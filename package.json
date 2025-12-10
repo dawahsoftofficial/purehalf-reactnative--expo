@@ -64,7 +64,8 @@
     "prettier": "^3.7.4",
     "react-test-renderer": "19.1.1",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.49.0"
+    "typescript-eslint": "^8.49.0",
+    "zod-validation-error": "^5.0.0"
   },
   "engines": {
     "node": ">=20"

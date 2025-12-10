@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { defineConfig, globalIgnores } from 'eslint/config';
 import i18nJsonPlugin from 'eslint-plugin-i18n-json';
+import importPlugin from 'eslint-plugin-import';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactNative from 'eslint-plugin-react-native';
@@ -21,7 +22,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig([
   globalIgnores([
     'dist/*',
-    'node_modules',
+    'node_modules/**',
     '__tests__/',
     'coverage',
     '.expo',
@@ -60,6 +61,7 @@ export default defineConfig([
       react: react,
       'react-hooks': reactHooks,
       'react-native': reactNative,
+      import: importPlugin,
       'simple-import-sort': simpleImportSort,
       unicorn: eslintPluginUnicorn,
       'unused-imports': unusedImports,
@@ -90,7 +92,7 @@ export default defineConfig([
         'error',
         {
           case: 'kebabCase',
-          ignore: ['/android', '/ios'],
+          ignore: ['/android', '/ios', 'App.tsx', 'index.ts', 'index.tsx'],
         },
       ],
       'simple-import-sort/imports': 'error',
@@ -109,8 +111,14 @@ export default defineConfig([
       'prettier/prettier': ['error', { ignores: ['expo-env.d.ts'] }],
     },
   },
+  ...configs.recommended.map((config) => ({
+    ...config,
+    files: ['**/*.ts', '**/*.tsx'],
+    ignores: ['node_modules/**', '**/node_modules/**'],
+  })),
   {
     files: ['**/*.ts', '**/*.tsx'],
+    ignores: ['node_modules/**', '**/node_modules/**'],
     languageOptions: {
       parser: parser,
       parserOptions: {
@@ -119,7 +127,6 @@ export default defineConfig([
       },
     },
     rules: {
-      ...configs.recommended.rules,
       '@typescript-eslint/comma-dangle': 'off',
       '@typescript-eslint/consistent-type-imports': [
         'warn',
