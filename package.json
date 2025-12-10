@@ -14,7 +14,7 @@
     "preinstall": "npx only-allow pnpm",
     "start:staging": "cross-env APP_ENV=staging pnpm run start",
     "prebuild:staging": "cross-env APP_ENV=staging pnpm run prebuild",
-    "prebuild:development": "cross-env APP_ENV=development pnpm run prebuild",
+    "prebuild:development": "cross-env APP_ENV=development pnpm run prebuild --clean",
     "android:staging": "cross-env APP_ENV=staging pnpm run android",
     "ios:staging": "cross-env APP_ENV=staging pnpm run ios",
     "start:production": "cross-env APP_ENV=production pnpm run start",
@@ -156,5 +156,10 @@
   },
   "osMetadata": {
     "initVersion": "8.0.0"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@gorhom/bottom-sheet": "patches/@gorhom__bottom-sheet.patch"
+    }
   }
 }

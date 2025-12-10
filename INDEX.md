@@ -25,21 +25,25 @@ PureHalf/
 File-based routing using Expo Router.
 
 #### Root Layout
+
 - **`_layout.tsx`** - Root layout component with global providers (Theme, API, Keyboard, Gesture Handler, Bottom Sheet)
 - **`+html.tsx`** - HTML document configuration for web
 - **`[...messing].tsx`** - Catch-all route for unmatched paths
 
 #### Authentication & Onboarding
+
 - **`onboarding.tsx`** - First-time user onboarding screen
 - **`login.tsx`** - User login screen
 
 #### Main App Routes (`(app)/`)
+
 - **`_layout.tsx`** - Tab navigation layout (Feed, Style, Settings)
 - **`index.tsx`** - Feed/home screen (main tab)
 - **`settings.tsx`** - Settings screen
 - **`style.tsx`** - Style customization screen
 
 #### Feed Routes (`feed/`)
+
 - **`[id].tsx`** - Dynamic route for individual post details
 - **`add-post.tsx`** - Create new post screen
 
@@ -48,6 +52,7 @@ File-based routing using Expo Router.
 ### 🧩 Components (`src/components/`)
 
 #### Shared Components
+
 - **`buttons.tsx`** - Button components
 - **`card.tsx`** - Card component
 - **`colors.tsx`** - Color definitions/utilities
@@ -59,12 +64,14 @@ File-based routing using Expo Router.
 - **`typography.tsx`** - Typography components
 
 #### Settings Components (`settings/`)
+
 - **`item.tsx`** - Generic settings item component
 - **`items-container.tsx`** - Container for settings items
 - **`language-item.tsx`** - Language selection item
 - **`theme-item.tsx`** - Theme selection item
 
 #### UI Components (`ui/`)
+
 Core UI component library with Nativewind styling.
 
 - **`index.tsx`** - Main UI components export (Button, Checkbox, Input, Select, Text, etc.)
@@ -87,6 +94,7 @@ Core UI component library with Nativewind styling.
 - **`utils.tsx`** - UI utility functions
 
 #### Icons (`ui/icons/`)
+
 - **`index.tsx`** - Icons export
 - **`arrow-right.tsx`** - Arrow right icon
 - **`caret-down.tsx`** - Caret down icon
@@ -106,12 +114,14 @@ Core UI component library with Nativewind styling.
 ### 🔌 API Layer (`src/api/`)
 
 #### Common API (`common/`)
+
 - **`index.tsx`** - Common API exports
 - **`api-provider.tsx`** - React Query API provider wrapper
 - **`client.tsx`** - Axios HTTP client configuration
 - **`utils.tsx`** - API utility functions
 
 #### Posts API (`posts/`)
+
 - **`index.ts`** - Posts API exports
 - **`types.ts`** - Post-related TypeScript types
 - **`use-add-post.ts`** - React Query hook for creating posts
@@ -119,6 +129,7 @@ Core UI component library with Nativewind styling.
 - **`use-posts.ts`** - React Query hook for fetching posts list
 
 #### Root
+
 - **`index.tsx`** - Main API exports
 - **`types.ts`** - Shared API types
 
@@ -127,15 +138,18 @@ Core UI component library with Nativewind styling.
 ### 🛠️ Libraries (`src/lib/`)
 
 #### Authentication (`auth/`)
+
 - **`index.tsx`** - Auth exports
 - **`utils.tsx`** - Authentication utility functions
 
 #### Custom Hooks (`hooks/`)
+
 - **`index.tsx`** - Hooks exports
 - **`use-is-first-time.tsx`** - Hook to check if app is opened for first time
 - **`use-selected-theme.tsx`** - Hook for theme selection state
 
 #### Internationalization (`i18n/`)
+
 - **`index.tsx`** - i18n exports
 - **`react-i18next.d.ts`** - TypeScript declarations for react-i18next
 - **`resources.ts`** - Translation resources
@@ -143,6 +157,7 @@ Core UI component library with Nativewind styling.
 - **`utils.tsx`** - i18n utility functions
 
 #### Root
+
 - **`index.tsx`** - Main library exports (auth, hooks, i18n, utils)
 - **`env.js`** - Environment variables configuration
 - **`storage.tsx`** - MMKV storage utilities
@@ -178,6 +193,7 @@ Core UI component library with Nativewind styling.
 ## ⚙️ Configuration Files
 
 ### Root Level
+
 - **`app.config.ts`** - Expo app configuration (name, version, icons, plugins)
 - **`package.json`** - Dependencies and scripts
 - **`tsconfig.json`** - TypeScript configuration
@@ -195,14 +211,17 @@ Core UI component library with Nativewind styling.
 - **`nativewind-env.d.ts`** - Nativewind TypeScript declarations
 
 ### Git Hooks (`.husky/`)
+
 - **`pre-commit`** - Pre-commit hook (runs lint-staged)
 - **`post-merge`** - Post-merge hook
 
 ### Scripts (`scripts/`)
+
 - **`genrate-apk-and-install`** - Script to generate and install APK
 - **`i18next-syntax-validation.js`** - i18next translation validation
 
 ### Prompts (`prompts/`)
+
 - **`expo-doctor.md`** - Expo doctor prompt
 - **`image-to-components.md`** - Image to components conversion prompt
 - **`svg-icon.md`** - SVG icon generation prompt
@@ -213,6 +232,7 @@ Core UI component library with Nativewind styling.
 ## 🧪 Testing
 
 ### Mocks (`__mocks__/`)
+
 - **`@gorhom/bottom-sheet.ts`** - Bottom sheet mock
 - **`expo-localization.ts`** - Expo localization mock
 - **`moti.ts`** - Moti animation library mock
@@ -220,6 +240,7 @@ Core UI component library with Nativewind styling.
 - **`react-native-keyboard-controller.ts`** - Keyboard controller mock
 
 ### Test Files
+
 Test files follow the pattern: `*.test.tsx` alongside their components.
 
 ---
@@ -256,18 +277,21 @@ Test files follow the pattern: `*.test.tsx` alongside their components.
 ## 📦 Key Dependencies
 
 ### Core
+
 - **expo** - Expo framework
 - **react-native** - React Native
 - **expo-router** - File-based routing
 - **nativewind** - Tailwind CSS for React Native
 
 ### State & Data
+
 - **@tanstack/react-query** - Data fetching and caching
 - **react-query-kit** - React Query utilities
 - **zustand** - State management
 - **axios** - HTTP client
 
 ### UI & Animation
+
 - **react-native-reanimated** - Animations
 - **react-native-gesture-handler** - Gestures
 - **@gorhom/bottom-sheet** - Bottom sheet component
@@ -275,19 +299,23 @@ Test files follow the pattern: `*.test.tsx` alongside their components.
 - **react-native-svg** - SVG support
 
 ### Forms & Validation
+
 - **react-hook-form** - Form management
 - **@hookform/resolvers** - Form validation resolvers
 - **zod** - Schema validation
 
 ### Storage
+
 - **react-native-mmkv** - Fast key-value storage
 
 ### Internationalization
+
 - **i18next** - i18n framework
 - **react-i18next** - React bindings for i18next
 - **expo-localization** - Device locale detection
 
 ### Utilities
+
 - **react-native-keyboard-controller** - Keyboard handling
 - **react-native-safe-area-context** - Safe area handling
 - **react-native-flash-message** - Flash messages
@@ -321,26 +349,29 @@ Test files follow the pattern: `*.test.tsx` alongside their components.
 ## 🔍 Quick Reference
 
 ### Find Components
+
 - UI Components: `src/components/ui/`
 - Shared Components: `src/components/`
 - Screen Components: `src/app/`
 
 ### Find API Hooks
+
 - Posts: `src/api/posts/`
 - Common: `src/api/common/`
 
 ### Find Utilities
+
 - General Utils: `src/lib/utils.ts`
 - Storage: `src/lib/storage.tsx`
 - Auth: `src/lib/auth/`
 - Hooks: `src/lib/hooks/`
 
 ### Find Types
+
 - Shared Types: `src/types/index.ts`
 - API Types: `src/api/types.ts` and `src/api/posts/types.ts`
 
 ---
 
-*Last updated: Generated automatically*
-*This index provides a comprehensive overview of the PureHalf codebase structure.*
-
+_Last updated: Generated automatically_
+_This index provides a comprehensive overview of the PureHalf codebase structure._

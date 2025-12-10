@@ -28,7 +28,7 @@
         <key>CFBundleURLSchemes</key>
         <array>
           <string>PureHalf</string>
-          <string>com.purehalf.development</string>
+          <string>com.purehalf</string>
         </array>
       </dict>
       <dict>
