@@ -87,6 +87,14 @@ android {
         versionCode 1
         versionName "1.0"
     }
+
+    configurations.all {
+        exclude group: 'com.android.support'
+        resolutionStrategy {
+            force 'androidx.core:core:1.16.0'
+            force 'androidx.core:core-ktx:1.16.0'
+        }
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -118,4 +126,7 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Required for react-native-image-picker on Android API levels below 30
+    implementation("androidx.activity:activity:1.9.+")
 }
