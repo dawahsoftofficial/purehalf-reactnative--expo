@@ -1,4 +1,4 @@
-package com.purehalf
+package com.zojayn
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate

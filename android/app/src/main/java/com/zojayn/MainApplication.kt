@@ -1,4 +1,4 @@
-package com.purehalf
+package com.zojayn
 
 import android.app.Application
 import com.facebook.react.PackageList

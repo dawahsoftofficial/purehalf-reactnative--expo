@@ -7,23 +7,39 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		02A00B3C0BF54D7B8C19462D /* Poppins-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0B4BF19892834262B0135F2F /* Poppins-Medium.ttf */; };
 		0C80B921A6F3F58F76C31292 /* libPods-PureHalf.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DCACB8F33CDC322A6C60F78 /* libPods-PureHalf.a */; };
 		0CCC34F94FBE7F56717DDD53 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
+		3ADC19D7CFD74260A99AFC2B /* Poppins-Thin.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 630C261592F84288BF99E53B /* Poppins-Thin.ttf */; };
+		4CD83834344142078838A895 /* Poppins-Black.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 368D08D5ADA240429483A866 /* Poppins-Black.ttf */; };
+		4EEB17A50B4745FFBABEB7C7 /* Poppins-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 98ABE1BBD36A4AA28DEFE37C /* Poppins-Bold.ttf */; };
+		60BB32BEADC94A2E831BE94A /* Poppins-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = BC5F9F7DCE10408B816F4076 /* Poppins-SemiBold.ttf */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		95D8C0BDF7864C3BBECBB0BC /* Poppins-Light.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 64970FE4C1B54A8FB2439E46 /* Poppins-Light.ttf */; };
+		A7F9F38DAB2543879B16C54B /* Besmellah-Normal.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A22AB859C6064BD4AB81239F /* Besmellah-Normal.ttf */; };
+		AA6C6858EED440DC9CD6C274 /* Poppins-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 043E7B4952294CA5BD5C13D4 /* Poppins-Regular.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		043E7B4952294CA5BD5C13D4 /* Poppins-Regular.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Regular.ttf"; path = "../src/assets/fonts/Poppins-Regular.ttf"; sourceTree = "<group>"; };
+		0B4BF19892834262B0135F2F /* Poppins-Medium.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Medium.ttf"; path = "../src/assets/fonts/Poppins-Medium.ttf"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* PureHalf.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PureHalf.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = PureHalf/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = PureHalf/Info.plist; sourceTree = "<group>"; };
 		13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = PrivacyInfo.xcprivacy; path = PureHalf/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		368D08D5ADA240429483A866 /* Poppins-Black.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Black.ttf"; path = "../src/assets/fonts/Poppins-Black.ttf"; sourceTree = "<group>"; };
 		3B4392A12AC88292D35C810B /* Pods-PureHalf.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PureHalf.debug.xcconfig"; path = "Target Support Files/Pods-PureHalf/Pods-PureHalf.debug.xcconfig"; sourceTree = "<group>"; };
 		5709B34CF0A7D63546082F79 /* Pods-PureHalf.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-PureHalf.release.xcconfig"; path = "Target Support Files/Pods-PureHalf/Pods-PureHalf.release.xcconfig"; sourceTree = "<group>"; };
 		5DCACB8F33CDC322A6C60F78 /* libPods-PureHalf.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-PureHalf.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		630C261592F84288BF99E53B /* Poppins-Thin.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Thin.ttf"; path = "../src/assets/fonts/Poppins-Thin.ttf"; sourceTree = "<group>"; };
+		64970FE4C1B54A8FB2439E46 /* Poppins-Light.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Light.ttf"; path = "../src/assets/fonts/Poppins-Light.ttf"; sourceTree = "<group>"; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = PureHalf/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = PureHalf/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		98ABE1BBD36A4AA28DEFE37C /* Poppins-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-Bold.ttf"; path = "../src/assets/fonts/Poppins-Bold.ttf"; sourceTree = "<group>"; };
+		A22AB859C6064BD4AB81239F /* Besmellah-Normal.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Besmellah-Normal.ttf"; path = "../src/assets/fonts/Besmellah-Normal.ttf"; sourceTree = "<group>"; };
+		BC5F9F7DCE10408B816F4076 /* Poppins-SemiBold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = undefined; includeInIndex = 0; lastKnownFileType = unknown; name = "Poppins-SemiBold.ttf"; path = "../src/assets/fonts/Poppins-SemiBold.ttf"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -75,6 +91,7 @@
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
 				BBD78D7AC51CEA395F1C20DB /* Pods */,
+				E5F5E693FDCD44D3844BEC8E /* Resources */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -96,6 +113,22 @@
 				5709B34CF0A7D63546082F79 /* Pods-PureHalf.release.xcconfig */,
 			);
 			path = Pods;
+			sourceTree = "<group>";
+		};
+		E5F5E693FDCD44D3844BEC8E /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				A22AB859C6064BD4AB81239F /* Besmellah-Normal.ttf */,
+				368D08D5ADA240429483A866 /* Poppins-Black.ttf */,
+				98ABE1BBD36A4AA28DEFE37C /* Poppins-Bold.ttf */,
+				64970FE4C1B54A8FB2439E46 /* Poppins-Light.ttf */,
+				0B4BF19892834262B0135F2F /* Poppins-Medium.ttf */,
+				043E7B4952294CA5BD5C13D4 /* Poppins-Regular.ttf */,
+				BC5F9F7DCE10408B816F4076 /* Poppins-SemiBold.ttf */,
+				630C261592F84288BF99E53B /* Poppins-Thin.ttf */,
+			);
+			name = Resources;
+			path = "";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -161,6 +194,14 @@
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				0CCC34F94FBE7F56717DDD53 /* PrivacyInfo.xcprivacy in Resources */,
+				A7F9F38DAB2543879B16C54B /* Besmellah-Normal.ttf in Resources */,
+				4CD83834344142078838A895 /* Poppins-Black.ttf in Resources */,
+				4EEB17A50B4745FFBABEB7C7 /* Poppins-Bold.ttf in Resources */,
+				95D8C0BDF7864C3BBECBB0BC /* Poppins-Light.ttf in Resources */,
+				02A00B3C0BF54D7B8C19462D /* Poppins-Medium.ttf in Resources */,
+				AA6C6858EED440DC9CD6C274 /* Poppins-Regular.ttf in Resources */,
+				60BB32BEADC94A2E831BE94A /* Poppins-SemiBold.ttf in Resources */,
+				3ADC19D7CFD74260A99AFC2B /* Poppins-Thin.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -273,7 +314,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zojayn";
 				PRODUCT_NAME = PureHalf;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -300,7 +341,7 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.zojayn";
 				PRODUCT_NAME = PureHalf;
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
