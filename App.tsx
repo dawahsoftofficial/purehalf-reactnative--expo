@@ -1,49 +1,17 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import { NewAppScreen } from '@react-native/new-app-screen';
-import React from 'react';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import React, { JSX } from 'react';
+import FlashMessage from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import { MenuProvider } from 'react-native-popup-menu';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+import { Initialization } from './src/initialization';
 
-  return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        <AppContent />
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
-  );
-}
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+const App = (): JSX.Element => (
+  <GestureHandlerRootView style={{ flex: 1 }}>
+    <MenuProvider>
+      <Initialization />
+      <FlashMessage position="top" />
+    </MenuProvider>
+  </GestureHandlerRootView>
+);
 
 export default App;
