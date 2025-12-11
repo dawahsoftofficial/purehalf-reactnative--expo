@@ -73,3 +73,11 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# Secrets and sensitive files
+src/assets/json/serviceAccountKey.json
+**/serviceAccountKey.json
+*.serviceAccountKey.json
+.env
+.env.local
+.env.*.local

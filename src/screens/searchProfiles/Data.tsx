@@ -1,0 +1,313 @@
+import { LanguageKeys } from "../../languages"
+
+const filtersData = [
+    {
+        id: 'search_for_people',
+        title: LanguageKeys.searchForPeople,
+        data: [
+            {
+                id: "location",
+                value: LanguageKeys.nearMe,
+                selected: true
+            },
+            {
+                id: "country",
+                value: LanguageKeys.byCountry,
+                selected: false
+            }
+        ],
+        selected: { id: "location", selected: true, value: "nearMe" },
+        apiKey: 'search_for_people',
+        type: 'radioButton',
+    },
+    {
+        title: LanguageKeys.farFromMe,
+        data: [],
+        type: 'dropDown',
+        id: 'distance',
+        selected: {},
+        category: 'distance-0',
+        apiKey: 'radius'
+    },
+    {
+        title: LanguageKeys.country,
+        data: [],
+        type: 'dropDown',
+        id: 'country',
+        selected: {},
+        category: 'country',
+        apiKey: 'country'
+    },
+    {
+        title: LanguageKeys.nationality,
+        data: [],
+        type: 'dropDown',
+        id: 'nationality',
+        selected: {},
+        category: 'nationality',
+        apiKey: 'nationality_id'
+    },
+    {
+        title: LanguageKeys.language,
+        data: [],
+        type: 'dropDown',
+        id: 'language',
+        selected: {},
+        category: 'familybg-0',
+        apiKey: 'language_id'
+    },
+    {
+        title: LanguageKeys.ethinicity,
+        data: [],
+        type: 'dropDown',
+        id: 'ethini-0',
+        selected: {},
+        category: 'familybg-0',
+        apiKey: 'ethinicity_id',
+        fromAttribute: true
+    },
+    {
+        title: LanguageKeys.skinTone,
+        data: [],
+        type: 'dropDown',
+        id: 'skin-0',
+        selected: {},
+        category: 'appearance-0',
+        apiKey: 'skin_tone_id',
+        fromAttribute: true
+    },
+    {
+        id: 'muslim-0',
+        title: LanguageKeys.candidateIs,
+        data: [
+            {
+                id: 0,
+                value: LanguageKeys.bornMuslim,
+                selected: false
+            },
+            {
+                id: 1,
+                value: LanguageKeys.convertRevert,
+                selected: false
+            }
+        ],
+        selected: {},
+        apiKey: 'is_new_muslim',
+        type: 'radioButton',
+    },
+    {
+        title: LanguageKeys.sect,
+        data: [],
+        type: 'dropDown',
+        id: 'sect-0',
+        selected: {},
+        category: 'islamicval-0',
+        apiKey: 'sect_id',
+        fromAttribute: true
+    },
+    {
+        title: LanguageKeys.minimumEducation,
+        data: [],
+        type: 'dropDown',
+        id: 'edu-0',
+        selected: {},
+        category: 'life-0',
+        apiKey: 'education_level_id',
+        fromAttribute: true
+    },
+    {
+        id: 'has_profile_picture',
+        title: LanguageKeys.hasprofilePicture,
+        data: [
+            {
+                id: 1,
+                value: LanguageKeys.yes,
+                selected: false
+            },
+            {
+                id: 0,
+                value: LanguageKeys.no,
+                selected: false
+            }
+        ],
+        selected: {},
+        apiKey: 'has_profile_picture',
+        type: 'radioButton',
+    },
+    // {
+    //     id: 'gender',
+    //     title: LanguageKeys.gender,
+    //     data: [
+    //         {
+    //             id: 'male',
+    //             value: LanguageKeys.male,
+    //             selected: false
+    //         },
+    //         {
+    //             value: LanguageKeys.female,
+    //             id: 'female',
+    //             selected: false
+    //         }
+    //     ],
+    //     selected: {},
+    //     apiKey: 'gender',
+    //     type: 'radioButton',
+    // },
+    {
+        title: LanguageKeys.withWali,
+        data: [{ value: LanguageKeys.yes, id: 1 }, { value: LanguageKeys.no, id: 0 }],
+        type: 'dropDown',
+        id: 'is_wali',
+        selected: {},
+        category: 'wali',
+        apiKey: 'is_wali'
+    },
+    {
+        title: LanguageKeys.jobS,
+        data: [
+            {
+                value: LanguageKeys.employed,
+                id: 1
+            },
+            {
+                value: LanguageKeys.unEmployed,
+                id: 0
+            }
+        ],
+        type: 'dropDown',
+        id: 'is_job',
+        selected: {},
+        category: 'jobStatus',
+        apiKey: 'is_job'
+    },
+    {
+        id: 'height',
+        title: LanguageKeys.height,
+        data: [
+            {
+                value: LanguageKeys.short,
+                id: 'small',
+            },
+            {
+                value: LanguageKeys.average,
+                id: 'medium',
+            },
+            {
+                value: LanguageKeys.tall,
+                id: 'tall',
+            }
+        ],
+        selected: {},
+        apiKey: 'height',
+        type: 'radioButton',
+    },
+    {
+        id: 'weight',
+        title: LanguageKeys.weight,
+        data: [
+            {
+                value: LanguageKeys.slim,
+                id: 'small',
+            },
+            {
+                value: LanguageKeys.average,
+                id: 'medium',
+            },
+            {
+                value: LanguageKeys.plusSize,
+                id: 'large',
+            }
+        ],
+        selected: {},
+        apiKey: 'weight',
+        type: 'radioButton',
+    },
+    {
+        id: 'is_smoking',
+        title: LanguageKeys.smoking,
+        data: [
+            {
+                id: 1,
+                value: LanguageKeys.yes,
+                selected: false
+            },
+            {
+                value: LanguageKeys.no,
+                id: 0,
+                selected: false
+            }
+        ],
+        selected: {},
+        apiKey: 'is_smoking',
+        type: 'radioButton',
+    },
+    {
+        id: 'is_drinking',
+        title: LanguageKeys.drinkingHabits,
+        data: [
+            {
+                id: 1,
+                value: LanguageKeys.yes,
+                selected: false
+            },
+            {
+                id: 0,
+                value: LanguageKeys.no,
+                selected: false
+            }
+        ],
+        selected: {},
+        apiKey: 'is_drinking',
+        type: 'radioButton',
+    },
+    {
+        title: LanguageKeys.prayersPunctuality,
+        data: [],
+        type: 'dropDown',
+        id: 'pray-0',
+        selected: {},
+        category: 'islamicval-0',
+        apiKey: 'prayers_punctuality_id',
+        fromAttribute: true
+    },
+    {
+        title: LanguageKeys.hijabLevel,
+        data: [],
+        type: 'dropDown',
+        id: 'hijab-0',
+        selected: {},
+        category: 'islamicval-0',
+        apiKey: 'hijab_level_id',
+        fromAttribute: true
+    },
+    {
+        title: LanguageKeys.dedicationToIslam,
+        data: [],
+        type: 'dropDown',
+        id: 'islam-0',
+        selected: {},
+        category: 'islamicval-0',
+        apiKey: 'islamic_practice_level_id',
+        fromAttribute: true
+    },
+    {
+        title: LanguageKeys.lastOnlineAt,
+        data: [{ value: LanguageKeys.weekAgo, id: 'week' }, { value: LanguageKeys.monthAgo, id: 'month' }, { value: LanguageKeys.yearAgo, id: 'year' }],
+        type: 'dropDown',
+        id: 'last_online_at',
+        selected: {},
+        category: 'lastOnlineAt',
+        apiKey: 'last_online_at'
+    },
+    {
+        title: LanguageKeys.registeredAt,
+        data: [{ value: LanguageKeys.weekAgo, id: 'week' }, { value: LanguageKeys.monthAgo, id: 'month' }, { value: LanguageKeys.yearAgo, id: 'year' }],
+        type: 'dropDown',
+        id: 'register_at',
+        selected: {},
+        category: 'registeredAt',
+        apiKey: 'register_at'
+    },
+]
+
+export { filtersData }
