@@ -1,0 +1,79 @@
+{
+  "project_info": {
+    "project_number": "760499091535",
+    "firebase_url": "https://zojayn-cd4d2-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "zojayn-cd4d2",
+    "storage_bucket": "zojayn-cd4d2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:760499091535:android:38eadbb7d24471cc45d23a",
+        "android_client_info": {
+          "package_name": "com.zojayn"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "760499091535-1bfjd8p512octmjmrbkdtubq37gupuli.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zojayn",
+            "certificate_hash": "6868a523ab4f67a77453accb1f640a8df8735b2f"
+          }
+        },
+        {
+          "client_id": "760499091535-49ppuog0ghtrpkacopq2bcbra60upuji.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zojayn",
+            "certificate_hash": "72d792104849d02892c99e146eabab543001fb8e"
+          }
+        },
+        {
+          "client_id": "760499091535-9ah4f4fam6pma08ut7fctqbto0vfsuk4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zojayn",
+            "certificate_hash": "cb3e704d8057edb74942c244e63f35104411c9b0"
+          }
+        },
+        {
+          "client_id": "760499091535-k08p6oqd771av9ve29oms7s1lrld78vh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zojayn",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "760499091535-7b8jggl5lmapn9oi1ovnh4o84a11iv9f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6AQjBMPf_Rp3o5y2w9RWtvZiPHU5Aiwk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "760499091535-7b8jggl5lmapn9oi1ovnh4o84a11iv9f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "760499091535-t16f1aojfq75mseebt9csrnn2b61vggk.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.zojayn"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
