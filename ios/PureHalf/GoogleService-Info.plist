@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>760499091535-t16f1aojfq75mseebt9csrnn2b61vggk.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.760499091535-t16f1aojfq75mseebt9csrnn2b61vggk</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>760499091535-1bfjd8p512octmjmrbkdtubq37gupuli.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyCwN8lD6N-BXSN0r3moMo3iAjKSQg59Y-Y</string>
+	<key>GCM_SENDER_ID</key>
+	<string>760499091535</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.zojayn</string>
+	<key>PROJECT_ID</key>
+	<string>zojayn-cd4d2</string>
+	<key>STORAGE_BUCKET</key>
+	<string>zojayn-cd4d2.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:760499091535:ios:dcf44acbaa263dca45d23a</string>
+	<key>DATABASE_URL</key>
+	<string>https://zojayn-cd4d2-default-rtdb.asia-southeast1.firebasedatabase.app</string>
+</dict>
+</plist>
