@@ -123,6 +123,7 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/comma-dangle': 'off',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/consistent-type-imports': [
         'warn',
         {

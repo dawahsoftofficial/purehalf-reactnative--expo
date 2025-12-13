@@ -1,6 +1,6 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Modal, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
@@ -12,7 +12,7 @@ import { Colors, Fonts } from '../../res';
 import { isIOS } from '../../services';
 import { Text } from '..';
 
-const DateTimePickerFun = (props: any) => {
+const DateTimePickerFun = React.memo((props: any) => {
   const Rtl = CheckRtl();
   const [visible, setVisible] = useState(false);
   const [date, setDate] = useState(props.date);
@@ -26,85 +26,156 @@ const DateTimePickerFun = (props: any) => {
     maxDate = new Date(),
   } = props;
 
-  const onPressOuterBtn = () => setVisible(true);
-  const closePickerIos = () => {
+  // Sync internal date state with props.date changes
+  useEffect(() => {
+    setDate(props.date);
+  }, [props.date]);
+
+  // Check if date is valid (not empty, not null, not undefined)
+  const hasValidDate = useMemo(() => {
+    if (!date) return false;
+    if (typeof date === 'string' && date.length === 0) return false;
+    if (date instanceof Date && isNaN(date.getTime())) return false;
+    return true;
+  }, [date]);
+
+  // Get formatted date string
+  const formattedDate = useMemo(() => {
+    if (!hasValidDate) return null;
+    try {
+      return moment(date).format('Do MMM, YYYY');
+    } catch {
+      return null;
+    }
+  }, [date, hasValidDate]);
+
+  // Get date value for picker
+  const pickerDateValue = useMemo(() => {
+    if (!hasValidDate) return new Date();
+    if (date instanceof Date) return date;
+    try {
+      return new Date(date);
+    } catch {
+      return new Date();
+    }
+  }, [date, hasValidDate]);
+
+  // Memoized styles
+  const iconContainerStyle = useMemo(
+    () => ({
+      marginLeft: Rtl ? wp(-1) : 0,
+    }),
+    [Rtl]
+  );
+
+  const labelStyle = useMemo(
+    () => [
+      Styles.inputLabel,
+      outerLabelStyle,
+      { alignSelf: Rtl ? 'flex-end' : 'flex-start' },
+    ],
+    [outerLabelStyle, Rtl]
+  );
+
+  const containerStyle = useMemo(
+    () => [
+      Styles.btnOuterContainer,
+      {
+        flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
+        backgroundColor: disabled ? Colors.color54 : Colors.color3,
+      },
+    ],
+    [Rtl, disabled]
+  );
+
+  const placeholderTextStyle = useMemo(
+    () => [Styles.btnTxt, { color: Colors.color28 }],
+    []
+  );
+
+  // Memoized handlers
+  const onPressOuterBtn = useCallback(() => {
+    if (!disabled) {
+      setVisible(true);
+    }
+  }, [disabled]);
+
+  const closePickerIos = useCallback(() => {
     setVisible(false);
     setDate(props.date);
-  };
+  }, [props.date]);
 
-  const onChangeAndroidDate = (data: any) => {
-    const { type, nativeEvent } = data;
-    const { timestamp } = nativeEvent;
-    if (type === 'dismissed') {
-      setVisible(false);
-    } else if (type === 'set') {
-      setVisible(false);
-      setDate(new Date(timestamp));
-      props.selectedDate(new Date(timestamp));
-    }
-  };
+  const onChangeAndroidDate = useCallback(
+    (data: any) => {
+      const { type, nativeEvent } = data;
+      const { timestamp } = nativeEvent;
+      if (type === 'dismissed') {
+        setVisible(false);
+      } else if (type === 'set') {
+        const selectedDate = new Date(timestamp);
+        setVisible(false);
+        setDate(selectedDate);
+        props.selectedDate?.(selectedDate);
+      }
+    },
+    [props]
+  );
 
-  const onChangeIosDate = (data: any) => {
+  const onChangeIosDate = useCallback((data: any) => {
     const { nativeEvent } = data;
     const { timestamp } = nativeEvent;
     setDate(new Date(timestamp));
-  };
+  }, []);
 
-  const onConfirmIos = () => {
+  const onConfirmIos = useCallback(() => {
     setVisible(false);
-    setDate(date);
-    props.selectedDate(date);
-  };
+    props.selectedDate?.(date);
+  }, [date, props]);
 
-  const RenderIcon = () => (
-    <Image
-      source={icon}
-      resizeMode="contain"
-      style={[Styles.btnIcon, { marginLeft: Rtl ? wp(-1) : 0 }, iconStyle]}
-    />
-  );
-  const RenderBtn = () => (
-    <Ripple style={Styles.btn} onPress={onPressOuterBtn} disabled={disabled}>
-      {date?.length !== 0 ? (
-        <Text style={Styles.btnTxt}>{moment(date).format('Do MMM, YYYY')}</Text>
-      ) : (
-        <Text style={{ ...Styles.btnTxt, color: Colors.color28 }}>
-          {LanguageKeys.selectDateOfBirth}
-        </Text>
-      )}
-    </Ripple>
-  );
+  // Memoized icon element
+  const iconElement = useMemo(() => {
+    if (!icon) return null;
+    return (
+      <Image
+        source={icon}
+        resizeMode="contain"
+        style={[Styles.btnIcon, iconContainerStyle, iconStyle]}
+      />
+    );
+  }, [icon, iconContainerStyle, iconStyle]);
+
+  // Memoized button text element
+  const buttonTextElement = useMemo(() => {
+    if (formattedDate) {
+      return <Text style={Styles.btnTxt}>{formattedDate}</Text>;
+    }
+    return (
+      <Text style={placeholderTextStyle}>{LanguageKeys.selectDateOfBirth}</Text>
+    );
+  }, [formattedDate, placeholderTextStyle]);
+
+  const modalVisible = visible && isIOS;
+  const androidPickerVisible = !isIOS && visible;
 
   return (
     <View style={Styles.container}>
-      <Text
-        style={[
-          Styles.inputLabel,
-          outerLabelStyle,
-          { alignSelf: Rtl ? 'flex-end' : 'flex-start' },
-        ]}
-      >
-        {label}
-      </Text>
-      {
-        <View
-          style={[
-            Styles.btnOuterContainer,
-            {
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-              backgroundColor: disabled ? Colors.color54 : Colors.color3,
-            },
-          ]}
+      <Text style={labelStyle}>{label}</Text>
+      <View style={containerStyle}>
+        {iconElement}
+        <Ripple
+          style={Styles.btn}
+          onPress={onPressOuterBtn}
+          disabled={disabled}
         >
-          <RenderIcon />
-          <RenderBtn />
-        </View>
-      }
+          {buttonTextElement}
+        </Ripple>
+      </View>
 
       <Modal
-        visible={visible && isIOS}
+        visible={modalVisible}
         transparent={true}
         onRequestClose={closePickerIos}
+        animationType="fade"
       >
         <TouchableOpacity
           style={Styles.pickerContainer}
@@ -115,12 +186,12 @@ const DateTimePickerFun = (props: any) => {
             <Animation animation="zoomIn" style={Styles.pickerInnerCon}>
               <DateTimePicker
                 testID="dateTimePicker"
-                value={date?.length !== 0 ? new Date(date) : new Date()}
+                value={pickerDateValue}
                 mode={mode}
                 is24Hour={true}
                 onChange={onChangeIosDate}
-                maximumDate={maxDate ? maxDate : new Date()}
-                display={'spinner'}
+                maximumDate={maxDate || new Date()}
+                display="spinner"
                 themeVariant="light"
               />
               {isIOS && (
@@ -133,21 +204,23 @@ const DateTimePickerFun = (props: any) => {
         </TouchableOpacity>
       </Modal>
 
-      {!isIOS && visible && (
+      {androidPickerVisible && (
         <DateTimePicker
           testID="dateTimePicker"
-          value={date?.length !== 0 ? new Date(date) : new Date()}
+          value={pickerDateValue}
           mode={mode}
           is24Hour={true}
           onChange={onChangeAndroidDate}
-          display={'spinner'}
-          maximumDate={new Date()}
+          display="spinner"
+          maximumDate={maxDate || new Date()}
           themeVariant="light"
         />
       )}
     </View>
   );
-};
+});
+
+DateTimePickerFun.displayName = 'DateTimePicker';
 
 export default DateTimePickerFun;
 const Styles = StyleSheet.create({

@@ -1,197 +1,279 @@
-import { View, StyleSheet, Modal, FlatList, TouchableOpacity, Image } from 'react-native'
-import React, { useState } from 'react'
-import { hp, Typography, wp } from '../../global'
-import { Colors, Fonts, Images } from '../../res'
-import { Text } from '..'
-import { LanguageKeys, CheckRtl } from '../../languages'
+import React, { useCallback, useMemo, useState } from 'react';
+import {
+  FlatList,
+  Image,
+  Modal,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Constants from '../../global/Constants'
-import Ionicons from 'react-native-vector-icons/Ionicons'
-import AntDesign from 'react-native-vector-icons/AntDesign'
-import { Animation } from '../../animations'
-import { isIOS } from '../../services'
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const GenderPicker = (props: any) => {
-    const Rtl = CheckRtl()
-    const {
-        value = '',
-        outerLabelStyle = {},
-        disabled = false
-    } = props
-    const [genderModalVisible, setGenderModalVisible] = useState(false)
-    const [genders, setGenders] = useState([
-        {
-            label: LanguageKeys.male, value: LanguageKeys.male, id: '1', selected: value === 'male' ? true : false
-        },
-        {
-            label: LanguageKeys.female, value: LanguageKeys.female, id: '2', selected: value === 'female' ? true : false
-        }
-    ])
-    const [activeGender, setActiveGender] = useState(value)
+import { Animation } from '../../animations';
+import { hp, Typography, wp } from '../../global';
+import Constants from '../../global/Constants';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { Colors, Fonts, Images } from '../../res';
+import { isIOS } from '../../services';
+import { Text } from '..';
 
-    const renderRadio = (item: any) => {
-        return (
-            item.selected ?
-                <Ionicons name='radio-button-on' size={wp(4.5)} color={Colors.theme} />
-                :
-                <Ionicons name='radio-button-off' size={wp(4.5)} color={Colors.theme} />
-        )
+type GenderItem = {
+  label: string;
+  value: string;
+  id: string;
+  selected: boolean;
+};
+
+const GenderPicker = React.memo((props: any) => {
+  const Rtl = CheckRtl();
+  const { value = '', outerLabelStyle = {}, disabled = false } = props;
+  const [genderModalVisible, setGenderModalVisible] = useState(false);
+
+  // Initialize genders list - memoized and updated when value changes
+  const genders = useMemo<GenderItem[]>(
+    () => [
+      {
+        label: LanguageKeys.male,
+        value: LanguageKeys.male,
+        id: '1',
+        selected: value === LanguageKeys.male,
+      },
+      {
+        label: LanguageKeys.female,
+        value: LanguageKeys.female,
+        id: '2',
+        selected: value === LanguageKeys.female,
+      },
+    ],
+    [value]
+  );
+
+  const activeGender = value;
+  const hasActiveGender = activeGender && activeGender.length > 0;
+
+  // Memoized handlers
+  const showGenderModal = useCallback(() => {
+    if (!disabled) {
+      setGenderModalVisible(true);
     }
+  }, [disabled]);
 
-    const onGenderPress = (item: any) => {
-        genders.forEach((element) => {
-            if(element.value === item.value) {
-                element.selected = true
-                setActiveGender(element.value)
-                props.onSelect(element.value)
-            }
-            else {
-                element.selected = false
-            }
-        })
-        setGenders(genders)
-        setGenderModalVisible(false)
+  const closeGenderModal = useCallback(() => {
+    setGenderModalVisible(false);
+  }, []);
+
+  const onGenderPress = useCallback(
+    (item: GenderItem) => {
+      props.onSelect?.(item.value);
+      setGenderModalVisible(false);
+    },
+    [props]
+  );
+
+  // Memoized radio icon component
+  const renderRadio = useCallback((isSelected: boolean) => {
+    return isSelected ? (
+      <Ionicons name="radio-button-on" size={wp(4.5)} color={Colors.theme} />
+    ) : (
+      <Ionicons name="radio-button-off" size={wp(4.5)} color={Colors.theme} />
+    );
+  }, []);
+
+  // Memoized item container style
+  const itemContainerStyleBase = useMemo(
+    () => [
+      Styles.itemContainer,
+      {
+        justifyContent: (Rtl ? 'flex-end' : 'flex-start') as
+          | 'flex-start'
+          | 'flex-end',
+      },
+    ],
+    [Rtl]
+  );
+
+  // Memoized gender item renderer
+  const renderGenders = useCallback(
+    ({ item }: { item: GenderItem }) => {
+      const radioIcon = renderRadio(item.selected);
+      return (
+        <TouchableOpacity
+          style={itemContainerStyleBase}
+          onPress={() => onGenderPress(item)}
+          activeOpacity={0.5}
+        >
+          {!Rtl && radioIcon}
+          <Text style={Styles.itemLabel}>{item.label}</Text>
+          {Rtl && radioIcon}
+        </TouchableOpacity>
+      );
+    },
+    [Rtl, onGenderPress, renderRadio, itemContainerStyleBase]
+  );
+
+  // Memoized styles
+  const labelStyle = useMemo(
+    () => [Styles.label, outerLabelStyle],
+    [outerLabelStyle]
+  );
+
+  const containerStyle = useMemo(
+    () => [
+      Styles.container,
+      {
+        flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
+        backgroundColor: disabled ? Colors.color54 : Colors.color3,
+      },
+    ],
+    [Rtl, disabled]
+  );
+
+  const innerContainerStyle = useMemo(
+    () => [
+      Styles.innerContainer,
+      { flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse' },
+    ],
+    [Rtl]
+  );
+
+  const placeholderTextStyle = useMemo(
+    () => [Styles.outerBtnLabel, { color: Colors.color28 }],
+    []
+  );
+
+  // Memoized elements
+  const downIconElement = useMemo(
+    () => <AntDesign name="down" size={wp(3.5)} color={Colors.color4} />,
+    []
+  );
+
+  const groupImageElement = useMemo(
+    () => (
+      <Image
+        source={Images.groupUser}
+        resizeMode="contain"
+        style={Styles.groupUserIcon}
+      />
+    ),
+    []
+  );
+
+  const genderTextElement = useMemo(() => {
+    if (hasActiveGender) {
+      return <Text style={Styles.outerBtnLabel}>{activeGender}</Text>;
     }
-
-    const renderGenders = ({ item }: any) => {
-        return (
-            <TouchableOpacity style={{ ...Styles.itemContainer, justifyContent: Rtl ? 'flex-end' : 'flex-start' }}
-                onPress={onGenderPress.bind(null, item)}
-                activeOpacity={0.5}
-            >
-                {!Rtl && renderRadio(item)}
-                <Text style={Styles.itemLabel}>
-                    {item.label}
-                </Text>
-                {Rtl && renderRadio(item)}
-            </TouchableOpacity>
-        )
-    }
-
-    const RenderDownIcon = () => (
-        <AntDesign name='down' size={wp(3.5)} color={Colors.color4} />
-    )
-    const RenderGroupImage = () => (
-        <Image
-            source={Images.groupUser}
-            resizeMode='contain'
-            style={Styles.groupUserIcon}
-        />
-    )
-    const RenderGenderText = () => (
-        activeGender.length !== 0 ?
-            <Text style={Styles.outerBtnLabel}>{activeGender}</Text>
-            : <Text style={{ ...Styles.outerBtnLabel, color: Colors.color28 }}>
-                {LanguageKeys.selectGender}
-            </Text>
-    )
-    const showGenderModal = () => setGenderModalVisible(true)
-    const closeGenderModal = () => setGenderModalVisible(false)
-
     return (
-        <View>
-            <Text style={[Styles.label, outerLabelStyle]}>
-                {LanguageKeys.gender}
-            </Text>
-            <Ripple
-                style={[Styles.container, { flexDirection: Rtl ? 'row-reverse' : 'row', backgroundColor: disabled ? Colors.color54 : Colors.color3 }]}
-                onPress={showGenderModal}
-                disabled={disabled}
-            >
-                <View style={[Styles.innerContainer, { flexDirection: Rtl ? 'row-reverse' : 'row' }]}>
-                    <RenderGroupImage />
-                    <RenderGenderText />
-                </View>
-                <RenderDownIcon />
-            </Ripple>
+      <Text style={placeholderTextStyle}>{LanguageKeys.selectGender}</Text>
+    );
+  }, [hasActiveGender, activeGender, placeholderTextStyle]);
 
-            <Modal
-                visible={genderModalVisible}
-                transparent={true}
-            >
-                <TouchableOpacity style={Styles.modalContainer}
-                    activeOpacity={1}
-                    onPress={closeGenderModal}
-                >
-                    <Animation
-                        style={Styles.listContainer}
-                        duration={300}
-                    >
-                        <FlatList
-                            data={genders}
-                            renderItem={renderGenders}
-                        />
-                    </Animation>
+  // Memoized keyExtractor for FlatList
+  const keyExtractor = useCallback((item: GenderItem) => item.id, []);
 
-
-                </TouchableOpacity>
-            </Modal>
+  return (
+    <View>
+      <Text style={labelStyle}>{LanguageKeys.gender}</Text>
+      <Ripple
+        style={containerStyle}
+        onPress={showGenderModal}
+        disabled={disabled}
+      >
+        <View style={innerContainerStyle}>
+          {groupImageElement}
+          {genderTextElement}
         </View>
+        {downIconElement}
+      </Ripple>
 
-    )
-}
+      <Modal
+        visible={genderModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeGenderModal}
+      >
+        <TouchableOpacity
+          style={Styles.modalContainer}
+          activeOpacity={1}
+          onPress={closeGenderModal}
+        >
+          <Animation style={Styles.listContainer} duration={300}>
+            <FlatList
+              data={genders}
+              renderItem={renderGenders}
+              keyExtractor={keyExtractor}
+            />
+          </Animation>
+        </TouchableOpacity>
+      </Modal>
+    </View>
+  );
+});
 
-export default GenderPicker
+GenderPicker.displayName = 'GenderPicker';
+
+export default GenderPicker;
 
 const Styles = StyleSheet.create({
-    container: {
-        backgroundColor: Colors.color3,
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        height: hp(6.3),
-        paddingLeft: wp(2),
-        paddingRight: wp(5),
-        borderBottomWidth: 0.7,
-        borderColor: Colors.color1,
-        marginTop: hp(0.8),
-    },
-    label: {
-        fontSize: Typography.medium,
-        fontFamily: Fonts.APPFONT_R,
-        marginBottom: Constants.fontFamilyMarginBottom,
-        color: Colors.color1
-    },
-    innerContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        height: hp(6),
-    },
-    groupUserIcon: {
-        width: wp(4.5),
-        height: hp(4)
-    },
-    outerBtnLabel: {
-        fontFamily: Fonts.APPFONT_R,
-        color: Colors.color1,
-        fontSize: Typography.small3,
-        marginTop: !isIOS ? hp(0.35) : 0,
-        alignSelf: 'center',
-        marginHorizontal: wp(3)
-    },
-    modalContainer: {
-        flex: 1,
-        backgroundColor: 'rgba(0, 0, 0,0.5)',
-        justifyContent: 'flex-end'
-    },
-    listContainer: {
-        width: wp(100),
-        paddingVertical: hp(2),
-        paddingHorizontal: wp(4),
-        backgroundColor: Colors.color2,
-        borderTopRightRadius: 20,
-        borderTopLeftRadius: 20,
-    },
-    itemContainer: {
-        paddingVertical: hp(1.4),
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    itemLabel: {
-        marginHorizontal: wp(1),
-        fontSize: Typography.medium,
-        color: Colors.color1,
-        fontFamily: Fonts.APPFONT_R,
-        marginBottom: Constants.fontFamilyMarginBottom,
-    }
-})
+  container: {
+    backgroundColor: Colors.color3,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    height: hp(6.3),
+    paddingLeft: wp(2),
+    paddingRight: wp(5),
+    borderBottomWidth: 0.7,
+    borderColor: Colors.color1,
+    marginTop: hp(0.8),
+  },
+  label: {
+    fontSize: Typography.medium,
+    fontFamily: Fonts.APPFONT_R,
+    marginBottom: Constants.fontFamilyMarginBottom,
+    color: Colors.color1,
+  },
+  innerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: hp(6),
+  },
+  groupUserIcon: {
+    width: wp(4.5),
+    height: hp(4),
+  },
+  outerBtnLabel: {
+    fontFamily: Fonts.APPFONT_R,
+    color: Colors.color1,
+    fontSize: Typography.small3,
+    marginTop: !isIOS ? hp(0.35) : 0,
+    alignSelf: 'center',
+    marginHorizontal: wp(3),
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  listContainer: {
+    width: wp(100),
+    paddingVertical: hp(2),
+    paddingHorizontal: wp(4),
+    backgroundColor: Colors.color2,
+    borderTopRightRadius: 20,
+    borderTopLeftRadius: 20,
+  },
+  itemContainer: {
+    paddingVertical: hp(1.4),
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  itemLabel: {
+    marginHorizontal: wp(1),
+    fontSize: Typography.medium,
+    color: Colors.color1,
+    fontFamily: Fonts.APPFONT_R,
+    marginBottom: Constants.fontFamilyMarginBottom,
+  },
+});
