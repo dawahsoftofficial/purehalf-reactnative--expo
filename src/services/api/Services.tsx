@@ -20,61 +20,138 @@ const { storageKeys, setData, getData } = StorageManager;
 class GApiServices {
   socialAuthenticate = (provider: string) => {
     return new Promise(async (resolve, reject) => {
+      console.log(
+        '[socialAuthenticate] Starting social authentication with provider:',
+        provider
+      );
       Firebase.googleSignIn()
         .then(async (googleRes: any) => {
+          // Handle response structure - could be direct or wrapped in data
+          const idToken = googleRes?.data?.idToken || googleRes?.idToken;
+          const userData = googleRes?.data?.user || googleRes?.user;
+          const email = userData?.email;
+          const givenName = userData?.givenName;
+          const familyName = userData?.familyName;
+
+          console.log('[socialAuthenticate] Google sign-in successful:', {
+            hasIdToken: !!idToken,
+            hasUser: !!userData,
+            userEmail: email,
+            userId: userData?.id,
+            responseStructure: {
+              hasData: !!googleRes?.data,
+              hasDirectIdToken: !!googleRes?.idToken,
+              hasDirectUser: !!googleRes?.user,
+            },
+          });
           let fcmToken;
           try {
             fcmToken = await getData(storageKeys.FCM_TOKEN);
+            console.log(
+              '[socialAuthenticate] FCM token retrieved:',
+              !!fcmToken
+            );
           } catch (error) {
-            console.error('Error retrieving FCM token:', error);
+            console.error(
+              '[socialAuthenticate] Error retrieving FCM token:',
+              error
+            );
             fcmToken = 'defaultFCMToken';
           }
-          Api.post(EndPoints.socialAuthenticate, {
-            token: googleRes?.idToken,
-            email: googleRes?.user?.email,
+          const requestPayload = {
+            token: idToken,
+            email: email,
             provider,
             fcm_token: fcmToken,
             device_type: !isIOS ? 0 : 1,
-          })
+          };
+          console.log('[socialAuthenticate] Calling API with payload:', {
+            hasToken: !!requestPayload.token,
+            email: requestPayload.email,
+            provider: requestPayload.provider,
+            hasFcmToken: !!requestPayload.fcm_token,
+            deviceType: requestPayload.device_type,
+          });
+          Api.post(EndPoints.socialAuthenticate, requestPayload)
             .then(async (apiRes: any) => {
+              console.log('[socialAuthenticate] API call successful:', {
+                hasData: !!apiRes?.data,
+                hasResults: !!apiRes?.data?.results,
+                hasBearerToken: !!apiRes?.data?.bearer_token,
+              });
               const apiResult = apiRes?.data?.results;
 
-              const firstName =
-                apiResult?.first_name || googleRes?.user?.givenName || '';
-              const lastName =
-                apiResult?.last_name || googleRes?.user?.familyName || '';
+              const firstName = apiResult?.first_name || givenName || '';
+              const lastName = apiResult?.last_name || familyName || '';
 
               apiResult.first_name = firstName;
               apiResult.last_name = lastName;
 
+              console.log(
+                '[socialAuthenticate] Saving user data to storage...'
+              );
               await setData(storageKeys.USER, apiResult);
               await setData(storageKeys.USER_TOKEN, apiRes?.data?.bearer_token);
               await Firebase.handleIsLoggedIn(true);
 
               if (apiResult?.banned_at && apiResult?.banned_at?.length !== 0) {
+                console.log('[socialAuthenticate] User is banned');
                 flashErrorMessage(
                   'You are banned and not allowed to login anymore.'
                 );
-                reject('');
+                const banError = new Error('User is banned');
+                reject(banError);
               } else {
                 const res = {
                   user: apiResult,
                 };
+                console.log(
+                  '[socialAuthenticate] Authentication completed successfully:',
+                  {
+                    userId: apiResult?.id,
+                    userEmail: apiResult?.email,
+                  }
+                );
                 resolve(res);
               }
             })
             .catch((error: any) => {
-              flashErrorMessage(error?.response?.data?.message, 4);
-              reject('');
-              console.log(
-                'error while authenticating User with google =>',
-                error?.response?.data
+              const errorData = error?.response?.data || error;
+              console.error(
+                '[socialAuthenticate] API error while authenticating User with google:',
+                {
+                  message: error?.message || errorData?.message,
+                  errorData: errorData,
+                  responseData: error?.response?.data,
+                  responseStatus: error?.response?.status,
+                  statusCode: error?.response?.status || errorData?.code,
+                  errorCode: error?.code || errorData?.code,
+                  results: errorData?.results,
+                  resultsArray: Array.isArray(errorData?.results)
+                    ? errorData.results.map((r: any, i: number) => ({
+                        index: i,
+                        ...r,
+                      }))
+                    : errorData?.results,
+                  fullError: JSON.stringify(error, null, 2),
+                }
               );
+              const errorMessage =
+                errorData?.message ||
+                errorData?.results?.[0]?.message ||
+                error?.message ||
+                'Authentication failed';
+              flashErrorMessage(errorMessage, 4);
+              reject(error);
             });
         })
-        .catch((error) => {
-          console.log('error while authentication User with google =>', error);
-          reject('');
+        .catch((error: any) => {
+          console.error('[socialAuthenticate] Error in Google sign-in:', {
+            error,
+            message: error?.message,
+            code: error?.code,
+          });
+          reject(error);
         });
     });
   };

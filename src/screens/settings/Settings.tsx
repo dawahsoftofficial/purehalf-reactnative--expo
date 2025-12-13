@@ -1,29 +1,30 @@
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Image,
-  Dimensions,
-  ActivityIndicator,
-  Linking,
-} from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import auth from '@react-native-firebase/auth';
+import { CommonActions } from '@react-navigation/native';
 import React, { useState } from 'react';
-import { Container, Text } from '../../components';
+import {
+  ActivityIndicator,
+  Dimensions,
+  Image,
+  Linking,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Rate from 'react-native-rate';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+
+import { Container, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { Fonts, Colors, Images } from '../../res';
-import { LanguageKeys, CheckRtl } from '../../languages';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
-  StorageManager,
   stopConversationsListener,
+  StorageManager,
   useGlobalContext,
 } from '../../services';
-import { CommonActions } from '@react-navigation/native';
-import auth from '@react-native-firebase/auth';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Rate, { AndroidMarket } from 'react-native-rate';
 
 const Settings = (props: any) => {
   const [loading, setLoading] = useState<any>({
@@ -62,7 +63,10 @@ const Settings = (props: any) => {
   };
 
   const onMembershipPress = () => {
-    if (currentUser?.membership_status === 0 || currentUser?.membership_status === null) {
+    if (
+      currentUser?.membership_status === 0 ||
+      currentUser?.membership_status === null
+    ) {
       props.navigation.navigate('ProFeaturesPromotion');
     } else {
       props.navigation.navigate('MembershipInfo');
@@ -97,7 +101,7 @@ const Settings = (props: any) => {
       visible: true,
       id: LanguageKeys.logOut,
     });
-    let verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID)
+    const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
     await AsyncStorage.setItem('isRecommended', 'false');
     await ApiServices.logout().catch(hideLoader);
     await auth().signOut().catch(hideLoader);
@@ -112,14 +116,14 @@ const Settings = (props: any) => {
           CommonActions.reset({
             index: 1,
             routes: [{ name: 'AuthWelcome' }],
-          }),
+          })
         );
       })
       .catch(hideLoader);
   };
 
   const onHelpAndSupportPress = () => {
-    Linking.openURL("https://purehalf.com/support");
+    Linking.openURL('https://purehalf.com/support');
   };
 
   const onNeedHelpPress = () => {
@@ -140,7 +144,13 @@ const Settings = (props: any) => {
     return <AntDesign name={name} color={Colors.color1} size={wp(6)} />;
   };
 
-  const RenderCommonBtn = ({ icon, iconStyle, name, onPress, loading }: any) => {
+  const RenderCommonBtn = ({
+    icon,
+    iconStyle,
+    name,
+    onPress,
+    loading,
+  }: any) => {
     return Rtl ? (
       <Ripple style={Styles.btnCon} onPress={onPress}>
         <RenderArrow name="arrowleft" />
@@ -148,7 +158,8 @@ const Settings = (props: any) => {
           style={{
             ...Styles.btnConInner,
             justifyContent: Rtl ? 'flex-end' : 'flex-start',
-          }}>
+          }}
+        >
           <RenderBtnName name={name} />
           <RenderBtnIcon icon={icon} style={iconStyle} />
         </View>
@@ -159,7 +170,8 @@ const Settings = (props: any) => {
           style={{
             ...Styles.btnConInner,
             justifyContent: Rtl ? 'flex-end' : 'flex-start',
-          }}>
+          }}
+        >
           <RenderBtnIcon icon={icon} style={iconStyle} />
           <RenderBtnName name={name} />
         </View>
@@ -183,7 +195,8 @@ const Settings = (props: any) => {
       </View>
       <ScrollView
         contentContainerStyle={Styles.innerCon}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         <RenderCommonBtn
           icon={Images.user}
           name={LanguageKeys.basicSettings}
@@ -253,38 +266,71 @@ const Settings = (props: any) => {
           onPress={onLogoutPress}
           loading={loading.visible && loading.id === LanguageKeys.logOut}
         /> */}
-        <View style={{
-          flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 10, marginBottom: 10, paddingTop: 30, flex: 1
-        }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+            gap: 10,
+            marginBottom: 10,
+            paddingTop: 30,
+            flex: 1,
+          }}
+        >
           <Ripple
-            onPress={() => Linking.openURL("https://www.facebook.com/purehalfofficial")}
+            onPress={() =>
+              Linking.openURL('https://www.facebook.com/purehalfofficial')
+            }
           >
-            <RenderBtnIcon icon={Images.facebookIcon} style={Styles.socialIcon} />
+            <RenderBtnIcon
+              icon={Images.facebookIcon}
+              style={Styles.socialIcon}
+            />
           </Ripple>
           <Ripple
-            onPress={() => Linking.openURL("https://www.instagram.com/purehalfofficial")}
+            onPress={() =>
+              Linking.openURL('https://www.instagram.com/purehalfofficial')
+            }
           >
-            <RenderBtnIcon icon={Images.instagramIcon} style={Styles.socialIcon} />
+            <RenderBtnIcon
+              icon={Images.instagramIcon}
+              style={Styles.socialIcon}
+            />
           </Ripple>
           <Ripple
-            onPress={() => Linking.openURL("https://www.tiktok.com/@purehalfofficial")}
+            onPress={() =>
+              Linking.openURL('https://www.tiktok.com/@purehalfofficial')
+            }
           >
             <RenderBtnIcon icon={Images.tiktokIcon} style={Styles.socialIcon} />
           </Ripple>
           <Ripple
-            onPress={() => Linking.openURL("https://www.youtube.com/@purehalfofficial")}
+            onPress={() =>
+              Linking.openURL('https://www.youtube.com/@purehalfofficial')
+            }
           >
-            <RenderBtnIcon icon={Images.youtubeIcon} style={Styles.socialIcon} />
+            <RenderBtnIcon
+              icon={Images.youtubeIcon}
+              style={Styles.socialIcon}
+            />
+          </Ripple>
+          <Ripple onPress={() => Linking.openURL('https://purehalf.com/')}>
+            <RenderBtnIcon
+              icon={Images.websiteIcon}
+              style={Styles.socialIcon}
+            />
           </Ripple>
           <Ripple
-            onPress={() => Linking.openURL("https://purehalf.com/")}
+            onPress={() =>
+              Linking.openURL(
+                'https://whatsapp.com/channel/0029Va8AMdt8vd1MeOSlPH25'
+              )
+            }
           >
-            <RenderBtnIcon icon={Images.websiteIcon} style={Styles.socialIcon} />
-          </Ripple>
-          <Ripple
-            onPress={() => Linking.openURL("https://whatsapp.com/channel/0029Va8AMdt8vd1MeOSlPH25")}
-          >
-            <RenderBtnIcon icon={Images.whatsappIcon} style={Styles.socialIcon} />
+            <RenderBtnIcon
+              icon={Images.whatsappIcon}
+              style={Styles.socialIcon}
+            />
           </Ripple>
         </View>
       </ScrollView>
@@ -311,7 +357,7 @@ const Styles = StyleSheet.create({
   },
   innerCon: {
     paddingBottom: hp(1),
-    flex: 1
+    flex: 1,
   },
   btnCon: {
     borderRadius: 8,
@@ -347,6 +393,6 @@ const Styles = StyleSheet.create({
   },
   socialIcon: {
     width: 35,
-    height: 35
-  }
+    height: 35,
+  },
 });

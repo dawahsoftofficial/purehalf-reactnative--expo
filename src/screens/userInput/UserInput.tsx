@@ -1,41 +1,40 @@
-import { ScrollView, View, StyleSheet, SafeAreaView } from 'react-native';
-import React, { useState, useEffect } from 'react';
-import moment from 'moment';
-import _ from 'lodash';
-import Ripple from 'react-native-material-ripple';
-import { hasNotch } from 'react-native-device-info';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { CommonActions as CommonActionsNav } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
+import { CommonActions as CommonActionsNav } from '@react-navigation/native';
+import _ from 'lodash';
+import moment from 'moment';
+import React, { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { hasNotch } from 'react-native-device-info';
+import Ripple from 'react-native-material-ripple';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   Button,
   CheckMembershipStatus,
   Container,
-  CountryPicker,
   DateTimePicker,
   GenderPicker,
   Header,
-  Loader,
-  SlideShowContainer,
-  Text,
   IconInput,
+  Loader,
+  Text,
 } from '../../components';
-import { Images } from '../../res';
-import { hp, wp, Typography } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
+import { CommonActions } from '../../navigation';
+import { Images } from '../../res';
 import { Colors, Fonts } from '../../res';
 import {
-  checkEmpty,
-  StorageManager,
   ApiServices,
-  useGlobalContext,
-  flashSuccessMessage,
+  checkEmpty,
   flashErrorMessage,
-  stopConversationsListener,
+  flashSuccessMessage,
   isIOS,
+  stopConversationsListener,
+  StorageManager,
+  useGlobalContext,
 } from '../../services';
-import { CommonActions } from '../../navigation';
 
 const UserInput = (props: any) => {
   const Rtl = CheckRtl();
@@ -55,7 +54,10 @@ const UserInput = (props: any) => {
 
   const onChangeFirstName = (text: any) => setFirstName(text);
   const onChangeLastName = (text: any) => setLastName(text);
-  const onDateOfBirthSelection = (date: any) => setDateOfBirth(date);
+  const onDateOfBirthSelection = (date: any) => {
+    console.log('date', date);
+    setDateOfBirth(date);
+  };
   const onGenderChange = (value: any) => setGender(value);
   const hideLoader = () => setSubmitLoader(false);
   // const showCountryPicker = () => setCountryPickerVisible(true)
@@ -159,7 +161,7 @@ const UserInput = (props: any) => {
     getData(storageKeys.LANGUAGE).then((language: any) => {
       ApiServices.getLanguages().then((data: any) => {
         if (data?.length !== 0) {
-          let result = _.find(data, function (n) {
+          const result = _.find(data, function (n) {
             if (n.short_code?.toLowerCase() === language.toLowerCase()) {
               return n;
             }
@@ -178,7 +180,7 @@ const UserInput = (props: any) => {
   }, []);
 
   const onLogoutPress = async () => {
-    let verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
+    const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
     await AsyncStorage.setItem('isRecommended', 'false');
     await ApiServices.logout().catch(hideLoader);
     await auth().signOut().catch(hideLoader);
@@ -406,7 +408,7 @@ const Styles = StyleSheet.create({
     // width: wp(100),
     paddingHorizontal: wp(2),
     justifyContent: 'center',
-    paddingVertical: hasNotch() && isIOS ? 20 : 0,
+    // paddingVertical: hasNotch() && isIOS ? 20 : 0,
     zIndex: 1,
   },
   container2: {

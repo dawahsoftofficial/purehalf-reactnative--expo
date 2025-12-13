@@ -7,15 +7,14 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Linking,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
   Text as DefaultText,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import DeviceInfo, { hasNotch } from 'react-native-device-info';
+import DeviceInfo from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { Animation } from '../../animations';
@@ -82,17 +81,72 @@ const AuthWelcome = (props: any) => {
       props.navigation.navigate('PhoneNumber');
     } else if (type === 'google') {
       try {
+        console.log('[Google Login] Starting Google authentication...');
         setLoader(true);
         ApiServices.socialAuthenticate('google')
           .then(async (res: any) => {
-            const user = await ApiServices.getCurrentUserDetail();
-            updateCurrentUser(user);
-            onVerified(user);
-            setLoader(false);
+            console.log('[Google Login] socialAuthenticate success:', {
+              hasRes: !!res,
+              hasUser: !!res?.user,
+              userId: res?.user?.id,
+              userEmail: res?.user?.email,
+              responseKeys: res ? Object.keys(res) : [],
+            });
+            try {
+              console.log('[Google Login] Fetching current user details...');
+              const user = await ApiServices.getCurrentUserDetail();
+              console.log('[Google Login] getCurrentUserDetail success:', {
+                hasUser: !!user,
+                userId: user?.id,
+                userEmail: user?.email,
+                userKeys: user ? Object.keys(user) : [],
+              });
+              console.log('[Google Login] Updating current user in context...');
+              updateCurrentUser(user);
+              console.log('[Google Login] Calling onVerified with user:', {
+                userId: user?.id,
+                hasLocation: !!(user?.latitude && user?.longitude),
+                hasProfile: !!(
+                  user?.first_name &&
+                  user?.last_name &&
+                  user?.gender &&
+                  user?.date_of_birth
+                ),
+              });
+              onVerified(user);
+              setLoader(false);
+              console.log('[Google Login] Google login completed successfully');
+            } catch (userError: any) {
+              console.error(
+                '[Google Login] Error in getCurrentUserDetail or onVerified:',
+                {
+                  error: userError,
+                  message: userError?.message,
+                  stack: userError?.stack,
+                  response: userError?.response?.data,
+                }
+              );
+              setLoader(false);
+            }
           })
-          .catch(hideLoading);
-      } catch (error) {
-        console.log({ error });
+          .catch((error: any) => {
+            console.error('[Google Login] Error in socialAuthenticate:', {
+              error,
+              message: error?.message,
+              stack: error?.stack,
+              response: error?.response?.data,
+              status: error?.response?.status,
+              code: error?.code,
+            });
+            hideLoading();
+          });
+      } catch (error: any) {
+        console.error('[Google Login] Error in try block:', {
+          error,
+          message: error?.message,
+          stack: error?.stack,
+        });
+        setLoader(false);
       }
     } else if (type === 'apple') {
       try {
@@ -112,65 +166,169 @@ const AuthWelcome = (props: any) => {
     }
 
     const onVerified = async (user: any) => {
-      await setRevenueCat(user?.id);
-      ApiServices.getMembershipStatus().then(async (res: any) => {
-        if (res || user?.membership_status) {
-          user.membership_expiry =
-            res?.membership_expiry || user.membership_expiry;
-          user.membership_status = 1;
-        } else {
-          user.membership_expiry = null;
-          user.membership_status = 0;
+      console.log(
+        '[Google Login - onVerified] Starting verification process:',
+        {
+          userId: user?.id,
+          userEmail: user?.email,
         }
-        const userData = await ApiServices.getCurrentUserDetail();
-        updateCurrentUser({ ...userData, ...user });
-        await setData(storageKeys.USER, { ...userData, ...user });
-      });
+      );
+      try {
+        console.log(
+          '[Google Login - onVerified] Setting RevenueCat with userId:',
+          user?.id
+        );
+        await setRevenueCat(user?.id);
+        console.log('[Google Login - onVerified] RevenueCat set successfully');
 
-      setLoading(false);
-
-      if (!user?.latitude || !user?.longitude) {
-        props.navigation.navigate('Location');
-      } else if (
-        user?.first_name &&
-        user?.last_name &&
-        user?.gender &&
-        user?.date_of_birth
-      ) {
-        if (
-          !user?.media ||
-          !user?.media?.primary_image ||
-          user?.media?.primary_image?.length === 0
-        ) {
-          props.navigation.navigate('ProfilePicture');
-        } else if (
-          user?.membership_status === null ||
-          user?.membership_status === 0
-        ) {
-          props.navigation.reset({
-            index: 0,
-            routes: [
+        console.log(
+          '[Google Login - onVerified] Fetching membership status...'
+        );
+        ApiServices.getMembershipStatus()
+          .then(async (res: any) => {
+            console.log(
+              '[Google Login - onVerified] getMembershipStatus response:',
               {
-                name: 'ProFeaturesPromotion',
-                params: {
-                  navigateTo: 'BottomTab',
-                  from: 'SignUp',
-                },
-              },
-            ],
+                hasRes: !!res,
+                membershipExpiry: res?.membership_expiry,
+                userMembershipStatus: user?.membership_status,
+              }
+            );
+
+            if (res || user?.membership_status) {
+              user.membership_expiry =
+                res?.membership_expiry || user.membership_expiry;
+              user.membership_status = 1;
+              console.log(
+                '[Google Login - onVerified] User has active membership'
+              );
+            } else {
+              user.membership_expiry = null;
+              user.membership_status = 0;
+              console.log(
+                '[Google Login - onVerified] User does not have active membership'
+              );
+            }
+
+            console.log(
+              '[Google Login - onVerified] Fetching updated user data...'
+            );
+            const userData = await ApiServices.getCurrentUserDetail();
+            console.log('[Google Login - onVerified] User data retrieved:', {
+              userId: userData?.id,
+              hasUserData: !!userData,
+            });
+
+            console.log(
+              '[Google Login - onVerified] Updating user in context and storage...'
+            );
+            updateCurrentUser({ ...userData, ...user });
+            await setData(storageKeys.USER, { ...userData, ...user });
+            console.log(
+              '[Google Login - onVerified] User data saved successfully'
+            );
+          })
+          .catch((error: any) => {
+            console.error(
+              '[Google Login - onVerified] Error in getMembershipStatus:',
+              {
+                error,
+                message: error?.message,
+                response: error?.response?.data,
+              }
+            );
           });
+
+        setLoading(false);
+
+        console.log(
+          '[Google Login - onVerified] Determining navigation path...',
+          {
+            hasLocation: !!(user?.latitude && user?.longitude),
+            hasFirstName: !!user?.first_name,
+            hasLastName: !!user?.last_name,
+            hasGender: !!user?.gender,
+            hasDateOfBirth: !!user?.date_of_birth,
+            hasMedia: !!user?.media,
+            hasPrimaryImage: !!(
+              user?.media?.primary_image &&
+              user?.media?.primary_image?.length > 0
+            ),
+            membershipStatus: user?.membership_status,
+          }
+        );
+
+        if (!user?.latitude || !user?.longitude) {
+          console.log(
+            '[Google Login - onVerified] Navigating to Location screen (no location)'
+          );
+          props.navigation.navigate('Location');
+        } else if (
+          user?.first_name &&
+          user?.last_name &&
+          user?.gender &&
+          user?.date_of_birth
+        ) {
+          if (
+            !user?.media ||
+            !user?.media?.primary_image ||
+            user?.media?.primary_image?.length === 0
+          ) {
+            console.log(
+              '[Google Login - onVerified] Navigating to ProfilePicture screen (no profile picture)'
+            );
+            props.navigation.navigate('ProfilePicture');
+          } else if (
+            user?.membership_status === null ||
+            user?.membership_status === 0
+          ) {
+            console.log(
+              '[Google Login - onVerified] Navigating to ProFeaturesPromotion screen (no membership)'
+            );
+            props.navigation.reset({
+              index: 0,
+              routes: [
+                {
+                  name: 'ProFeaturesPromotion',
+                  params: {
+                    navigateTo: 'BottomTab',
+                    from: 'SignUp',
+                  },
+                },
+              ],
+            });
+          } else {
+            console.log(
+              '[Google Login - onVerified] Navigating to BottomTab screen (all conditions met)'
+            );
+            props.navigation.navigate('BottomTab');
+          }
+        } else if (
+          !user?.first_name ||
+          !user?.last_name ||
+          !user?.gender ||
+          !user?.date_of_birth
+        ) {
+          console.log(
+            '[Google Login - onVerified] Navigating to UserInput screen (incomplete profile)'
+          );
+          props.navigation.navigate('UserInput');
         } else {
+          console.log(
+            '[Google Login - onVerified] Navigating to BottomTab screen (fallback)'
+          );
           props.navigation.navigate('BottomTab');
         }
-      } else if (
-        !user?.first_name ||
-        !user?.last_name ||
-        !user?.gender ||
-        !user?.date_of_birth
-      ) {
-        props.navigation.navigate('UserInput');
-      } else {
-        props.navigation.navigate('BottomTab');
+      } catch (error: any) {
+        console.error(
+          '[Google Login - onVerified] Error in onVerified function:',
+          {
+            error,
+            message: error?.message,
+            stack: error?.stack,
+          }
+        );
+        setLoading(false);
       }
     };
   };
@@ -216,8 +374,8 @@ const AuthWelcome = (props: any) => {
           colors={[Colors.blackRGBA25, Colors.blackRGBA38]}
         />
       </View>
-      <SafeAreaView style={Styles.container}>
-        <View
+      <SafeAreaView edges={['top', 'bottom']} style={Styles.container}>
+        {/* <View
           style={[
             Styles.headerCon,
             {
@@ -252,7 +410,7 @@ const AuthWelcome = (props: any) => {
               {LanguageKeys.guardian}
             </Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
 
         <KeyboardAvoidingView
           behavior={'height'}
@@ -444,7 +602,7 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     height: hp(100),
     width: wp(100),
-    paddingVertical: hasNotch() && isIOS ? 20 : 0,
+    // paddingVertical: hasNotch() && isIOS ? 20 : 0,
     zIndex: 1,
   },
   headerCon: {

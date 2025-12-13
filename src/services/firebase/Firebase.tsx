@@ -18,7 +18,6 @@ class GFirebase {
       GoogleSignin.signIn()
         .then((res: SignInResponse) => {
           resolve(res);
-          console.log(JSON.stringify(res, null, 2));
         })
         .catch((error: Error) => {
           console.log({ error });
