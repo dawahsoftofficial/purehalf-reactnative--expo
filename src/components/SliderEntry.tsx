@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, Image, Dimensions, StyleSheet, ActivityIndicator } from 'react-native';
-import { ParallaxImage } from 'react-native-snap-carousel';
 import PropTypes from 'prop-types';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
@@ -183,20 +182,7 @@ const SliderEntry = ({
         setProfileImageError(true);
     }
 
-    const image = parallax ? (
-        <ParallaxImage
-            source={{ uri: illustration }}
-            containerStyle={[
-                Styles.imageContainer,
-                even ? Styles.imageContainerEven : {},
-            ]}
-            style={Styles.image}
-            parallaxFactor={0.35}
-            showSpinner={true}
-            spinnerColor={even ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.25)'}
-            {...parallaxProps}
-        />
-    ) : (
+    const image = (
         <View style={{ ...Styles.profileImageCon, ...Styles.shadow, left: 0, right: 0, bottom: 0 }}>
             {!profileImageError && data?.media?.primary_image ?
                 <Image

@@ -1,15 +1,15 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useRef, useState } from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
+import { Dimensions, Modal, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Carousel from 'react-native-snap-carousel';
+import Carousel from 'react-native-reanimated-carousel';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import { wp } from '../global';
 import { LanguageKeys } from '../languages';
 import { Colors } from '../res';
 import { ApiServices, flashSuccessMessage, isIOS } from '../services';
-import SliderEntry, { itemWidth, sliderWidth } from './SliderEntry';
+import SliderEntry from './SliderEntry';
 
 const _renderItem = ({
   item,
@@ -31,6 +31,8 @@ const _renderItem = ({
   );
 };
 
+const { width: screenWidth } = Dimensions.get('window');
+
 const SwiperComponent = ({
   onPress,
 }: {
@@ -39,6 +41,7 @@ const SwiperComponent = ({
   const swiper: any = useRef(null);
   const [users, setUsers] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [currentIndex, setCurrentIndex] = useState<number>(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -46,12 +49,17 @@ const SwiperComponent = ({
       ApiServices.getRecommendedUser().then((res: any) => {
         setUsers([...res, { id: null }]);
         setLoading(false);
+        setCurrentIndex(0);
       });
     }, [])
   );
 
   const swipeNext = () => {
-    swiper?.current?.snapToNext();
+    if (currentIndex < users.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
+      swiper?.current?.scrollTo({ index: nextIndex, animated: true });
+    }
   };
 
   const onLikePress = (id: number) => {
@@ -62,7 +70,7 @@ const SwiperComponent = ({
     };
     ApiServices.interactionAction(params).then(() => {
       flashSuccessMessage(LanguageKeys.liked);
-      swiper?.current?.snapToNext();
+      swipeNext();
     });
   };
 
@@ -71,8 +79,8 @@ const SwiperComponent = ({
       top_pics: JSON.stringify([id]),
     };
     ApiServices.topPicks(params)
-      .then((res) => {
-        swiper?.current?.snapToNext();
+      .then(() => {
+        swipeNext();
       })
       .catch();
   };
@@ -99,16 +107,12 @@ const SwiperComponent = ({
                 onPress,
               })
             }
-            sliderWidth={sliderWidth}
-            itemWidth={itemWidth}
-            hasParallaxImages={true}
-            firstItem={0}
-            inactiveSlideScale={0.94}
-            inactiveSlideOpacity={0.7}
-            containerCustomStyle={Styles.slider}
-            contentContainerCustomStyle={Styles.sliderContentContainer}
-            autoplay={false}
-            scrollEnabled={false}
+            width={screenWidth}
+            height={Dimensions.get('window').height}
+            loop={false}
+            enabled={false}
+            style={Styles.slider}
+            onSnapToItem={(index) => setCurrentIndex(index)}
           />
         ) : null}
       </View>
