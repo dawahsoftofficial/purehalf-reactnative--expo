@@ -1,979 +1,1030 @@
-import EndPoints from './EndPoints';
-import { StorageManager } from '../storageManager';
-import { Api } from './Middleware';
+import {
+  appleAuth,
+  type AppleRequestResponseFullName,
+} from '@invertase/react-native-apple-authentication';
+import auth from '@react-native-firebase/auth';
+import axios from 'axios';
+import Purchases from 'react-native-purchases';
+
+import { LanguageKeys } from '../../languages';
+import { isIOS } from '../CommonServices';
 import { Firebase } from '../firebase';
 import { flashErrorMessage, flashSuccessMessage } from '../FlashMessages';
-import axios from 'axios'
+import { StorageManager } from '../storageManager';
 import BaseUrl from './BaseUrl';
-import Purchases from 'react-native-purchases';
-import { LanguageKeys } from '../../languages';
-import { AppleRequestResponseFullName, appleAuth } from "@invertase/react-native-apple-authentication";
-import auth from '@react-native-firebase/auth';
-import { isIOS } from '../CommonServices';
-
+import EndPoints from './EndPoints';
+import { Api } from './Middleware';
 
 const { storageKeys, setData, getData } = StorageManager;
 
 class GApiServices {
-    socialAuthenticate = (provider: string) => {
-        return new Promise(async (resolve, reject) => {
-            Firebase.googleSignIn().then(async (googleRes: any) => {
-                let fcmToken;
-                try {
-                    fcmToken = await getData(storageKeys.FCM_TOKEN);
-                } catch (error) {
-                    console.error("Error retrieving FCM token:", error);
-                    fcmToken = 'defaultFCMToken'
-                }
-                Api.post(
-                    EndPoints.socialAuthenticate,
-                    {
-                        token: googleRes?.idToken,
-                        email: googleRes?.user?.email,
-                        provider,
-                        fcm_token: fcmToken,
-                        device_type: !isIOS ? 0 : 1
-                    }
-                )
-                    .then(async (apiRes: any) => {
-                        const apiResult = apiRes?.data?.results
+  socialAuthenticate = (provider: string) => {
+    return new Promise(async (resolve, reject) => {
+      Firebase.googleSignIn()
+        .then(async (googleRes: any) => {
+          let fcmToken;
+          try {
+            fcmToken = await getData(storageKeys.FCM_TOKEN);
+          } catch (error) {
+            console.error('Error retrieving FCM token:', error);
+            fcmToken = 'defaultFCMToken';
+          }
+          Api.post(EndPoints.socialAuthenticate, {
+            token: googleRes?.idToken,
+            email: googleRes?.user?.email,
+            provider,
+            fcm_token: fcmToken,
+            device_type: !isIOS ? 0 : 1,
+          })
+            .then(async (apiRes: any) => {
+              const apiResult = apiRes?.data?.results;
 
-                        const firstName = apiResult?.first_name || googleRes?.user?.givenName || ''
-                        const lastName = apiResult?.last_name || googleRes?.user?.familyName || ''
+              const firstName =
+                apiResult?.first_name || googleRes?.user?.givenName || '';
+              const lastName =
+                apiResult?.last_name || googleRes?.user?.familyName || '';
 
-                        apiResult.first_name = firstName
-                        apiResult.last_name = lastName
+              apiResult.first_name = firstName;
+              apiResult.last_name = lastName;
 
-                        await setData(storageKeys.USER, apiResult)
-                        await setData(storageKeys.USER_TOKEN, apiRes?.data?.bearer_token)
-                        await Firebase.handleIsLoggedIn(true)
+              await setData(storageKeys.USER, apiResult);
+              await setData(storageKeys.USER_TOKEN, apiRes?.data?.bearer_token);
+              await Firebase.handleIsLoggedIn(true);
 
-                        if (apiResult?.banned_at && apiResult?.banned_at?.length !== 0) {
-                            flashErrorMessage("You are banned and not allowed to login anymore.")
-                            reject('')
-                        }
-                        else {
-                            const res = {
-                                user: apiResult,
-                            }
-                            resolve(res)
-                        }
-                    })
-                    .catch((error: any) => {
-                        flashErrorMessage(error?.response?.data?.message, 4)
-                        reject('')
-                        console.log('error while authenticating User with google =>', error?.response?.data)
-                    })
+              if (apiResult?.banned_at && apiResult?.banned_at?.length !== 0) {
+                flashErrorMessage(
+                  'You are banned and not allowed to login anymore.'
+                );
+                reject('');
+              } else {
+                const res = {
+                  user: apiResult,
+                };
+                resolve(res);
+              }
             })
-                .catch((error) => {
-                    console.log('error while authentication User with google =>', error)
-                    reject('')
-                })
-
+            .catch((error: any) => {
+              flashErrorMessage(error?.response?.data?.message, 4);
+              reject('');
+              console.log(
+                'error while authenticating User with google =>',
+                error?.response?.data
+              );
+            });
         })
-    }
-    socialAppleAuthenticate = (provider: string) => {
-        return new Promise(async (resolve, reject) => {
-            let appleFullName: AppleRequestResponseFullName | null = null
-            try {
-                const appleAuthRequestResponse = await appleAuth.performRequest({
-                    requestedOperation: appleAuth.Operation.LOGIN,
-                    // As per the FAQ of react-native-apple-authentication, the name should come first in the following array.
-                    // See: https://github.com/invertase/react-native-apple-authentication#faqs
-                    requestedScopes: [appleAuth.Scope.FULL_NAME, appleAuth.Scope.EMAIL],
-                });
-                const { identityToken, nonce, fullName } = appleAuthRequestResponse;
-                appleFullName = fullName
-                const appleCredential = auth.AppleAuthProvider.credential(identityToken, nonce);
-                auth().signInWithCredential(appleCredential).then(async (res: any) => {
-                    let fcmToken;
-                    try {
-                        fcmToken = await getData(storageKeys.FCM_TOKEN);
-                    } catch (error) {
-                        console.error("Error retrieving FCM token:", error);
-                        fcmToken = 'defaultFCMToken'
-                    }
-
-                    Api.post(
-                        EndPoints.socialAuthenticate,
-                        {
-                            token: appleCredential?.token,
-                            email: res?.user?.email,
-                            provider,
-                            fcm_token: fcmToken,
-                            device_type: !isIOS ? 0 : 1
-                        }
-                    )
-                        .then(async (apiRes: any) => {
-                            let apiResult = apiRes?.data?.results
-                            let firstName = '';
-                            let lastName = '';
-
-                            if (appleFullName) {
-                                const { givenName, familyName } = appleFullName
-                                firstName = givenName || ''
-                                lastName = familyName || ''
-                            }
-
-                            apiResult.first_name = apiResult?.first_name || firstName
-                            apiResult.last_name = apiResult?.last_name || lastName
-
-                            await setData(storageKeys.USER, apiResult)
-                            await setData(storageKeys.USER_TOKEN, apiRes?.data?.bearer_token)
-                            await Firebase.handleIsLoggedIn(true)
-
-                            if (apiResult?.banned_at && apiResult?.banned_at?.length !== 0) {
-                                flashErrorMessage("You are banned and not allowed to login anymore.")
-                                reject('')
-                            }
-                            else {
-                                const res = {
-                                    user: apiResult,
-                                }
-                                resolve(res)
-                            }
-                        })
-                        .catch((error: any) => {
-                            flashErrorMessage(error?.response?.data?.message, 4)
-                            reject('')
-                            console.log('error while authenticating User with google =>', error?.response?.data)
-                        })
-                })
-            } catch (error) {
-                console.log('error while authentication User with google =>', error)
-                reject('')
-            }
-        })
-    }
-
-    loginUser = async (phoneNumber: any, onLogin: Function) => {
-        return new Promise(async (resolve, reject) => {
-            let fcmToken;
-            try {
-                fcmToken = await getData(storageKeys.FCM_TOKEN);
-            } catch (error) {
-                console.error("Error retrieving FCM token:", error);
-                fcmToken = 'defaultFCMToken'
-            }
-            Api.post(
-                EndPoints.authenticate,
-                {
-                    phone_number: phoneNumber,
-                    fcm_token: fcmToken,
-                    device_type: !isIOS ? 0 : 1
-                }
-            )
-                .then(async (apiRes: any) => {
-                    const apiResult = apiRes?.data?.results
-                    await setData(storageKeys.USER, apiResult)
-                    await setData(storageKeys.USER_TOKEN, apiRes?.data?.bearer_token)
-                    if (apiResult?.banned_at && apiResult?.banned_at?.length !== 0) {
-                        flashErrorMessage("You are banned and not allowed to login anymore.")
-                        reject('')
-                    }
-                    else {
-                        onLogin(apiRes?.data)
-                    }
-                })
-                .catch((error) => {
-                    reject('')
-                    console.log('error while authenticating User =>', error?.response?.data)
-                })
-        })
-    }
-
-    authenticateUser = (phoneNumber: any, onLogin: Function, fromOtp: boolean) => {
-        return new Promise(async (resolve, reject) => {
-            // const fcmToken = await getData(storageKeys.FCM_TOKEN)
-            if (fromOtp) {
-                this.loginUser(phoneNumber, onLogin)
-            } else {
-                let user = auth().currentUser
-                Firebase.sendVerificationCode(phoneNumber).then(async (verificationRes) => {
-                    const res = {
-                        verificationRes: verificationRes
-                    }
-                    let verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
-                    await setData(storageKeys.FIREBASE_VERIFICATION_ID, res?.verificationRes?.['_verificationId'])
-
-                    if (verificationId === res?.verificationRes?.['_verificationId']) {
-                        this.loginUser(phoneNumber, onLogin)
-                    } else {
-                        resolve(res)
-                    }
-                })
-                    .catch((error) => {
-                        console.log('error while authentication User on firebase with phone number =>', error)
-                        reject('')
-                    })
-            }
-
-
-
-        })
-    }
-
-    updateUserInfo = (params: any) => {
-        return new Promise(async (resolve, reject) => {
-            Api.post(
-                EndPoints.updateInfo,
-                params,
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    const errorMessage = error?.response?.data?.results
-                    if (errorMessage && errorMessage?.length !== 0) {
-                        flashErrorMessage(errorMessage[0])
-                    }
-                    else {
-                        flashErrorMessage()
-                    }
-                    reject('')
-                    console.log('error while updating auth info =>', error)
-                })
-        })
-    }
-
-    getButtonsActiveStatus = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                EndPoints.getButtonsActiveStatus
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting Button Status =>', error)
-                    reject('')
-                })
-        })
-    }
-    getLanguages = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                EndPoints.getLanguageList
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting languages =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    getNationality = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                EndPoints.getNationalityList
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting nationality list =>', error)
-                    reject('')
-                })
-        })
-    }
-
-
-    getUsers = (params = { page: 1, type: -1 }) => {
-        return new Promise((resolve, reject) => {
-            const { page, type } = params
-            Api.get(
-                `${EndPoints.getUsers}?page=${page}&type=${type}`
-            ).then((data) => {
-                if (Array.isArray(data?.data?.results)) {
-                    resolve(data?.data?.results)
-                }
-                else {
-                    resolve([data?.data?.results])
-                }
-            })
-                .catch((error) => {
-                    console.log('error while getting users =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    getAttribute = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                `${EndPoints.getAttribute}`
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting attributes =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    updateDetails = (params: any) => {
-        return new Promise((resolve, reject) => {
-            params.in_app_notifications = 1
-            Api.post(
-                EndPoints.updateDetails,
-                params,
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage(error?.response?.data?.message)
-                    reject('')
-                    console.log('error while updateDetails =>', error)
-                })
-        })
-    }
-
-    getUserDetail = (id: any) => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                `${EndPoints.getUserDetail}/${id}/detail`
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting user detail =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    getRecommendedUser = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(`${EndPoints.recommendedUsers}`)
-                .then(data => {
-                    resolve(data?.data?.results);
-                })
-                .catch(error => {
-                    console.log('error while getting recommended users =>', error?.response?.data);
-                    reject('');
-                });
+        .catch((error) => {
+          console.log('error while authentication User with google =>', error);
+          reject('');
         });
-    };
-
-    logout = () => {
-        return new Promise(async (resolve, reject) => {
-            // const fcmToken = await getData(storageKeys.FCM_TOKEN)
+    });
+  };
+  socialAppleAuthenticate = (provider: string) => {
+    return new Promise(async (resolve, reject) => {
+      let appleFullName: AppleRequestResponseFullName | null = null;
+      try {
+        const appleAuthRequestResponse = await appleAuth.performRequest({
+          requestedOperation: appleAuth.Operation.LOGIN,
+          // As per the FAQ of react-native-apple-authentication, the name should come first in the following array.
+          // See: https://github.com/invertase/react-native-apple-authentication#faqs
+          requestedScopes: [appleAuth.Scope.FULL_NAME, appleAuth.Scope.EMAIL],
+        });
+        const { identityToken, nonce, fullName } = appleAuthRequestResponse;
+        appleFullName = fullName;
+        const appleCredential = auth.AppleAuthProvider.credential(
+          identityToken,
+          nonce
+        );
+        auth()
+          .signInWithCredential(appleCredential)
+          .then(async (res: any) => {
             let fcmToken;
             try {
-                fcmToken = await getData(storageKeys.FCM_TOKEN);
+              fcmToken = await getData(storageKeys.FCM_TOKEN);
             } catch (error) {
-                console.error("Error retrieving FCM token:", error);
-                fcmToken = 'defaultFCMToken'
-            }
-            Api.post(
-                EndPoints.logout,
-                {
-                    fcm_token: fcmToken,
-                },
-            ).then(() => {
-                resolve('')
-            })
-                .catch((error) => {
-                    console.log('error while logging out user =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    imageUpload = (file: any, key: any, youtubeURL: any) => {
-        return new Promise(async (resolve, reject) => {
-            var myHeaders = new Headers();
-            myHeaders.append("Authorization", `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`);
-            myHeaders.append('Content-Type', 'multipart/form-data')
-
-            var formdata = new FormData();
-            if (file?.uri && key) {
-                //@ts-ignore
-                formdata.append('file', {
-                    uri: file.uri,
-                    type: file?.type ? file.type : 'image/jpeg',
-                    name: file.name,
-                })
-                formdata.append("key", key);
+              console.error('Error retrieving FCM token:', error);
+              fcmToken = 'defaultFCMToken';
             }
 
-            if (youtubeURL?.length !== 0) {
-                formdata.append("youtube_url", youtubeURL);
-            }
-
-            var requestOptions = {
-                method: 'POST',
-                headers: myHeaders,
-                body: formdata,
-                redirect: 'follow'
-            };
-            fetch(`${BaseUrl}/auth/media/upload`, requestOptions)
-                .then(response => response.text())
-                .then(result => {
-                    resolve(JSON.parse(result).results)
-                })
-                .catch(error => {
-                    reject('')
-                    console.log('error while uploading image =>', error)
-                });
-        })
-    }
-
-    deleteImage = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.deleteMedia,
-                params,
-            ).then(async res => {
-                flashSuccessMessage(LanguageKeys.imageDeleted)
-                resolve(res?.data?.results)
+            Api.post(EndPoints.socialAuthenticate, {
+              token: appleCredential?.token,
+              email: res?.user?.email,
+              provider,
+              fcm_token: fcmToken,
+              device_type: !isIOS ? 0 : 1,
             })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while deleting image =>', error)
-                })
-        })
-    }
+              .then(async (apiRes: any) => {
+                const apiResult = apiRes?.data?.results;
+                let firstName = '';
+                let lastName = '';
 
-    moveMedia = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.moveMedia,
-                params,
-            ).then(async res => {
-                flashSuccessMessage(LanguageKeys.imageMoved)
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while moving image =>', error)
-                })
-        })
-    }
-
-    interactionAction = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.interactionAction,
-                params,
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while hiting intreaction action api =>', error?.response?.data)
-                })
-        })
-    }
-
-    topPicks = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.topPicks,
-                params,
-            ).then(async res => {
-                resolve(res?.data)
-            })
-                .catch((error) => {
-                    // flashErrorMessage()
-                    reject('')
-                    console.log('error while hiting topPicks api =>', error?.response?.data)
-                })
-        })
-    }
-
-    privatePhotoAccessRequest = (userId: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.privatePhotoAccessRequest,
-                { action_user_id: userId },
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    reject('')
-                    flashErrorMessage(error?.response?.data?.message)
-                    console.log('error while hiting private Photo Access Request api =>', error)
-                })
-        })
-    }
-
-    getUserStats = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                EndPoints.counter
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while running counter API  =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    privatePhotoAcceptRequest = (userId: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.privatePhotoAcceptRequest,
-                { action_user_id: userId },
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while hiting private Photo Accept Request api =>', error?.response.data)
-                })
-        })
-    }
-
-    privatePhotoRejectRequest = (userId: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.privatePhotoRejectRequest,
-                { action_user_id: userId },
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while hiting private Photo Reject Request api =>', error)
-                })
-        })
-    }
-
-    privatePhotoRemoveRequest = (userId: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.privatePhotoRemoveRequest,
-                { action_user_id: userId },
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while hiting private Photo Remove Request api =>', error)
-                })
-        })
-    }
-
-    searchFilterApply = (params: any, page = 1) => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                `${EndPoints.searchFilterApply}?page=${page}${params}`
-            ).then((data) => {
-                resolve(data?.data)
-            })
-                .catch((error) => {
-                    if (error?.response?.data?.results.length !== 0) {
-                        flashErrorMessage(error?.response?.data?.results[0])
-                    }
-                    console.log('error while running search filter API  =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    saveSearchFilter = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.saveSearchFilter,
-                params,
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while saving search filter =>', error?.response?.data)
-                })
-        })
-    }
-
-    getSearchFilters = (page = 1) => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                `${EndPoints.getSearchFilter}?page=${page}`
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while getting filter   =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    sendOTPForAccountDelete = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.deleteAccountOtp,
-                params,
-            ).then(async res => {
-                resolve(res?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while sending otp delete Account =>', error?.response?.data)
-                })
-        })
-    }
-
-    verifyOTP = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.verifyOtp,
-                params,
-            ).then(async res => {
-                resolve(res?.data)
-            })
-                .catch((error) => {
-                    flashErrorMessage(error?.response?.data?.message)
-                    reject('')
-                    console.log('error while verifying otp delete Account =>', error?.response?.data)
-                })
-        })
-    }
-
-    deleteAccount = (purposeOfLeaving: any) => {
-        return new Promise(async (resolve, reject) => {
-            let config = {
-                method: 'delete',
-                maxBodyLength: Infinity,
-                url: `${BaseUrl}${EndPoints.deleteAccount}`,
-                headers: {
-                    'Authorization': `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`,
-                    'Content-Type': 'application/json'
-                },
-                data: JSON.stringify({
-                    "purpose_of_leaving": purposeOfLeaving
-                })
-            };
-            axios.request(config)
-                .then(() => {
-                    flashSuccessMessage(LanguageKeys.accountDeleted)
-                    resolve('')
-                })
-                .catch((error) => {
-                    flashErrorMessage()
-                    reject('')
-                    console.log('error while deleting account =>', error)
-                });
-        })
-    }
-
-    getCurrentUserDetail = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                `${EndPoints.getCurrentUserDetail}`
-            ).then(async (data) => {
-                await setData(storageKeys.USER, data?.data?.results)
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while getting current user detail  =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    getMembershipStatus = () => {
-        return new Promise((resolve, reject) => {
-            Purchases.getCustomerInfo().then((res: any) => {
-                if (res?.activeSubscriptions?.length !== 0) {
-                    const data = {
-                        membership_status: 1,
-                        membership_expiry: res?.latestExpirationDate
-                    }
-                    resolve(data)
+                if (appleFullName) {
+                  const { givenName, familyName } = appleFullName;
+                  firstName = givenName || '';
+                  lastName = familyName || '';
                 }
-                else {
-                    resolve(null)
-                }
-            })
-                .catch((error: any) => {
-                    console.log('error while getting membership info =>', error)
-                    reject('')
-                })
-        })
-    }
 
-    deleteSearchFilter = (id: any) => {
-        return new Promise((resolve, reject) => {
-            Api.delete(`${EndPoints.searchFilter}/${id}/delete`).then(() => {
-                resolve('')
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while deleting search filter =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
+                apiResult.first_name = apiResult?.first_name || firstName;
+                apiResult.last_name = apiResult?.last_name || lastName;
 
-    viewPrivateMedia = (id: any) => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                `${EndPoints.user}/${id}${EndPoints.privateMedia}`
-            ).then(async (data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while getting private media  =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
+                await setData(storageKeys.USER, apiResult);
+                await setData(
+                  storageKeys.USER_TOKEN,
+                  apiRes?.data?.bearer_token
+                );
+                await Firebase.handleIsLoggedIn(true);
 
-    addWaliInformation = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                `${EndPoints.createGuardian}`,
-                params
-            ).then(async (data) => {
-                resolve(data)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while adding wali  =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    removeWali = () => {
-        return new Promise((resolve, reject) => {
-            Api.delete(
-                `${EndPoints.removeGuardian}`
-            ).then(async (data) => {
-                resolve(data)
-            })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while adding wali  =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    resendWaliVerificationCode = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(`${EndPoints.resendOtp}`)
-                .then(async (data) => {
-                    resolve(data)
-                    flashSuccessMessage(LanguageKeys.codeSentToWali)
-                })
-                .catch((error) => {
-                    flashErrorMessage()
-                    console.log('error while resending otp to wali email  =>', error?.response?.data)
-                    reject('')
-                })
-        })
-    }
-
-    authenticateGuardian = async (params: any) => {
-        try {
-            const response = await Api.post(`${EndPoints.authenticateGuardian}`, params)
-            await setData(storageKeys.USER_TOKEN, response?.data?.bearer_token)
-            return response?.data?.results
-        } catch (error: any) {
-            const errorDetail = error?.response?.data
-            if (errorDetail?.message) {
-                flashErrorMessage(errorDetail?.message)
-            }
-            else {
-                flashErrorMessage()
-            }
-
-            console.log('error while logging in guardian =>', errorDetail)
-            throw error
-        }
-    }
-
-    verifyWaliCode = async (otp: any) => {
-        try {
-            const response = await Api.post(`${EndPoints.verifyGuardian}`, { otp })
-            return response
-        } catch (error: any) {
-            error = error?.response?.data
-            if (error?.code === 422) {
-                flashErrorMessage(LanguageKeys.otpMismatchedError)
-            }
-            else if (error?.error) {
-                flashErrorMessage(error?.message)
-            }
-            else {
-                flashErrorMessage()
-            }
-            console.log('error while verifying wali otp =>', error)
-            throw error
-        }
-    }
-
-    changeGuardianPassword = async (params: any) => {
-        try {
-            const response = await Api.post(`${EndPoints.changeGuardianPassword}`, params)
-            return response
-        } catch (error: any) {
-            error = error?.response?.data
-            if (error && error?.results?.length !== 0) {
-                flashErrorMessage(error?.results[0])
-            }
-            else {
-                flashErrorMessage()
-            }
-            console.log('error while changing guardian password =>', error?.response)
-            throw error
-        }
-    }
-
-    getUserDetailGuardian = async (userId: string) => {
-        try {
-            const response = await Api.get(`${EndPoints.guardianAuthUser}/${userId}/detail`)
-            return response.data?.results
-        } catch (error: any) {
-            console.log('error while getting user detail', error?.response)
-            throw error
-        }
-    }
-
-    logoutGuardian = () => {
-        return new Promise((resolve, reject) => {
-            Api.post(EndPoints.guardianLogout).then(() => resolve(''))
-                .catch((error: any) => {
-                    console.log('error while logging out guardian =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    addProfilePicture = (
-        params: any,
-        onProgress: (progress: number) => void,
-    ) => {
-        return new Promise(async (resolve, reject) => {
-            const { uri, type, name } = params
-            const formData = new FormData();
-            formData.append('file', {
-                uri: uri,
-                type: type ? type : 'image/jpeg',
-                name: name,
-            })
-            formData.append("key", "primary_image");
-            const xhr = new XMLHttpRequest();
-            xhr.withCredentials = true;
-            xhr.open("POST", `${BaseUrl}/auth/media/upload`);
-            const userToken = await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)
-            xhr.setRequestHeader("Authorization", `Bearer ${userToken}`);
-            xhr.upload.onprogress = (event) => {
-                const progressPercentage = Math.round((event.loaded / event.total) * 100);
-                onProgress(progressPercentage);
-            }
-            xhr.onload = () => {
-                if (xhr.status === 200) {
-                    const responseData = JSON.parse(xhr.response);
-                    resolve(responseData);
+                if (
+                  apiResult?.banned_at &&
+                  apiResult?.banned_at?.length !== 0
+                ) {
+                  flashErrorMessage(
+                    'You are banned and not allowed to login anymore.'
+                  );
+                  reject('');
                 } else {
-                    if (xhr.response && xhr.response.results && xhr.response.results.length !== 0) {
-                        flashErrorMessage('File must be shorter than 2 MB')
-                    }
-                    else {
-                        flashErrorMessage()
-                    }
-                    reject('')
+                  const res = {
+                    user: apiResult,
+                  };
+                  resolve(res);
                 }
+              })
+              .catch((error: any) => {
+                flashErrorMessage(error?.response?.data?.message, 4);
+                reject('');
+                console.log(
+                  'error while authenticating User with google =>',
+                  error?.response?.data
+                );
+              });
+          });
+      } catch (error) {
+        console.log('error while authentication User with google =>', error);
+        reject('');
+      }
+    });
+  };
+
+  loginUser = async (phoneNumber: any, onLogin: Function) => {
+    return new Promise(async (resolve, reject) => {
+      let fcmToken;
+      try {
+        fcmToken = await getData(storageKeys.FCM_TOKEN);
+      } catch (error) {
+        console.error('Error retrieving FCM token:', error);
+        fcmToken = 'defaultFCMToken';
+      }
+      Api.post(EndPoints.authenticate, {
+        phone_number: phoneNumber,
+        fcm_token: fcmToken,
+        device_type: !isIOS ? 0 : 1,
+      })
+        .then(async (apiRes: any) => {
+          const apiResult = apiRes?.data?.results;
+          await setData(storageKeys.USER, apiResult);
+          await setData(storageKeys.USER_TOKEN, apiRes?.data?.bearer_token);
+          if (apiResult?.banned_at && apiResult?.banned_at?.length !== 0) {
+            flashErrorMessage(
+              'You are banned and not allowed to login anymore.'
+            );
+            reject('');
+          } else {
+            onLogin(apiRes?.data);
+          }
+        })
+        .catch((error) => {
+          reject('');
+          console.log(
+            'error while authenticating User =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  authenticateUser = (
+    phoneNumber: any,
+    onLogin: Function,
+    fromOtp: boolean
+  ) => {
+    return new Promise(async (resolve, reject) => {
+      // const fcmToken = await getData(storageKeys.FCM_TOKEN)
+      if (fromOtp) {
+        this.loginUser(phoneNumber, onLogin);
+      } else {
+        const user = auth().currentUser;
+        Firebase.sendVerificationCode(phoneNumber)
+          .then(async (verificationRes) => {
+            const res = {
+              verificationRes: verificationRes,
             };
-            xhr.onerror = () => {
-                reject('')
+            const verificationId = await getData(
+              storageKeys.FIREBASE_VERIFICATION_ID
+            );
+            await setData(
+              storageKeys.FIREBASE_VERIFICATION_ID,
+              res?.verificationRes?.['_verificationId']
+            );
+
+            if (verificationId === res?.verificationRes?.['_verificationId']) {
+              this.loginUser(phoneNumber, onLogin);
+            } else {
+              resolve(res);
+            }
+          })
+          .catch((error) => {
+            console.log(
+              'error while authentication User on firebase with phone number =>',
+              error
+            );
+            reject('');
+          });
+      }
+    });
+  };
+
+  updateUserInfo = (params: any) => {
+    return new Promise(async (resolve, reject) => {
+      Api.post(EndPoints.updateInfo, params)
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          const errorMessage = error?.response?.data?.results;
+          if (errorMessage && errorMessage?.length !== 0) {
+            flashErrorMessage(errorMessage[0]);
+          } else {
+            flashErrorMessage();
+          }
+          reject('');
+          console.log('error while updating auth info =>', error);
+        });
+    });
+  };
+
+  getButtonsActiveStatus = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.getButtonsActiveStatus)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log('error while getting Button Status =>', error);
+          reject('');
+        });
+    });
+  };
+  getLanguages = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.getLanguageList)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log('error while getting languages =>', error);
+          reject('');
+        });
+    });
+  };
+
+  getNationality = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.getNationalityList)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log('error while getting nationality list =>', error);
+          reject('');
+        });
+    });
+  };
+
+  getUsers = (params = { page: 1, type: -1 }) => {
+    return new Promise((resolve, reject) => {
+      const { page, type } = params;
+      Api.get(`${EndPoints.getUsers}?page=${page}&type=${type}`)
+        .then((data) => {
+          if (Array.isArray(data?.data?.results)) {
+            resolve(data?.data?.results);
+          } else {
+            resolve([data?.data?.results]);
+          }
+        })
+        .catch((error) => {
+          console.log('error while getting users =>', error?.response?.data);
+          reject('');
+        });
+    });
+  };
+
+  getAttribute = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.getAttribute}`)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log('error while getting attributes =>', error);
+          reject('');
+        });
+    });
+  };
+
+  updateDetails = (params: any) => {
+    return new Promise((resolve, reject) => {
+      params.in_app_notifications = 1;
+      Api.post(EndPoints.updateDetails, params)
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage(error?.response?.data?.message);
+          reject('');
+          console.log('error while updateDetails =>', error);
+        });
+    });
+  };
+
+  getUserDetail = (id: any) => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.getUserDetail}/${id}/detail`)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log(
+            'error while getting user detail =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  getRecommendedUser = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.recommendedUsers}`)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log(
+            'error while getting recommended users =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  logout = () => {
+    return new Promise(async (resolve, reject) => {
+      // const fcmToken = await getData(storageKeys.FCM_TOKEN)
+      let fcmToken;
+      try {
+        fcmToken = await getData(storageKeys.FCM_TOKEN);
+      } catch (error) {
+        console.error('Error retrieving FCM token:', error);
+        fcmToken = 'defaultFCMToken';
+      }
+      Api.post(EndPoints.logout, {
+        fcm_token: fcmToken,
+      })
+        .then(() => {
+          resolve('');
+        })
+        .catch((error) => {
+          console.log('error while logging out user =>', error);
+          reject('');
+        });
+    });
+  };
+
+  imageUpload = (file: any, key: any, youtubeURL: any) => {
+    return new Promise(async (resolve, reject) => {
+      const myHeaders = new Headers();
+      myHeaders.append(
+        'Authorization',
+        `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`
+      );
+      myHeaders.append('Content-Type', 'multipart/form-data');
+
+      const formdata = new FormData();
+      if (file?.uri && key) {
+        //@ts-ignore
+        formdata.append('file', {
+          uri: file.uri,
+          type: file?.type ? file.type : 'image/jpeg',
+          name: file.name,
+        });
+        formdata.append('key', key);
+      }
+
+      if (youtubeURL?.length !== 0) {
+        formdata.append('youtube_url', youtubeURL);
+      }
+
+      const requestOptions = {
+        method: 'POST',
+        headers: myHeaders,
+        body: formdata,
+        redirect: 'follow',
+      };
+      fetch(`${BaseUrl}/auth/media/upload`, requestOptions)
+        .then((response) => response.text())
+        .then((result) => {
+          resolve(JSON.parse(result).results);
+        })
+        .catch((error) => {
+          reject('');
+          console.log('error while uploading image =>', error);
+        });
+    });
+  };
+
+  deleteImage = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.deleteMedia, params)
+        .then(async (res) => {
+          flashSuccessMessage(LanguageKeys.imageDeleted);
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log('error while deleting image =>', error);
+        });
+    });
+  };
+
+  moveMedia = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.moveMedia, params)
+        .then(async (res) => {
+          flashSuccessMessage(LanguageKeys.imageMoved);
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log('error while moving image =>', error);
+        });
+    });
+  };
+
+  interactionAction = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.interactionAction, params)
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while hiting intreaction action api =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  topPicks = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.topPicks, params)
+        .then(async (res) => {
+          resolve(res?.data);
+        })
+        .catch((error) => {
+          // flashErrorMessage()
+          reject('');
+          console.log(
+            'error while hiting topPicks api =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  privatePhotoAccessRequest = (userId: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.privatePhotoAccessRequest, { action_user_id: userId })
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          reject('');
+          flashErrorMessage(error?.response?.data?.message);
+          console.log(
+            'error while hiting private Photo Access Request api =>',
+            error
+          );
+        });
+    });
+  };
+
+  getUserStats = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.counter)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          console.log('error while running counter API  =>', error);
+          reject('');
+        });
+    });
+  };
+
+  privatePhotoAcceptRequest = (userId: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.privatePhotoAcceptRequest, { action_user_id: userId })
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while hiting private Photo Accept Request api =>',
+            error?.response.data
+          );
+        });
+    });
+  };
+
+  privatePhotoRejectRequest = (userId: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.privatePhotoRejectRequest, { action_user_id: userId })
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while hiting private Photo Reject Request api =>',
+            error
+          );
+        });
+    });
+  };
+
+  privatePhotoRemoveRequest = (userId: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.privatePhotoRemoveRequest, { action_user_id: userId })
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while hiting private Photo Remove Request api =>',
+            error
+          );
+        });
+    });
+  };
+
+  searchFilterApply = (params: any, page = 1) => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.searchFilterApply}?page=${page}${params}`)
+        .then((data) => {
+          resolve(data?.data);
+        })
+        .catch((error) => {
+          if (error?.response?.data?.results.length !== 0) {
+            flashErrorMessage(error?.response?.data?.results[0]);
+          }
+          console.log(
+            'error while running search filter API  =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  saveSearchFilter = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.saveSearchFilter, params)
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while saving search filter =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  getSearchFilters = (page = 1) => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.getSearchFilter}?page=${page}`)
+        .then((data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log('error while getting filter   =>', error);
+          reject('');
+        });
+    });
+  };
+
+  sendOTPForAccountDelete = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.deleteAccountOtp, params)
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while sending otp delete Account =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  verifyOTP = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.verifyOtp, params)
+        .then(async (res) => {
+          resolve(res?.data);
+        })
+        .catch((error) => {
+          flashErrorMessage(error?.response?.data?.message);
+          reject('');
+          console.log(
+            'error while verifying otp delete Account =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  deleteAccount = (purposeOfLeaving: any) => {
+    return new Promise(async (resolve, reject) => {
+      const config = {
+        method: 'delete',
+        maxBodyLength: Infinity,
+        url: `${BaseUrl}${EndPoints.deleteAccount}`,
+        headers: {
+          Authorization: `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`,
+          'Content-Type': 'application/json',
+        },
+        data: JSON.stringify({
+          purpose_of_leaving: purposeOfLeaving,
+        }),
+      };
+      axios
+        .request(config)
+        .then(() => {
+          flashSuccessMessage(LanguageKeys.accountDeleted);
+          resolve('');
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log('error while deleting account =>', error);
+        });
+    });
+  };
+
+  getCurrentUserDetail = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.getCurrentUserDetail}`)
+        .then(async (data) => {
+          await setData(storageKeys.USER, data?.data?.results);
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log(
+            'error while getting current user detail  =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  getMembershipStatus = () => {
+    return new Promise((resolve, reject) => {
+      Purchases.getCustomerInfo()
+        .then((res: any) => {
+          if (res?.activeSubscriptions?.length !== 0) {
+            const data = {
+              membership_status: 1,
+              membership_expiry: res?.latestExpirationDate,
             };
-            xhr.send(formData);
+            resolve(data);
+          } else {
+            resolve(null);
+          }
         })
-    }
+        .catch((error: any) => {
+          console.log('error while getting membership info =>', error);
+          reject('');
+        });
+    });
+  };
 
-    getLocationByLatLong = async (lat: number, long: number) => {
-        try {
-            const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json?address='
-                + lat + ',' + long + '&key=' +
-                'AIzaSyAyqvD_HZo402WmbfQ3AbvM60jYljrGbu8')
-            return response?.data
-        } catch (error: any) {
-            console.log('error while getting user detail', error?.response)
-            throw error
+  deleteSearchFilter = (id: any) => {
+    return new Promise((resolve, reject) => {
+      Api.delete(`${EndPoints.searchFilter}/${id}/delete`)
+        .then(() => {
+          resolve('');
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log(
+            'error while deleting search filter =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  viewPrivateMedia = (id: any) => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.user}/${id}${EndPoints.privateMedia}`)
+        .then(async (data) => {
+          resolve(data?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log(
+            'error while getting private media  =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  addWaliInformation = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(`${EndPoints.createGuardian}`, params)
+        .then(async (data) => {
+          resolve(data);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log('error while adding wali  =>', error?.response?.data);
+          reject('');
+        });
+    });
+  };
+
+  removeWali = () => {
+    return new Promise((resolve, reject) => {
+      Api.delete(`${EndPoints.removeGuardian}`)
+        .then(async (data) => {
+          resolve(data);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log('error while adding wali  =>', error?.response?.data);
+          reject('');
+        });
+    });
+  };
+
+  resendWaliVerificationCode = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.resendOtp}`)
+        .then(async (data) => {
+          resolve(data);
+          flashSuccessMessage(LanguageKeys.codeSentToWali);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          console.log(
+            'error while resending otp to wali email  =>',
+            error?.response?.data
+          );
+          reject('');
+        });
+    });
+  };
+
+  authenticateGuardian = async (params: any) => {
+    try {
+      const response = await Api.post(
+        `${EndPoints.authenticateGuardian}`,
+        params
+      );
+      await setData(storageKeys.USER_TOKEN, response?.data?.bearer_token);
+      return response?.data?.results;
+    } catch (error: any) {
+      const errorDetail = error?.response?.data;
+      if (errorDetail?.message) {
+        flashErrorMessage(errorDetail?.message);
+      } else {
+        flashErrorMessage();
+      }
+
+      console.log('error while logging in guardian =>', errorDetail);
+      throw error;
+    }
+  };
+
+  verifyWaliCode = async (otp: any) => {
+    try {
+      const response = await Api.post(`${EndPoints.verifyGuardian}`, { otp });
+      return response;
+    } catch (error: any) {
+      error = error?.response?.data;
+      if (error?.code === 422) {
+        flashErrorMessage(LanguageKeys.otpMismatchedError);
+      } else if (error?.error) {
+        flashErrorMessage(error?.message);
+      } else {
+        flashErrorMessage();
+      }
+      console.log('error while verifying wali otp =>', error);
+      throw error;
+    }
+  };
+
+  changeGuardianPassword = async (params: any) => {
+    try {
+      const response = await Api.post(
+        `${EndPoints.changeGuardianPassword}`,
+        params
+      );
+      return response;
+    } catch (error: any) {
+      error = error?.response?.data;
+      if (error && error?.results?.length !== 0) {
+        flashErrorMessage(error?.results[0]);
+      } else {
+        flashErrorMessage();
+      }
+      console.log('error while changing guardian password =>', error?.response);
+      throw error;
+    }
+  };
+
+  getUserDetailGuardian = async (userId: string) => {
+    try {
+      const response = await Api.get(
+        `${EndPoints.guardianAuthUser}/${userId}/detail`
+      );
+      return response.data?.results;
+    } catch (error: any) {
+      console.log('error while getting user detail', error?.response);
+      throw error;
+    }
+  };
+
+  logoutGuardian = () => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.guardianLogout)
+        .then(() => resolve(''))
+        .catch((error: any) => {
+          console.log('error while logging out guardian =>', error);
+          reject('');
+        });
+    });
+  };
+
+  addProfilePicture = (params: any, onProgress: (progress: number) => void) => {
+    return new Promise(async (resolve, reject) => {
+      const { uri, type, name } = params;
+      const formData = new FormData();
+      formData.append('file', {
+        uri: uri,
+        type: type ? type : 'image/jpeg',
+        name: name,
+      });
+      formData.append('key', 'primary_image');
+      const xhr = new XMLHttpRequest();
+      xhr.withCredentials = true;
+      xhr.open('POST', `${BaseUrl}/auth/media/upload`);
+      const userToken = await StorageManager.getData(
+        StorageManager.storageKeys.USER_TOKEN
+      );
+      xhr.setRequestHeader('Authorization', `Bearer ${userToken}`);
+      xhr.upload.onprogress = (event) => {
+        const progressPercentage = Math.round(
+          (event.loaded / event.total) * 100
+        );
+        onProgress(progressPercentage);
+      };
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          const responseData = JSON.parse(xhr.response);
+          resolve(responseData);
+        } else {
+          if (
+            xhr.response &&
+            xhr.response.results &&
+            xhr.response.results.length !== 0
+          ) {
+            flashErrorMessage('File must be shorter than 2 MB');
+          } else {
+            flashErrorMessage();
+          }
+          reject('');
         }
-    }
+      };
+      xhr.onerror = () => {
+        reject('');
+      };
+      xhr.send(formData);
+    });
+  };
 
-    storeQuery = async (params: any) => {
-        try {
-            const response = await Api.post(EndPoints.storeQuerySupport, params)
-            return response
-        } catch (error: any) {
-            error = error?.response?.data
-            if (error && error?.results?.length !== 0) {
-                flashErrorMessage(error?.results[0])
-            }
-            else {
-                flashErrorMessage()
-            }
-            console.log('error while changing guardian password =>', error?.response)
-            throw error
-        }
+  getLocationByLatLong = async (lat: number, long: number) => {
+    try {
+      const response = await axios.get(
+        'https://maps.googleapis.com/maps/api/geocode/json?address=' +
+          lat +
+          ',' +
+          long +
+          '&key=' +
+          'AIzaSyAyqvD_HZo402WmbfQ3AbvM60jYljrGbu8'
+      );
+      return response?.data;
+    } catch (error: any) {
+      console.log('error while getting user detail', error?.response);
+      throw error;
     }
+  };
 
-    getPaymentInfo = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                EndPoints.paymentInfo
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting Payment Info =>', error)
-                    reject('')
-                })
+  storeQuery = async (params: any) => {
+    try {
+      const response = await Api.post(EndPoints.storeQuerySupport, params);
+      return response;
+    } catch (error: any) {
+      error = error?.response?.data;
+      if (error && error?.results?.length !== 0) {
+        flashErrorMessage(error?.results[0]);
+      } else {
+        flashErrorMessage();
+      }
+      console.log('error while changing guardian password =>', error?.response);
+      throw error;
+    }
+  };
+
+  getPaymentInfo = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.paymentInfo)
+        .then((data) => {
+          resolve(data?.data?.results);
         })
-    }
+        .catch((error) => {
+          console.log('error while getting Payment Info =>', error);
+          reject('');
+        });
+    });
+  };
 
-    getAppUpdateInfo = () => {
-        return new Promise((resolve, reject) => {
-            Api.get(
-                EndPoints.appUpdateInfo
-            ).then((data) => {
-                resolve(data?.data?.results)
-            })
-                .catch((error) => {
-                    console.log('error while getting Update Info =>', error)
-                    reject('')
-                })
+  getAppUpdateInfo = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.appUpdateInfo)
+        .then((data) => {
+          resolve(data?.data?.results);
         })
-    }
+        .catch((error) => {
+          console.log('error while getting Update Info =>', error);
+          reject('');
+        });
+    });
+  };
 
-    snedMessageNotification = (params: any) => {
-        return new Promise((resolve, reject) => {
-            Api.post(
-                EndPoints.snedMessageNotification,
-                params,
-            ).then(async res => {
-                console.log({ res });
+  snedMessageNotification = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.snedMessageNotification, params)
+        .then(async (res) => {
+          console.log({ res });
 
-                resolve(res?.data)
-            })
-                .catch((error) => {
-                    // flashErrorMessage()
-                    reject('')
-                    console.log('error while hiting snedMessageNotification api =>', error, error?.response, error?.response?.data)
-                })
+          resolve(res?.data);
         })
-    }
+        .catch((error) => {
+          // flashErrorMessage()
+          reject('');
+          console.log(
+            'error while hiting snedMessageNotification api =>',
+            error,
+            error?.response,
+            error?.response?.data
+          );
+        });
+    });
+  };
 }
 
 const ApiServices = new GApiServices();

@@ -1,4 +1,4 @@
-import React, { JSX } from 'react';
+import React, { type JSX } from 'react';
 import FlashMessage from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MenuProvider } from 'react-native-popup-menu';
