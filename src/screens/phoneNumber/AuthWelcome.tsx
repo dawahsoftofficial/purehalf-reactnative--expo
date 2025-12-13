@@ -150,17 +150,95 @@ const AuthWelcome = (props: any) => {
       }
     } else if (type === 'apple') {
       try {
+        console.log('[Apple Login] Starting Apple authentication...');
         setLoader(true);
         ApiServices.socialAppleAuthenticate('apple')
           .then(async (res: any) => {
-            const user = await ApiServices.getCurrentUserDetail();
-            updateCurrentUser(user);
-            onVerified(user);
-            setLoader(false);
+            console.log('[Apple Login] socialAppleAuthenticate success:', {
+              hasRes: !!res,
+              hasUser: !!res?.user,
+              userId: res?.user?.id,
+              userEmail: res?.user?.email,
+              responseKeys: res ? Object.keys(res) : [],
+            });
+            try {
+              console.log('[Apple Login] Fetching current user details...');
+              const user = await ApiServices.getCurrentUserDetail();
+              console.log('[Apple Login] getCurrentUserDetail success:', {
+                hasUser: !!user,
+                userId: user?.id,
+                userEmail: user?.email,
+                userKeys: user ? Object.keys(user) : [],
+              });
+              console.log('[Apple Login] Updating current user in context...');
+              updateCurrentUser(user);
+              console.log('[Apple Login] Calling onVerified with user:', {
+                userId: user?.id,
+                hasLocation: !!(user?.latitude && user?.longitude),
+                hasProfile: !!(
+                  user?.first_name &&
+                  user?.last_name &&
+                  user?.gender &&
+                  user?.date_of_birth
+                ),
+              });
+              onVerified(user);
+              setLoader(false);
+              console.log('[Apple Login] Apple login completed successfully');
+            } catch (userError: any) {
+              console.error(
+                '[Apple Login] Error in getCurrentUserDetail or onVerified:',
+                {
+                  error: userError,
+                  message: userError?.message,
+                  stack: userError?.stack,
+                  response: userError?.response?.data,
+                }
+              );
+              setLoader(false);
+            }
           })
-          .catch(hideLoading);
-      } catch (error) {
-        console.log('error', error);
+          .catch((error: any) => {
+            console.error('[Apple Login] Error in socialAppleAuthenticate:', {
+              error,
+              message: error?.message,
+              name: error?.name,
+              stack: error?.stack,
+              response: error?.response?.data,
+              status: error?.response?.status,
+              code: error?.code,
+            });
+
+            // Handle different error types
+            if (error?.name === 'AppleSignInCanceled') {
+              console.log('[Apple Login] User canceled Apple sign in');
+              // Silently handle cancellation - no error message shown
+            } else if (error?.name === 'AppleSignInNotSupported') {
+              console.error(
+                '[Apple Login] Apple Sign In not supported on this device'
+              );
+              // Error message already shown by flashErrorMessage in Services.tsx
+            } else if (error?.name === 'AppleSignInConfigurationError') {
+              console.error(
+                '[Apple Login] Apple Sign In configuration error - check device settings or Xcode configuration'
+              );
+              // Error message already shown by flashErrorMessage in Services.tsx
+            } else {
+              // Other errors - error message already shown by flashErrorMessage in Services.tsx
+              console.error(
+                '[Apple Login] Apple sign in failed:',
+                error?.message
+              );
+            }
+
+            hideLoading();
+          });
+      } catch (error: any) {
+        console.error('[Apple Login] Error in try block:', {
+          error,
+          message: error?.message,
+          stack: error?.stack,
+        });
         setLoader(false);
       }
     }
@@ -430,44 +508,6 @@ const AuthWelcome = (props: any) => {
           <Animation style={Styles.phoneNumberSectionCon}>
             <Text style={Styles.getStarted}>getStarted</Text>
 
-            <View style={Styles.radioBtnCon}>
-              <CheckBox
-                disabled={false}
-                value={checkBox}
-                onValueChange={(newValue) => setCheckbox(newValue)}
-                tintColors={{ true: Colors.color57, false: Colors.color2 }}
-              />
-              <View>
-                <View style={{ flexDirection: 'row', marginLeft: 3 }}>
-                  <DefaultText style={Styles.termsAndConditionText}>
-                    {t('acceptTermsAndConditions')}{' '}
-                  </DefaultText>
-                  <Ripple
-                    onPress={() =>
-                      Linking.openURL('https://purehalf.com/terms-conditions/')
-                    }
-                    style={{ paddingTop: isIOS ? 0 : 5 }}
-                  >
-                    <DefaultText style={Styles.underline}>
-                      {t('termsAndConditions')}
-                    </DefaultText>
-                  </Ripple>
-                  <DefaultText style={Styles.termsAndConditionText}>
-                    {t('and')}
-                  </DefaultText>
-                </View>
-                <Ripple
-                  onPress={() =>
-                    Linking.openURL('https://purehalf.com/privacy-policy/')
-                  }
-                >
-                  <DefaultText style={[Styles.underline, { marginLeft: 7 }]}>
-                    {t('privacyPolicy')}
-                  </DefaultText>
-                </Ripple>
-              </View>
-            </View>
-
             {/* <View
               style={{
                 ...Styles.phoneNumberCon,
@@ -577,6 +617,44 @@ const AuthWelcome = (props: any) => {
                 }
               />
             )}
+
+            <View style={Styles.radioBtnCon}>
+              <CheckBox
+                disabled={false}
+                value={checkBox}
+                onValueChange={(newValue) => setCheckbox(newValue)}
+                tintColors={{ true: Colors.color57, false: Colors.color2 }}
+              />
+              <View>
+                <View style={{ flexDirection: 'row', marginLeft: 3 }}>
+                  <DefaultText style={Styles.termsAndConditionText}>
+                    {t('acceptTermsAndConditions')}{' '}
+                  </DefaultText>
+                  <Ripple
+                    onPress={() =>
+                      Linking.openURL('https://purehalf.com/terms-conditions/')
+                    }
+                    style={{ paddingTop: isIOS ? 0 : 5 }}
+                  >
+                    <DefaultText style={Styles.underline}>
+                      {t('termsAndConditions')}
+                    </DefaultText>
+                  </Ripple>
+                  <DefaultText style={Styles.termsAndConditionText}>
+                    {t('and')}
+                  </DefaultText>
+                </View>
+                <Ripple
+                  onPress={() =>
+                    Linking.openURL('https://purehalf.com/privacy-policy/')
+                  }
+                >
+                  <DefaultText style={[Styles.underline, { marginLeft: 7 }]}>
+                    {t('privacyPolicy')}
+                  </DefaultText>
+                </Ripple>
+              </View>
+            </View>
           </Animation>
         </KeyboardAvoidingView>
         {/* <ModalLoader visible={loader} /> */}

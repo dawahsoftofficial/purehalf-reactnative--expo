@@ -157,39 +157,111 @@ class GApiServices {
   };
   socialAppleAuthenticate = (provider: string) => {
     return new Promise(async (resolve, reject) => {
+      console.log(
+        '[socialAppleAuthenticate] Starting Apple authentication with provider:',
+        provider
+      );
       let appleFullName: AppleRequestResponseFullName | null = null;
       try {
+        // Check if Apple Sign In is supported on this device
+        const isSupported = appleAuth.isSupported;
+        console.log(
+          '[socialAppleAuthenticate] Apple Sign In supported:',
+          isSupported
+        );
+        if (!isSupported) {
+          const error = new Error(
+            'Apple Sign In is not supported on this device. Please use iOS 13+ or try another login method.'
+          );
+          error.name = 'AppleSignInNotSupported';
+          flashErrorMessage(
+            'Apple Sign In is not available on this device. Please use another login method.',
+            4
+          );
+          reject(error);
+          return;
+        }
+
+        console.log(
+          '[socialAppleAuthenticate] Performing Apple authentication request...'
+        );
         const appleAuthRequestResponse = await appleAuth.performRequest({
           requestedOperation: appleAuth.Operation.LOGIN,
           // As per the FAQ of react-native-apple-authentication, the name should come first in the following array.
           // See: https://github.com/invertase/react-native-apple-authentication#faqs
           requestedScopes: [appleAuth.Scope.FULL_NAME, appleAuth.Scope.EMAIL],
         });
+        console.log(
+          '[socialAppleAuthenticate] Apple auth request successful:',
+          {
+            hasIdentityToken: !!appleAuthRequestResponse?.identityToken,
+            hasNonce: !!appleAuthRequestResponse?.nonce,
+            hasFullName: !!appleAuthRequestResponse?.fullName,
+            hasEmail: !!appleAuthRequestResponse?.email,
+          }
+        );
+
         const { identityToken, nonce, fullName } = appleAuthRequestResponse;
         appleFullName = fullName;
+        console.log(
+          '[socialAppleAuthenticate] Creating Firebase credential...'
+        );
         const appleCredential = auth.AppleAuthProvider.credential(
           identityToken,
           nonce
         );
+        console.log(
+          '[socialAppleAuthenticate] Signing in with Firebase credential...'
+        );
         auth()
           .signInWithCredential(appleCredential)
           .then(async (res: any) => {
+            console.log(
+              '[socialAppleAuthenticate] Firebase sign-in successful:',
+              {
+                hasUser: !!res?.user,
+                userEmail: res?.user?.email,
+                userId: res?.user?.uid,
+              }
+            );
             let fcmToken;
             try {
               fcmToken = await getData(storageKeys.FCM_TOKEN);
+              console.log(
+                '[socialAppleAuthenticate] FCM token retrieved:',
+                !!fcmToken
+              );
             } catch (error) {
-              console.error('Error retrieving FCM token:', error);
+              console.error(
+                '[socialAppleAuthenticate] Error retrieving FCM token:',
+                error
+              );
               fcmToken = 'defaultFCMToken';
             }
 
-            Api.post(EndPoints.socialAuthenticate, {
-              token: appleCredential?.token,
+            const requestPayload = {
+              token: identityToken,
               email: res?.user?.email,
               provider,
               fcm_token: fcmToken,
               device_type: !isIOS ? 0 : 1,
-            })
+            };
+
+            console.log('[socialAppleAuthenticate] Calling API with payload:', {
+              hasToken: !!requestPayload.token,
+              email: requestPayload.email,
+              provider: requestPayload.provider,
+              hasFcmToken: !!requestPayload.fcm_token,
+              deviceType: requestPayload.device_type,
+            });
+
+            Api.post(EndPoints.socialAuthenticate, requestPayload)
               .then(async (apiRes: any) => {
+                console.log('[socialAppleAuthenticate] API call successful:', {
+                  hasData: !!apiRes?.data,
+                  hasResults: !!apiRes?.data?.results,
+                  hasBearerToken: !!apiRes?.data?.bearer_token,
+                });
                 const apiResult = apiRes?.data?.results;
                 let firstName = '';
                 let lastName = '';
@@ -198,11 +270,21 @@ class GApiServices {
                   const { givenName, familyName } = appleFullName;
                   firstName = givenName || '';
                   lastName = familyName || '';
+                  console.log(
+                    '[socialAppleAuthenticate] Extracted name from Apple:',
+                    {
+                      firstName,
+                      lastName,
+                    }
+                  );
                 }
 
                 apiResult.first_name = apiResult?.first_name || firstName;
                 apiResult.last_name = apiResult?.last_name || lastName;
 
+                console.log(
+                  '[socialAppleAuthenticate] Saving user data to storage...'
+                );
                 await setData(storageKeys.USER, apiResult);
                 await setData(
                   storageKeys.USER_TOKEN,
@@ -214,29 +296,145 @@ class GApiServices {
                   apiResult?.banned_at &&
                   apiResult?.banned_at?.length !== 0
                 ) {
+                  console.log('[socialAppleAuthenticate] User is banned');
                   flashErrorMessage(
                     'You are banned and not allowed to login anymore.'
                   );
-                  reject('');
+                  const banError = new Error('User is banned');
+                  reject(banError);
                 } else {
                   const res = {
                     user: apiResult,
                   };
+                  console.log(
+                    '[socialAppleAuthenticate] Authentication completed successfully:',
+                    {
+                      userId: apiResult?.id,
+                      userEmail: apiResult?.email,
+                    }
+                  );
                   resolve(res);
                 }
               })
               .catch((error: any) => {
-                flashErrorMessage(error?.response?.data?.message, 4);
-                reject('');
-                console.log(
-                  'error while authenticating User with google =>',
-                  error?.response?.data
+                const errorData = error?.response?.data || error;
+                console.error(
+                  '[socialAppleAuthenticate] API error while authenticating User with Apple:',
+                  {
+                    message: error?.message || errorData?.message,
+                    errorData: errorData,
+                    responseData: error?.response?.data,
+                    responseStatus: error?.response?.status,
+                    statusCode: error?.response?.status || errorData?.code,
+                    errorCode: error?.code || errorData?.code,
+                    results: errorData?.results,
+                    resultsArray: Array.isArray(errorData?.results)
+                      ? errorData.results.map((r: any, i: number) => ({
+                          index: i,
+                          ...r,
+                        }))
+                      : errorData?.results,
+                    fullError: JSON.stringify(error, null, 2),
+                  }
                 );
+                const errorMessage =
+                  errorData?.message ||
+                  errorData?.results?.[0]?.message ||
+                  error?.message ||
+                  'Authentication failed';
+                flashErrorMessage(errorMessage, 4);
+                reject(error);
               });
+          })
+          .catch((error: any) => {
+            console.error(
+              '[socialAppleAuthenticate] Error in Firebase sign-in with credential:',
+              {
+                error,
+                message: error?.message,
+                code: error?.code,
+              }
+            );
+            reject(error);
           });
-      } catch (error) {
-        console.log('error while authentication User with google =>', error);
-        reject('');
+      } catch (error: any) {
+        const errorCode = error?.code;
+        const errorMessage = error?.message;
+        const errorDomain = error?.domain;
+
+        console.error(
+          '[socialAppleAuthenticate] Error in Apple authentication request:',
+          {
+            error,
+            message: errorMessage,
+            code: errorCode,
+            domain: errorDomain,
+            userInfo: error?.userInfo,
+          }
+        );
+
+        // Handle specific Apple authentication error codes
+        // Error code 1001 = ASAuthorizationErrorCanceled (user canceled)
+        // Error code 1000 = ASAuthorizationErrorUnknown (unknown error - could be configuration issue)
+        // Error code 1002 = ASAuthorizationErrorInvalidResponse
+        // Error code 1003 = ASAuthorizationErrorNotHandled
+        // Error code 1004 = ASAuthorizationErrorFailed
+        if (errorCode === '1001' || errorCode === 1001) {
+          console.log(
+            '[socialAppleAuthenticate] User canceled Apple authentication'
+          );
+          // Don't show error message if user canceled
+          const cancelError = new Error('User canceled Apple sign in');
+          cancelError.name = 'AppleSignInCanceled';
+          reject(cancelError);
+        } else if (errorCode === '1000' || errorCode === 1000) {
+          // Error 1000 is ASAuthorizationErrorUnknown - could be:
+          // - Configuration issue (missing Sign in with Apple capability)
+          // - Device not signed in to iCloud
+          // - Bundle identifier mismatch
+          // - Missing configuration in Apple Developer Portal
+          console.error(
+            '[socialAppleAuthenticate] Apple authentication error 1000 (Unknown) - Possible causes:',
+            {
+              possibleCauses: [
+                'Missing Sign in with Apple capability in Xcode',
+                'Device not signed in to iCloud',
+                'Bundle identifier mismatch',
+                'Missing configuration in Apple Developer Portal',
+                'iOS version or device compatibility issue',
+              ],
+              errorDetails: {
+                domain: errorDomain,
+                userInfo: error?.userInfo,
+              },
+            }
+          );
+          const configError = new Error(
+            'Apple Sign In configuration error. Please check your device settings or contact support.'
+          );
+          configError.name = 'AppleSignInConfigurationError';
+          flashErrorMessage(
+            'Apple Sign In is not properly configured. Please use another login method or contact support.',
+            4
+          );
+          reject(configError);
+        } else {
+          // Other errors - show user-friendly message
+          console.error(
+            '[socialAppleAuthenticate] Apple authentication error:',
+            errorCode,
+            errorMessage
+          );
+          const authError = new Error(
+            errorMessage || 'Apple authentication failed. Please try again.'
+          );
+          authError.name = 'AppleSignInError';
+          flashErrorMessage(
+            'Apple sign in failed. Please try again or use another method.',
+            4
+          );
+          reject(authError);
+        }
       }
     });
   };
