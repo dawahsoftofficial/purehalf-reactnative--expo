@@ -1,9 +1,9 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import notifee from '@notifee/react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import moment from 'moment';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TextStyle, ViewStyle } from 'react-native';
 import {
   ActivityIndicator,
   Dimensions,
@@ -14,16 +14,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type { TextStyle, ViewStyle } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import notifee from '@notifee/react-native';
-import Modal from 'react-native-modal';
-import moment from 'moment';
 import Ripple from 'react-native-material-ripple';
+import Modal from 'react-native-modal';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useTranslation } from 'react-i18next';
 
 import {
   CheckMembershipStatus,
@@ -32,12 +27,10 @@ import {
   ModalLoader,
   Swiper,
 } from '../../components';
-import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
-import OptionsBar from './OptionsBar';
-import UsersList from './UsersList';
-import PremiumButton from './PremiumButton';
-import RecommendationButton from './RecommendationButton';
 import { hp, Typography, wp } from '../../global';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { CommonActions } from '../../navigation';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   flashSuccessMessage,
@@ -45,9 +38,11 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
-import { CommonActions } from '../../navigation';
-import { Colors, Fonts, Images } from '../../res';
-import { CheckRtl, LanguageKeys } from '../../languages';
+import OptionsBar from './OptionsBar';
+import PremiumButton from './PremiumButton';
+import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
+import RecommendationButton from './RecommendationButton';
+import UsersList from './UsersList';
 
 type OptionButton = {
   name: string;
@@ -78,10 +73,13 @@ type WelcomeProps = {
 
 const sortByCompletion = (
   a: ProfileProgressItem,
-  b: ProfileProgressItem,
+  b: ProfileProgressItem
 ): number => Number(b.completed) - Number(a.completed);
 
 const { width } = Dimensions.get('window');
+
+// Module-level flag to prevent multiple initial fetches across remounts
+let hasInitializedUsers = false;
 
 const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const optionBarList = useMemo<OptionButton[]>(
@@ -103,7 +101,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         value: '3',
       },
     ],
-    [],
+    []
   );
 
   const profileProgressTemplate = useMemo<ProfileProgressItem[]>(
@@ -177,7 +175,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         completed: false,
       },
     ],
-    [],
+    []
   );
 
   const { t } = useTranslation();
@@ -189,7 +187,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [modalLoader, setModalLoader] = useState(false);
   const [userStats, setUserStats] = useState<UserStats>({});
   const [activeOptionButton, setActiveOptionButton] = useState<OptionButton>(
-    optionBarList[0],
+    optionBarList[0]
   );
   const [optionTab, setOptionTab] = useState<string>('');
   const [usersList, setUsersList] = useState<any[]>([]);
@@ -199,25 +197,22 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [headerModal, setHeaderModal] = useState<boolean>(false);
   const [profileCompleteProgress, setProfileCompleteProgress] = useState<
     ProfileProgressItem[]
-  >(() => profileProgressTemplate.map(item => ({ ...item })));
+  >(() => profileProgressTemplate.map((item) => ({ ...item })));
   const [showRecommendationModal, setShowRecommendationModal] =
     useState<boolean>(false);
 
-  const applyOptionSelection = useCallback(
-    (item: OptionButton) => {
-      setOptionTab(item.name);
-      setActiveOptionButton(item);
-      setUserListPage(1);
-      setHeaderModal(false);
-      setUsersList([]);
-    },
-    [],
-  );
+  const applyOptionSelection = useCallback((item: OptionButton) => {
+    setOptionTab(item.name);
+    setActiveOptionButton(item);
+    setUserListPage(1);
+    setHeaderModal(false);
+    setUsersList([]);
+  }, []);
 
   const getAttribute = useCallback(() => {
-    getData(storageKeys.ATTRIBUTE).then(res => {
+    getData(storageKeys.ATTRIBUTE).then((res) => {
       if (!res) {
-        ApiServices.getAttribute().then(data => {
+        ApiServices.getAttribute().then((data) => {
           setData(storageKeys.ATTRIBUTE, data);
         });
       }
@@ -227,13 +222,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const getUsers = useCallback(
     (
       params: { page: number; type: string } = { page: 1, type: '-1' },
-      replace = false,
+      replace = false
     ) => {
       ApiServices.getUsers(params)
         .then((res: any[]) => {
-          getAttribute();
           const list = Array.isArray(res) ? res : [];
-          setUsersList(prev => (replace ? list : [...prev, ...list]));
+          setUsersList((prev) => (replace ? list : [...prev, ...list]));
         })
         .catch(() => {})
         .finally(() => {
@@ -241,7 +235,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           setLoadMoreLoader(false);
         });
     },
-    [getAttribute],
+    []
   );
 
   const getUserStats = useCallback(() => {
@@ -309,7 +303,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       getUsers,
       navigation,
       optionBarList,
-    ],
+    ]
   );
 
   const onLoadMorePress = useCallback(() => {
@@ -317,7 +311,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       setLoadMoreLoader(true);
     }
 
-    setUserListPage(prevPage => {
+    setUserListPage((prevPage) => {
       const nextPage = prevPage + 1;
       const type = activeOptionButton?.value ?? optionBarList[0].value;
       getUsers({ page: nextPage, type });
@@ -336,7 +330,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         });
       }
     },
-    [navigation],
+    [navigation]
   );
 
   const notifeeBackForHandler = useCallback(
@@ -370,7 +364,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         }
       }
     },
-    [navigateToChat, onOptionPress],
+    [navigateToChat, onOptionPress]
   );
 
   const getInitialNotification = useCallback(async () => {
@@ -398,11 +392,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       'personality-0': true,
       'futurePlans-0': Boolean(
         currentUser?.detail?.family_plan_id &&
-          currentUser?.detail?.marriage_plan_id &&
-          currentUser?.detail?.relocation_plan_id,
+        currentUser?.detail?.marriage_plan_id &&
+        currentUser?.detail?.relocation_plan_id
       ),
       'myInterestAndHobbies-0': Boolean(
-        currentUser?.detail?.personality_id?.length,
+        currentUser?.detail?.personality_id?.length
       ),
     };
 
@@ -410,7 +404,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       const data: any = await getData(storageKeys.PROFILE_DETAIL_LOCAL);
       if (data) {
         let islamicCount = 0;
-        Object.keys(data).forEach(childKey => {
+        Object.keys(data).forEach((childKey) => {
           data[childKey].forEach((element: any) => {
             if (currentUser?.detail && Object.keys(currentUser.detail).length) {
               const value = currentUser.detail[element.apiKey];
@@ -437,13 +431,18 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     }
 
     setProfileCompleteProgress(() => {
-      const updated = profileProgressTemplate.map(item => ({
+      const updated = profileProgressTemplate.map((item) => ({
         ...item,
         completed: Boolean(baseState[item.id]),
       }));
       return updated.sort(sortByCompletion);
     });
-  }, [currentUser, getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
+  }, [
+    currentUser,
+    getData,
+    profileProgressTemplate,
+    storageKeys.PROFILE_DETAIL_LOCAL,
+  ]);
 
   const checkNewTransaction = useCallback(() => {
     if (currentUser?.latest_transaction?.paid_tracking === 0) {
@@ -455,13 +454,22 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     }
   }, [currentUser?.latest_transaction, navigation]);
 
+  // Call getAttribute and getUsers once on mount only (using module-level flag to prevent refetch on remount)
+  useEffect(() => {
+    getAttribute();
+    if (!hasInitializedUsers) {
+      hasInitializedUsers = true;
+      getUsers(undefined, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     getInitialNotification();
     const unsubscribeForeground = notifee.onForegroundEvent(
-      notifeeBackForHandler,
+      notifeeBackForHandler
     );
     notifee.onBackgroundEvent(notifeeBackForHandler);
-    getUsers(undefined, true);
     const timer = setTimeout(() => {
       checkNewTransaction();
     }, 100);
@@ -472,45 +480,34 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       }
       clearTimeout(timer);
     };
-  }, [
-    checkNewTransaction,
-    getInitialNotification,
-    getUsers,
-    notifeeBackForHandler,
-  ]);
+  }, [checkNewTransaction, getInitialNotification, notifeeBackForHandler]);
 
-  const onRecommendationPress = useCallback(
-    (value?: boolean) => {
-      if (value) {
-        setShowRecommendationModal(true);
-        setRecommendationModal(true);
-      } else {
-        setRecommendationModal(prev => !prev);
-      }
-    },
-    [],
-  );
+  const onRecommendationPress = useCallback((value?: boolean) => {
+    if (value) {
+      setShowRecommendationModal(true);
+      setRecommendationModal(true);
+    } else {
+      setRecommendationModal((prev) => !prev);
+    }
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
       getUserStats();
       handleProfileCompleteData();
-    }, [getUserStats, handleProfileCompleteData]),
+    }, [getUserStats, handleProfileCompleteData])
   );
 
   useFocusEffect(
     React.useCallback(() => {
-      if (
-        showRecommendationModal &&
-        route?.params?.openRecommendationModal
-      ) {
+      if (showRecommendationModal && route?.params?.openRecommendationModal) {
         onRecommendationPress(true);
       }
     }, [
       onRecommendationPress,
       route?.params?.openRecommendationModal,
       showRecommendationModal,
-    ]),
+    ])
   );
 
   const isPremiumUser = useMemo(() => {
@@ -528,7 +525,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       setHeaderModal(false);
       navigation.navigate(item.navigation, { scrollTo: item.scrollTo });
     },
-    [navigation],
+    [navigation]
   );
 
   const AccordionItem: React.FC<{
@@ -551,7 +548,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     const [expanded, setExpanded] = useState(false);
 
     const toggleItem = () => {
-      setExpanded(prev => !prev);
+      setExpanded((prev) => !prev);
     };
 
     return (
@@ -633,7 +630,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               </Ripple>
             )}
             <Ripple
-              style={[Styles.headerIconWrapper, { backgroundColor: Colors.color7 }]}
+              style={[
+                Styles.headerIconWrapper,
+                { backgroundColor: Colors.color7 },
+              ]}
               onPress={() => setHeaderModal(!headerModal)}
             >
               {currentUser?.media?.primary_image &&
@@ -676,7 +676,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               <Entypo name="cross" size={wp(6)} />
             </TouchableOpacity>
             <View style={Styles.modalHeaderContent}>
-              <Text style={Styles.modalHeaderTitle}>{t(LanguageKeys.myAccount)}</Text>
+              <Text style={Styles.modalHeaderTitle}>
+                {t(LanguageKeys.myAccount)}
+              </Text>
               <Text style={Styles.modalHeaderSubTitle}>
                 {t(LanguageKeys.profileComplete)}
               </Text>
@@ -686,7 +688,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             <View style={Styles.modalBody}>
               <AccordionItem
                 title={t(LanguageKeys.profileCompletion)}
-                count={`${profileCompleteProgress.filter(item => item.completed).length}/${profileCompleteProgress.length}`}
+                count={`${profileCompleteProgress.filter((item) => item.completed).length}/${profileCompleteProgress.length}`}
                 type="profile"
               >
                 <View style={Styles.completeProfileWrapper}>
@@ -715,7 +717,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               {!currentUser?.is_approved ? (
                 <AccordionItem
                   title={t(LanguageKeys.profileInReview)}
-                  count={<MaterialCommunityIcons name="information-variant" size={wp(5)} />}
+                  count={
+                    <MaterialCommunityIcons
+                      name="information-variant"
+                      size={wp(5)}
+                    />
+                  }
                   titleStyle={{ color: Colors.color25 }}
                   counterWrapperStyle={{ borderColor: Colors.color25 }}
                   counterTextStyle={{ color: Colors.color25 }}
@@ -723,9 +730,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   <View style={Styles.completeProfileWrapper}>
                     <Text style={Styles.completeProfileText}>
                       Your profile is being reviewed! During this brief period,
-                      visibility will be limited. We are just making sure everything
-                      is top-notch to ensure the best experience to all our members.
-                      You will be notified upon approval.
+                      visibility will be limited. We are just making sure
+                      everything is top-notch to ensure the best experience to
+                      all our members. You will be notified upon approval.
                     </Text>
                   </View>
                 </AccordionItem>
@@ -740,9 +747,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   <View style={Styles.completeProfileWrapper}>
                     <Text style={Styles.completeProfileText}>
                       Your profile is being reviewed! During this brief period,
-                      visibility will be limited. We are just making sure everything
-                      is top-notch to ensure the best experience to all our members.
-                      You will be notified upon approval.
+                      visibility will be limited. We are just making sure
+                      everything is top-notch to ensure the best experience to
+                      all our members. You will be notified upon approval.
                     </Text>
                   </View>
                 </AccordionItem>

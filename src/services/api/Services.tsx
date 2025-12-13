@@ -577,6 +577,7 @@ class GApiServices {
   getUsers = (params = { page: 1, type: -1 }) => {
     return new Promise((resolve, reject) => {
       const { page, type } = params;
+      console.log('[getUsers] API call initiated:', { page, type, stack: new Error().stack });
       Api.get(`${EndPoints.getUsers}?page=${page}&type=${type}`)
         .then((data) => {
           if (Array.isArray(data?.data?.results)) {

@@ -9,7 +9,8 @@ const EndPoints = {
   getUserDetail: '/auth/user',
   recommendedUsers: '/auth/user/exclusive?page=1&type=-1',
   getCurrentUserDetail: '/auth/my/detail',
-  messagePushNotification: 'https://fcm.googleapis.com/v1/projects/purehalf-19603/messages:send',
+  messagePushNotification:
+    'https://fcm.googleapis.com/v1/projects/purehalf-19603/messages:send',
   getAttribute: '/auth/list/attribute',
   logout: '/auth/logout',
   deleteMedia: '/auth/media/delete',
@@ -40,10 +41,10 @@ const EndPoints = {
   guardianAuthUser: '/guardian/auth/user',
   guardianLogout: 'guardian/auth/logout',
   storeQuerySupport: '/auth/query/store',
-  getButtonsActiveStatus: "/setting/authenticate-option",
-  paymentInfo: "/auth/list/paymentinfo",
-  appUpdateInfo: "/auth/force-update",
-  snedMessageNotification: "/auth/send/message/notification",
-}
+  getButtonsActiveStatus: '/setting/authenticate-option',
+  paymentInfo: '/auth/list/paymentinfo',
+  appUpdateInfo: '/auth/force-update',
+  snedMessageNotification: '/auth/send/message/notification',
+};
 
 export default EndPoints;
