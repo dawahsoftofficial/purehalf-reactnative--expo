@@ -1,60 +1,53 @@
+import CheckBox from '@react-native-community/checkbox';
+import i18next from 'i18next';
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Image,
-  Text as DefaultText,
-  View,
-  TouchableOpacity,
   Keyboard,
   KeyboardAvoidingView,
-  StatusBar,
   Linking,
   SafeAreaView,
-  StyleSheet
+  StatusBar,
+  StyleSheet,
+  Text as DefaultText,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import Ripple from 'react-native-material-ripple';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import DeviceInfo, { hasNotch } from 'react-native-device-info';
+import Ripple from 'react-native-material-ripple';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import {
-  LinearGradient,
-  ModalLoader,
-  SlideShowContainer,
-  Text
-} from '../../components';
-import { LanguageKeys, CheckRtl } from '../../languages';
-import { Button } from '../../components';
 import { Animation } from '../../animations';
-import { hp, wp, Typography } from '../../global';
+import { LinearGradient, SlideShowContainer, Text } from '../../components';
+import { Button } from '../../components';
+import { hp, Typography, wp } from '../../global';
+import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
-import { ApiServices } from '../../services/api';
 import { Firebase, isIOS, setRevenueCat } from '../../services';
-import { useGlobalContext, StorageManager } from '../../services';
+import { StorageManager, useGlobalContext } from '../../services';
+import { ApiServices } from '../../services/api';
 import Data from '../profile/Data';
-import CheckBox from '@react-native-community/checkbox';
-
 
 const AuthWelcome = (props: any) => {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   const [checkBox, setCheckbox] = useState(false);
   const Rtl = CheckRtl();
   const { getData, setData, storageKeys } = StorageManager;
   const { language, updateCurrentUser, updateDirection } = useGlobalContext();
   const [loading, setLoading] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  const [buttonStatus, setButtonStatus] = useState(null);
+  const [buttonStatus, setButtonStatus] = useState<any>(null);
   const [loader, setLoader] = useState(false);
-
 
   const getButtonStatus = () => {
     ApiServices.getButtonsActiveStatus()
       .then((data) => setButtonStatus(data))
-      .catch(error => console.log("error", error))
-  }
+      .catch((error) => console.log('error', error));
+  };
 
   useEffect(() => {
-    getButtonStatus()
+    getButtonStatus();
     saveDataLocal();
     getToken();
     if (Rtl) {
@@ -84,18 +77,17 @@ const AuthWelcome = (props: any) => {
 
   const hideLoading = () => setLoader(false);
 
-
   const onContinuePress = (type: string) => {
     if (type === 'phone') {
-      props.navigation.navigate('PhoneNumber')
+      props.navigation.navigate('PhoneNumber');
     } else if (type === 'google') {
       try {
-        setLoader(true)
+        setLoader(true);
         ApiServices.socialAuthenticate('google')
           .then(async (res: any) => {
-            const user = await ApiServices.getCurrentUserDetail()
+            const user = await ApiServices.getCurrentUserDetail();
             updateCurrentUser(user);
-            onVerified(user)
+            onVerified(user);
             setLoader(false);
           })
           .catch(hideLoading);
@@ -104,71 +96,83 @@ const AuthWelcome = (props: any) => {
       }
     } else if (type === 'apple') {
       try {
-        setLoader(true)
+        setLoader(true);
         ApiServices.socialAppleAuthenticate('apple')
           .then(async (res: any) => {
-            const user = await ApiServices.getCurrentUserDetail()
+            const user = await ApiServices.getCurrentUserDetail();
             updateCurrentUser(user);
-            onVerified(user)
+            onVerified(user);
             setLoader(false);
           })
           .catch(hideLoading);
       } catch (error) {
-        console.log("error", error)
+        console.log('error', error);
         setLoader(false);
       }
     }
 
-
     const onVerified = async (user: any) => {
-      await setRevenueCat(user?.id)
+      await setRevenueCat(user?.id);
       ApiServices.getMembershipStatus().then(async (res: any) => {
         if (res || user?.membership_status) {
-          user.membership_expiry = res?.membership_expiry || user.membership_expiry
-          user.membership_status = 1
+          user.membership_expiry =
+            res?.membership_expiry || user.membership_expiry;
+          user.membership_status = 1;
+        } else {
+          user.membership_expiry = null;
+          user.membership_status = 0;
         }
-        else {
-          user.membership_expiry = null
-          user.membership_status = 0
-        }
-        const userData = await ApiServices.getCurrentUserDetail()
-        updateCurrentUser({ ...userData, ...user })
-        await setData(storageKeys.USER, { ...userData, ...user })
-      })
+        const userData = await ApiServices.getCurrentUserDetail();
+        updateCurrentUser({ ...userData, ...user });
+        await setData(storageKeys.USER, { ...userData, ...user });
+      });
 
-      setLoading(false)
+      setLoading(false);
 
       if (!user?.latitude || !user?.longitude) {
-        props.navigation.navigate('Location')
-      }
-      else if (user?.first_name && user?.last_name && user?.gender && user?.date_of_birth) {
+        props.navigation.navigate('Location');
+      } else if (
+        user?.first_name &&
+        user?.last_name &&
+        user?.gender &&
+        user?.date_of_birth
+      ) {
         if (
-          !user?.media || !user?.media?.primary_image ||
+          !user?.media ||
+          !user?.media?.primary_image ||
           user?.media?.primary_image?.length === 0
         ) {
-          props.navigation.navigate('ProfilePicture')
-        }
-        else if (user?.membership_status === null || user?.membership_status === 0) {
+          props.navigation.navigate('ProfilePicture');
+        } else if (
+          user?.membership_status === null ||
+          user?.membership_status === 0
+        ) {
           props.navigation.reset({
             index: 0,
-            routes: [{
-              name: 'ProFeaturesPromotion',
-              params: {
-                navigateTo: 'BottomTab',
-                from: 'SignUp'
-              }
-            }],
+            routes: [
+              {
+                name: 'ProFeaturesPromotion',
+                params: {
+                  navigateTo: 'BottomTab',
+                  from: 'SignUp',
+                },
+              },
+            ],
           });
+        } else {
+          props.navigation.navigate('BottomTab');
         }
-        else {
-          props.navigation.navigate('BottomTab')
-        }
-      } else if (!user?.first_name || !user?.last_name || !user?.gender || !user?.date_of_birth) {
-        props.navigation.navigate('UserInput')
+      } else if (
+        !user?.first_name ||
+        !user?.last_name ||
+        !user?.gender ||
+        !user?.date_of_birth
+      ) {
+        props.navigation.navigate('UserInput');
       } else {
-        props.navigation.navigate('BottomTab')
+        props.navigation.navigate('BottomTab');
       }
-    }
+    };
   };
 
   const saveDataLocal = async () => {
@@ -176,13 +180,13 @@ const AuthWelcome = (props: any) => {
   };
 
   const getToken = async () => {
-    getData(storageKeys.FCM_TOKEN).then(async res => {
+    getData(storageKeys.FCM_TOKEN).then(async (res) => {
       if (!res) {
         const isEmulator = await DeviceInfo.isEmulator();
         if (isEmulator && isIOS) {
           await setData(storageKeys.FCM_TOKEN, 'FcmToken');
         } else {
-          Firebase.getFcmToken().then(async res => {
+          Firebase.getFcmToken().then(async (res) => {
             if (res) {
               await setData(storageKeys.FCM_TOKEN, res);
             } else {
@@ -197,7 +201,6 @@ const AuthWelcome = (props: any) => {
   const onGuardianPress = () => {
     props?.navigation.navigate('GuardianEmailInput');
   };
-
 
   return (
     <SlideShowContainer disabled>
@@ -220,31 +223,42 @@ const AuthWelcome = (props: any) => {
             {
               flexDirection: Rtl ? 'row-reverse' : 'row',
             },
-          ]}>
+          ]}
+        >
           <TouchableOpacity
             style={[
               Styles.languageBtnCon,
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
             activeOpacity={0.7}
-            onPress={onLanguagePress}>
+            onPress={onLanguagePress}
+          >
             <MaterialCommunityIcons
               name="web"
               color={Colors.color2}
               size={wp(8)}
             />
-            <Text style={Styles.languageText}>{language === "en" ? LanguageKeys.english : LanguageKeys.romanUrdu}</Text>
+            <Text style={Styles.languageText}>
+              {language === 'en'
+                ? LanguageKeys.english
+                : LanguageKeys.romanUrdu}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={{ marginBottom: hp(0.5) }}
-            onPress={onGuardianPress}>
+            onPress={onGuardianPress}
+          >
             <Text style={[Styles.languageText, { marginHorizontal: 0 }]}>
               {LanguageKeys.guardian}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <KeyboardAvoidingView behavior={'height'} style={{ flex: 1 }} keyboardVerticalOffset={isIOS ? 80 : 10}>
+        <KeyboardAvoidingView
+          behavior={'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={isIOS ? 80 : 10}
+        >
           {!isKeyboardOpen && (
             <View style={Styles.purehalfLogoCon}>
               <Image
@@ -271,20 +285,27 @@ const AuthWelcome = (props: any) => {
                     {t('acceptTermsAndConditions')}{' '}
                   </DefaultText>
                   <Ripple
-                    onPress={() => Linking.openURL("https://purehalf.com/terms-conditions/")}
+                    onPress={() =>
+                      Linking.openURL('https://purehalf.com/terms-conditions/')
+                    }
                     style={{ paddingTop: isIOS ? 0 : 5 }}
                   >
-                    <DefaultText style={Styles.underline}>{t('termsAndConditions')}</DefaultText>
+                    <DefaultText style={Styles.underline}>
+                      {t('termsAndConditions')}
+                    </DefaultText>
                   </Ripple>
                   <DefaultText style={Styles.termsAndConditionText}>
                     {t('and')}
                   </DefaultText>
                 </View>
                 <Ripple
-                  onPress={() => Linking.openURL("https://purehalf.com/privacy-policy/")}
+                  onPress={() =>
+                    Linking.openURL('https://purehalf.com/privacy-policy/')
+                  }
                 >
                   <DefaultText style={[Styles.underline, { marginLeft: 7 }]}>
-                    {t('privacyPolicy')}</DefaultText>
+                    {t('privacyPolicy')}
+                  </DefaultText>
                 </Ripple>
               </View>
             </View>
@@ -350,8 +371,7 @@ const AuthWelcome = (props: any) => {
                 </Ripple>
               </View>
             </View> */}
-            {
-              isIOS && buttonStatus?.is_apple_active === 1 &&
+            {isIOS && buttonStatus?.is_apple_active === 1 && (
               <Button
                 text={LanguageKeys.startWithWithApple}
                 onPress={() => onContinuePress('apple')}
@@ -366,9 +386,8 @@ const AuthWelcome = (props: any) => {
                   />
                 }
               />
-            }
-            {
-              buttonStatus?.is_phone_active === 1 &&
+            )}
+            {buttonStatus?.is_phone_active === 1 && (
               <Button
                 text={LanguageKeys.startWithWithPhone}
                 onPress={() => onContinuePress('phone')}
@@ -383,9 +402,8 @@ const AuthWelcome = (props: any) => {
                   />
                 }
               />
-            }
-            {
-              buttonStatus?.is_google_active === 1 &&
+            )}
+            {buttonStatus?.is_google_active === 1 && (
               <Button
                 text={LanguageKeys.startWithWithGoogle}
                 onPress={() => onContinuePress('google')}
@@ -400,7 +418,7 @@ const AuthWelcome = (props: any) => {
                   />
                 }
               />
-            }
+            )}
           </Animation>
         </KeyboardAvoidingView>
         {/* <ModalLoader visible={loader} /> */}
@@ -489,7 +507,7 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: hp(2),
-    alignSelf: 'flex-start'
+    alignSelf: 'flex-start',
   },
   termsAndConditionText: {
     color: Colors.color2,
@@ -508,7 +526,7 @@ const Styles = StyleSheet.create({
   appleBtn: {
     backgroundColor: Colors.color1,
     marginTop: hp(2),
-  }
+  },
   // phoneNumberCon: {
   //   flexDirection: 'row',
   //   borderBottomWidth: 1,

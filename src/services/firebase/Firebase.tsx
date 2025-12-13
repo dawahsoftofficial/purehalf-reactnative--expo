@@ -1,371 +1,433 @@
-import { StorageManager } from '../storageManager';
-import auth from '@react-native-firebase/auth'
-import messaging from '@react-native-firebase/messaging';
+import auth from '@react-native-firebase/auth';
 import database from '@react-native-firebase/database';
 import functions from '@react-native-firebase/functions';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import messaging from '@react-native-firebase/messaging';
+import {
+  GoogleSignin,
+  type SignInResponse,
+} from '@react-native-google-signin/google-signin';
 
 import { flashErrorMessage } from '../FlashMessages';
+import { StorageManager } from '../storageManager';
 const { storageKeys, setData } = StorageManager;
 
 class GFirebase {
+  googleSignIn = () => {
+    return new Promise<SignInResponse>((resolve, reject) => {
+      GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      GoogleSignin.signIn()
+        .then((res: SignInResponse) => {
+          resolve(res);
+          console.log(JSON.stringify(res, null, 2));
+        })
+        .catch((error: Error) => {
+          console.log({ error });
+          flashErrorMessage(error?.message || 'An error occurred', 4);
+          reject(error);
+        });
+    });
+  };
 
-    googleSignIn = () => {
-        return new Promise((resolve, reject) => {
-            GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-            GoogleSignin.signIn().then((res) => {
-                resolve(res);
-            }).catch((error: any) => {
-                console.log({ error });
-                flashErrorMessage(error, 4);
-                reject('')
+  sendVerificationCode = (phoneNumber: any, forceResend = false) => {
+    return new Promise((resolve, reject) => {
+      auth()
+        .signInWithPhoneNumber(phoneNumber, forceResend)
+        .then((confirmResult: any) => {
+          resolve(confirmResult);
+        })
+        .catch((error: any) => {
+          console.log('Error while sending verification code =>', error);
+          if (error?.code === 'missing-phone-number') {
+            flashErrorMessage('Missing Phone Number', 4);
+          } else if (error?.code === 'auth/invalid-phone-number') {
+            flashErrorMessage('Invalid Phone Number', 4);
+          } else if (error?.code === 'auth/quota-exceeded') {
+            flashErrorMessage('SMS quota exceeded.Please try again later', 4);
+          } else if (error?.code === 'auth/user-disabled') {
+            flashErrorMessage(
+              'Phone Number disabled. Please contact support',
+              4
+            );
+          } else {
+            console.log('Unexpected Error.' + error?.code);
+            flashErrorMessage(
+              'Unexpected Error Occured. Please contact support',
+              4
+            );
+          }
+          reject('');
+        });
+    });
+  };
+
+  handleIsLoggedIn = async (isLoggedIn: any) => {
+    return new Promise((resolve, reject) => {
+      setData(storageKeys.IS_LOGGED_IN, isLoggedIn)
+        .then(() => {
+          resolve('');
+        })
+        .catch((error: any) => {
+          console.log('error while saving isLoggedIn =>', error);
+          reject('');
+        });
+    });
+  };
+
+  matchLoginVerificationCode = (phoneNumberFirebaseRes: any, value: any) => {
+    return new Promise(async (resolve, reject) => {
+      const user: any = auth().currentUser;
+      if (user && user.uid) {
+        this.handleIsLoggedIn(true)
+          .then(() => {
+            resolve('');
+          })
+          .catch(() => reject(''));
+      } else {
+        phoneNumberFirebaseRes
+          .confirm(value)
+          .then(async () => {
+            this.handleIsLoggedIn(true)
+              .then(() => {
+                resolve('');
+              })
+              .catch(() => reject(''));
+          })
+          .catch((error: any) => {
+            switch (error.code) {
+              case 'auth/invalid-verification-code':
+                flashErrorMessage('Invalid code');
+                break;
+              default:
+                flashErrorMessage(error.message);
+            }
+            reject('');
+            console.log(
+              'Error while matching firebase verification code =>',
+              error
+            );
+          });
+      }
+    });
+  };
+
+  createChat = (conversationData: any) => {
+    return new Promise((resolve, reject) => {
+      const conversationId = conversationData?.id;
+      database()
+        .ref(`conversations/${conversationId}`)
+        .set({
+          convDetails: conversationData,
+          messages: [],
+        })
+        .then(() => {
+          resolve('');
+        })
+        .catch((error) => {
+          console.log('error while creating conversation =>', error);
+          reject('');
+        });
+    });
+  };
+
+  sendMessage = (messageData: any, conversationData: any) => {
+    return new Promise((resolve, reject) => {
+      delete messageData?.status;
+      const {
+        id,
+        participantsDeleteFlag,
+        participantsData,
+        unReadCount,
+        latestMessage,
+        latestMessageCreatedAt,
+      } = conversationData;
+      const messageId = messageData?.id;
+      const messagesRef = database().ref(
+        `/conversations/${id}/messages/${messageId}`
+      );
+      messagesRef
+        .set({ ...messageData })
+        .then(() => {
+          database()
+            .ref(`/conversations/${id}/convDetails`)
+            .update({
+              participantsDeleteFlag: participantsDeleteFlag,
+              participantsData: participantsData,
+              unReadCount: unReadCount,
+              latestMessage: latestMessage,
+              latestMessageCreatedAt: latestMessageCreatedAt,
+            })
+            .then((res) => {
+              resolve(res);
+            })
+            .catch((error) => {
+              reject('');
+              console.log('error while updating conversation data =>', error);
             });
         })
-    }
+        .catch((error) => {
+          reject('');
+          console.log('error while pushing message to firebase chat =>', error);
+        });
+    });
+  };
 
-    sendVerificationCode = (phoneNumber: any, forceResend = false) => {
-        return new Promise((resolve, reject) => {
-            auth().signInWithPhoneNumber(phoneNumber, forceResend)
-                .then((confirmResult: any) => {
-                    resolve(confirmResult)
-                })
-                .catch((error: any) => {
-                    console.log('Error while sending verification code =>', error)
-                    if (error?.code === 'missing-phone-number') {
-                        flashErrorMessage('Missing Phone Number', 4);
-                    } else if (error?.code === 'auth/invalid-phone-number') {
-                        flashErrorMessage('Invalid Phone Number', 4);
-                    } else if (error?.code === 'auth/quota-exceeded') {
-                        flashErrorMessage('SMS quota exceeded.Please try again later', 4);
-                    } else if (error?.code === 'auth/user-disabled') {
-                        flashErrorMessage('Phone Number disabled. Please contact support', 4);
-                    } else {
-                        console.log('Unexpected Error.' + error?.code);
-                        flashErrorMessage('Unexpected Error Occured. Please contact support', 4);
-                    }
-                    reject('')
-                })
+  getFcmToken = () => {
+    return new Promise(async (resolve, reject) => {
+      const authStatus = await messaging().requestPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      if (enabled) {
+        messaging()
+          .getToken()
+          .then((token) => resolve(token))
+          .catch((err) => {
+            console.log('Error while getting device token =>', err);
+            reject('');
+          });
+      }
+    });
+  };
+
+  sendMessageNotification = async (token: any, data: any) => {
+    const sendNotification = functions().httpsCallable('sendNotification');
+    try {
+      await sendNotification({
+        token: token,
+        data: {
+          title: data?.title,
+          body: data?.body,
+          pressAction: data?.pressAction,
+          data: JSON.stringify(data?.data),
+        },
+      });
+    } catch (error) {
+      console.log('error while sending notificaiton =>', error);
+    }
+  };
+
+  deleteChat = (id: any) => {
+    return new Promise((resolve, reject) => {
+      database()
+        .ref(`/chats/${id}`)
+        .remove()
+        .then(() => {
+          resolve('');
         })
-    }
+        .catch((error) => {
+          console.log('error while deleting chat =>', error);
+          flashErrorMessage();
+          reject('');
+        });
+    });
+  };
 
-    handleIsLoggedIn = async (isLoggedIn: any) => {
-        return new Promise((resolve, reject) => {
-            setData(storageKeys.IS_LOGGED_IN, isLoggedIn).then(() => {
-                resolve('')
+  matchOTP = (phoneNumberFirebaseRes: any, code: any) => {
+    return new Promise((resolve, reject) => {
+      phoneNumberFirebaseRes
+        .confirm(code)
+        .then(async () => {
+          resolve('');
+        })
+        .catch((error: any) => {
+          switch (error.code) {
+            case 'auth/invalid-verification-code':
+              flashErrorMessage('Invalid code');
+              break;
+            default:
+              flashErrorMessage(error.message);
+          }
+          reject('');
+          console.log(
+            'Error while matching firebase verification code =>',
+            error
+          );
+        });
+    });
+  };
+
+  updateConvUnReadCount = (convId: any, userId: any) => {
+    return new Promise((resolve, reject) => {
+      database()
+        .ref(`/conversations/${convId}/convDetails/unReadCount`)
+        .update({ [userId]: 0 })
+        .then(() => resolve(''))
+        .catch((error: any) => {
+          console.log(
+            'error while updating unreadCount of conversation =>',
+            error
+          );
+          reject('');
+        });
+    });
+  };
+
+  updateMessagesReadBy = (
+    filteredMessages: any,
+    currentUserId: any,
+    conversationId: any
+  ) => {
+    const updates: any = {};
+    filteredMessages.forEach((message: any) => {
+      const messageId = message?.id;
+      updates[
+        `/conversations/${conversationId}/messages/${messageId}/readBy/${currentUserId}`
+      ] = message?.readBy[currentUserId];
+    });
+    database()
+      .ref()
+      .update(updates)
+      .catch((error) => {
+        console.log('error while updating messages readBy =>', error);
+      });
+  };
+
+  clearChat = (conversationId: any, lastMessageId: any, currentUserId: any) => {
+    return new Promise((resolve, reject) => {
+      const messageRef = database().ref(
+        `/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`
+      );
+      messageRef
+        .update({
+          [currentUserId]: true,
+        })
+        .then(() => {
+          resolve('');
+        })
+        .catch((error) => {
+          console.log('error while clearing chat =>', error);
+          reject('');
+        });
+    });
+  };
+
+  updateMessageDeletedBy = (
+    conversationId: any,
+    lastMessageId: any,
+    currentUserId: any
+  ) => {
+    return new Promise((resolve, reject) => {
+      const conversationRef = database().ref(
+        `/conversations/${conversationId}/convDetails/participantsDeleteFlag`
+      );
+      const messageRef = database().ref(
+        `/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`
+      );
+      conversationRef
+        .update({
+          [currentUserId]: {
+            deleteStatus: true,
+          },
+        })
+        .then(() => {
+          messageRef
+            .update({
+              [currentUserId]: true,
             })
-                .catch((error: any) => {
-                    console.log('error while saving isLoggedIn =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    matchLoginVerificationCode = (phoneNumberFirebaseRes: any, value: any) => {
-        return new Promise(async (resolve, reject) => {
-            const user: any = auth().currentUser
-            if (user && user.uid) {
-                this.handleIsLoggedIn(true).then(() => {
-                    resolve('')
-                })
-                    .catch(() => reject(''))
-            }
-            else {
-                phoneNumberFirebaseRes.confirm(value)
-                    .then(async () => {
-                        this.handleIsLoggedIn(true).then(() => {
-                            resolve('')
-                        })
-                            .catch(() => reject(''))
-                    })
-                    .catch((error: any) => {
-                        switch (error.code) {
-                            case "auth/invalid-verification-code":
-                                flashErrorMessage('Invalid code')
-                                break;
-                            default:
-                                flashErrorMessage(error.message)
-                        }
-                        reject('')
-                        console.log('Error while matching firebase verification code =>', error)
-                    })
-            }
-        })
-    }
-
-    createChat = (conversationData: any) => {
-        return new Promise((resolve, reject) => {
-            const conversationId = conversationData?.id
-            database().ref(`conversations/${conversationId}`)
-                .set({
-                    convDetails: conversationData,
-                    messages: []
-                })
-                .then(() => {
-                    resolve('')
-                })
-                .catch((error) => {
-                    console.log('error while creating conversation =>', error)
-                    reject('')
-                })
-        })
-    }
-
-    sendMessage = (messageData: any, conversationData: any) => {
-        return new Promise((resolve, reject) => {
-            delete messageData?.status
-            const { id, participantsDeleteFlag, participantsData,
-                unReadCount, latestMessage, latestMessageCreatedAt } = conversationData
-            const messageId = messageData?.id
-            const messagesRef = database().ref(`/conversations/${id}/messages/${messageId}`)
-            messagesRef.set({ ...messageData })
-                .then(() => {
-                    database()
-                        .ref(`/conversations/${id}/convDetails`)
-                        .update({
-                            participantsDeleteFlag: participantsDeleteFlag,
-                            participantsData: participantsData,
-                            unReadCount: unReadCount,
-                            latestMessage: latestMessage,
-                            latestMessageCreatedAt: latestMessageCreatedAt
-                        })
-                        .then((res) => {
-                            resolve(res)
-                        })
-                        .catch((error) => {
-                            reject('')
-                            console.log('error while updating conversation data =>', error)
-                        })
-                })
-                .catch((error) => {
-                    reject('')
-                    console.log('error while pushing message to firebase chat =>', error)
-                })
-
-        })
-    }
-
-    getFcmToken = () => {
-        return new Promise(async (resolve, reject) => {
-            const authStatus = await messaging().requestPermission();
-            const enabled =
-                authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-                authStatus === messaging.AuthorizationStatus.PROVISIONAL;
-            if (enabled) {
-                messaging()
-                    .getToken()
-                    .then(token => resolve(token))
-                    .catch(err => {
-                        console.log('Error while getting device token =>', err)
-                        reject('')
-                    })
-            }
-
-        })
-    }
-
-
-
-    sendMessageNotification = async (token: any, data: any) => {
-        const sendNotification = functions().httpsCallable('sendNotification');
-        try {
-            await sendNotification({
-                token: token,
-                data: {
-                    title: data?.title,
-                    body: data?.body,
-                    pressAction: data?.pressAction,
-                    data: JSON.stringify(data?.data)
-                }
+            .catch((error) => {
+              console.log('error while updating message deleted by =>', error);
+              reject('');
             });
-        } catch (error) {
-            console.log('error while sending notificaiton =>', error)
-        }
-
-    };
-
-    deleteChat = (id: any) => {
-        return new Promise((resolve, reject) => {
-            database().ref(`/chats/${id}`).remove().then(() => {
-                resolve('')
-            })
-                .catch((error) => {
-                    console.log('error while deleting chat =>', error)
-                    flashErrorMessage()
-                    reject('')
-                })
+          resolve('');
         })
-    }
-
-    matchOTP = (phoneNumberFirebaseRes: any, code: any) => {
-        return new Promise((resolve, reject) => {
-            phoneNumberFirebaseRes.confirm(code)
-                .then(async () => {
-                    resolve('')
-                })
-                .catch((error: any) => {
-                    switch (error.code) {
-                        case "auth/invalid-verification-code":
-                            flashErrorMessage('Invalid code')
-                            break;
-                        default:
-                            flashErrorMessage(error.message)
-                    }
-                    reject('')
-                    console.log('Error while matching firebase verification code =>', error)
-                })
-        })
-    }
-
-    updateConvUnReadCount = (convId: any, userId: any) => {
-        return new Promise((resolve, reject) => {
-            database()
-                .ref(`/conversations/${convId}/convDetails/unReadCount`)
-                .update({ [userId]: 0 })
-                .then(() => resolve(''))
-                .catch((error: any) => {
-                    console.log('error while updating unreadCount of conversation =>', error)
-                    reject('')
-                })
-        })
-
-    }
-
-    updateMessagesReadBy = (filteredMessages: any, currentUserId: any, conversationId: any) => {
-        const updates: any = {};
-        filteredMessages.forEach((message: any) => {
-            const messageId = message?.id;
-            updates[`/conversations/${conversationId}/messages/${messageId}/readBy/${currentUserId}`] = message?.readBy[currentUserId];
+        .catch((error) => {
+          console.log('error while updating conversation deleted by =>', error);
+          flashErrorMessage();
+          reject('');
         });
-        database().ref().update(updates).catch((error) => {
-            console.log('error while updating messages readBy =>', error)
-        })
-    }
+    });
+  };
 
-    clearChat = (conversationId: any, lastMessageId: any, currentUserId: any) => {
-        return new Promise((resolve, reject) => {
-            const messageRef = database().ref(`/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`);
-            messageRef
-                .update({
-                    [currentUserId]: true,
-                })
-                .then(() => {
-                    resolve('');
-                })
-                .catch((error) => {
-                    console.log('error while clearing chat =>', error);
-                    reject('');
-                });
+  getSingleConversation = (currentUserId: any, otherUserId: any) => {
+    return new Promise((resolve, reject) => {
+      const conversationsRef = database().ref('conversations');
+      conversationsRef
+        .orderByChild(
+          `convDetails/participantsDeleteFlag/${currentUserId}/deleteStatus`
+        )
+        .equalTo(true)
+        .once('value', (snapshot: any) => {
+          const data = snapshot.val();
+          if (data) {
+            const filteredConversations = Object.values(data).filter(
+              (conversation: any) => {
+                const participantKeys = Object.keys(
+                  conversation.convDetails.participantsDeleteFlag
+                );
+                return (
+                  participantKeys.includes(JSON.stringify(currentUserId)) &&
+                  participantKeys.includes(JSON.stringify(otherUserId))
+                );
+              }
+            );
+            resolve(filteredConversations);
+          } else {
+            resolve([]);
+          }
         })
-    }
+        .catch(() => reject(''));
+    });
+  };
 
-    updateMessageDeletedBy = (conversationId: any, lastMessageId: any, currentUserId: any) => {
-        return new Promise((resolve, reject) => {
-            const conversationRef = database().ref(`/conversations/${conversationId}/convDetails/participantsDeleteFlag`);
-            const messageRef = database().ref(`/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`);
-            conversationRef
-                .update({
-                    [currentUserId]: {
-                        deleteStatus: true,
-                    },
-                })
-                .then(() => {
-                    messageRef
-                        .update({
-                            [currentUserId]: true,
-                        })
-                        .catch((error) => {
-                            console.log('error while updating message deleted by =>', error);
-                            reject('');
-                        });
-                    resolve('');
-                })
-                .catch((error) => {
-                    console.log('error while updating conversation deleted by =>', error);
-                    flashErrorMessage();
-                    reject('');
-                });
+  blockUnBlockConv = (conversationId: any, userId: any, blockUser: any) => {
+    return new Promise((resolve, reject) => {
+      const conversationRef = database().ref(
+        `/conversations/${conversationId}/convDetails/participantsBlockFlag`
+      );
+      conversationRef
+        .update(
+          blockUser
+            ? {
+                [userId]: {
+                  blockStatus: true,
+                },
+              }
+            : {
+                [userId]: { blockStatus: false },
+              }
+        )
+        .then(() => {
+          resolve('');
+        })
+        .catch((error) => {
+          console.log('error while blocking user =>', error);
+          flashErrorMessage();
+          reject('');
         });
-    };
+    });
+  };
 
-
-    getSingleConversation = (currentUserId: any, otherUserId: any) => {
-        return new Promise((resolve, reject) => {
-            const conversationsRef = database().ref('conversations');
-            conversationsRef
-                .orderByChild(`convDetails/participantsDeleteFlag/${currentUserId}/deleteStatus`)
-                .equalTo(true)
-                .once('value', (snapshot: any) => {
-                    const data = snapshot.val();
-                    if (data) {
-                        const filteredConversations = Object.values(data).filter((conversation: any) => {
-                            const participantKeys = Object.keys(conversation.convDetails.participantsDeleteFlag);
-                            return (
-                                participantKeys.includes(JSON.stringify(currentUserId)) &&
-                                participantKeys.includes(JSON.stringify(otherUserId))
-                            );
-                        });
-                        resolve(filteredConversations)
-                    }
-                    else {
-                        resolve([])
-                    }
-                })
-                .catch(() => reject(''))
+  getNoOfChats = (userId: number, conversationId: string) => {
+    const todayTimestamp = new Date().setHours(0, 0, 0, 0);
+    return new Promise((resolve, reject) => {
+      database()
+        .ref('conversations')
+        .orderByChild('convDetails/createdAt')
+        .startAt(todayTimestamp)
+        .once('value')
+        .then((snapshot: any) => {
+          let numberOfChats: number = 0;
+          snapshot.forEach((childSnapshot: any) => {
+            const chat = childSnapshot.val() as any;
+            if (
+              chat.convDetails.createdBy === userId &&
+              chat.convDetails.participantsDeleteFlag[userId]?.deleteStatus ===
+                false &&
+              chat?.convDetails?.id !== conversationId
+            ) {
+              numberOfChats++;
+            }
+          });
+          resolve(numberOfChats);
         })
-    }
-
-    blockUnBlockConv = (conversationId: any, userId: any, blockUser: any) => {
-        return new Promise((resolve, reject) => {
-            const conversationRef = database().ref(`/conversations/${conversationId}/convDetails/participantsBlockFlag`);
-            conversationRef.update(
-                blockUser ?
-                    {
-                        [userId]: {
-                            blockStatus: true
-                        }
-                    }
-                    :
-                    {
-                        [userId]: { blockStatus: false }
-                    }
-            )
-                .then(() => {
-                    resolve('');
-                }).catch((error) => {
-                    console.log('error while blocking user =>', error)
-                    flashErrorMessage()
-                    reject('');
-                });
-        })
-    }
-
-    getNoOfChats = (userId: number, conversationId: string) => {
-        const todayTimestamp = new Date().setHours(0, 0, 0, 0);
-        return new Promise((resolve, reject) => {
-            database().ref('conversations').orderByChild('convDetails/createdAt').startAt(todayTimestamp).once('value')
-                .then((snapshot: any) => {
-                    let numberOfChats: number = 0;
-                    snapshot.forEach((childSnapshot: any) => {
-                        const chat = childSnapshot.val() as any;
-                        if (
-                            chat.convDetails.createdBy === userId &&
-                            chat.convDetails.participantsDeleteFlag[userId]?.deleteStatus === false &&
-                            chat?.convDetails?.id !== conversationId
-                        ) {
-                            numberOfChats++;
-                        }
-                    });
-                    resolve(numberOfChats);
-                })
-                .catch((error) => {
-                    console.error('Error reading data: ', error);
-                    flashErrorMessage()
-                    reject('');
-                });
-        })
-    }
+        .catch((error) => {
+          console.error('Error reading data: ', error);
+          flashErrorMessage();
+          reject('');
+        });
+    });
+  };
 }
-
 
 const FirebaseServices = new GFirebase();
 export default FirebaseServices;
