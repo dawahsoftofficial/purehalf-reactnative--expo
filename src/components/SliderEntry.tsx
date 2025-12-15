@@ -1,4 +1,5 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { t } from 'i18next';
 import moment from 'moment';
 import PropTypes from 'prop-types';
 import React, { useRef, useState } from 'react';
@@ -26,6 +27,7 @@ import {
   isIOS,
   useGlobalContext,
 } from '../services';
+import { Button } from './buttons';
 
 const { width: viewportWidth } = Dimensions.get('window');
 
@@ -243,26 +245,26 @@ const SliderEntry = ({
     </View>
   );
 
-  // if (!data?.id) {
-  //   return (
-  //     <View style={Styles.nullSlideInnerContainer}>
-  //       <View style={Styles.nullUserInfoContainer}>
-  //         <Image source={Images.recommendationIcon2} style={Styles.nullIcon} />
-  //         <Text style={Styles.userNullTxtName}>
-  //           {t('noRcommendedUserAvailable')}
-  //         </Text>
-  //       </View>
-  //       <View style={Styles.closeTextContainer}>
-  //         <Button
-  //           text={LanguageKeys.close}
-  //           buttonStyle={Styles.btnContainer}
-  //           onPress={() => onPress()}
-  //           textStyle={Styles.closeBtnText}
-  //         />
-  //       </View>
-  //     </View>
-  //   );
-  // }
+  if (!data?.id) {
+    return (
+      <View style={Styles.nullSlideInnerContainer}>
+        <View style={Styles.nullUserInfoContainer}>
+          <Image source={Images.recommendationIcon2} style={Styles.nullIcon} />
+          <Text style={Styles.userNullTxtName}>
+            {t('noRcommendedUserAvailable')}
+          </Text>
+        </View>
+        <View style={Styles.closeTextContainer}>
+          <Button
+            text={LanguageKeys.close}
+            buttonStyle={Styles.btnContainer}
+            onPress={() => onPress()}
+            textStyle={Styles.closeBtnText}
+          />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={Styles.slideInnerContainer}>
