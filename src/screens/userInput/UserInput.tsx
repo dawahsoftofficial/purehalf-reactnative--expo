@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
+import { getApp } from '@react-native-firebase/app';
+import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
 import _ from 'lodash';
 import moment from 'moment';
@@ -35,6 +36,9 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
+
+const firebaseApp = getApp();
+const auth = getAuth(firebaseApp);
 
 const UserInput = (props: any) => {
   const Rtl = CheckRtl();
@@ -183,7 +187,7 @@ const UserInput = (props: any) => {
     const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
     await AsyncStorage.setItem('isRecommended', 'false');
     await ApiServices.logout().catch(hideLoader);
-    await auth().signOut().catch(hideLoader);
+    await signOut(auth).catch(hideLoader);
     await deleteAll()
       .then(async () => {
         updateCurrentUser(null);

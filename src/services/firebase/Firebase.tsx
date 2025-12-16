@@ -1,7 +1,13 @@
-import auth from '@react-native-firebase/auth';
-import database from '@react-native-firebase/database';
-import functions from '@react-native-firebase/functions';
-import messaging from '@react-native-firebase/messaging';
+import { getApp } from '@react-native-firebase/app';
+import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
+import { getDatabase } from '@react-native-firebase/database';
+import { getFunctions } from '@react-native-firebase/functions';
+import {
+  AuthorizationStatus,
+  getMessaging,
+  getToken,
+  requestPermission,
+} from '@react-native-firebase/messaging';
 import {
   GoogleSignin,
   type SignInResponse,
@@ -10,6 +16,12 @@ import {
 import { flashErrorMessage } from '../FlashMessages';
 import { StorageManager } from '../storageManager';
 const { storageKeys, setData } = StorageManager;
+
+const firebaseApp = getApp();
+const auth = getAuth(firebaseApp);
+const database = getDatabase(firebaseApp);
+const functions = getFunctions(firebaseApp);
+const messaging = getMessaging(firebaseApp);
 
 class GFirebase {
   googleSignIn = () => {
@@ -29,8 +41,7 @@ class GFirebase {
 
   sendVerificationCode = (phoneNumber: any, forceResend = false) => {
     return new Promise((resolve, reject) => {
-      auth()
-        .signInWithPhoneNumber(phoneNumber, forceResend)
+      signInWithPhoneNumber(auth, phoneNumber, undefined, forceResend)
         .then((confirmResult: any) => {
           resolve(confirmResult);
         })
@@ -74,7 +85,7 @@ class GFirebase {
 
   matchLoginVerificationCode = (phoneNumberFirebaseRes: any, value: any) => {
     return new Promise(async (resolve, reject) => {
-      const user: any = auth().currentUser;
+      const user: any = auth.currentUser;
       if (user && user.uid) {
         this.handleIsLoggedIn(true)
           .then(() => {
@@ -112,7 +123,7 @@ class GFirebase {
   createChat = (conversationData: any) => {
     return new Promise((resolve, reject) => {
       const conversationId = conversationData?.id;
-      database()
+      database
         .ref(`conversations/${conversationId}`)
         .set({
           convDetails: conversationData,
@@ -140,13 +151,13 @@ class GFirebase {
         latestMessageCreatedAt,
       } = conversationData;
       const messageId = messageData?.id;
-      const messagesRef = database().ref(
+      const messagesRef = database.ref(
         `/conversations/${id}/messages/${messageId}`
       );
       messagesRef
         .set({ ...messageData })
         .then(() => {
-          database()
+          database
             .ref(`/conversations/${id}/convDetails`)
             .update({
               participantsDeleteFlag: participantsDeleteFlag,
@@ -172,13 +183,12 @@ class GFirebase {
 
   getFcmToken = () => {
     return new Promise(async (resolve, reject) => {
-      const authStatus = await messaging().requestPermission();
+      const authStatus = await requestPermission(messaging);
       const enabled =
-        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
-        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+        authStatus === AuthorizationStatus.AUTHORIZED ||
+        authStatus === AuthorizationStatus.PROVISIONAL;
       if (enabled) {
-        messaging()
-          .getToken()
+        getToken(messaging)
           .then((token) => resolve(token))
           .catch((err) => {
             console.log('Error while getting device token =>', err);
@@ -189,7 +199,7 @@ class GFirebase {
   };
 
   sendMessageNotification = async (token: any, data: any) => {
-    const sendNotification = functions().httpsCallable('sendNotification');
+    const sendNotification = functions.httpsCallable('sendNotification');
     try {
       await sendNotification({
         token: token,
@@ -207,7 +217,7 @@ class GFirebase {
 
   deleteChat = (id: any) => {
     return new Promise((resolve, reject) => {
-      database()
+      database
         .ref(`/chats/${id}`)
         .remove()
         .then(() => {
@@ -247,7 +257,7 @@ class GFirebase {
 
   updateConvUnReadCount = (convId: any, userId: any) => {
     return new Promise((resolve, reject) => {
-      database()
+      database
         .ref(`/conversations/${convId}/convDetails/unReadCount`)
         .update({ [userId]: 0 })
         .then(() => resolve(''))
@@ -273,7 +283,7 @@ class GFirebase {
         `/conversations/${conversationId}/messages/${messageId}/readBy/${currentUserId}`
       ] = message?.readBy[currentUserId];
     });
-    database()
+    database
       .ref()
       .update(updates)
       .catch((error) => {
@@ -283,7 +293,7 @@ class GFirebase {
 
   clearChat = (conversationId: any, lastMessageId: any, currentUserId: any) => {
     return new Promise((resolve, reject) => {
-      const messageRef = database().ref(
+      const messageRef = database.ref(
         `/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`
       );
       messageRef
@@ -306,10 +316,10 @@ class GFirebase {
     currentUserId: any
   ) => {
     return new Promise((resolve, reject) => {
-      const conversationRef = database().ref(
+      const conversationRef = database.ref(
         `/conversations/${conversationId}/convDetails/participantsDeleteFlag`
       );
-      const messageRef = database().ref(
+      const messageRef = database.ref(
         `/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`
       );
       conversationRef
@@ -339,7 +349,7 @@ class GFirebase {
 
   getSingleConversation = (currentUserId: any, otherUserId: any) => {
     return new Promise((resolve, reject) => {
-      const conversationsRef = database().ref('conversations');
+      const conversationsRef = database.ref('conversations');
       conversationsRef
         .orderByChild(
           `convDetails/participantsDeleteFlag/${currentUserId}/deleteStatus`
@@ -370,7 +380,7 @@ class GFirebase {
 
   blockUnBlockConv = (conversationId: any, userId: any, blockUser: any) => {
     return new Promise((resolve, reject) => {
-      const conversationRef = database().ref(
+      const conversationRef = database.ref(
         `/conversations/${conversationId}/convDetails/participantsBlockFlag`
       );
       conversationRef
@@ -399,7 +409,7 @@ class GFirebase {
   getNoOfChats = (userId: number, conversationId: string) => {
     const todayTimestamp = new Date().setHours(0, 0, 0, 0);
     return new Promise((resolve, reject) => {
-      database()
+      database
         .ref('conversations')
         .orderByChild('convDetails/createdAt')
         .startAt(todayTimestamp)
