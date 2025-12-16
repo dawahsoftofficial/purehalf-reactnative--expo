@@ -44,6 +44,8 @@ import {
   SearchProfiles,
   SearchResults,
   Settings,
+  SignupStepInput,
+  SignupStepRadio,
   SingleChat,
   UserInput,
   UserProfile,
@@ -201,6 +203,8 @@ function App() {
           <Stack.Screen name="ProfilePicture" component={ProfilePicture} />
           <Stack.Screen name="UserLocation" component={Map} />
           <Stack.Screen name="AccountSuspended" component={AccountSuspended} />
+          <Stack.Screen name="SignupStepInput" component={SignupStepInput} />
+          <Stack.Screen name="SignupStepRadio" component={SignupStepRadio} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

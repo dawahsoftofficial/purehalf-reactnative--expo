@@ -618,6 +618,32 @@ const AuthWelcome = (props: any) => {
               />
             )}
 
+            <Button
+              text="Test Input Screen"
+              onPress={() => props.navigation.navigate('SignupStepInput')}
+              buttonStyle={Styles.testButton}
+              icon={
+                <MaterialCommunityIcons
+                  name={'text-box'}
+                  size={wp(5)}
+                  color={Colors.color2}
+                />
+              }
+            />
+
+            <Button
+              text="Test Radio Screen"
+              onPress={() => props.navigation.navigate('SignupStepRadio')}
+              buttonStyle={Styles.testButton}
+              icon={
+                <MaterialCommunityIcons
+                  name={'radiobox-marked'}
+                  size={wp(5)}
+                  color={Colors.color2}
+                />
+              }
+            />
+
             <View style={Styles.radioBtnCon}>
               <CheckBox
                 disabled={false}
@@ -761,6 +787,10 @@ const Styles = StyleSheet.create({
   },
   appleBtn: {
     backgroundColor: Colors.color1,
+    marginTop: hp(2),
+  },
+  testButton: {
+    backgroundColor: Colors.theme,
     marginTop: hp(2),
   },
   // phoneNumberCon: {

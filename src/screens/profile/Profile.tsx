@@ -1,18 +1,16 @@
-import {
-  View,
-  StatusBar,
-  ScrollView,
-  LogBox,
-  TextInput,
-  Text as ReactText,
-  SafeAreaView,
-} from 'react-native';
-import React, { useState, useEffect, useRef } from 'react';
-import Feather from 'react-native-vector-icons/Feather';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import Ripple from 'react-native-material-ripple';
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import _ from 'lodash';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ScrollView,
+  StatusBar,
+  Text as ReactText,
+  TextInput,
+  View,
+} from 'react-native';
+import Ripple from 'react-native-material-ripple';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import Feather from 'react-native-vector-icons/Feather';
 
 import {
   Button,
@@ -22,25 +20,24 @@ import {
   PremiumButton,
   Text,
 } from '../../components';
-import Header from './Header';
-import Styles from './Styles';
-import InfoCard from './InfoCard';
+import { hp, wp } from '../../global';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { Colors } from '../../res';
+import {
+  ApiServices,
+  Firebase,
+  flashSuccessMessage,
+  StorageManager,
+  useGlobalContext,
+} from '../../services';
 import EditInfoCardModal from './EditInfoCardModal';
+import EditInterestCardModal from './EditInterestCardModal';
+import Header from './Header';
+import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
 import InterestAndHobbyCardStatic from './InterestAndHobbyCardStatic';
-import EditInterestCardModal from './EditInterestCardModal';
-import { CheckRtl, LanguageKeys } from '../../languages';
-import {
-  useGlobalContext,
-  StorageManager,
-  ApiServices,
-  flashSuccessMessage,
-  Firebase,
-} from '../../services';
-import { Colors } from '../../res';
-import { hp, wp } from '../../global';
+import Styles from './Styles';
 
-LogBox.ignoreAllLogs(true);
 const Profile = (props: any) => {
   const { currentUser, updateCurrentUser, conversations } = useGlobalContext();
   const scrollViewRef: any = useRef(null);
@@ -233,7 +230,7 @@ const Profile = (props: any) => {
           setIinterestAndHobbies(interest);
         }
         const catData: any = {};
-        for (let child in Data) {
+        for (const child in Data) {
           Data[child].forEach((element: any) => {
             if (child !== 'personalityRequirements') {
               const result = attributeRes[element.category][element.id];
@@ -249,7 +246,7 @@ const Profile = (props: any) => {
 
               if (value !== null && value !== undefined) {
                 if (element.type === 'dropDown') {
-                  let result = _.find(element?.data, function (n) {
+                  const result = _.find(element?.data, function (n) {
                     if (n.id === value) {
                       return n;
                     }
