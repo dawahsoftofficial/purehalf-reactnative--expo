@@ -618,7 +618,7 @@ const AuthWelcome = (props: any) => {
               />
             )}
 
-            <Button
+            {/* <Button
               text="Test Input Screen"
               onPress={() => props.navigation.navigate('SignupStepInput')}
               buttonStyle={Styles.testButton}
@@ -642,7 +642,7 @@ const AuthWelcome = (props: any) => {
                   color={Colors.color2}
                 />
               }
-            />
+            /> */}
 
             <View style={Styles.radioBtnCon}>
               <CheckBox

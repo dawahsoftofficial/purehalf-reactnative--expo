@@ -1,5 +1,5 @@
 import { getApp } from '@react-native-firebase/app';
-import { getAuth } from '@react-native-firebase/auth';
+import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import { getDatabase } from '@react-native-firebase/database';
 import { getFunctions } from '@react-native-firebase/functions';
 import {
@@ -41,8 +41,7 @@ class GFirebase {
 
   sendVerificationCode = (phoneNumber: any, forceResend = false) => {
     return new Promise((resolve, reject) => {
-      auth
-        .signInWithPhoneNumber(phoneNumber, forceResend)
+      signInWithPhoneNumber(auth, phoneNumber, undefined, forceResend)
         .then((confirmResult: any) => {
           resolve(confirmResult);
         })
