@@ -1,26 +1,27 @@
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  View,
-  StyleSheet,
-  StatusBar,
-  Dimensions,
-  Image,
   ActivityIndicator,
+  Dimensions,
   FlatList,
+  Image,
+  StatusBar,
+  StyleSheet,
+  View,
 } from 'react-native';
+import Ripple from 'react-native-material-ripple';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useRef, useState, useEffect } from 'react';
-import { Colors, Fonts } from '../res';
+import { SwiperFlatList } from 'react-native-swiper-flatlist';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { hp, Typography, wp } from '../global';
-import { SwiperFlatList } from 'react-native-swiper-flatlist';
-import Ripple from 'react-native-material-ripple';
+
 import { Animation } from '../animations';
-import { PrivacyProtectedAlert, RequestSentAlert } from './alerts';
-import Text from './Text';
-import ModalLoader from './loaders/ModalLoader';
-import { ApiServices, useGlobalContext } from '../services';
+import { hp, Typography, wp } from '../global';
 import { LanguageKeys } from '../languages';
+import { Colors, Fonts } from '../res';
+import { ApiServices, useGlobalContext } from '../services';
+import { PrivacyProtectedAlert, RequestSentAlert } from './alerts';
+import ModalLoader from './loaders/ModalLoader';
+import Text from './Text';
 
 const ImageViewer = (props: any) => {
   const { currentUser } = useGlobalContext();
@@ -103,11 +104,11 @@ const ImageViewer = (props: any) => {
   };
 
   const getPhotos = async () => {
-    let { media, photo_access_action } = userData;
+    const { media, photo_access_action } = userData;
 
     const isCurrentUser = userData?.id === currentUser?.id ? true : false;
     if (media) {
-      let { public_gallery, private_photo_count, private_gallery } = media;
+      const { public_gallery, private_photo_count, private_gallery } = media;
       let allPhotos: any = [];
       if (public_gallery && public_gallery?.length !== 0) {
         allPhotos = public_gallery;

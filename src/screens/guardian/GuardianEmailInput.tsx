@@ -1,27 +1,34 @@
-import { View, StyleSheet, KeyboardAvoidingView, TextInput, Image, StatusBar } from 'react-native'
-import React, { useState } from 'react'
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons'
-import LinearGradient from 'react-native-linear-gradient'
-import { Button, Header, SlideShowContainer, Text } from '../../components'
-import { Colors, Fonts, Images } from '../../res'
-import { Typography, hp, wp } from '../../global'
-import { Animation } from '../../animations'
-import { CheckRtl, LanguageKeys } from '../../languages'
-import { checkEmpty, emailValidation, flashErrorMessage } from '../../services'
+import React, { useState } from 'react';
+import {
+  Image,
+  KeyboardAvoidingView,
+  StatusBar,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
+import { Animation } from '../../animations';
+import { Button, Header, SlideShowContainer, Text } from '../../components';
+import { hp, Typography, wp } from '../../global';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { Colors, Fonts, Images } from '../../res';
+import { checkEmpty, emailValidation, flashErrorMessage } from '../../services';
 
 const GuardianEmailInput = ({ navigation }: any) => {
-  const Rtl = CheckRtl()
-  const [email, setEmail] = useState('')
+  const Rtl = CheckRtl();
+  const [email, setEmail] = useState('');
 
-  const onChangeEmail = (text: string) => setEmail(text)
+  const onChangeEmail = (text: string) => setEmail(text);
   const onContinuePress = () => {
     if (!emailValidation(email)) {
-      flashErrorMessage('Invalid email')
+      flashErrorMessage('Invalid email');
+    } else {
+      navigation.navigate('GuardianPasswordInput', { email });
     }
-    else {
-      navigation.navigate('GuardianPasswordInput', { email })
-    }
-  }
+  };
 
   return (
     <SlideShowContainer disabled>
@@ -43,10 +50,7 @@ const GuardianEmailInput = ({ navigation }: any) => {
           arrowColor={Colors.color2}
           containerStyle={Styles.header}
         />
-        <KeyboardAvoidingView
-          behavior={"height"}
-          style={{ flex: 1 }}
-        >
+        <KeyboardAvoidingView behavior={'height'} style={{ flex: 1 }}>
           <Animation style={Styles.contentContainer}>
             <Text style={Styles.heading}>
               {LanguageKeys.enterYourEmailLabel}
@@ -56,7 +60,7 @@ const GuardianEmailInput = ({ navigation }: any) => {
             </Text>
             <TextInput
               style={[Styles.emailInput, { textAlign: Rtl ? 'right' : 'left' }]}
-              keyboardType='email-address'
+              keyboardType="email-address"
               value={email}
               onChangeText={onChangeEmail}
             />
@@ -64,21 +68,27 @@ const GuardianEmailInput = ({ navigation }: any) => {
               text={LanguageKeys.continue}
               onPress={onContinuePress}
               disabled={checkEmpty(email)}
-              icon={<MaterialCommunityIcons name={'logout-variant'} size={wp(5)} color={Colors.color2} />}
+              icon={
+                <MaterialCommunityIcons
+                  name={'logout-variant'}
+                  size={wp(5)}
+                  color={Colors.color2}
+                />
+              }
             />
           </Animation>
         </KeyboardAvoidingView>
       </View>
     </SlideShowContainer>
-  )
-}
+  );
+};
 
-export default GuardianEmailInput
+export default GuardianEmailInput;
 
 const Styles = StyleSheet.create({
   header: {
     paddingTop: hp(6),
-    borderBottomWidth: 0
+    borderBottomWidth: 0,
   },
   imageOuterView: {
     height: '100%',
@@ -102,7 +112,7 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(4),
     width: wp(100),
     zIndex: 1,
-    paddingHorizontal: wp(4)
+    paddingHorizontal: wp(4),
   },
   heading: {
     color: Colors.color2,
@@ -125,6 +135,6 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(2),
     borderBottomColor: Colors.color2,
     borderBottomWidth: 1,
-    marginVertical: hp(3)
-  }
-})
+    marginVertical: hp(3),
+  },
+});

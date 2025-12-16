@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import {
   FlatList,
   Modal,
-  StatusBar,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -46,10 +45,6 @@ const ButtonPicker = (props: any) => {
 
   const Content = () => (
     <View style={{ flex: 1 }}>
-      <StatusBar
-        backgroundColor={Colors.blackRGBA50}
-        barStyle="light-content"
-      />
       <TouchableOpacity
         style={Styles.container}
         activeOpacity={1}
