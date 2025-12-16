@@ -569,7 +569,7 @@ const AuthWelcome = (props: any) => {
                 </Ripple>
               </View>
             </View> */}
-            {isIOS && buttonStatus?.is_apple_active === 1 && (
+            {isIOS && buttonStatus?.is_apple === 1 && (
               <Button
                 text={LanguageKeys.startWithWithApple}
                 onPress={() => onContinuePress('apple')}
@@ -585,7 +585,7 @@ const AuthWelcome = (props: any) => {
                 }
               />
             )}
-            {buttonStatus?.is_phone_active === 1 && (
+            {buttonStatus?.is_phone === 1 && (
               <Button
                 text={LanguageKeys.startWithWithPhone}
                 onPress={() => onContinuePress('phone')}
@@ -601,7 +601,7 @@ const AuthWelcome = (props: any) => {
                 }
               />
             )}
-            {buttonStatus?.is_google_active === 1 && (
+            {buttonStatus?.is_google === 1 && (
               <Button
                 text={LanguageKeys.startWithWithGoogle}
                 onPress={() => onContinuePress('google')}

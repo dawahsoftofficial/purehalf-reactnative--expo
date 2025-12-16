@@ -40,10 +40,7 @@ Api.interceptors.request.use(
       dataSize: config.data ? JSON.stringify(config.data).length : 0,
     };
 
-    console.log('[API Request]', {
-      ...requestInfo,
-      formattedUrl: `${requestInfo.method} ${requestInfo.fullUrl}`,
-    });
+    console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
 
     // Store request timestamp for response time calculation
     config.metadata = { startTime: Date.now() };
@@ -51,11 +48,7 @@ Api.interceptors.request.use(
     return config;
   },
   (error: any) => {
-    console.error('[API Request Error]', {
-      error,
-      message: error?.message,
-      stack: error?.stack,
-    });
+    console.error('[API Request Error]', JSON.stringify(error, null, 4));
     return Promise.reject(error);
   }
 );
@@ -80,11 +73,10 @@ Api.interceptors.response.use(
       hasData: !!response.data,
     };
 
-    console.log('[API Response Success]', {
-      ...responseInfo,
-      formattedUrl: `${responseInfo.method} ${responseInfo.fullUrl}`,
-      summary: `${responseInfo.method} ${responseInfo.url} - ${responseInfo.status} ${responseInfo.statusText} (${responseInfo.requestDuration})`,
-    });
+    console.log(
+      '[API Response Success]',
+      JSON.stringify(responseInfo, null, 4)
+    );
 
     return response;
   },
@@ -110,25 +102,10 @@ Api.interceptors.response.use(
       hasRequest: !!error?.config,
     };
 
-    console.error('[API Response Error]', {
-      ...errorInfo,
-      formattedUrl: `${errorInfo.method} ${errorInfo.url}`,
-      summary: `${errorInfo.method} ${errorInfo.url} - ${errorInfo.status || 'No status'} (${errorInfo.requestDuration || 'N/A'})`,
-      errorDetails: {
-        message: errorInfo.errorMessage,
-        code: errorInfo.errorCode,
-        status: errorInfo.status,
-        statusText: errorInfo.statusText,
-        responseData: errorInfo.responseData,
-      },
-    });
+    console.error('[API Response Error]', JSON.stringify(errorInfo, null, 4));
 
     // Handle authentication errors
     if (error?.response?.status === 401 || error?.response?.status === 400) {
-      console.log(
-        '[API Response Error] Handling authentication error:',
-        error?.response?.status
-      );
       const { getData, setData, deleteAll, storageKeys } = StorageManager;
       const verificationId = await getData(
         storageKeys.FIREBASE_VERIFICATION_ID

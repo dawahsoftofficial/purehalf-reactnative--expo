@@ -539,8 +539,16 @@ class GApiServices {
   getButtonsActiveStatus = () => {
     return new Promise((resolve, reject) => {
       Api.get(EndPoints.getButtonsActiveStatus)
-        .then((data) => {
-          resolve(data?.data?.results);
+        .then((data: any) => {
+          const results = data?.data?.results || [];
+          const authenticationMethod = results?.find(
+            (item: any) => item?.key === 'authentication_method'
+          );
+          if (authenticationMethod?.value) {
+            resolve(authenticationMethod?.value);
+          } else {
+            resolve({});
+          }
         })
         .catch((error) => {
           console.log('error while getting Button Status =>', error);
@@ -577,7 +585,11 @@ class GApiServices {
   getUsers = (params = { page: 1, type: -1 }) => {
     return new Promise((resolve, reject) => {
       const { page, type } = params;
-      console.log('[getUsers] API call initiated:', { page, type, stack: new Error().stack });
+      console.log('[getUsers] API call initiated:', {
+        page,
+        type,
+        stack: new Error().stack,
+      });
       Api.get(`${EndPoints.getUsers}?page=${page}&type=${type}`)
         .then((data) => {
           if (Array.isArray(data?.data?.results)) {
