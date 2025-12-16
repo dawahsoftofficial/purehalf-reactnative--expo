@@ -1,52 +1,53 @@
-import {
-  View,
-  StatusBar,
-  BackHandler,
-  StyleSheet,
-  Image,
-} from 'react-native';
 import React, { useEffect } from 'react';
+import { BackHandler, Image, StatusBar, StyleSheet, View } from 'react-native';
 
 import { Button, Text } from '../../components';
+import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { hp, wp, Typography } from '../../global';
 import { Colors, Fonts, Images } from '../../res';
 import { useGlobalContext } from '../../services';
 
 const WelcomeUser = (props: any) => {
-  const { currentUser } = useGlobalContext()
+  const { currentUser } = useGlobalContext();
 
   const onGetStartedPress = () => {
-    if (currentUser?.membership_status === null || currentUser?.membership_status === 0) {
+    if (
+      currentUser?.membership_status === null ||
+      currentUser?.membership_status === 0
+    ) {
       props.navigation.reset({
         index: 0,
-        routes: [{
-          name: 'ProFeaturesPromotion',
-          params: {
-            navigateTo: 'BottomTab',
-            from: 'SignUp'
-          }
-        }],
+        routes: [
+          {
+            name: 'ProFeaturesPromotion',
+            params: {
+              navigateTo: 'BottomTab',
+              from: 'SignUp',
+            },
+          },
+        ],
       });
-    }
-    else if (currentUser?.membership_status) {
+    } else if (currentUser?.membership_status) {
       props.navigation.reset({
         index: 0,
-        routes: [{
-          name: 'GiftMembershipCongrats',
-          params: {
-            navigateTo: 'BottomTab',
-            from: 'SignUp'
-          }
-        }],
+        routes: [
+          {
+            name: 'GiftMembershipCongrats',
+            params: {
+              navigateTo: 'BottomTab',
+              from: 'SignUp',
+            },
+          },
+        ],
       });
-    }
-    else {
+    } else {
       props.navigation.reset({
         index: 0,
-        routes: [{
-          name: 'BottomTab'
-        }],
+        routes: [
+          {
+            name: 'BottomTab',
+          },
+        ],
       });
     }
   };
@@ -58,7 +59,7 @@ const WelcomeUser = (props: any) => {
     };
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backAction,
+      backAction
     );
     return () => backHandler.remove();
   }, []);
@@ -75,19 +76,27 @@ const WelcomeUser = (props: any) => {
           {/* <Text style={Styles.bismillahText}>
             k
           </Text> */}
-          <Image source={Images.bismillah} resizeMode='contain' style={Styles.bismillahImage} />
+          <Image
+            source={Images.bismillah}
+            resizeMode="contain"
+            style={Styles.bismillahImage}
+          />
           <Text style={Styles.welcomeHeading}>
             {LanguageKeys.welcome} {currentUser?.first_name}!
           </Text>
           <Text style={Styles.description}>
             {`PureHalf is a Halal platform rooted in Islamic values, dedicated to fostering meaningful connections. Please engage respectfully and adhere to Islamic principles.<br/><br/>"Tell the believing men to lower their gaze and guard their modesty; that is purer for them. And tell the believing women to lower their gaze and guard their modesty..." - Surah An-Nur, 24:30.
-            <br/>Failure to adhere to these guidelines may result in your account being banned.<br/><br/>By using this platform, you consent to uphold these principles with Allah as your witness.            `.split("<br/>").join("\n")}
+            <br/>Failure to adhere to these guidelines may result in your account being banned.<br/><br/>By using this platform, you consent to uphold these principles with Allah as your witness.            `
+              .split('<br/>')
+              .join('\n')}
           </Text>
           <Text style={Styles.descriptionBold}>
             I commit to honor these teachings insha'Allah.
           </Text>
           <View style={Styles.finalTextContainer}>
-            <Text style={Styles.finalText}>{currentUser?.first_name} {currentUser?.last_name}</Text>
+            <Text style={Styles.finalText}>
+              {currentUser?.first_name} {currentUser?.last_name}
+            </Text>
           </View>
         </View>
         <View>
@@ -119,21 +128,21 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_Bismillah,
     fontSize: wp(17),
     color: Colors.color12,
-    alignSelf: 'flex-end'
+    alignSelf: 'flex-end',
   },
-  bismillahImage: { width: "100%", height: 80 },
+  bismillahImage: { width: '100%', height: 80 },
   welcomeHeading: {
     color: Colors.color12,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.large2,
-    marginTop: 10
+    marginTop: 10,
   },
   description: {
     color: Colors.color12,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small,
     marginBottom: 20,
-    marginTop: 5
+    marginTop: 5,
   },
   descriptionBold: {
     color: Colors.color12,
@@ -142,12 +151,12 @@ const Styles = StyleSheet.create({
   },
   finalTextContainer: {
     marginTop: hp(3),
-    borderBottomWidth: .5,
+    borderBottomWidth: 0.5,
     borderColor: Colors.color18,
   },
   finalText: {
     color: Colors.color12,
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large3
-  }
+    fontSize: Typography.large3,
+  },
 });

@@ -426,7 +426,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           });
         });
       }
-    } catch (error) {
+    } catch {
       // ignore read errors and keep existing completion defaults
     }
 
@@ -437,12 +437,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       }));
       return updated.sort(sortByCompletion);
     });
-  }, [
-    currentUser,
-    getData,
-    profileProgressTemplate,
-    storageKeys.PROFILE_DETAIL_LOCAL,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
 
   const checkNewTransaction = useCallback(() => {
     if (currentUser?.latest_transaction?.paid_tracking === 0) {
@@ -495,7 +491,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     React.useCallback(() => {
       getUserStats();
       handleProfileCompleteData();
-    }, [getUserStats, handleProfileCompleteData])
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
   );
 
   useFocusEffect(

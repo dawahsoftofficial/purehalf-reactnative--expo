@@ -548,14 +548,7 @@ class GApiServices {
       Api.get(EndPoints.getButtonsActiveStatus)
         .then((data: any) => {
           const results = data?.data?.results || [];
-          const authenticationMethod = results?.find(
-            (item: any) => item?.key === 'authentication_method'
-          );
-          if (authenticationMethod?.value) {
-            resolve(authenticationMethod?.value);
-          } else {
-            resolve({});
-          }
+          resolve({ results });
         })
         .catch((error) => {
           console.log('error while getting Button Status =>', error);
@@ -1287,18 +1280,6 @@ class GApiServices {
     });
   };
 
-  getAppUpdateInfo = () => {
-    return new Promise((resolve, reject) => {
-      Api.get(EndPoints.appUpdateInfo)
-        .then((data) => {
-          resolve(data?.data?.results);
-        })
-        .catch((error) => {
-          console.log('error while getting Update Info =>', error);
-          reject('');
-        });
-    });
-  };
 
   snedMessageNotification = (params: any) => {
     return new Promise((resolve, reject) => {

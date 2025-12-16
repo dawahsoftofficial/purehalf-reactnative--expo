@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useReducer,
+} from 'react';
 
 import Reducer from './Reducer';
 
@@ -20,8 +26,8 @@ let initialState = {
 const AppProvider = ({ children }: any) => {
   const [state, dispatch]: any = useReducer(Reducer, initialState);
 
-  const updateCustomModal = (visible: any, data: any) => {
-    return dispatch({
+  const updateCustomModal = useCallback((visible: any, data: any) => {
+    dispatch({
       type: 'UPDATE_CUSTOM_MODAL',
       payload: {
         customModal: {
@@ -30,68 +36,80 @@ const AppProvider = ({ children }: any) => {
         },
       },
     });
-  };
+  }, []);
 
-  const updateConversationLoading = (coversationLoading: any) => {
-    return dispatch({
+  const updateConversationLoading = useCallback((coversationLoading: any) => {
+    dispatch({
       type: 'CONVERSATION_LOADING',
       payload: {
         coversationLoading: coversationLoading,
       },
     });
-  };
+  }, []);
 
-  const updateOpenedConversationId = (openedConversationId: any) => {
-    return dispatch({
-      type: 'OPENED_CONVERSATION_ID',
-      payload: {
-        openedConversationId: openedConversationId,
-      },
-    });
-  };
+  const updateOpenedConversationId = useCallback(
+    (openedConversationId: any) => {
+      dispatch({
+        type: 'OPENED_CONVERSATION_ID',
+        payload: {
+          openedConversationId: openedConversationId,
+        },
+      });
+    },
+    []
+  );
 
-  const updateDirection = (direction: any, language: any) => {
-    return dispatch({
+  const updateDirection = useCallback((direction: any, language: any) => {
+    dispatch({
       type: 'UPDATE_DIRECTION',
       payload: {
         direction: direction,
         language: language,
       },
     });
-  };
+  }, []);
 
-  const updateCurrentUser = async (currentUser: any) => {
-    return dispatch({
+  const updateCurrentUser = useCallback(async (currentUser: any) => {
+    dispatch({
       type: 'UPDATE_CURRENT_USER',
       payload: {
         currentUser: currentUser,
       },
     });
-  };
+  }, []);
 
-  const updateConversations = async (conversations: any) => {
-    return dispatch({
+  const updateConversations = useCallback(async (conversations: any) => {
+    dispatch({
       type: 'UPDATE_CONVERSATIONS',
       payload: {
         conversations: conversations,
       },
     });
-  };
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({
+      ...state,
+      updateDirection,
+      updateCurrentUser,
+      updateConversations,
+      updateConversationLoading,
+      updateOpenedConversationId,
+      updateCustomModal,
+    }),
+    [
+      state,
+      updateDirection,
+      updateCurrentUser,
+      updateConversations,
+      updateConversationLoading,
+      updateOpenedConversationId,
+      updateCustomModal,
+    ]
+  );
 
   return (
-    <AppContext.Provider
-      value={{
-        ...state,
-        updateDirection,
-        updateCurrentUser,
-        updateConversations,
-        updateConversationLoading,
-        updateOpenedConversationId,
-        updateCustomModal,
-      }}
-    >
-      {children}
-    </AppContext.Provider>
+    <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
   );
 };
 
