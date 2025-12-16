@@ -1,23 +1,23 @@
+import moment from 'moment';
+import React, { useEffect } from 'react';
 import {
-  View,
+  BackHandler,
   Image,
   ImageBackground,
   StatusBar,
-  BackHandler,
-  SafeAreaView,
+  View,
 } from 'react-native';
-import React, { useEffect } from 'react';
-import { Button, Text } from '../../components';
-import { Images } from '../../res';
-import { Animation } from '../../animations';
-import { LanguageKeys } from '../../languages';
 import { StyleSheet } from 'react-native';
-import { hp, wp, Typography } from '../../global';
-import { Colors, Fonts } from '../../res';
-import { addAnaylatics } from '../../services/firebase/analytics';
-import { ApiServices, StorageManager, useGlobalContext } from '../../services';
-import moment from 'moment';
 import { AppEventsLogger } from 'react-native-fbsdk-next';
+
+import { Animation } from '../../animations';
+import { Button, Text } from '../../components';
+import { hp, Typography, wp } from '../../global';
+import { LanguageKeys } from '../../languages';
+import { Images } from '../../res';
+import { Colors, Fonts } from '../../res';
+import { ApiServices, StorageManager, useGlobalContext } from '../../services';
+import { addAnaylatics } from '../../services/firebase/analytics';
 
 const MembershipCongrats = (props: any) => {
   const {

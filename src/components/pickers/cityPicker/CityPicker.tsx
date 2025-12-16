@@ -3,10 +3,10 @@ import {
   Text,
   Modal,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import Cities from './Cities';
 import { hp, Typography, wp } from '../../../global';

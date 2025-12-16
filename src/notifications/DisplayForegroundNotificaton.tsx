@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  SafeAreaView,
   Image,
   Dimensions,
   PanResponder,
@@ -10,6 +9,7 @@ import {
   Easing,
   StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ripple from 'react-native-material-ripple';
 import AsyncStorage from '@react-native-async-storage/async-storage';

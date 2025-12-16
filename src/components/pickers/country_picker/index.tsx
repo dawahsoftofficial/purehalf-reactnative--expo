@@ -3,11 +3,11 @@ import {
   Text,
   Modal,
   StyleSheet,
-  SafeAreaView,
   TextInput,
   FlatList,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react';
 import Countries from './Countries';
 import { hp, Typography, wp } from '../../../global';

@@ -1,5 +1,6 @@
-import { View, StyleSheet, Image, StatusBar, SafeAreaView } from 'react-native';
+import { View, StyleSheet, Image, StatusBar } from 'react-native';
 import React from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient, Text } from '..';
 import { Colors, Fonts, Images } from '../../res';
 import { wp } from '../../global';

@@ -3,11 +3,11 @@ import {
   StyleSheet,
   StatusBar,
   Dimensions,
-  SafeAreaView,
   Image,
   ActivityIndicator,
   FlatList,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useRef, useState, useEffect } from 'react';
 import { Colors, Fonts } from '../res';
 import AntDesign from 'react-native-vector-icons/AntDesign';
