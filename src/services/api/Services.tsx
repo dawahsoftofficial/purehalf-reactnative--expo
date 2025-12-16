@@ -2,7 +2,12 @@ import {
   appleAuth,
   type AppleRequestResponseFullName,
 } from '@invertase/react-native-apple-authentication';
-import auth from '@react-native-firebase/auth';
+import { getApp } from '@react-native-firebase/app';
+import {
+  AppleAuthProvider,
+  getAuth,
+  signInWithCredential,
+} from '@react-native-firebase/auth';
 import axios from 'axios';
 import Purchases from 'react-native-purchases';
 
@@ -16,6 +21,9 @@ import EndPoints from './EndPoints';
 import { Api } from './Middleware';
 
 const { storageKeys, setData, getData } = StorageManager;
+
+const firebaseApp = getApp();
+const auth = getAuth(firebaseApp);
 
 class GApiServices {
   socialAuthenticate = (provider: string) => {
@@ -206,15 +214,15 @@ class GApiServices {
         console.log(
           '[socialAppleAuthenticate] Creating Firebase credential...'
         );
-        const appleCredential = auth.AppleAuthProvider.credential(
+        const appleCredential = AppleAuthProvider.credential(
           identityToken,
           nonce
         );
         console.log(
           '[socialAppleAuthenticate] Signing in with Firebase credential...'
         );
-        auth()
-          .signInWithCredential(appleCredential)
+
+        signInWithCredential(auth, appleCredential)
           .then(async (res: any) => {
             console.log(
               '[socialAppleAuthenticate] Firebase sign-in successful:',
@@ -486,7 +494,6 @@ class GApiServices {
       if (fromOtp) {
         this.loginUser(phoneNumber, onLogin);
       } else {
-        const user = auth().currentUser;
         Firebase.sendVerificationCode(phoneNumber)
           .then(async (verificationRes) => {
             const res = {

@@ -1,24 +1,25 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getApp } from '@react-native-firebase/app';
+import { getAuth, signOut } from '@react-native-firebase/auth';
+import { getMessaging, onMessage } from '@react-native-firebase/messaging';
+import { useNavigation } from '@react-navigation/native';
+import { CommonActions as CommonActionsNav } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  Image,
-  Dimensions,
-  PanResponder,
   Animated,
+  Dimensions,
   Easing,
+  Image,
+  PanResponder,
   StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import Ripple from 'react-native-material-ripple';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import auth from '@react-native-firebase/auth';
-import { CommonActions as CommonActionsNav } from '@react-navigation/native';
-import messaging from '@react-native-firebase/messaging';
 import Rate from 'react-native-rate';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Typography, hp, wp } from '../global';
+import { hp, Typography, wp } from '../global';
 import { Colors, Fonts } from '../res';
 import {
   ApiServices,
@@ -26,6 +27,10 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../services';
+
+const firebaseApp = getApp();
+const auth = getAuth(firebaseApp);
+const messaging = getMessaging(firebaseApp);
 
 const DisplayForegroundNotification = () => {
   const { getData, setData, deleteAll, storageKeys } = StorageManager;
@@ -65,14 +70,54 @@ const DisplayForegroundNotification = () => {
     },
   });
 
+  const showNotification = () => {
+    Animated.timing(slideAnimation, {
+      toValue: 0, // Slide up to show
+      duration: 500,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const hideNotification = (callback: () => void) => {
+    Animated.timing(slideAnimation, {
+      toValue: -Dimensions.get('window').height, // Slide down to the bottom
+      duration: 500,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    }).start(callback);
+  };
+
   const handleOnMessage = (data: any, remoteMessage: any) => {
     setRemoteMessageData(data);
     setRemoteMessage(remoteMessage);
     showNotification();
   };
 
+  const onLogoutPress = async () => {
+    const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
+    await AsyncStorage.setItem('isRecommended', 'false');
+    await ApiServices.logout().catch();
+    await signOut(auth).catch();
+    await deleteAll()
+      .then(async () => {
+        updateCurrentUser(null);
+        const { setData } = StorageManager;
+        await setData(storageKeys.LANGUAGE, language);
+        await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
+        await stopConversationsListener();
+        navigation.dispatch(
+          CommonActionsNav.reset({
+            index: 1,
+            routes: [{ name: 'AuthWelcome' }],
+          })
+        );
+      })
+      .catch();
+  };
+
   useEffect(() => {
-    messaging().onMessage(async (remoteMessage: any) => {
+    onMessage(messaging, async (remoteMessage: any) => {
       const pressAction = remoteMessage?.data?.pressAction;
 
       const data = JSON.parse(remoteMessage?.data?.data || {});
@@ -133,53 +178,6 @@ const DisplayForegroundNotification = () => {
       }
     });
   }, []);
-
-  const onLogoutPress = async () => {
-    let verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
-    await AsyncStorage.setItem('isRecommended', 'false');
-    await ApiServices.logout().catch();
-    auth().signOut().catch();
-    await deleteAll()
-      .then(async () => {
-        updateCurrentUser(null);
-        const { setData } = StorageManager;
-        await setData(storageKeys.LANGUAGE, language);
-        await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
-        await stopConversationsListener();
-        navigation.dispatch(
-          CommonActionsNav.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
-      })
-      .catch();
-  };
-
-  const showNotification = () => {
-    slideAnimation.setValue(-Dimensions.get('window').height); // Set initial position to the top (negative value)
-    Animated.timing(slideAnimation, {
-      toValue: 0, // Slide down to the center
-      duration: 500,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }).start();
-    setTimeout(() => {
-      hideNotification(() => {
-        setRemoteMessage(null);
-        setRemoteMessageData(null);
-      });
-    }, 10000);
-  };
-
-  const hideNotification = (callback: () => void) => {
-    Animated.timing(slideAnimation, {
-      toValue: -Dimensions.get('window').height, // Slide down to the bottom
-      duration: 500,
-      easing: Easing.linear,
-      useNativeDriver: true,
-    }).start(callback);
-  };
 
   const onNotificationPress = async () => {
     switch (remoteMessageData?.notification_type) {

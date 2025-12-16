@@ -1,7 +1,11 @@
 import 'react-native-gesture-handler';
 
 import notifee from '@notifee/react-native';
-import messaging from '@react-native-firebase/messaging';
+import { getApp } from '@react-native-firebase/app';
+import {
+  getMessaging,
+  setBackgroundMessageHandler,
+} from '@react-native-firebase/messaging';
 import React from 'react';
 import { AppRegistry } from 'react-native';
 
@@ -9,6 +13,9 @@ import App from './App';
 import { name as appName } from './app.json';
 import { Images } from './src/res';
 import { AppProvider, isIOS } from './src/services';
+
+const firebaseApp = getApp();
+const messaging = getMessaging(firebaseApp);
 
 const createChannelId = async () => {
   const channelId = await notifee.createChannel({
@@ -47,7 +54,7 @@ const onMessageReceived = async (message) => {
   });
 };
 
-messaging().setBackgroundMessageHandler(onMessageReceived);
+setBackgroundMessageHandler(messaging, onMessageReceived);
 
 const Initial = () => {
   return (
