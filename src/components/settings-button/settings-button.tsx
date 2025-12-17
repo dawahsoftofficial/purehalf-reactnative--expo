@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,6 +20,8 @@ type SettingsButtonProps = {
   onPress: () => void;
   loading?: boolean;
   iconStyle?: object;
+  disabled?: boolean;
+  accessibilityLabel?: string;
 };
 
 const { width } = Dimensions.get('window');
@@ -30,50 +32,68 @@ function SettingsButton({
   onPress,
   loading = false,
   iconStyle,
+  disabled = false,
+  accessibilityLabel,
 }: SettingsButtonProps) {
   const Rtl = CheckRtl();
 
-  const renderIcon = () => (
-    <Image
-      source={icon}
-      resizeMode="contain"
-      style={[Styles.btnIcon, iconStyle]}
-    />
+  const iconElement = useMemo(
+    () => (
+      <Image
+        source={icon}
+        resizeMode="contain"
+        style={[Styles.btnIcon, iconStyle]}
+      />
+    ),
+    [icon, iconStyle]
   );
 
-  const renderName = () => (
-    <Text style={Styles.btnTxt} numberOfLines={1}>
-      {name}
-    </Text>
+  const nameElement = useMemo(
+    () => (
+      <Text style={Styles.btnTxt} numberOfLines={1}>
+        {name}
+      </Text>
+    ),
+    [name]
   );
 
-  const renderArrow = () => (
-    <AntDesign
-      name={Rtl ? 'arrowleft' : 'arrowright'}
-      color={Colors.color1}
-      size={wp(6)}
-    />
+  const arrowElement = useMemo(
+    () => (
+      <AntDesign
+        name={Rtl ? 'arrowleft' : 'arrowright'}
+        color={Colors.color1}
+        size={wp(6)}
+      />
+    ),
+    [Rtl]
   );
 
   return (
-    <Ripple style={Styles.btnCon} onPress={onPress}>
-      {Rtl && renderArrow()}
+    <Ripple
+      style={Styles.btnCon}
+      onPress={onPress}
+      disabled={disabled}
+      hitSlop={Styles.hitSlop}
+      accessibilityLabel={accessibilityLabel ?? name}
+      accessibilityRole="button"
+    >
+      {Rtl && arrowElement}
       <View
         style={[
           Styles.btnConInner,
           { justifyContent: Rtl ? 'flex-end' : 'flex-start' },
         ]}
       >
-        {!Rtl && renderIcon()}
-        {renderName()}
-        {Rtl && renderIcon()}
+        {!Rtl && iconElement}
+        {nameElement}
+        {Rtl && iconElement}
       </View>
-      {!Rtl && (loading ? <ActivityIndicator /> : renderArrow())}
+      {!Rtl && (loading ? <ActivityIndicator /> : arrowElement)}
     </Ripple>
   );
 }
 
-export default SettingsButton;
+export default memo(SettingsButton);
 
 const Styles = StyleSheet.create({
   btnCon: {
@@ -102,5 +122,11 @@ const Styles = StyleSheet.create({
     marginHorizontal: wp(3),
     color: Colors.color1,
     includeFontPadding: false,
+  },
+  hitSlop: {
+    top: 6,
+    bottom: 6,
+    left: 6,
+    right: 6,
   },
 });

@@ -18,7 +18,6 @@ export default SettingsHeader;
 
 const Styles = StyleSheet.create({
   container: {
-    paddingTop: hp(1.5),
     paddingBottom: hp(0.5),
     alignItems: 'center',
   },

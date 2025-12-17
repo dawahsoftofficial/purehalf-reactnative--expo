@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { Linking, ScrollView, StyleSheet } from 'react-native';
 import Rate from 'react-native-rate';
 
@@ -28,41 +28,42 @@ type SettingsMenuItem = {
 
 function Settings(props: SettingsProps) {
   const { currentUser } = useGlobalContext();
+  const { navigate } = props.navigation;
 
   const onBasicInfoPress = useCallback(() => {
-    props.navigation.navigate('UserInput', { fromSettings: true });
-  }, [props.navigation]);
+    navigate('UserInput', { fromSettings: true });
+  }, [navigate]);
 
   const onLocationPress = useCallback(() => {
-    props.navigation.navigate('UserLocation');
-  }, [props.navigation]);
+    navigate('UserLocation');
+  }, [navigate]);
 
   const onBlockListPress = useCallback(() => {
-    props.navigation.navigate('BlockedList');
-  }, [props.navigation]);
+    navigate('BlockedList');
+  }, [navigate]);
 
   const onPrivacyPress = useCallback(() => {
-    props.navigation.navigate('PrivacySettings');
-  }, [props.navigation]);
+    navigate('PrivacySettings');
+  }, [navigate]);
 
   const onPrivatePhotoAccessPress = useCallback(() => {
-    props.navigation.navigate('PrivatePhotoRequest');
-  }, [props.navigation]);
+    navigate('PrivatePhotoRequest');
+  }, [navigate]);
 
   const onMembershipPress = useCallback(() => {
     if (
       currentUser?.membership_status === 0 ||
       currentUser?.membership_status === null
     ) {
-      props.navigation.navigate('ProFeaturesPromotion');
+      navigate('ProFeaturesPromotion');
     } else {
-      props.navigation.navigate('MembershipInfo');
+      navigate('MembershipInfo');
     }
-  }, [currentUser?.membership_status, props.navigation]);
+  }, [currentUser?.membership_status, navigate]);
 
   const onAddWaliPress = useCallback(() => {
-    props.navigation.navigate('AddWali', { fromSettings: true });
-  }, [props.navigation]);
+    navigate('AddWali', { fromSettings: true });
+  }, [navigate]);
 
   const onRateAppPress = useCallback(() => {
     const options = {
@@ -83,12 +84,14 @@ function Settings(props: SettingsProps) {
   }, []);
 
   const onHelpAndSupportPress = useCallback(() => {
-    Linking.openURL('https://purehalf.com/support');
+    Linking.openURL('https://purehalf.com/support').catch(() => {
+      // noop
+    });
   }, []);
 
   const onNeedHelpPress = useCallback(() => {
-    props.navigation.navigate('ContactSupport');
-  }, [props.navigation]);
+    navigate('ContactSupport');
+  }, [navigate]);
 
   const settingsMenuItems = useMemo<SettingsMenuItem[]>(
     () => [
@@ -159,6 +162,14 @@ function Settings(props: SettingsProps) {
     ]
   );
 
+  const visibleMenuItems = useMemo(
+    () =>
+      settingsMenuItems.filter(
+        (item) => !item.showCondition || item.showCondition()
+      ),
+    [settingsMenuItems]
+  );
+
   return (
     <Container style={Styles.container} barStyle="light-content">
       <SettingsHeader />
@@ -166,26 +177,22 @@ function Settings(props: SettingsProps) {
         contentContainerStyle={Styles.innerCon}
         showsVerticalScrollIndicator={false}
       >
-        {settingsMenuItems.map((item, index) => {
-          if (item.showCondition && !item.showCondition()) {
-            return null;
-          }
-          return (
-            <SettingsButton
-              key={index}
-              icon={item.icon}
-              name={item.name}
-              onPress={item.onPress}
-            />
-          );
-        })}
+        {visibleMenuItems.map((item) => (
+          <SettingsButton
+            key={item.name}
+            icon={item.icon}
+            name={item.name}
+            onPress={item.onPress}
+            accessibilityLabel={item.name}
+          />
+        ))}
         <SocialLinks />
       </ScrollView>
     </Container>
   );
 }
 
-export default Settings;
+export default memo(Settings);
 
 const Styles = StyleSheet.create({
   container: {
@@ -193,6 +200,6 @@ const Styles = StyleSheet.create({
   },
   innerCon: {
     paddingBottom: hp(1),
-    flex: 1,
+    flexGrow: 1,
   },
 });
