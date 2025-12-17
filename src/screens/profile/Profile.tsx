@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import type { ScrollView } from 'react-native';
 import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Loader, Text } from '../../components';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -530,7 +531,7 @@ const Profile = ({
 
   const isOwnProfile = !fromUserProfile;
   return (
-    <View style={Styles.container}>
+    <SafeAreaView style={Styles.container}>
       <ScreenLoader visible={loader.visible} message={loader.message} />
       <View style={{ flex: 1 }}>
         <ContentScroll scrollRef={scrollViewRef}>
@@ -651,8 +652,7 @@ const Profile = ({
         onButtonPress={onButtonPickerButtonPress}
         headerTitle={buttonPickerVisible.pickerHeaderTitle}
       />
-    </View>
-    // </SafeAreaView>
+    </SafeAreaView>
   );
 };
 export default Profile;
