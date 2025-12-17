@@ -1,6 +1,7 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { type JSX, useCallback, useEffect, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
+import RNBootSplash from 'react-native-bootsplash';
 import Rate from 'react-native-rate';
 
 import { Button, Text } from '../components';
@@ -81,6 +82,12 @@ const Initialization = (): JSX.Element => {
 
     initializeApp();
   }, [clearOpenedConversationId, configureLanguage]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      RNBootSplash.hide({ fade: true });
+    }
+  }, [isLoading]);
 
   const handleUpdatePress = useCallback(() => {
     const options = {
