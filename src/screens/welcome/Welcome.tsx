@@ -595,7 +595,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   };
 
   return (
-    <Container style={Styles.container} barStyle="light-content">
+    <Container style={Styles.container}>
       <View style={Styles.paddingH}>
         <CheckMembershipStatus />
         <ModalLoader visible={modalLoader} useModalLayout={true} />

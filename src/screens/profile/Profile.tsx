@@ -12,7 +12,7 @@ import type { ScrollView } from 'react-native';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Loader, Text } from '../../components';
+import { Loader, PremiumButton, Text } from '../../components';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import {
   ApiServices,
@@ -533,6 +533,7 @@ const Profile = ({
   return (
     <SafeAreaView style={Styles.container}>
       <ScreenLoader visible={loader.visible} message={loader.message} />
+      {currentUser?.membership_status === 0 && <PremiumButton />}
       <View style={{ flex: 1 }}>
         <ContentScroll scrollRef={scrollViewRef}>
           <Header

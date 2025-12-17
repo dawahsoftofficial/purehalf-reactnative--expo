@@ -62,7 +62,7 @@ const Styles = StyleSheet.create({
   container: {
     height: 60,
     flexDirection: 'row',
-    paddingHorizontal: wp(4),
+    // paddingHorizontal: wp(4),
     alignItems: 'center',
     justifyContent: 'space-between',
   },

@@ -1,19 +1,21 @@
 import React from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
-
-import { hp } from '@/global';
+import DeviceInfo from 'react-native-device-info';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '../res';
 
+const hasNotch = DeviceInfo.hasNotch();
 const Container = (props: any) => {
   const {
     style = null,
     barStyle = 'dark-content',
     barBg = Colors.color2,
   } = props;
+  const { top } = useSafeAreaInsets();
 
   return (
-    <View style={Styles.container}>
+    <View style={[Styles.container, { paddingTop: top }]}>
       <View style={[Styles.container, style]}>
         <StatusBar
           backgroundColor={barBg}
@@ -31,7 +33,6 @@ export default Container;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: hp(2),
     backgroundColor: Colors.color2,
   },
 });

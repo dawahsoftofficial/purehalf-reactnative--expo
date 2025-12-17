@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
+  ImageBackground,
   Modal,
   StatusBar,
   StyleSheet,
@@ -25,6 +26,7 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import {
   Button,
   CheckMembershipStatus,
+  LinearGradient,
   ModalLoader,
   Text,
 } from '../../components';
@@ -94,9 +96,9 @@ type HeaderProps = {
 const Styles = StyleSheet.create({
   container: {
     // paddingTop: isIOS ? hp(5) : hp(4),
-    paddingBottom: hp(3),
-    paddingHorizontal: wp(4),
-    backgroundColor: Colors.color3,
+    marginBottom: hp(3),
+    // paddingHorizontal: wp(4),
+    // backgroundColor: Colors.color3,
   },
   topBar: {
     flexDirection: 'row',
@@ -115,14 +117,7 @@ const Styles = StyleSheet.create({
     borderColor: Colors.color8,
   },
   surface: {
-    backgroundColor: Colors.color2,
-    borderRadius: 16,
     padding: wp(4),
-    shadowColor: Colors.color1,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 4,
   },
   profileRow: {
     width: '100%',
@@ -205,13 +200,13 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    color: Colors.color1,
+    color: Colors.color2,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium1,
     includeFontPadding: false,
   },
   location: {
-    color: Colors.color1,
+    color: Colors.color2,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: Typography.small2,
@@ -304,7 +299,7 @@ const Styles = StyleSheet.create({
     marginBottom: hp(-0.6),
   },
   lastOnlineAt: {
-    color: Colors.color1,
+    color: Colors.color2,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: Typography.small,
@@ -937,6 +932,20 @@ const Header = ({
 
   return (
     <View style={Styles.container}>
+      <ImageBackground
+        style={{
+          ...StyleSheet.absoluteFill,
+        }}
+        source={{ uri: userData?.media?.primary_image }}
+        resizeMode="cover"
+        onLoadStart={onProfileImageLoadStart}
+        onLoadEnd={onProfileImageLoadEnd}
+        onError={onProfileImageError}
+      />
+      <LinearGradient
+        colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
+        style={{ ...StyleSheet.absoluteFill }}
+      />
       {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
       {fromUserProfile && <CheckMembershipStatus />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
@@ -960,7 +969,7 @@ const Header = ({
             { flexDirection: Rtl ? 'row-reverse' : 'row' },
           ]}
         >
-          <ProfileAvatar
+          {/* <ProfileAvatar
             userData={userData}
             profileImageError={profileImageError}
             profileImageLoader={profileImageLoader}
@@ -969,7 +978,7 @@ const Header = ({
             onProfileImageLoadEnd={onProfileImageLoadEnd}
             onProfileImageError={onProfileImageError}
             fromUserProfile={fromUserProfile}
-          />
+          /> */}
 
           <View
             style={[

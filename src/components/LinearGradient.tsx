@@ -1,15 +1,14 @@
-import React from 'react'
-import { Colors } from '../res';
-
+import React from 'react';
 import LinearGradient from 'react-native-linear-gradient';
 
-const CustomLinearGradient = (props: any) => {
-    return (
-        <LinearGradient colors={[Colors.theme, Colors.theme]}
-            {...props}>
-            {props.children}
-        </LinearGradient>
-    )
-}
+import { Colors } from '../res';
 
-export default CustomLinearGradient
+const CustomLinearGradient = (props: any) => {
+  return (
+    <LinearGradient colors={[Colors.theme, Colors.theme]} {...props}>
+      {props.children}
+    </LinearGradient>
+  );
+};
+
+export default CustomLinearGradient;

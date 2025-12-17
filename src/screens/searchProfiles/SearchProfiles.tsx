@@ -14,7 +14,7 @@ import SavedSearches from './SavedSearches';
 const hasNotch = DeviceInfo.hasNotch();
 const SearchProfiles = (props: any) => {
   return (
-    <Container style={Styles.container} barStyle="light-content">
+    <Container style={Styles.container}>
       <ScrollView
         contentContainerStyle={Styles.innerContainer}
         showsVerticalScrollIndicator={false}

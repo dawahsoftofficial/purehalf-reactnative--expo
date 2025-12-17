@@ -171,7 +171,7 @@ function Settings(props: SettingsProps) {
   );
 
   return (
-    <Container style={Styles.container} barStyle="light-content">
+    <Container style={Styles.container}>
       <SettingsHeader />
       <ScrollView
         contentContainerStyle={Styles.innerCon}
