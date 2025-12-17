@@ -41,7 +41,17 @@ const AuthWelcome = (props: any) => {
 
   const getButtonStatus = () => {
     ApiServices.getButtonsActiveStatus()
-      .then((data) => setButtonStatus(data))
+      .then((data: any) => {
+        const results = data?.results || [];
+        const authenticationMethod = results.find(
+          (item: any) => item?.key === 'authentication_method'
+        );
+        if (authenticationMethod?.value) {
+          setButtonStatus(authenticationMethod.value);
+        } else {
+          setButtonStatus({});
+        }
+      })
       .catch((error) => console.log('error', error));
   };
 

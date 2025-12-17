@@ -1,41 +1,31 @@
-import React from 'react'
+import React, { memo } from 'react';
+import type { ViewStyle } from 'react-native';
 import * as Animatable from 'react-native-animatable';
-import { StyleSheet } from 'react-native'
 
-const Animation = (props: any) => {
-    const {
-        animation = 'fadeInUp',
-        duration = 400,
-        style = null
-    } = props
+type AnimationProps = {
+  animation?: string;
+  duration?: number;
+  style?: ViewStyle | ViewStyle[];
+  children?: React.ReactNode;
+};
 
-    const fromValues = {
-        opacity: 0,
-        backgroundColor: 'transparent'
-    };
-
-    const toValues = {
-        opacity: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0)'
-    };
-
-    return (
-        <Animatable.View
-            animation={animation}
-            useNativeDriver={true}
-            duration={duration}
-            style={{ ...Style.container, ...style }}
-            easing={'ease-out'}
-        >
-            {props.children}
-        </Animatable.View>
-    )
+function Animation({
+  animation = 'fadeInUp',
+  duration = 400,
+  style,
+  children,
+}: AnimationProps) {
+  return (
+    <Animatable.View
+      animation={animation}
+      useNativeDriver={true}
+      duration={duration}
+      style={style}
+      easing="ease-out"
+    >
+      {children}
+    </Animatable.View>
+  );
 }
 
-export default Animation
-
-const Style = StyleSheet.create({
-    container: {}
-})
-
-
+export default memo(Animation);

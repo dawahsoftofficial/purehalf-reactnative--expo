@@ -59,6 +59,9 @@ export const startConversationsListener = (
   const childAddedUnsubscribe = query.on(
     'child_added',
     (snapshot: DataSnapshot) => {
+      if (!snapshot || !snapshot.key) {
+        return;
+      }
       const conversationId = snapshot.key;
       const conversationData = snapshot.val();
       onChildAdded(conversationId, conversationData);
@@ -69,6 +72,9 @@ export const startConversationsListener = (
   const childChangedUnsubscribe = query.on(
     'child_changed',
     (snapshot: DataSnapshot) => {
+      if (!snapshot || !snapshot.key) {
+        return;
+      }
       const conversationId = snapshot.key;
       const conversationData = snapshot.val();
       onChildChanged(conversationId, conversationData);
@@ -79,6 +85,9 @@ export const startConversationsListener = (
   const childRemovedUnsubscribe = database
     .ref('conversations')
     .on('child_removed', (snapshot: DataSnapshot) => {
+      if (!snapshot || !snapshot.key) {
+        return;
+      }
       const conversationId = snapshot.key;
       onChildRemoved(conversationId);
     });

@@ -1,13 +1,7 @@
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import _ from 'lodash';
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  ScrollView,
-  StatusBar,
-  Text as ReactText,
-  TextInput,
-  View,
-} from 'react-native';
+import { ScrollView, Text as ReactText, TextInput, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Feather from 'react-native-vector-icons/Feather';
@@ -474,7 +468,6 @@ const Profile = (props: any) => {
     // <SafeAreaView  style={[Styles.container , {backgroundColor:Colors.blackRGBA50}]} >
 
     <View style={Styles.container}>
-      <StatusBar backgroundColor={Colors.color1} barStyle={'light-content'} />
       <ModalLoader visible={loader.visible} message={loader.message} />
       {currentUser?.membership_status === 0 && <PremiumButton />}
       <View style={{ flex: 1 }}>

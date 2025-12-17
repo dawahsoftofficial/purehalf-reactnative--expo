@@ -11,7 +11,6 @@ import {
   Dimensions,
   Image,
   ScrollView,
-  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -861,8 +860,7 @@ const SingleChat = (props: any) => {
   };
 
   return (
-    <Container>
-      <StatusBar backgroundColor={Colors.color2} barStyle={'dark-content'} />
+    <Container barStyle="light-content">
       {(currentUser?.membership_status === 0 ||
         currentUser?.membership_status === null) && (
         <PremiumButton

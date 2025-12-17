@@ -1,4 +1,4 @@
-const Colors: any = {
+const Colors = {
   theme: '#8E0798',
   color1: '#000',
   color2: '#fff',

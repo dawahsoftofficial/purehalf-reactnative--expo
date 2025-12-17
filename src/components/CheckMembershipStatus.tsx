@@ -1,32 +1,35 @@
-import React, { useEffect } from 'react'
-import { ApiServices, StorageManager, useGlobalContext } from '../services'
-import { View } from 'react-native'
+import React, { useCallback, useEffect } from 'react';
+import { View } from 'react-native';
+
+import { ApiServices, StorageManager, useGlobalContext } from '../services';
 
 const CheckMembershipStatus = () => {
-    const { currentUser, updateCurrentUser } = useGlobalContext()
-    const { setData, storageKeys } = StorageManager
+  const { currentUser, updateCurrentUser } = useGlobalContext();
+  const { setData, storageKeys } = StorageManager;
 
-    const checkMembershipStatus = () => {
-        ApiServices.getMembershipStatus().then(async (res: any) => {
-            if(res || currentUser.membership_status) {
-                currentUser.membership_expiry = res?.membership_expiry || currentUser.membership_expiry
-                currentUser.membership_status = 1
-            }
-            else {
-                currentUser.membership_expiry = null
-                currentUser.membership_status = 0
-            }
-            updateCurrentUser(currentUser)
-            await setData(storageKeys.USER, currentUser)
-        })
-    }
-    useEffect(() => {
-        checkMembershipStatus()
-    }, [])
+  const checkMembershipStatus = useCallback(async () => {
+    if (!currentUser) return;
 
-    return (
-        <View />
-    )
-}
+    ApiServices.getMembershipStatus().then(async (res: any) => {
+      const updatedUser = { ...currentUser };
+      if (res || currentUser.membership_status) {
+        updatedUser.membership_expiry =
+          res?.membership_expiry || currentUser.membership_expiry;
+        updatedUser.membership_status = 1;
+      } else {
+        updatedUser.membership_expiry = null;
+        updatedUser.membership_status = 0;
+      }
+      updateCurrentUser(updatedUser);
+      await setData(storageKeys.USER, updatedUser);
+    });
+  }, [currentUser, updateCurrentUser, setData, storageKeys]);
 
-export default CheckMembershipStatus
+  useEffect(() => {
+    checkMembershipStatus();
+  }, [checkMembershipStatus]);
+
+  return <View />;
+};
+
+export default CheckMembershipStatus;

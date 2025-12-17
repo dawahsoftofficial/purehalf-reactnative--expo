@@ -1,15 +1,10 @@
-import {
-  View,
-  ScrollView,
-  StyleSheet,
-  StatusBar,
-  Image,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import LinearGradient from 'react-native-linear-gradient';
+import { Image, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { hasNotch } from 'react-native-device-info';
+import LinearGradient from 'react-native-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import {
   Button,
   CheckMembershipStatus,
@@ -23,20 +18,20 @@ import {
   Text,
 } from '../../components';
 import RelationPicker from '../../components/pickers/RelationPicker';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Typography, hp, wp } from '../../global';
+import { CommonActions } from '../../navigation';
 import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
-  StorageManager,
   checkEmpty,
   emailValidation,
   flashErrorMessage,
   flashSuccessMessage,
   isIOS,
+  StorageManager,
   useGlobalContext,
 } from '../../services';
-import { CommonActions } from '../../navigation';
 
 const AddWali = ({ navigation, route }: any) => {
   const { getData, setData, storageKeys } = StorageManager;
@@ -107,7 +102,9 @@ const AddWali = ({ navigation, route }: any) => {
       setFirstName(first_name);
       setLastName(last_name);
       setEmail(email);
-      let userRelation = relations?.find((rel) => rel?.id === relationship_id);
+      const userRelation = relations?.find(
+        (rel) => rel?.id === relationship_id
+      );
       setRelation({
         id: userRelation?.id,
         label: userRelation?.value,
