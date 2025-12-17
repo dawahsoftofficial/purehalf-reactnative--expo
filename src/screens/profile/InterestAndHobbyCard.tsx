@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Feather from 'react-native-vector-icons/Feather';
@@ -10,61 +10,72 @@ import Constants from '../../global/Constants';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 
-const InterestAndHobbyCard = (props: any) => {
+type InterestItem = { selected?: boolean; value?: string };
+
+type InterestAndHobbyCardProps = {
+  data?: InterestItem[];
+  headerHeading?: string;
+  onEditPress?: (payload: { data: InterestItem[]; from: string }) => void;
+  fromUserProfile?: boolean;
+  from?: string;
+};
+
+const InterestAndHobbyCard = ({
+  data = [],
+  headerHeading = '',
+  onEditPress,
+  fromUserProfile = false,
+  from = '',
+}: InterestAndHobbyCardProps) => {
   const Rtl = CheckRtl();
-  const {
-    data = [],
-    headerHeading = '',
-    onEditPress = () => null,
-    fromUserProfile = false,
-    from = '',
-  } = props;
 
-  const RenderHeaderHeading = () => (
-    <Text style={Styles.headerTxt}>{headerHeading}</Text>
+  const onEdit = useCallback(() => {
+    if (onEditPress) {
+      onEditPress({ data, from: headerHeading });
+    }
+  }, [data, headerHeading, onEditPress]);
+
+  const selectedItems = useMemo(
+    () => data.filter((item) => item?.selected),
+    [data]
   );
 
-  const RenderEditBtn = () => (
-    <Ripple
-      style={Styles.editButton}
-      onPress={onEditPress.bind(null, {
-        data: data,
-        from: headerHeading,
-      })}
-    >
-      <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
-    </Ripple>
-  );
+  const hasSelected = selectedItems.length > 0;
 
   return data.length !== 0 ? (
     <View style={Styles.container}>
       <View
-        style={{
-          ...Styles.headerContainer,
-          flexDirection: Rtl ? 'row-reverse' : 'row',
-        }}
+        style={[
+          Styles.headerContainer,
+          { flexDirection: Rtl ? 'row-reverse' : 'row' },
+        ]}
       >
-        <RenderHeaderHeading />
-        {!fromUserProfile && <RenderEditBtn />}
+        <Text style={Styles.headerTxt}>{headerHeading}</Text>
+        {!fromUserProfile ? (
+          <Ripple style={Styles.editButton} onPress={onEdit}>
+            <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
+          </Ripple>
+        ) : null}
       </View>
       <Animation animation={'fadeInDown'} duration={500}>
         {from === 'waliInformation' && fromUserProfile && data.length !== 0 ? (
           <Text style={Styles.waliInfoDes}>{LanguageKeys.moderatedByWali}</Text>
         ) : (
           <View
-            style={{
-              ...Styles.listItemContainer,
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-            }}
+            style={[
+              Styles.listItemContainer,
+              { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
           >
-            {data?.find((item: any) => item?.selected) ? (
-              data?.map((item: any, index: number) =>
-                item?.selected ? (
-                  <View key={index} style={Styles.item}>
-                    <Text style={Styles.itemValue}>{item?.value}</Text>
-                  </View>
-                ) : null
-              )
+            {hasSelected ? (
+              selectedItems.map((item, index) => (
+                <View
+                  key={`${item?.value ?? index}-${index}`}
+                  style={Styles.item}
+                >
+                  <Text style={Styles.itemValue}>{item?.value ?? ''}</Text>
+                </View>
+              ))
             ) : (
               <View>
                 <Text style={Styles.passInfoDes}>
@@ -83,7 +94,7 @@ const InterestAndHobbyCard = (props: any) => {
   );
 };
 
-export default InterestAndHobbyCard;
+export default React.memo(InterestAndHobbyCard);
 
 const Styles = StyleSheet.create({
   container: {
