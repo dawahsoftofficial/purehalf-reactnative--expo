@@ -41,7 +41,7 @@ export const TaglineSection = memo(function TaglineSection({
       <View
         style={{
           ...Styles.tagLineOuterCon,
-          paddingHorizontal: wp(4),
+          // paddingHorizontal: wp(4),
           flexDirection: rtl ? 'row-reverse' : 'row',
         }}
       >
@@ -50,7 +50,7 @@ export const TaglineSection = memo(function TaglineSection({
             ...Styles.tagLineInput,
             textAlign: rtl ? 'right' : 'left',
           }}
-          placeholder={'Enter Tagline'}
+          placeholder={'Enter One line about yourself'}
           placeholderTextColor={Colors.color1}
           onChangeText={onChange}
           value={inputValue}
@@ -80,6 +80,7 @@ export const TaglineSection = memo(function TaglineSection({
       style={{
         ...Styles.tagLineOuterCon,
         flexDirection: rtl ? 'row-reverse' : 'row',
+        // paddingRight: wp(2),
       }}
     >
       <Text style={Styles.tagLineHeading} numberOfLines={1}>

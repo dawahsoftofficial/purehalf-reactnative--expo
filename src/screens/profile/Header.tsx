@@ -44,7 +44,7 @@ import {
   useGlobalContext,
 } from '../../services';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 type FcmToken = { fcm_token?: string | null };
 
@@ -92,330 +92,6 @@ type HeaderProps = {
   fromUserProfile?: boolean;
   isBlockedYou?: boolean;
 };
-
-const Styles = StyleSheet.create({
-  container: {
-    // paddingTop: isIOS ? hp(5) : hp(4),
-    marginBottom: hp(3),
-    // paddingHorizontal: wp(4),
-    // backgroundColor: Colors.color3,
-  },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: hp(1),
-  },
-  navButton: {
-    width: wp(11),
-    height: wp(11),
-    borderRadius: wp(5.5),
-    backgroundColor: Colors.color2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.color8,
-  },
-  surface: {
-    padding: wp(4),
-  },
-  profileRow: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  profileInfo: {
-    flex: 1,
-    paddingHorizontal: wp(2),
-  },
-  nameWrapper: {
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: hp(0.5),
-  },
-  infoChip: {
-    marginLeft: wp(2),
-    padding: wp(2),
-    borderRadius: 12,
-    backgroundColor: Colors.color3,
-    borderWidth: 1,
-    borderColor: Colors.color8,
-  },
-  infoIconSmall: {
-    width: 20,
-    height: 20,
-  },
-  actionsWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: hp(1),
-    marginHorizontal: wp(1),
-  },
-  onlineStatus: {
-    width: width * 0.04,
-    height: width * 0.04 * 1,
-    borderRadius: (width * 0.04 * 1) / 2,
-    marginTop: hp(0.1),
-    marginHorizontal: wp(1),
-  },
-  videoVoiceContainer: {
-    width: '100%',
-    paddingHorizontal: wp(4),
-    paddingTop: hp(2),
-  },
-  videoVoiceIconWrapper: {
-    backgroundColor: Colors.color47,
-    padding: wp(1),
-    borderRadius: 50,
-    alignItems: 'center',
-  },
-  contentContainer: {
-    width: '100%',
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  contentContainerInner: {
-    width: wp(50),
-    justifyContent: 'flex-end',
-  },
-  rowCon: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  blurContainer: {
-    justifyContent: 'center',
-    marginLeft: 10,
-  },
-  blurText: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    fontSize: Typography.small2,
-  },
-  nameCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  name: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium1,
-    includeFontPadding: false,
-  },
-  location: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    fontSize: Typography.small2,
-  },
-  allPhotosBtn: {
-    justifyContent: 'space-between',
-    borderRadius: 30,
-    paddingVertical: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(2.5),
-    backgroundColor: Colors.color47,
-  },
-  myPhotosBtn: {
-    justifyContent: 'space-between',
-    borderRadius: 30,
-    paddingVertical: 5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: wp(2.5),
-    backgroundColor: Colors.color1,
-  },
-  allPhotosBtnInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  galleryIcon: {
-    width: wp(4),
-    height: hp(3),
-  },
-  allPhotosTxt: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    marginBottom: Constants.fontFamilyMarginBottom,
-    marginHorizontal: wp(0.4),
-  },
-  actionBtnCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: hp(2),
-  },
-  actionIcon: {
-    width: width * 0.1,
-    height: width * 0.1 * 1,
-    borderRadius: (width * 0.08 * 1) / 2,
-    backgroundColor: Colors.color2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: wp(0.5),
-  },
-  actionIconInner: {
-    width: width * 0.1,
-    height: width * 0.1 * 1,
-    borderRadius: (width * 0.08 * 1) / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shadow: {
-    shadowColor: Colors.color1,
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    elevation: 2,
-  },
-  profileImageCon: {
-    alignSelf: 'flex-start',
-    width: width * 0.3,
-    height: width * 0.3 * 1,
-    borderRadius: (width * 0.3 * 1) / 6,
-    marginHorizontal: wp(3),
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.color2,
-  },
-  profileImage: {
-    width: width * 0.3,
-    height: width * 0.3 * 1,
-    borderRadius: (width * 0.3 * 1) / 6,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  youtubeIcon: {
-    alignSelf: 'flex-end',
-    marginHorizontal: wp(5),
-    marginBottom: hp(-0.6),
-  },
-  lastOnlineAt: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    fontSize: Typography.small,
-  },
-  lastOnlineAtInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  gradientView: {
-    position: 'absolute',
-    bottom: 0,
-    width: wp(100),
-    height: hp(30),
-  },
-  modalWrapper: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: Colors.color2,
-  },
-  tooltipWrapper: {
-    position: 'absolute',
-    left: 125,
-    top: -10,
-    zIndex: 9,
-    backgroundColor: Colors.color2,
-    borderRadius: 25,
-    // padding: 7,
-  },
-  infoIcon: {
-    width: 30,
-    height: 30,
-  },
-  quotesIcon: {
-    width: 80,
-    height: 80,
-    opacity: 0.3,
-  },
-  tootltipTextWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  closeWrapper: {
-    alignSelf: 'flex-end',
-    paddingRight: 10,
-    marginTop: isIOS ? 40 : 2,
-  },
-  tootltipTitle: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    marginTop: 20,
-  },
-  description: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small2,
-    color: Colors.color1,
-  },
-  tootltipText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small2,
-    color: Colors.color1,
-  },
-  closeBtn: {
-    backgroundColor: Colors.color2,
-    borderWidth: 1,
-    borderColor: Colors.greyRGBA61,
-    marginBottom: hp(2),
-    marginHorizontal: wp(5),
-  },
-  closeBtnText: {
-    color: Colors.blackRGBA70,
-  },
-  italic: { fontStyle: 'italic' },
-  userIcon: {
-    marginTop: hp(3),
-  },
-  profileCameraIcon: {
-    position: 'absolute',
-    bottom: hp(-0.2),
-    backgroundColor: '#D9DADF',
-    width: width * 0.1,
-    height: width * 0.1 * 1,
-    borderRadius: (width * 0.1 * 1) / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    right: wp(-3),
-  },
-  coverCameraIcon: {
-    position: 'absolute',
-    bottom: hp(-0.5),
-    right: wp(4),
-    backgroundColor: '#D9DADF',
-    width: width * 0.1,
-    height: width * 0.1 * 1,
-    borderRadius: (width * 0.1 * 1) / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  premiumBadge: {
-    width: width * 0.07,
-    height: width * 0.07,
-    borderRadius: 50,
-    backgroundColor: Colors.color47,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    bottom: -7,
-    left: 100,
-  },
-  premiumBadgeIcon: {
-    width: 14,
-    height: 14,
-  },
-});
 
 type NameRowProps = {
   firstName?: string;
@@ -929,15 +605,20 @@ const Header = ({
       time: lastOnline.format('(hh:mm a)'),
     };
   }, [userData?.last_online_at]);
-
+  console.log('userData?.media?.primary_image', userData?.media?.primary_image);
   return (
     <View style={Styles.container}>
+      {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
+      {fromUserProfile && <CheckMembershipStatus />}
+      <ModalLoader visible={modalLoader} useModalLayout={true} />
+
       <ImageBackground
         style={{
           ...StyleSheet.absoluteFill,
+          backgroundColor: Colors.color1,
         }}
         source={{ uri: userData?.media?.primary_image }}
-        resizeMode="cover"
+        resizeMode="contain"
         onLoadStart={onProfileImageLoadStart}
         onLoadEnd={onProfileImageLoadEnd}
         onError={onProfileImageError}
@@ -946,9 +627,20 @@ const Header = ({
         colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
         style={{ ...StyleSheet.absoluteFill }}
       />
-      {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
-      {fromUserProfile && <CheckMembershipStatus />}
-      <ModalLoader visible={modalLoader} useModalLayout={true} />
+      {isSelf ? (
+        <Ripple
+          style={[
+            Styles.infoChip,
+            {
+              left: Rtl ? wp(2) : undefined,
+              right: Rtl ? undefined : wp(2),
+            },
+          ]}
+          onPress={() => setToolTipVisible(true)}
+        >
+          <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
+        </Ripple>
+      ) : null}
 
       <View style={Styles.topBar}>
         {fromUserProfile && (
@@ -999,23 +691,6 @@ const Header = ({
                 statusColor={onlineStatusColor}
                 rtl={Rtl}
               />
-              {isSelf ? (
-                <Ripple
-                  style={[
-                    Styles.infoChip,
-                    {
-                      marginLeft: Rtl ? 0 : wp(2),
-                      marginRight: Rtl ? wp(2) : 0,
-                    },
-                  ]}
-                  onPress={() => setToolTipVisible(true)}
-                >
-                  <Image
-                    source={Images.infoIcon}
-                    style={Styles.infoIconSmall}
-                  />
-                </Ripple>
-              ) : null}
             </View>
             <AgeText age={userData?.age} />
             <LocationText city={userData?.city} country={userData?.country} />
@@ -1122,3 +797,328 @@ const Header = ({
 };
 
 export default Header;
+
+const Styles = StyleSheet.create({
+  container: {
+    height: height * 0.4,
+    // marginBottom: hp(3),
+    justifyContent: 'flex-end',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp(1),
+  },
+  navButton: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.color2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.color8,
+  },
+  surface: {
+    padding: wp(4),
+  },
+  profileRow: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  profileInfo: {
+    flex: 1,
+    paddingHorizontal: wp(2),
+  },
+  nameWrapper: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: hp(0.5),
+  },
+  infoChip: {
+    position: 'absolute',
+    top: wp(2),
+    zIndex: 10,
+    padding: wp(2),
+    borderRadius: 12,
+    backgroundColor: Colors.color3,
+    borderWidth: 1,
+    borderColor: Colors.color8,
+  },
+  infoIconSmall: {
+    width: 20,
+    height: 20,
+  },
+  actionsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: hp(1),
+    // marginHorizontal: wp(1),
+  },
+  onlineStatus: {
+    width: width * 0.04,
+    height: width * 0.04 * 1,
+    borderRadius: (width * 0.04 * 1) / 2,
+    marginTop: hp(0.1),
+    marginHorizontal: wp(1),
+  },
+  videoVoiceContainer: {
+    width: '100%',
+    paddingHorizontal: wp(4),
+    paddingTop: hp(2),
+  },
+  videoVoiceIconWrapper: {
+    backgroundColor: Colors.color47,
+    padding: wp(1),
+    borderRadius: 50,
+    alignItems: 'center',
+  },
+  contentContainer: {
+    width: '100%',
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  contentContainerInner: {
+    width: wp(50),
+    justifyContent: 'flex-end',
+  },
+  rowCon: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  blurContainer: {
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  blurText: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
+    fontSize: Typography.small2,
+  },
+  nameCon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  name: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium1,
+    includeFontPadding: false,
+  },
+  location: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
+    fontSize: Typography.small2,
+  },
+  allPhotosBtn: {
+    justifyContent: 'space-between',
+    borderRadius: 30,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(2.5),
+    backgroundColor: Colors.color47,
+  },
+  myPhotosBtn: {
+    justifyContent: 'space-between',
+    borderRadius: 30,
+    paddingVertical: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(2.5),
+    backgroundColor: Colors.color1,
+  },
+  allPhotosBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  galleryIcon: {
+    width: wp(4),
+    height: hp(3),
+  },
+  allPhotosTxt: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    marginBottom: Constants.fontFamilyMarginBottom,
+    marginHorizontal: wp(0.4),
+  },
+  actionBtnCon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp(2),
+  },
+  actionIcon: {
+    width: width * 0.1,
+    height: width * 0.1 * 1,
+    borderRadius: (width * 0.08 * 1) / 2,
+    backgroundColor: Colors.color2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: wp(0.5),
+  },
+  actionIconInner: {
+    width: width * 0.1,
+    height: width * 0.1 * 1,
+    borderRadius: (width * 0.08 * 1) / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  shadow: {
+    shadowColor: Colors.color1,
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.41,
+    elevation: 2,
+  },
+  profileImageCon: {
+    alignSelf: 'flex-start',
+    width: width * 0.3,
+    height: width * 0.3 * 1,
+    borderRadius: (width * 0.3 * 1) / 6,
+    marginHorizontal: wp(3),
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.color2,
+  },
+  profileImage: {
+    width: width * 0.3,
+    height: width * 0.3 * 1,
+    borderRadius: (width * 0.3 * 1) / 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  youtubeIcon: {
+    alignSelf: 'flex-end',
+    marginHorizontal: wp(5),
+    marginBottom: hp(-0.6),
+  },
+  lastOnlineAt: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
+    fontSize: Typography.small,
+  },
+  lastOnlineAtInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  gradientView: {
+    position: 'absolute',
+    bottom: 0,
+    width: wp(100),
+    height: hp(30),
+  },
+  modalWrapper: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: Colors.color2,
+  },
+  tooltipWrapper: {
+    position: 'absolute',
+    left: 125,
+    top: -10,
+    zIndex: 9,
+    backgroundColor: Colors.color2,
+    borderRadius: 25,
+    // padding: 7,
+  },
+  infoIcon: {
+    width: 30,
+    height: 30,
+  },
+  quotesIcon: {
+    width: 80,
+    height: 80,
+    opacity: 0.3,
+  },
+  tootltipTextWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  closeWrapper: {
+    alignSelf: 'flex-end',
+    paddingRight: 10,
+    marginTop: isIOS ? 40 : 2,
+  },
+  tootltipTitle: {
+    color: Colors.color1,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium,
+    marginTop: 20,
+  },
+  description: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    color: Colors.color1,
+  },
+  tootltipText: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    color: Colors.color1,
+  },
+  closeBtn: {
+    backgroundColor: Colors.color2,
+    borderWidth: 1,
+    borderColor: Colors.greyRGBA61,
+    marginBottom: hp(2),
+    marginHorizontal: wp(5),
+  },
+  closeBtnText: {
+    color: Colors.blackRGBA70,
+  },
+  italic: { fontStyle: 'italic' },
+  userIcon: {
+    marginTop: hp(3),
+  },
+  profileCameraIcon: {
+    position: 'absolute',
+    bottom: hp(-0.2),
+    backgroundColor: '#D9DADF',
+    width: width * 0.1,
+    height: width * 0.1 * 1,
+    borderRadius: (width * 0.1 * 1) / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    right: wp(-3),
+  },
+  coverCameraIcon: {
+    position: 'absolute',
+    bottom: hp(-0.5),
+    right: wp(4),
+    backgroundColor: '#D9DADF',
+    width: width * 0.1,
+    height: width * 0.1 * 1,
+    borderRadius: (width * 0.1 * 1) / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  premiumBadge: {
+    width: width * 0.07,
+    height: width * 0.07,
+    borderRadius: 50,
+    backgroundColor: Colors.color47,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    bottom: -7,
+    left: 100,
+  },
+  premiumBadgeIcon: {
+    width: 14,
+    height: 14,
+  },
+});

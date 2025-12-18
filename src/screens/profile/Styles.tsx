@@ -45,7 +45,7 @@ export default StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flexDirection: 'row',
-    paddingHorizontal: wp(8),
+    marginHorizontal: hp(2),
   },
   tagLineEditBtn: {
     position: 'absolute',
@@ -75,6 +75,5 @@ export default StyleSheet.create({
   editButton: {
     paddingVertical: hp(1),
     paddingHorizontal: wp(2),
-    marginRight: wp(-2),
   },
 });
