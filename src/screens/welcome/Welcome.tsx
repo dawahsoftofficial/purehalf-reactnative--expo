@@ -666,12 +666,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       >
         <View style={Styles.modalContent}>
           <View style={Styles.modalHeader}>
-            <TouchableOpacity
-              onPress={() => setHeaderModal(false)}
-              style={Styles.modalCloseBtn}
-            >
-              <Entypo name="cross" size={wp(6)} />
-            </TouchableOpacity>
             <View style={Styles.modalHeaderContent}>
               <Text style={Styles.modalHeaderTitle}>
                 {t(LanguageKeys.myAccount)}
@@ -680,6 +674,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                 {t(LanguageKeys.profileComplete)}
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={() => setHeaderModal(false)}
+              style={Styles.modalCloseBtn}
+            >
+              <Entypo name="cross" size={wp(6)} />
+            </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={Styles.modalBody}>
@@ -845,15 +845,16 @@ const Styles = StyleSheet.create({
     right: -7,
   },
   headerCounterText: {
-    fontFamily: Fonts.APPFONT_S,
+    fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small1,
-    color: Colors.white,
+    color: Colors.color2,
   },
   modal: {
     margin: 0,
+    // justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.color2,
     borderRadius: 10,
     padding: 10,
     maxHeight: hp(80),
@@ -878,8 +879,8 @@ const Styles = StyleSheet.create({
   },
   modalHeaderSubTitle: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
-    color: Colors.color26,
+    fontSize: Typography.small,
+    color: Colors.color28,
   },
   modalBody: {
     paddingBottom: hp(2),
