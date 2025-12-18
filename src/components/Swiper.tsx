@@ -1,14 +1,18 @@
 import { useFocusEffect } from '@react-navigation/native';
 import React, { useRef, useState } from 'react';
-import { Dimensions, Modal, StyleSheet, View } from 'react-native';
+import { Dimensions, Modal, StyleSheet } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Carousel from 'react-native-reanimated-carousel';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { wp } from '../global';
+import { hp, wp } from '../global';
 import { LanguageKeys } from '../languages';
 import { Colors } from '../res';
-import { ApiServices, flashSuccessMessage, isIOS } from '../services';
+import { ApiServices, flashSuccessMessage } from '../services';
 import SliderEntry from './SliderEntry';
 
 const _renderItem = ({
@@ -22,11 +26,11 @@ const _renderItem = ({
   return (
     <SliderEntry
       data={item}
-      even={(index + 1) % 2 === 0}
+      onPress={onPress}
       swipeNext={swipeNext}
       onLikePress={onLikePress}
       onPassPress={onPassPress}
-      onPress={onPress}
+      even={(index + 1) % 2 === 0}
     />
   );
 };
@@ -38,6 +42,7 @@ const SwiperComponent = ({
 }: {
   onPress: (value?: boolean) => void;
 }) => {
+  const { top, bottom } = useSafeAreaInsets();
   const swiper: any = useRef(null);
   const [users, setUsers] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -89,7 +94,7 @@ const SwiperComponent = ({
 
   return (
     <Modal visible={true} transparent={true}>
-      <View style={Styles.container}>
+      <SafeAreaView style={Styles.container}>
         <Ripple style={Styles.closeWrapper} onPress={() => onPress()}>
           <AntDesign name="close" size={wp(8)} color={Colors.color2} />
         </Ripple>
@@ -97,6 +102,12 @@ const SwiperComponent = ({
           <Carousel
             ref={swiper}
             data={users}
+            loop={false}
+            enabled={false}
+            width={screenWidth}
+            style={Styles.slider}
+            height={Dimensions.get('window').height - bottom - top}
+            onSnapToItem={(index) => setCurrentIndex(index)}
             renderItem={({ item, index }) =>
               _renderItem({
                 item,
@@ -107,15 +118,9 @@ const SwiperComponent = ({
                 onPress,
               })
             }
-            width={screenWidth}
-            height={Dimensions.get('window').height}
-            loop={false}
-            enabled={false}
-            style={Styles.slider}
-            onSnapToItem={(index) => setCurrentIndex(index)}
           />
         ) : null}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 };
@@ -125,23 +130,16 @@ export default SwiperComponent;
 const Styles = StyleSheet.create({
   container: {
     position: 'relative',
-    // height: hp(200),
-    // width: wp(100),
     zIndex: 1,
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    // backgroundColor: Colors.blackRGBA90,
-    // backgroundColor: "red",
   },
   closeWrapper: {
     position: 'absolute',
-    // alignSelf: 'center',
-    top: isIOS ? 40 : 18,
-    right: 15,
-    zIndex: 9,
-
-    // borderRadius: 30,
+    right: hp(2),
+    top: hp(2),
+    zIndex: 10,
   },
   slider: {
     // marginTop: 50,
