@@ -28,6 +28,7 @@ const Button = (props: any) => {
         {
           backgroundColor:
             disabled || loading ? Colors.themeRGBA50 : Colors.theme,
+          opacity: disabled ? 0.5 : 1,
         },
         buttonStyle,
       ]}

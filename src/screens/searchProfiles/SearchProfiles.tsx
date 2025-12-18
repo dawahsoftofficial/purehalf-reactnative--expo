@@ -1,9 +1,10 @@
-import React from 'react';
-import { ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { View } from 'react-native-animatable';
 import DeviceInfo from 'react-native-device-info';
+import Feather from 'react-native-vector-icons/Feather';
 
-import { Container, Text } from '../../components';
+import { Button, Container, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
@@ -12,21 +13,67 @@ import RefineSearch from './RefineSearch';
 import SavedSearches from './SavedSearches';
 
 const hasNotch = DeviceInfo.hasNotch();
-const SearchProfiles = (props: any) => {
+const SearchProfiles = () => {
+  const refineSearchRef = useRef<any>(null);
+
+  const [hasFilters, setHasFilters] = useState(false);
+
+  useEffect(() => {
+    const checkFilters = () => {
+      if (refineSearchRef.current) {
+        const hasSelected = refineSearchRef.current.hasFiltersSelected();
+        setHasFilters(hasSelected);
+      }
+    };
+
+    const interval = setInterval(checkFilters, 200);
+    checkFilters();
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSaveAndSearch = () => {
+    refineSearchRef.current?.onSaveAndSearchPress();
+  };
+
+  const handleSearch = () => {
+    refineSearchRef.current?.onSearchPress();
+  };
+
   return (
     <Container style={Styles.container}>
-      <ScrollView
-        contentContainerStyle={Styles.innerContainer}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        <View style={Styles.headerCon}>
-          <Text style={Styles.headerTitle}>{LanguageKeys.searchProfiles}</Text>
-        </View>
-        <Text style={Styles.heading}>{LanguageKeys.savedSearches}</Text>
-        <SavedSearches />
-        <RefineSearch />
-      </ScrollView>
+      <RNView style={Styles.contentWrapper}>
+        <ScrollView
+          contentContainerStyle={Styles.innerContainer}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          style={Styles.scrollView}
+        >
+          <View style={Styles.headerCon}>
+            <Text style={Styles.headerTitle}>
+              {LanguageKeys.searchProfiles}
+            </Text>
+          </View>
+          <Text style={Styles.heading}>{LanguageKeys.savedSearches}</Text>
+          <SavedSearches />
+          <RefineSearch ref={refineSearchRef} />
+        </ScrollView>
+      </RNView>
+      <RNView style={[Styles.buttonsContainer]}>
+        <Button
+          text={LanguageKeys.saveAndSearch}
+          icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
+          buttonStyle={Styles.saveSearchBtn}
+          onPress={handleSaveAndSearch}
+          disabled={!hasFilters}
+        />
+        <Button
+          text={LanguageKeys.search}
+          icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
+          buttonStyle={Styles.searchBtn}
+          onPress={handleSearch}
+        />
+      </RNView>
     </Container>
   );
 };
@@ -37,10 +84,46 @@ const Styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.color7,
     paddingTop: 0,
+    flex: 1,
+  },
+  contentWrapper: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
   },
   innerContainer: {
     paddingHorizontal: wp(4),
-    paddingBottom: hp(4),
+    paddingBottom: hp(20),
+  },
+  buttonsContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+    backgroundColor: Colors.color7,
+    paddingTop: hp(2),
+    borderTopWidth: 1,
+    borderTopColor: Colors.color27,
+    zIndex: 10,
+    shadowColor: Colors.color1,
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  saveSearchBtn: {
+    marginHorizontal: wp(4),
+    marginBottom: hp(2),
+  },
+  searchBtn: {
+    backgroundColor: Colors.color1,
+    marginHorizontal: wp(4),
+    marginBottom: hp(2),
   },
   heading: {
     color: Colors.color1,

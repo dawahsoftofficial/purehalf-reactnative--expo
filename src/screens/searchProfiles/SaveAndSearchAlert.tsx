@@ -45,6 +45,7 @@ const SaveAndSearchAlert = (props: any) => {
             placeholderTextColor={Colors.color1}
             value={input}
             onChangeText={onChangeText}
+            maxLength={100}
           />
         </View>
 
@@ -54,6 +55,7 @@ const SaveAndSearchAlert = (props: any) => {
         icon={<Feather name='search' color={Colors.color2} size={wp(5)} />}
         buttonStyle={Styles.searchBtn}
         onPress={onPress}
+        disabled={!input.trim()}
       />
     </AlertContainer>
   )
