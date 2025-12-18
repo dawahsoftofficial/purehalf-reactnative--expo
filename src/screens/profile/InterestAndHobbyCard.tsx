@@ -43,7 +43,11 @@ const InterestAndHobbyCard = ({
   const hasSelected = selectedItems.length > 0;
 
   return data.length !== 0 ? (
-    <View style={Styles.container}>
+    <Ripple
+      onPress={onEdit}
+      style={Styles.container}
+      rippleColor={Colors.theme}
+    >
       <View
         style={[
           Styles.headerContainer,
@@ -52,9 +56,9 @@ const InterestAndHobbyCard = ({
       >
         <Text style={Styles.headerTxt}>{headerHeading}</Text>
         {!fromUserProfile ? (
-          <Ripple style={Styles.editButton} onPress={onEdit}>
+          <View style={Styles.editButton}>
             <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
-          </Ripple>
+          </View>
         ) : null}
       </View>
       <Animation animation={'fadeInDown'} duration={500}>
@@ -88,7 +92,7 @@ const InterestAndHobbyCard = ({
           </View>
         )}
       </Animation>
-    </View>
+    </Ripple>
   ) : (
     <View />
   );

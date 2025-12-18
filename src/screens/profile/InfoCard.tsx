@@ -129,7 +129,11 @@ const InfoCard = ({
   }
 
   return (
-    <View style={Styles.container}>
+    <Ripple
+      onPress={onEdit}
+      style={Styles.container}
+      rippleColor={Colors.theme}
+    >
       <View
         style={[
           Styles.headerContainer,
@@ -138,9 +142,9 @@ const InfoCard = ({
       >
         {renderHeader}
         {!fromUserProfile ? (
-          <Ripple style={Styles.editButton} onPress={onEdit}>
+          <View style={Styles.editButton}>
             <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
-          </Ripple>
+          </View>
         ) : null}
       </View>
 
@@ -162,7 +166,7 @@ const InfoCard = ({
           </ScrollView>
         )}
       </Animation>
-    </View>
+    </Ripple>
   );
 };
 
