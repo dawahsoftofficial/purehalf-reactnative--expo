@@ -11,15 +11,21 @@ const CheckMembershipStatus = () => {
     if (!currentUser) return;
 
     ApiServices.getMembershipStatus().then(async (res: any) => {
-      const updatedUser = { ...currentUser };
-      if (res || currentUser.membership_status) {
-        updatedUser.membership_expiry =
-          res?.membership_expiry || currentUser.membership_expiry;
-        updatedUser.membership_status = 1;
-      } else {
-        updatedUser.membership_expiry = null;
-        updatedUser.membership_status = 0;
-      }
+      const membership_status = res || currentUser.membership_status ? 1 : 0;
+      const membership_expiry = res?.membership_expiry ?? null;
+
+      const hasStatusChanged =
+        currentUser.membership_status !== membership_status ||
+        currentUser.membership_expiry !== membership_expiry;
+
+      if (!hasStatusChanged) return;
+
+      const updatedUser = {
+        ...currentUser,
+        membership_status,
+        membership_expiry,
+      };
+
       updateCurrentUser(updatedUser);
       await setData(storageKeys.USER, updatedUser);
     });

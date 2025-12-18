@@ -1,22 +1,19 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import _ from 'lodash';
-import React, { useEffect, useRef, useState } from 'react';
-import { ScrollView, Text as ReactText, TextInput, View } from 'react-native';
-import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import Feather from 'react-native-vector-icons/Feather';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import type { ScrollView } from 'react-native';
+import { View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import {
-  Button,
-  ButtonPicker,
-  Loader,
-  ModalLoader,
-  PremiumButton,
-  Text,
-} from '../../components';
-import { hp, wp } from '../../global';
+import { Loader, PremiumButton, Text } from '../../components';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors } from '../../res';
 import {
   ApiServices,
   Firebase,
@@ -30,24 +27,93 @@ import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
 import InterestAndHobbyCardStatic from './InterestAndHobbyCardStatic';
+import {
+  type BlockPickerOption,
+  BlockPickerSheet,
+  ContentScroll,
+  ErrorRetry,
+  ScreenLoader,
+  TaglineSection,
+} from './profile-components';
 import Styles from './Styles';
 
-const Profile = (props: any) => {
+type LoaderState = { visible: boolean; message: string };
+
+type PickerState = {
+  pickerData: BlockPickerOption[];
+  pickerHeaderTitle: string;
+  visible: boolean;
+  item: unknown;
+  from: string;
+};
+
+type UserDetail = {
+  tagline?: string;
+  personality_id?: number[];
+  height_scale?: string;
+  height?: number;
+  weight_scale?: string;
+  weight?: number;
+  personality_id_value?: unknown;
+};
+
+type User = {
+  id?: number;
+  detail?: UserDetail;
+  blocked?: number;
+  blocked_you?: number;
+  match_percentage?: number;
+};
+
+type Conversation = {
+  convDetails?: {
+    participantsDeleteFlag: Record<string, unknown>;
+    id?: string;
+  };
+  id?: string;
+};
+
+type ProfileProps = {
+  navigation: any;
+  route?: { params?: { scrollTo?: number } };
+  userData?: User;
+  fromUserProfile?: boolean;
+};
+
+type EditPayload = {
+  data: unknown;
+  from: string;
+};
+
+type EditCardState = {
+  visible: boolean;
+  data: any;
+  from: string;
+};
+
+const Profile = ({
+  navigation,
+  route,
+  userData: propUserData,
+  fromUserProfile = false,
+}: ProfileProps) => {
   const { currentUser, updateCurrentUser, conversations } = useGlobalContext();
-  const scrollViewRef: any = useRef(null);
+  const scrollViewRef = useRef<ScrollView | null>(null);
   const Rtl = CheckRtl();
   const isFocused = useIsFocused();
   const [tagLineInputVisible, setTagLineInputVisible] = useState(false);
   const [tagLineInput, setTagLineInput] = useState('');
   const [error, setError] = useState<boolean>(false);
-  const [userConversation, setUserConversation] = useState<any>(null);
+  const [userConversation, setUserConversation] = useState<Conversation | null>(
+    null
+  );
 
-  const [loader, setLoader] = useState({
+  const [loader, setLoader] = useState<LoaderState>({
     visible: true,
     message: LanguageKeys.loading,
   });
 
-  const [buttonPickerVisible, setButtonPickerVisible] = useState<any>({
+  const [buttonPickerVisible, setButtonPickerVisible] = useState<PickerState>({
     pickerData: [],
     pickerHeaderTitle: '',
     visible: false,
@@ -57,77 +123,96 @@ const Profile = (props: any) => {
 
   const { getData, storageKeys, setData } = StorageManager;
 
-  const { fromUserProfile = false } = props;
-
-  const [editInfoCard, setEditInfoCard] = useState({
+  const [editInfoCard, setEditInfoCard] = useState<EditCardState>({
     visible: false,
     data: [],
     from: '',
   });
 
-  const [editInterestCard, setEditInterestCard] = useState({
+  const [editInterestCard, setEditInterestCard] = useState<EditCardState>({
     visible: false,
     data: [],
     from: '',
   });
 
-  const [userData, setUserData] = useState<any>(
-    props?.userData ? props.userData : currentUser
+  const [userData, setUserData] = useState<User>(
+    propUserData ? propUserData : currentUser
   );
-  const [interestAndHobbies, setIinterestAndHobbies] = useState([]);
+  const [interestAndHobbies, setIinterestAndHobbies] = useState<any[]>([]);
   const [isBlockedByYou, setIsBlockedByYou] = useState(false);
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
   const [matchingData, setMatchingData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
 
-  let blockPickerData = [
-    {
-      label: LanguageKeys.block,
-      value: 'block',
-    },
-    {
-      label: LanguageKeys.reportAndBlock,
-      value: 'blockAndReport',
-    },
-    {
-      label: LanguageKeys.cancel,
-      value: 'cancel',
-    },
-  ];
+  const blockPickerData: BlockPickerOption[] = useMemo(
+    () =>
+      isBlockedByYou
+        ? [
+            { label: LanguageKeys.unBlock, value: 'unBlock' },
+            { label: LanguageKeys.cancel, value: 'cancel' },
+          ]
+        : [
+            { label: LanguageKeys.block, value: 'block' },
+            { label: LanguageKeys.reportAndBlock, value: 'blockAndReport' },
+            { label: LanguageKeys.cancel, value: 'cancel' },
+          ],
+    [isBlockedByYou]
+  );
 
-  if (isBlockedByYou) {
-    blockPickerData = [
-      {
-        label: LanguageKeys.unBlock,
-        value: 'unBlock',
-      },
-      {
-        label: LanguageKeys.cancel,
-        value: 'cancel',
-      },
-    ];
-  }
+  const scrollToSection = useCallback(() => {
+    if (route?.params?.scrollTo && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({
+        y: route.params.scrollTo,
+        animated: true,
+      });
+    }
+  }, [route?.params?.scrollTo]);
 
-  const scrollToSection = () => {
-    scrollViewRef.current.scrollTo({
-      y: props?.route.params?.scrollTo,
-      animated: true,
+  const getUserConversation = useCallback(() => {
+    const conversationData = conversations.filter((element: Conversation) => {
+      const deleteFlag = element.convDetails?.participantsDeleteFlag ?? {};
+      return Object.prototype.hasOwnProperty.call(
+        deleteFlag,
+        JSON.stringify(userData?.id)
+      );
     });
-  };
+    if (conversationData && conversationData.length !== 0) {
+      const conversation = conversationData[0];
+      if (conversation?.convDetails) {
+        setUserConversation(
+          conversation.convDetails as unknown as Conversation
+        );
+      }
+      return;
+    }
+    Firebase.getSingleConversation(currentUser?.id, userData?.id).then(
+      (data: unknown) => {
+        const conversationList = data as Conversation[];
+        if (conversationList && conversationList.length !== 0) {
+          const firstConv = conversationList[0];
+          if (firstConv?.convDetails) {
+            setUserConversation(
+              firstConv.convDetails as unknown as Conversation
+            );
+          }
+        }
+      }
+    );
+  }, [conversations, currentUser?.id, userData?.id]);
 
   useEffect(() => {
-    props?.route?.params?.scrollTo && scrollToSection();
-  }, [props?.route?.params?.scrollTo]);
+    scrollToSection();
+  }, [scrollToSection]);
 
   useFocusEffect(
     React.useCallback(() => {
       if (userData?.id !== currentUser?.id) {
         ApiServices.getUserDetail(userData?.id).then((res) => {
-          setUserData(res);
+          setUserData(res as User);
         });
       }
-    }, [])
+    }, [currentUser?.id, userData?.id])
   );
 
   useFocusEffect(
@@ -135,41 +220,10 @@ const Profile = (props: any) => {
       if (fromUserProfile) {
         getUserConversation();
       }
-    }, [conversations])
+    }, [fromUserProfile, getUserConversation])
   );
 
-  const getUserConversation = () => {
-    const conversationData = conversations.filter((element: any) => {
-      const deleteFlag = element.convDetails.participantsDeleteFlag;
-      return deleteFlag.hasOwnProperty(JSON.stringify(userData?.id));
-    });
-    if (conversationData && conversationData.length !== 0) {
-      if (
-        conversationData[0] &&
-        Object.keys(conversationData[0]?.convDetails).length !== 0
-      ) {
-        const { convDetails } = conversationData[0];
-        setUserConversation(convDetails);
-      }
-    } else {
-      Firebase.getSingleConversation(currentUser?.id, userData?.id).then(
-        (data: any) => {
-          if (data && data?.length !== 0) {
-            if (
-              conversationData[0] &&
-              Object.keys(conversationData[0]?.convDetails).length !== 0
-            ) {
-              const { convDetails } = conversationData[0];
-              setUserConversation(convDetails);
-            }
-          }
-        }
-      );
-      // .catch(() => setMessageButtonLoader(false))
-    }
-  };
-
-  const hideButtonPicker = () => {
+  const hideButtonPicker = useCallback(() => {
     setButtonPickerVisible({
       visible: false,
       item: '',
@@ -177,17 +231,17 @@ const Profile = (props: any) => {
       pickerData: [],
       pickerHeaderTitle: '',
     });
-  };
+  }, []);
 
-  const closeEditInfoCard = () => {
+  const closeEditInfoCard = useCallback(() => {
     setEditInfoCard({
       visible: false,
       data: [],
       from: '',
     });
-  };
+  }, []);
 
-  const onInfoCardEdit = ({ data, from }: any) => {
+  const onInfoCardEdit = ({ data, from }: EditPayload) => {
     setEditInfoCard({
       visible: true,
       data: data,
@@ -195,15 +249,15 @@ const Profile = (props: any) => {
     });
   };
 
-  const closeEditInterestCard = () => {
+  const closeEditInterestCard = useCallback(() => {
     setEditInterestCard({
       visible: false,
       data: [],
       from: '',
     });
-  };
+  }, []);
 
-  const onInterestCardEdit = ({ data, from }: any) => {
+  const onInterestCardEdit = ({ data, from }: EditPayload) => {
     setEditInterestCard({
       visible: true,
       data: data,
@@ -211,81 +265,86 @@ const Profile = (props: any) => {
     });
   };
 
-  const getAttribute = (Data: any, userData: any) => {
-    getData(storageKeys.ATTRIBUTE).then((attributeRes: any) => {
-      if (attributeRes) {
-        if (attributeRes.hasOwnProperty('personality-0')) {
-          const interest = attributeRes['personality-0'];
-          interest?.forEach((element: any) => {
-            if (userData?.detail?.personality_id?.includes(element.id)) {
-              element.selected = true;
-            }
-          });
-          setIinterestAndHobbies(interest);
-        }
-        const catData: any = {};
-        for (const child in Data) {
-          Data[child].forEach((element: any) => {
-            if (child !== 'personalityRequirements') {
-              const result = attributeRes[element.category][element.id];
-              if (result) {
-                element.data = result;
+  const getAttribute = useCallback(
+    (Data: any, nextUserData: User) => {
+      getData(storageKeys.ATTRIBUTE).then((attributeRes: any) => {
+        if (attributeRes) {
+          if (attributeRes.hasOwnProperty('personality-0')) {
+            const interest = attributeRes['personality-0'] as any[];
+            interest?.forEach((element: any) => {
+              if (nextUserData?.detail?.personality_id?.includes(element.id)) {
+                element.selected = true;
               }
-            }
-            if (
-              userData?.detail &&
-              Object.keys(userData?.detail).length !== 0
-            ) {
-              const value = userData?.detail[element.apiKey];
-
-              if (value !== null && value !== undefined) {
-                if (element.type === 'dropDown') {
-                  const result = _.find(element?.data, function (n) {
-                    if (n.id === value) {
-                      return n;
-                    }
-                  });
-
-                  if (result) {
-                    element.selected = result;
-                  } else if (
-                    element.id === 'language' ||
-                    element.id === 'nationality'
-                  ) {
-                    element.selected = {
-                      id: value?.id,
-                      value: value?.name,
-                    };
-                  }
-                } else if (element.type === 'scalling') {
-                  element.id === 'height'
-                    ? (element.selected = {
-                        scale: userData?.detail?.height_scale,
-                        value: userData?.detail?.height,
-                      })
-                    : (element.selected = {
-                        scale: userData?.detail?.weight_scale,
-                        value: userData?.detail?.weight,
-                      });
-                } else {
-                  element.selected = {
-                    id: element?.id,
-                    value: value,
-                    category: element?.category,
-                  };
+            });
+            setIinterestAndHobbies(interest);
+          }
+          const catData: any = {};
+          for (const child in Data) {
+            Data[child].forEach((element: any) => {
+              if (child !== 'personalityRequirements') {
+                const result = attributeRes[element.category][element.id];
+                if (result) {
+                  element.data = result;
                 }
               }
-            }
-          });
-          catData[child] = Data[child];
-        }
-        setCategoriesData(catData);
-        setDataLoader(false);
-      }
-    });
-  };
+              if (
+                nextUserData?.detail &&
+                Object.keys(nextUserData?.detail).length !== 0
+              ) {
+                const value = (nextUserData?.detail as any)[element.apiKey];
 
-  const fetchData = async () => {
+                if (value !== null && value !== undefined) {
+                  if (element.type === 'dropDown') {
+                    const result = _.find(element?.data, function (n) {
+                      if (n.id === value) {
+                        return n;
+                      }
+                    });
+
+                    if (result) {
+                      element.selected = result;
+                    } else if (
+                      element.id === 'language' ||
+                      element.id === 'nationality'
+                    ) {
+                      element.selected = {
+                        id: value?.id,
+                        value: value?.name,
+                      };
+                    }
+                  } else if (element.type === 'scalling') {
+                    if (element.id === 'height') {
+                      element.selected = {
+                        scale: nextUserData?.detail?.height_scale,
+                        value: nextUserData?.detail?.height,
+                      };
+                    } else {
+                      element.selected = {
+                        scale: nextUserData?.detail?.weight_scale,
+                        value: nextUserData?.detail?.weight,
+                      };
+                    }
+                  } else {
+                    element.selected = {
+                      id: element?.id,
+                      value: value,
+                      category: element?.category,
+                    };
+                  }
+                }
+              }
+            });
+            catData[child] = Data[child];
+          }
+          setCategoriesData(catData);
+          setDataLoader(false);
+        }
+      });
+    },
+    [getData, storageKeys.ATTRIBUTE]
+  );
+
+  const fetchData = useCallback(async () => {
     const data = await getData(storageKeys.PROFILE_DETAIL_LOCAL);
     setError(false);
     if (data) {
@@ -295,7 +354,7 @@ const Profile = (props: any) => {
             visible: true,
             message: LanguageKeys.loading,
           });
-          const user: any = await ApiServices.getUserDetail(userData?.id);
+          const user = (await ApiServices.getUserDetail(userData?.id)) as User;
           setUserData(user);
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
@@ -308,7 +367,7 @@ const Profile = (props: any) => {
           } else {
             setDataLoader(false);
           }
-        } catch (error) {
+        } catch {
           setError(true);
           setDataLoader(false);
           hideLoader();
@@ -319,13 +378,13 @@ const Profile = (props: any) => {
             visible: true,
             message: LanguageKeys.loading,
           });
-          const user: any = await ApiServices.getCurrentUserDetail();
+          const user = (await ApiServices.getCurrentUserDetail()) as User;
           setUserData(user);
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
           getAttribute(data, user);
-        } catch (error) {
+        } catch {
           setError(true);
           setDataLoader(false);
           hideLoader();
@@ -334,13 +393,19 @@ const Profile = (props: any) => {
     }
     setDataLoader(false);
     hideLoader();
-  };
+  }, [
+    fromUserProfile,
+    getAttribute,
+    getData,
+    storageKeys.PROFILE_DETAIL_LOCAL,
+    userData?.id,
+  ]);
 
   useEffect(() => {
     fetchData();
-  }, [isFocused]);
+  }, [fetchData, isFocused]);
 
-  const onBlockPress = () => {
+  const onBlockPress = useCallback(() => {
     const pickerHeaderTitle = isBlockedByYou
       ? LanguageKeys.unBlockAlertSureDes
       : LanguageKeys.blockAlertSureDes;
@@ -351,9 +416,9 @@ const Profile = (props: any) => {
       pickerData: blockPickerData,
       pickerHeaderTitle: pickerHeaderTitle,
     });
-  };
+  }, [blockPickerData, isBlockedByYou, userData]);
 
-  const onLikeUnlikePress = (value: any) => {
+  const onLikeUnlikePress = (value: boolean) => {
     const params = {
       type: 2,
       action_user_id: userData?.id,
@@ -371,7 +436,7 @@ const Profile = (props: any) => {
     });
   };
 
-  const onButtonPickerButtonPress = (item: any) => {
+  const onButtonPickerButtonPress = (item: BlockPickerOption) => {
     hideButtonPicker();
     const { value } = item;
     if (value === 'block' || value === 'unBlock') {
@@ -399,10 +464,9 @@ const Profile = (props: any) => {
               );
             })
             .catch();
+          const nextUser = { ...userData, blocked: value === 'block' ? 1 : 0 };
           setIsBlockedByYou(!isBlockedByYou);
-          userData.blocked = value === 'block' ? 1 : 0;
-          // userData.block_by_you = value === 'block' ? 1 : 0
-          setUserData(userData);
+          setUserData(nextUser as User);
           hideLoader();
         })
         .catch(hideLoader);
@@ -431,9 +495,9 @@ const Profile = (props: any) => {
               );
             })
             .catch();
+          const nextUser = { ...userData, blocked: 1 };
           setIsBlockedByYou(!isBlockedByYou);
-          userData.blocked = value === 'block' ? 1 : 0;
-          setUserData(userData);
+          setUserData(nextUser as User);
           hideLoader();
         })
         .catch(hideLoader);
@@ -451,9 +515,10 @@ const Profile = (props: any) => {
     });
     ApiServices.updateDetails({ tagline: tagLineInput })
       .then(async (res) => {
-        currentUser.detail = res;
-        await setData(storageKeys.USER, currentUser);
-        updateCurrentUser(currentUser);
+        const updatedUser = { ...currentUser, detail: res };
+        await setData(storageKeys.USER, updatedUser);
+        updateCurrentUser(updatedUser);
+        setUserData(updatedUser);
         fetchData();
         flashSuccessMessage(LanguageKeys.submitted);
         // hideLoader()
@@ -462,18 +527,17 @@ const Profile = (props: any) => {
       .catch(hideLoader);
   };
 
-  const onChangeTagLine = (text: any) => setTagLineInput(text);
+  const onChangeTagLine = (text: string) => setTagLineInput(text);
 
+  const isOwnProfile = !fromUserProfile;
   return (
-    // <SafeAreaView  style={[Styles.container , {backgroundColor:Colors.blackRGBA50}]} >
-
-    <View style={Styles.container}>
-      <ModalLoader visible={loader.visible} message={loader.message} />
+    <SafeAreaView style={Styles.container}>
+      <ScreenLoader visible={loader.visible} message={loader.message} />
       {currentUser?.membership_status === 0 && <PremiumButton />}
       <View style={{ flex: 1 }}>
-        <ScrollView showsVerticalScrollIndicator={false} ref={scrollViewRef}>
+        <ContentScroll scrollRef={scrollViewRef}>
           <Header
-            navigation={props.navigation}
+            navigation={navigation}
             fromUserProfile={fromUserProfile}
             userData={userData}
             onBlockPress={onBlockPress}
@@ -490,94 +554,23 @@ const Profile = (props: any) => {
             </Text>
           ) : (
             <>
-              {tagLineInputVisible ? (
-                <View
-                  style={{
-                    ...Styles.tagLineOuterCon,
-                    paddingHorizontal: wp(4),
-                    flexDirection: Rtl ? 'row-reverse' : 'row',
-                  }}
-                >
-                  <TextInput
-                    style={{
-                      ...Styles.tagLineInput,
-                      textAlign: Rtl ? 'right' : 'left',
-                    }}
-                    placeholder={'Enter Tagline'}
-                    placeholderTextColor={Colors}
-                    onChangeText={onChangeTagLine}
-                    value={tagLineInput}
-                  />
-                  <Ripple
-                    style={Styles.tagLineSubmitBtn}
-                    onPress={onTagLineSubmit}
-                  >
-                    <AntDesign name="check" color={Colors.theme} size={wp(6)} />
-                  </Ripple>
-                  <Ripple
-                    style={{
-                      ...Styles.tagLineSubmitBtn,
-                      backgroundColor: Colors.blackRGBA25,
-                    }}
-                    onPress={hideTagLineInput}
-                  >
-                    <AntDesign
-                      name="close"
-                      color={Colors.color1}
-                      size={wp(6)}
-                    />
-                  </Ripple>
-                </View>
-              ) : !fromUserProfile ? (
-                <View
-                  style={{
-                    ...Styles.tagLineOuterCon,
-                    flexDirection: Rtl ? 'row-reverse' : 'row',
-                  }}
-                >
-                  {userData?.detail?.tagline ? (
-                    <ReactText style={Styles.tagLineHeading} numberOfLines={1}>
-                      {userData?.detail?.tagline}
-                    </ReactText>
-                  ) : (
-                    <Text style={Styles.tagLineHeading}>
-                      {LanguageKeys.tagline}
-                    </Text>
-                  )}
-                  <Ripple style={Styles.editButton} onPress={showTagLineInput}>
-                    <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
-                  </Ripple>
-                </View>
-              ) : userData?.detail?.tagline ? (
-                <View
-                  style={{
-                    ...Styles.tagLineOuterCon,
-                    flexDirection: Rtl ? 'row-reverse' : 'row',
-                  }}
-                >
-                  <ReactText style={Styles.tagLineHeading} numberOfLines={1}>
-                    {userData?.detail?.tagline}
-                  </ReactText>
-                </View>
-              ) : (
-                <View style={{ marginBottom: hp(5) }} />
-              )}
+              <TaglineSection
+                rtl={Rtl}
+                tagline={userData?.detail?.tagline}
+                isEditing={tagLineInputVisible}
+                inputValue={tagLineInput}
+                onChange={onChangeTagLine}
+                onSubmit={onTagLineSubmit}
+                onEditPress={showTagLineInput}
+                onCancel={hideTagLineInput}
+                isOwnProfile={isOwnProfile}
+              />
               {dataLoader ? (
                 <Loader />
               ) : (
                 <View>
                   {error ? (
-                    <View>
-                      <Text style={Styles.somethingWentWrontText}>
-                        {LanguageKeys.somethingWentWrong}
-                      </Text>
-                      <Button
-                        text={LanguageKeys.tryAgain}
-                        onPress={fetchData}
-                        buttonStyle={Styles.tryAgainWrapper}
-                        textStyle={Styles.tryAgainText}
-                      />
-                    </View>
+                    <ErrorRetry onRetry={fetchData} />
                   ) : (
                     <>
                       <InterestAndHobbyCardStatic
@@ -617,13 +610,13 @@ const Profile = (props: any) => {
                         onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
-                      {/* <InfoCard
-                                                data={categoriesData?.waliInformation}
-                                                headerHeading={LanguageKeys.waliInformation}
-                                                onEditPress={onInfoCardEdit}
-                                                fromUserProfile={fromUserProfile}
-                                                from={'waliInformation'}
-                                            /> */}
+                      <InfoCard
+                        data={categoriesData?.waliInformation}
+                        headerHeading={LanguageKeys.waliInformation}
+                        onEditPress={onInfoCardEdit}
+                        fromUserProfile={fromUserProfile}
+                        from={'waliInformation'}
+                      />
                       <InfoCard
                         data={categoriesData?.islamicValues}
                         headerHeading={LanguageKeys.islamicValues}
@@ -635,7 +628,7 @@ const Profile = (props: any) => {
                         headerHeading={LanguageKeys.futurePlans}
                         onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
-                        userData={userData}
+                        userData={{ gender: userData?.detail?.gender }}
                       />
                     </>
                   )}
@@ -643,27 +636,24 @@ const Profile = (props: any) => {
               )}
             </>
           )}
-        </ScrollView>
+        </ContentScroll>
 
         <EditInfoCardModal details={editInfoCard} onClose={closeEditInfoCard} />
         <EditInterestCardModal
+          fetchData={fetchData}
           details={editInterestCard}
           onClose={closeEditInterestCard}
-          fetchData={fetchData}
         />
       </View>
 
-      {buttonPickerVisible.visible && (
-        <ButtonPicker
-          visible={true}
-          data={buttonPickerVisible.pickerData}
-          onClose={hideButtonPicker}
-          headerTitle={buttonPickerVisible.pickerHeaderTitle}
-          onButtonPress={onButtonPickerButtonPress}
-        />
-      )}
-    </View>
-    // </SafeAreaView>
+      <BlockPickerSheet
+        onClose={hideButtonPicker}
+        visible={buttonPickerVisible.visible}
+        data={buttonPickerVisible.pickerData}
+        onButtonPress={onButtonPickerButtonPress}
+        headerTitle={buttonPickerVisible.pickerHeaderTitle}
+      />
+    </SafeAreaView>
   );
 };
 export default Profile;

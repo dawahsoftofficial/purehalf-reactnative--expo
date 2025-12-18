@@ -4,7 +4,7 @@ import { Image, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { wp } from '../../global';
+import { hp, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
 import { LinearGradient, Text } from '..';
@@ -60,9 +60,9 @@ export default PremiumButton;
 
 const Styles = StyleSheet.create({
   container: {
-    height: 60,
     flexDirection: 'row',
-    paddingHorizontal: wp(4),
+    paddingHorizontal: hp(2),
+    paddingVertical: hp(1.5),
     alignItems: 'center',
     justifyContent: 'space-between',
   },

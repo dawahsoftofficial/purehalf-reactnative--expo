@@ -247,7 +247,7 @@ const Messages = (props: any) => {
   };
 
   return (
-    <Container barStyle="light-content">
+    <Container>
       {(currentUser?.membership_status === 0 ||
         currentUser?.membership_status === null) && (
         <PremiumButton

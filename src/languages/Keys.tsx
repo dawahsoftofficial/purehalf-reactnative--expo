@@ -327,6 +327,7 @@ const Keys = {
   yearAgo: 'yearAgo',
   any: 'any',
   filter: 'filter',
+  filterName: 'filterName',
   delete: 'delete',
   minimumAge: 'minimumAge',
   maximumAge: 'maximumAge',
@@ -477,6 +478,8 @@ const Keys = {
   adviceThirteenText: 'adviceThirteenText',
   welcome: 'welcome',
   updateLocation: 'updateLocation',
+  locationConsentHeading: 'locationConsentHeading',
+  locationConsentDescription: 'locationConsentDescription',
 };
 
 export default Keys;

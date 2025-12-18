@@ -225,7 +225,7 @@
     "unBlocked": "Unblocked",
     "submitting": "Submitting...",
     "submitted": "Submitted",
-    "tagline": "Tagline",
+    "tagline": "One line about yourself",
     "userBlockedYouDes": "User profile not available",
     "appearanceHealth": "Appearance & Health",
     "familyBackground": "Family Background",
@@ -493,6 +493,7 @@
     "yearAgo": "A Year Ago",
     "any": "Any",
     "filter": "Filter",
+    "filterName": "Filter name:",
     "delete": "Delete",
     "minimumAge": "Minimum age",
     "maximumAge": "Maximum age",
@@ -502,6 +503,8 @@
     "goPremiumButtonDescriptionTwo": "Enhanced visibility & More!",
     "searchMoreProfiles": "Search more profiles",
     "restoreSubscription": "Restore Subscription",
-    "restoreSubscriptionErrorMessage": "You dont have any pending subscription"
+    "restoreSubscriptionErrorMessage": "You dont have any pending subscription",
+    "locationConsentHeading": "Location Access Required",
+    "locationConsentDescription": "We need your location to help you find matches nearby and improve your matchmaking experience. Your location data is used only for matching purposes and is kept secure."
   }
 }

@@ -1,18 +1,22 @@
-import { useFocusEffect } from '@react-navigation/native';
+import {
+  type NavigationProp,
+  type ParamListBase,
+  useFocusEffect,
+} from '@react-navigation/native';
 import moment from 'moment';
-import React, { useReducer, useState } from 'react';
+import type { ReactElement } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   Image,
+  ImageBackground,
   Modal,
   StatusBar,
   StyleSheet,
   Text as ReactText,
-  TouchableOpacity,
   View,
 } from 'react-native';
-import DeviceInfo from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
@@ -36,231 +40,155 @@ import {
   Firebase,
   flashErrorMessage,
   isIOS,
-  StorageManager,
   useGlobalContext,
 } from '../../services';
 
-const Header = (props: any) => {
-  const { setData, storageKeys } = StorageManager;
-  const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
-  const [userConversation, setUserConversation] = useState({
-    convDetails: {},
-    messages: [],
-  });
-  const [ignored, forceUpdate] = useReducer((x) => x + 1, 0);
-  const [liked, setLiked] = useState(false);
-  const [imageLoader, setImageLoader] = useState(false);
-  const [profileImageLoader, setProfileImageLoader] = useState(false);
-  const [profileImageError, setProfileImageError] = useState(false);
-  const [coverImageError, setCoverImageError] = useState(false);
-  const [userData, setUserData] = useState(props.userData);
-  const [isPremiumMember, setIsPremiumMember] = useState<boolean>(false);
-  const [modalLoader, setModalLoader] = useState(false);
-  const [messageButtonLoader, setMessageButtonLoader] = useState(true);
-  const [toolTipVisible, setToolTipVisible] = useState<boolean>(false);
+const { width, height } = Dimensions.get('window');
 
-  const chatUserData = {
-    id: userData?.id,
-    name: userData?.full_name,
-    image: userData?.media?.primary_image,
-    token: userData?.fcm_token
-      ?.map((item: any) => item?.fcm_token)
-      .filter((token: any) => token !== undefined && token !== null),
+type FcmToken = { fcm_token?: string | null };
+
+type UserMedia = {
+  primary_image?: string;
+  cover_image?: string;
+  public_gallery?: string[];
+  private_photo_count?: number;
+  youtube_url?: string;
+};
+
+type User = {
+  id?: number;
+  full_name?: string;
+  first_name?: string;
+  last_name?: string;
+  age?: number;
+  city?: string;
+  country?: string;
+  last_online_at?: string;
+  liked?: boolean;
+  membership_expiry?: string | null;
+  media?: UserMedia;
+  fcm_token?: FcmToken[];
+  gender?: string;
+  is_blur?: boolean;
+  blur_allowed_you?: boolean;
+  block_by_you?: number;
+  blocked?: number;
+};
+
+type Conversation = {
+  convDetails: {
+    participantsDeleteFlag: Record<string, unknown>;
+    id?: string;
   };
+  messages: unknown[];
+};
 
-  const {
-    navigation = {},
-    fromUserProfile = false,
-    onBlockPress = () => null,
-    isBlockedYou = false,
-  } = props;
+type HeaderProps = {
+  navigation: NavigationProp<ParamListBase>;
+  userData: User;
+  onLikeUnlikePress?: (liked: boolean) => void;
+  onBlockPress?: () => void;
+  fromUserProfile?: boolean;
+  isBlockedYou?: boolean;
+};
 
-  useFocusEffect(
-    React.useCallback(() => {
-      setIsPremiumMember(
-        currentUser?.membership_status === 0 ||
-          currentUser?.membership_status === null
-          ? false
-          : true
-      );
-      setUserData(props?.userData);
-      setLiked(props?.userData?.liked);
-      forceUpdate();
-    }, [props?.userData, currentUser])
-  );
+type NameRowProps = {
+  firstName?: string;
+  lastName?: string;
+  showStatus: boolean;
+  statusColor: string;
+  rtl: boolean;
+};
 
-  const getUserConversation = () => {
-    const conversationData = conversations.filter((element: any) => {
-      const deleteFlag = element.convDetails.participantsDeleteFlag;
-      return deleteFlag.hasOwnProperty(JSON.stringify(userData?.id));
-    });
-    if (conversationData && conversationData.length !== 0) {
-      setUserConversation(conversationData[0]);
-      setMessageButtonLoader(false);
-    } else {
-      Firebase.getSingleConversation(currentUser?.id, userData?.id)
-        .then((data: any) => {
-          if (data && data?.length !== 0) {
-            setUserConversation(data[0]);
-            setMessageButtonLoader(false);
-          } else {
-            setMessageButtonLoader(false);
-          }
-        })
-        .catch(() => setMessageButtonLoader(false));
-    }
-  };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (fromUserProfile) {
-        getUserConversation();
-      }
-    }, [conversations])
-  );
-
-  const navigateToChat = () => {
-    props.navigation.navigate('SingleChat', {
-      otherUserData: chatUserData,
-      conversationData: userConversation,
-      fromProfile: true,
-    });
-  };
-
-  const isPremiumUser = () => {
-    return new Promise((resolve, reject) => {
-      const now = moment();
-      const membershipExpiry = currentUser?.membership_expiry;
-      if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
-        resolve('premiumUser');
-      } else if (
-        membershipExpiry === null ||
-        moment(membershipExpiry).isBefore(now)
-      ) {
-        setModalLoader(true);
-        ApiServices.getCurrentUserDetail()
-          .then((res: any) => {
-            const membershipExpiry = res?.membership_expiry;
-            updateCurrentUser(res);
-            setModalLoader(false);
-            if (
-              membershipExpiry === null ||
-              moment(membershipExpiry).isBefore(now)
-            ) {
-              props.navigation.navigate('ProFeaturesPromotion', {
-                navigateTo: 'goBack',
-              });
-            } else {
-              resolve('premiumUser');
-            }
-          })
-          .catch(() => {
-            setModalLoader(false);
-          });
-      }
-    });
-  };
-
-  const onMessagePress = () => {
-    const userConversationDetail: any = userConversation;
-    if (
-      // userConversation?.messages?.length === 0 &&
-      currentUser?.gender === 'male'
-      // && conversations?.length >= 3
-    ) {
-      isPremiumUser().then(() => {
-        Firebase.getNoOfChats(
-          currentUser?.id,
-          userConversationDetail?.convDetails?.id
-        ).then((numberOfChats: any) => {
-          if (numberOfChats < 5) {
-            navigateToChat();
-          } else {
-            flashErrorMessage(LanguageKeys.conversationLimit);
-          }
-        });
-      });
-    } else {
-      Firebase.getNoOfChats(
-        currentUser?.id,
-        userConversationDetail?.convDetails?.id
-      ).then((numberOfChats: any) => {
-        if (numberOfChats < 5) {
-          navigateToChat();
-        } else {
-          flashErrorMessage(LanguageKeys.conversationLimit);
-        }
-      });
-    }
-  };
-
-  const Rtl = CheckRtl();
-
-  const RenderName = () => (
+const NameRow = React.memo(function NameRow({
+  firstName,
+  lastName,
+  showStatus,
+  statusColor,
+  rtl,
+}: NameRowProps): ReactElement {
+  return (
     <View
-      style={{ ...Styles.nameCon, flexDirection: Rtl ? 'row-reverse' : 'row' }}
+      style={{ ...Styles.nameCon, flexDirection: rtl ? 'row-reverse' : 'row' }}
     >
       <ReactText style={{ ...Styles.name }}>
-        {capitalize(userData?.first_name) +
-          ' ' +
-          capitalize(userData?.last_name)}
+        {capitalize(firstName ?? '') + ' ' + capitalize(lastName ?? '')}
       </ReactText>
-      {fromUserProfile && (
+      {showStatus && (
         <View
           style={{
             ...Styles.onlineStatus,
-            backgroundColor:
-              lastOnlineFromCurrentTime === 1
-                ? Colors.color10
-                : lastOnlineFromCurrentTime > 1 &&
-                    lastOnlineFromCurrentTime <= 12
-                  ? Colors.color19
-                  : Colors.color15,
+            backgroundColor: statusColor,
           }}
         />
       )}
     </View>
   );
+});
 
-  const onEditPress = () => {
-    navigation.navigate('PhotosAndVideos');
-  };
+type LocationProps = {
+  city?: string;
+  country?: string;
+};
 
-  const onLikeUnlikePress = () => {
-    setLiked(!liked);
-    props.onLikeUnlikePress && props.onLikeUnlikePress(!liked);
-  };
+const LocationText = React.memo(function LocationText({
+  city,
+  country,
+}: LocationProps): ReactElement {
+  return (
+    <ReactText style={Styles.location} numberOfLines={2}>
+      {city}
+      {city && ', '}
+      {country}
+    </ReactText>
+  );
+});
 
-  const onChangeBlur = () => {
-    // setModalLoader(true)
-    // let newParams = {
-    //     type: 9,
-    //     action_user_id: currentUser?.id,
-    // }
-    // ApiServices.interactionAction(newParams).then(async (res) => {
-    //     setIsBlurred(!isBlurred)
-    //     // currentUser.isBlurred = newParams.isBlurred
-    //     // updateCurrentUser(currentUser)
-    //     // await setData(storageKeys.USER, currentUser)
-    //     flashSuccessMessage(LanguageKeys.updated)
-    //     setModalLoader(false)
-    // })
-    //     .catch(() => setModalLoader(false))
-  };
+type AgeProps = {
+  age?: number;
+};
 
-  const RenderActionBtn = () => (
+const AgeText = React.memo(function AgeText({ age }: AgeProps): ReactElement {
+  return (
+    <ReactText style={Styles.location} numberOfLines={2}>
+      {`Age: ${age}`}
+    </ReactText>
+  );
+});
+
+type ActionButtonsProps = {
+  rtl: boolean;
+  isBlocked: boolean;
+  isBlockedByYou: boolean;
+  onBlockPress?: () => void;
+  onMessagePress: () => void;
+  onLikePress: () => void;
+  messageButtonLoader: boolean;
+  liked: boolean;
+};
+
+const ActionButtons = React.memo(function ActionButtons({
+  rtl,
+  isBlocked,
+  isBlockedByYou,
+  onBlockPress,
+  onMessagePress,
+  onLikePress,
+  messageButtonLoader,
+  liked,
+}: ActionButtonsProps): ReactElement {
+  const blockIconColor =
+    isBlocked || isBlockedByYou ? Colors.theme : Colors.color1;
+
+  return (
     <View
       style={{
         ...Styles.actionBtnCon,
-        flexDirection: Rtl ? 'row-reverse' : 'row',
+        flexDirection: rtl ? 'row-reverse' : 'row',
       }}
     >
       <Ripple style={Styles.actionIcon} onPress={onBlockPress}>
-        {userData?.blocked === 1 || userData?.block_by_you === 1 ? (
-          <Entypo name="block" color={Colors.theme} size={wp(4.5)} />
-        ) : (
-          <Entypo name="block" color={Colors.color1} size={wp(4.5)} />
-        )}
+        <Entypo name="block" color={blockIconColor} size={wp(4.5)} />
       </Ripple>
       <Ripple
         style={[Styles.actionIcon, { backgroundColor: Colors.color47 }]}
@@ -274,7 +202,7 @@ const Header = (props: any) => {
         )}
       </Ripple>
 
-      <Ripple style={Styles.actionIcon} onPress={onLikeUnlikePress}>
+      <Ripple style={Styles.actionIcon} onPress={onLikePress}>
         {liked ? (
           <AntDesign name="heart" color={Colors.theme} size={wp(4.5)} />
         ) : (
@@ -283,95 +211,38 @@ const Header = (props: any) => {
       </Ripple>
     </View>
   );
+});
 
-  const RenderLocation = () => (
-    <ReactText style={Styles.location} numberOfLines={2}>
-      {userData?.city}
-      {userData?.city && ', '}
-      {userData?.country}
-    </ReactText>
-  );
+type AllPicturesButtonProps = {
+  rtl: boolean;
+  fromUserProfile: boolean;
+  hasPublicGallery: boolean;
+  privatePhotoCount?: number;
+  onSeeAllPress: () => void;
+  onEditPress: () => void;
+};
 
-  const RenderAge = () => (
-    <ReactText style={Styles.location} numberOfLines={2}>
-      {`Age: ${userData?.age}`}
-    </ReactText>
-  );
-
-  const RenderLastOnline = () => (
-    <View style={{ alignItems: Rtl ? 'flex-end' : 'flex-start' }}>
-      <Text style={Styles.lastOnlineAt}>{LanguageKeys.lastOnlineAt}</Text>
-      <View style={Styles.lastOnlineAtInner}>
-        {!moment(userData?.last_online_at).isSame(new Date(), 'day') && (
-          <ReactText style={{ ...Styles.lastOnlineAt, marginRight: wp(1) }}>
-            {moment(userData?.last_online_at).format('Do MMM, YYYY')}
-          </ReactText>
-        )}
-        <ReactText style={{ ...Styles.lastOnlineAt }}>
-          {moment(userData?.last_online_at).format('(hh:mm a)')}
-        </ReactText>
-      </View>
-    </View>
-  );
-
-  const onSeeAllPicPress = () => {
-    if (!fromUserProfile) {
-      navigation.navigate('PhotosAndVideos');
-    } else {
-      isPremiumUser().then(() => {
-        navigation.navigate('ImageViewer', { userData: userData });
-      });
-    }
-  };
-
-  const RenderAllPicturesBtn = () =>
-    fromUserProfile ? (
-      <>
-        {userData?.media?.public_gallery?.length ||
-        userData?.media?.private_photo_count ? (
-          <Ripple
-            style={{
-              ...Styles.allPhotosBtn,
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-            }}
-            onPress={onSeeAllPicPress}
-          >
-            <Image
-              source={Images.gallery}
-              resizeMode="contain"
-              style={[
-                Styles.galleryIcon,
-                {
-                  marginRight: Rtl ? 0 : wp(1.6),
-                  marginLeft: Rtl ? wp(1.6) : 0,
-                },
-              ]}
-            />
-            <View
-              style={{
-                ...Styles.allPhotosBtnInner,
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-              }}
-            >
-              <Text style={Styles.allPhotosTxt}>
-                {LanguageKeys.seeAllPictures}
-              </Text>
-            </View>
-          </Ripple>
-        ) : null}
-      </>
-    ) : (
+const AllPicturesButton = React.memo(function AllPicturesButton({
+  rtl,
+  fromUserProfile,
+  hasPublicGallery,
+  privatePhotoCount,
+  onSeeAllPress,
+  onEditPress,
+}: AllPicturesButtonProps): ReactElement | null {
+  if (!fromUserProfile) {
+    return (
       <Ripple
         style={{
           ...Styles.myPhotosBtn,
-          flexDirection: Rtl ? 'row-reverse' : 'row',
+          flexDirection: rtl ? 'row-reverse' : 'row',
         }}
         onPress={onEditPress}
       >
         <Entypo
           style={{
-            marginRight: Rtl ? 0 : wp(1.6),
-            marginLeft: Rtl ? wp(1.6) : 0,
+            marginRight: rtl ? 0 : wp(1.6),
+            marginLeft: rtl ? wp(1.6) : 0,
           }}
           name={'camera'}
           size={wp(5.5)}
@@ -380,261 +251,442 @@ const Header = (props: any) => {
         <View
           style={{
             ...Styles.allPhotosBtnInner,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
+            flexDirection: rtl ? 'row-reverse' : 'row',
           }}
         >
           <Text style={Styles.allPhotosTxt}>{LanguageKeys.myPhotos}</Text>
         </View>
       </Ripple>
     );
+  }
 
-  const onBackPress = () => navigation.goBack();
+  const showGallery = hasPublicGallery || (privatePhotoCount ?? 0) > 0;
+  if (!showGallery) {
+    return null;
+  }
 
-  const onImageLoadStart = () => setImageLoader(true);
-  const onImageLoadEnd = () => setImageLoader(false);
+  return (
+    <Ripple
+      style={{
+        ...Styles.allPhotosBtn,
+        flexDirection: rtl ? 'row-reverse' : 'row',
+      }}
+      onPress={onSeeAllPress}
+    >
+      <Image
+        source={Images.gallery}
+        resizeMode="contain"
+        style={[
+          Styles.galleryIcon,
+          {
+            marginRight: rtl ? 0 : wp(1.6),
+            marginLeft: rtl ? wp(1.6) : 0,
+          },
+        ]}
+      />
+      <View
+        style={{
+          ...Styles.allPhotosBtnInner,
+          flexDirection: rtl ? 'row-reverse' : 'row',
+        }}
+      >
+        <Text style={Styles.allPhotosTxt}>{LanguageKeys.seeAllPictures}</Text>
+      </View>
+    </Ripple>
+  );
+});
 
-  const onProfileImageLoadStart = () => setProfileImageLoader(true);
-  const onProfileImageLoadEnd = () => setProfileImageLoader(false);
+const Header = ({
+  navigation,
+  fromUserProfile = false,
+  onBlockPress = () => null,
+  isBlockedYou = false,
+  userData: initialUserData,
+  onLikeUnlikePress,
+}: HeaderProps) => {
+  const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
+  const [userConversation, setUserConversation] = useState<Conversation | null>(
+    null
+  );
+  const [liked, setLiked] = useState<boolean>(Boolean(initialUserData?.liked));
+  const [profileImageLoader, setProfileImageLoader] = useState(false);
+  const [profileImageError, setProfileImageError] = useState(false);
+  const [userData, setUserData] = useState<User>(initialUserData);
+  const [isPremiumMember, setIsPremiumMember] = useState<boolean>(false);
+  const [modalLoader, setModalLoader] = useState(false);
+  const [messageButtonLoader, setMessageButtonLoader] = useState(true);
+  const [toolTipVisible, setToolTipVisible] = useState<boolean>(false);
 
-  const lastOnlineFromCurrentTime = parseInt(
-    moment
-      .duration(moment(new Date()).diff(moment(userData?.last_online_at)))
-      .asHours()
-      .toFixed()
+  const chatUserData = useMemo(
+    () => ({
+      id: userData?.id,
+      name: userData?.full_name,
+      image: userData?.media?.primary_image,
+      token:
+        userData?.fcm_token
+          ?.map((item) => item?.fcm_token)
+          .filter((token): token is string => Boolean(token)) ?? [],
+    }),
+    [userData]
   );
 
+  useFocusEffect(
+    React.useCallback(() => {
+      setIsPremiumMember(
+        currentUser?.membership_status === 0 ||
+          currentUser?.membership_status === null
+          ? false
+          : true
+      );
+      setUserData(initialUserData);
+      setLiked(Boolean(initialUserData?.liked));
+    }, [initialUserData, currentUser])
+  );
+
+  const getUserConversation = useCallback(() => {
+    const conversationData = conversations.filter((element: Conversation) => {
+      const deleteFlag = element.convDetails.participantsDeleteFlag;
+      return deleteFlag.hasOwnProperty(JSON.stringify(userData?.id));
+    });
+    if (conversationData && conversationData.length !== 0) {
+      setUserConversation(conversationData[0]);
+      setMessageButtonLoader(false);
+      return;
+    }
+    Firebase.getSingleConversation(currentUser?.id, userData?.id)
+      .then((data) => {
+        const conversationList = data as Conversation[];
+        if (conversationList && conversationList.length !== 0) {
+          setUserConversation(conversationList[0]);
+        }
+        setMessageButtonLoader(false);
+      })
+      .catch(() => setMessageButtonLoader(false));
+  }, [conversations, currentUser?.id, userData?.id]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (fromUserProfile) {
+        getUserConversation();
+      }
+    }, [fromUserProfile, getUserConversation])
+  );
+
+  const navigateToChat = useCallback(() => {
+    navigation.navigate('SingleChat', {
+      otherUserData: chatUserData,
+      conversationData: userConversation,
+      fromProfile: true,
+    });
+  }, [chatUserData, navigation, userConversation]);
+
+  const isPremiumUser = useCallback(() => {
+    return new Promise((resolve) => {
+      const now = moment();
+      const membershipExpiry = currentUser?.membership_expiry;
+      if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
+        resolve('premiumUser');
+      } else if (
+        membershipExpiry === null ||
+        moment(membershipExpiry).isBefore(now)
+      ) {
+        setModalLoader(true);
+        ApiServices.getCurrentUserDetail()
+          .then((response) => {
+            const userResponse = response as User;
+            const membershipExpiry = userResponse?.membership_expiry;
+            updateCurrentUser(userResponse);
+            setModalLoader(false);
+            if (
+              membershipExpiry === null ||
+              moment(membershipExpiry).isBefore(now)
+            ) {
+              navigation.navigate('ProFeaturesPromotion', {
+                navigateTo: 'goBack',
+              });
+            } else {
+              resolve('premiumUser');
+            }
+          })
+          .catch(() => {
+            setModalLoader(false);
+          });
+      }
+    });
+  }, [currentUser?.membership_expiry, navigation, updateCurrentUser]);
+
+  const onMessagePress = useCallback(() => {
+    const conversationId = userConversation?.convDetails?.id;
+    if (!conversationId) {
+      navigateToChat();
+      return;
+    }
+    const handleChatCount = (count: unknown) => {
+      const totalChats = typeof count === 'number' ? count : Number(count ?? 0);
+      if (totalChats < 5) {
+        navigateToChat();
+      } else {
+        flashErrorMessage(LanguageKeys.conversationLimit);
+      }
+    };
+
+    if (currentUser?.gender === 'male') {
+      isPremiumUser().then(() => {
+        Firebase.getNoOfChats(currentUser?.id, conversationId).then(
+          handleChatCount
+        );
+      });
+      return;
+    }
+
+    Firebase.getNoOfChats(currentUser?.id, conversationId).then(
+      handleChatCount
+    );
+  }, [
+    currentUser?.gender,
+    currentUser?.id,
+    isPremiumUser,
+    navigateToChat,
+    userConversation?.convDetails?.id,
+  ]);
+
+  const Rtl = CheckRtl();
+
+  const lastOnlineFromCurrentTime = useMemo(() => {
+    if (!userData?.last_online_at) {
+      return 0;
+    }
+    return parseInt(
+      moment
+        .duration(moment(new Date()).diff(moment(userData?.last_online_at)))
+        .asHours()
+        .toFixed()
+    );
+  }, [userData?.last_online_at]);
+
+  const onlineStatusColor = useMemo(() => {
+    if (lastOnlineFromCurrentTime === 1) {
+      return Colors.color10;
+    }
+    if (lastOnlineFromCurrentTime > 1 && lastOnlineFromCurrentTime <= 12) {
+      return Colors.color19;
+    }
+    return Colors.color15;
+  }, [lastOnlineFromCurrentTime]);
+
+  const isSelf = currentUser?.id === userData?.id;
+
+  const onEditPress = useCallback(() => {
+    navigation.navigate('PhotosAndVideos');
+  }, [navigation]);
+
+  const handleLikeToggle = useCallback(() => {
+    setLiked((prev) => {
+      const next = !prev;
+      if (onLikeUnlikePress) {
+        onLikeUnlikePress(next);
+      }
+      return next;
+    });
+  }, [onLikeUnlikePress]);
+
+  const onSeeAllPicPress = useCallback(() => {
+    if (!fromUserProfile) {
+      navigation.navigate('PhotosAndVideos');
+      return;
+    }
+    isPremiumUser().then(() => {
+      navigation.navigate('ImageViewer', { userData });
+    });
+  }, [fromUserProfile, isPremiumUser, navigation, userData]);
+
+  const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
+
+  const onProfileImageLoadStart = useCallback(
+    () => setProfileImageLoader(true),
+    []
+  );
+  const onProfileImageLoadEnd = useCallback(
+    () => setProfileImageLoader(false),
+    []
+  );
+  const onProfileImageError = useCallback(() => setProfileImageError(true), []);
+
+  const formattedLastOnlineDate = useMemo(() => {
+    if (!userData?.last_online_at) {
+      return { date: '', time: '' };
+    }
+    const lastOnline = moment(userData.last_online_at);
+    return {
+      date: lastOnline.isSame(new Date(), 'day')
+        ? ''
+        : lastOnline.format('Do MMM, YYYY'),
+      time: lastOnline.format('(hh:mm a)'),
+    };
+  }, [userData?.last_online_at]);
+  console.log('userData?.media?.primary_image', userData?.media?.primary_image);
   return (
     <View style={Styles.container}>
       {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
       {fromUserProfile && <CheckMembershipStatus />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
-      <TouchableOpacity
-        style={Styles.imageCon}
-        onPress={onEditPress}
-        activeOpacity={0.8}
-        disabled={fromUserProfile}
-      >
-        <TouchableOpacity
-          onPress={onEditPress}
-          activeOpacity={0.8}
-          disabled={fromUserProfile}
+
+      {userData?.media?.primary_image &&
+      userData?.media?.primary_image?.length !== 0 &&
+      !profileImageError ? (
+        <ImageBackground
+          style={{
+            ...StyleSheet.absoluteFill,
+            backgroundColor: Colors.color1,
+          }}
+          source={{ uri: userData?.media?.primary_image }}
+          resizeMode="contain"
+          onLoadStart={onProfileImageLoadStart}
+          onLoadEnd={onProfileImageLoadEnd}
+          onError={onProfileImageError}
+        />
+      ) : (
+        <View
+          style={{
+            ...StyleSheet.absoluteFill,
+            backgroundColor: Colors.color1,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
         >
-          {/* <BlurView /> */}
-          {userData?.media?.cover_image &&
-          userData?.media?.cover_image?.length !== 0 &&
-          !coverImageError ? (
-            <Image
-              source={{ uri: userData.media.cover_image }}
-              resizeMode="cover"
-              // onLoadStart={onImageLoadStart}
-              // onLoadEnd={onImageLoadEnd}
-              onError={() => setCoverImageError(true)}
-              style={Styles.image}
-            />
-          ) : (
-            <Image
-              source={Images.coverImagePlaceholder}
-              resizeMode="cover"
-              // onLoadStart={onImageLoadStart}
-              // onLoadEnd={onImageLoadEnd}
-              style={Styles.image}
-            />
-          )}
-        </TouchableOpacity>
-        {/* {
-                    imageLoader &&
-                    <ActivityIndicator
-                        style={{ position: 'absolute' }}
-                        color={Colors.theme}
-                        size={wp(8)}
-                    />
-                } */}
-      </TouchableOpacity>
+          <FontAwesome5 name="user-alt" color={Colors.color8} size={wp(24)} />
+        </View>
+      )}
+      {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null}
+      {profileImageLoader && !profileImageError && (
+        <ActivityIndicator
+          style={{ position: 'absolute' }}
+          color={Colors.theme}
+          size={wp(8)}
+        />
+      )}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
+        style={{ ...StyleSheet.absoluteFill }}
+      />
+      {isSelf ? (
+        <Ripple
+          style={[
+            Styles.infoChip,
+            {
+              left: Rtl ? wp(2) : undefined,
+              right: Rtl ? undefined : wp(2),
+            },
+          ]}
+          onPress={() => setToolTipVisible(true)}
+          hitSlop={20}
+          rippleColor={Colors.theme}
+        >
+          <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
+        </Ripple>
+      ) : null}
       {fromUserProfile && (
         <Ripple
           style={[
-            Styles.header,
+            Styles.navButton,
             {
-              right: Rtl ? wp(1) : 'auto',
-              top:
-                hasNotch && !isPremiumMember
-                  ? 20
-                  : !hasNotch && !isPremiumMember
-                    ? 17
-                    : hasNotch && isPremiumMember
-                      ? 45
-                      : 35,
+              left: Rtl ? undefined : wp(2),
+              right: Rtl ? wp(2) : undefined,
             },
           ]}
+          hitSlop={20}
+          rippleColor={Colors.theme}
           onPress={onBackPress}
         >
           <AntDesign
             name={Rtl ? 'arrowright' : 'arrowleft'}
             color={Colors.color1}
-            size={wp(8)}
+            size={wp(7)}
           />
         </Ripple>
       )}
-      <TouchableOpacity
-        style={Styles.gradientView}
-        activeOpacity={0.8}
-        onPress={onEditPress}
-        disabled={fromUserProfile}
+
+      <View
+        style={[Styles.surface, fromUserProfile ? { paddingBottom: 0 } : {}]}
       >
-        <LinearGradient
-          style={Styles.gradientView}
-          colors={[Colors.blackRGBA0, Colors.blackRGBA70]}
-        />
-      </TouchableOpacity>
-
-      <View>
-        <View style={{ position: 'relative' }}>
-          {currentUser?.id === userData?.id ? (
-            <Ripple
-              style={Styles.tooltipWrapper}
-              onPress={() => setToolTipVisible(true)}
-            >
-              <Image source={Images.infoIcon} style={Styles.infoIcon} />
-            </Ripple>
-          ) : null}
-
-          <TouchableOpacity
-            style={{
-              ...Styles.rowCon,
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-            }}
-            activeOpacity={1}
-            disabled={fromUserProfile}
-            onPress={onEditPress}
-          >
-            <View style={{ ...Styles.profileImageCon, ...Styles.shadow }}>
-              {!userData?.blur_allowed_you && userData?.is_blur ? (
-                <BlurView />
-              ) : null}
-              {userData?.media?.primary_image &&
-              userData?.media?.primary_image?.length !== 0 &&
-              !profileImageError ? (
-                <Image
-                  source={{ uri: userData.media.primary_image }}
-                  resizeMode="cover"
-                  onLoadStart={onProfileImageLoadStart}
-                  onLoadEnd={onProfileImageLoadEnd}
-                  onError={() => setProfileImageError(true)}
-                  style={Styles.profileImage}
-                />
-              ) : (
-                <View style={Styles.profileImage}>
-                  <FontAwesome5
-                    name="user-alt"
-                    color={Colors.color8}
-                    size={wp(24)}
-                    style={Styles.userIcon}
-                  />
-                </View>
-              )}
-              {profileImageLoader && !profileImageError && (
-                <ActivityIndicator
-                  style={{ position: 'absolute' }}
-                  color={Colors.theme}
-                  size={wp(8)}
-                />
-              )}
-              {(!userData?.media?.primary_image ||
-                userData?.media?.primary_image?.length === 0 ||
-                profileImageError) &&
-                !fromUserProfile && (
-                  <Ripple
-                    style={Styles.profileCameraIcon}
-                    onPress={onEditPress}
-                  >
-                    <Entypo
-                      name={'camera'}
-                      size={wp(5.5)}
-                      color={Colors.color1}
-                    />
-                  </Ripple>
-                )}
-              {userData?.membership_expiry !== null &&
-                moment(userData?.membership_expiry).isAfter(moment()) && (
-                  <View style={Styles.premiumBadge}>
-                    <Image
-                      source={Images.membershipWhite}
-                      resizeMode="contain"
-                      style={Styles.premiumBadgeIcon}
-                    />
-                  </View>
-                )}
-            </View>
-            {/* {
-                        (!userData?.media?.cover_image || userData?.media?.cover_image?.length === 0) &&
-                        fromUserProfile &&
-                        <Ripple style={{ ...Styles.coverCameraIcon, right: userData?.media?.youtube_url ? wp(17) : wp(4) }}
-                            onPress={onEditPress}
-                        >
-                            <Entypo name={'camera'} size={wp(5.5)} color={Colors.color1} />
-                        </Ripple>
-                    } */}
-          </TouchableOpacity>
-        </View>
-        {/* <View style={{ ...Styles.videoVoiceContainer, flexDirection: Rtl ? 'row-reverse' : 'row' }}>
-                    <Ripple style={Styles.videoVoiceIconWrapper} onPress={onEditPress}>
-                        <Ionicons name='play-outline' size={wp(7)} color={Colors.color2} />
-                    </Ripple>
-                    <Ripple style={{ ...Styles.videoVoiceIconWrapper, marginLeft: wp(4) }} onPress={onEditPress}>
-                        <AntDesign name='sound' size={wp(7)} color={Colors.color2} />
-                    </Ripple>
-                </View> */}
-        {/* <View style={{ ...Styles.contentContainer, paddingVertical: 0, flexDirection: Rtl ? 'row-reverse' : 'row' }}>
-                    <View style={{ ...Styles.contentContainerInner, alignItems: Rtl ? 'flex-end' : 'flex-start' }} >
-                    </View>
-                </View> */}
         <View
-          style={{
-            ...Styles.contentContainer,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-          }}
+          style={[
+            Styles.profileRow,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
         >
           <View
-            style={{
-              ...Styles.contentContainerInner,
-              alignItems: Rtl ? 'flex-end' : 'flex-start',
-            }}
+            style={[
+              Styles.profileInfo,
+              { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+            ]}
           >
-            {/* {!fromUserProfile ? <View style={{ flexDirection: 'row', marginBottom: 5 }}>
-                            <Switch
-                                value={isBlurred}
-                                onValueChange={onChangeBlur}
-                                renderActiveText={false}
-                                renderInActiveText={false}
-                                circleSize={20}
-                                backgroundActive={Colors.color2}
-                                backgroundInactive={Colors.color2}
-                                innerCircleStyle={{
-                                    borderWidth: 0
-                                }}
-                                circleActiveColor={Colors.color47}
-                                circleInActiveColor={Colors.color4}
-                            />
-                            <View style={Styles.blurContainer}>
-                                <Text style={Styles.blurText}>
-                                    {isBlurred ? 'turnOffBlur' : 'turnOnBlur'}
-                                </Text>
-                            </View>
-                        </View> : null} */}
-            <RenderName />
-            <RenderAge />
-            <RenderLocation />
-            {!isBlockedYou && fromUserProfile && <RenderLastOnline />}
-          </View>
-          <View
-            style={{
-              ...Styles.contentContainerInner,
-              width: wp(42),
-              alignItems: Rtl ? 'flex-start' : 'flex-end',
-            }}
-          >
-            {!isBlockedYou && fromUserProfile && <RenderActionBtn />}
-            {!isBlockedYou && <RenderAllPicturesBtn />}
+            <View
+              style={[
+                Styles.nameWrapper,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <NameRow
+                firstName={userData?.first_name}
+                lastName={userData?.last_name}
+                showStatus={fromUserProfile}
+                statusColor={onlineStatusColor}
+                rtl={Rtl}
+              />
+            </View>
+            <AgeText age={userData?.age} />
+            <LocationText city={userData?.city} country={userData?.country} />
+            {!isBlockedYou && fromUserProfile && (
+              <View style={{ alignItems: Rtl ? 'flex-end' : 'flex-start' }}>
+                <Text style={Styles.lastOnlineAt}>
+                  {LanguageKeys.lastOnlineAt}
+                </Text>
+                <View style={Styles.lastOnlineAtInner}>
+                  {formattedLastOnlineDate.date ? (
+                    <ReactText
+                      style={{ ...Styles.lastOnlineAt, marginRight: wp(1) }}
+                    >
+                      {formattedLastOnlineDate.date}
+                    </ReactText>
+                  ) : null}
+                  <ReactText style={{ ...Styles.lastOnlineAt }}>
+                    {formattedLastOnlineDate.time}
+                  </ReactText>
+                </View>
+              </View>
+            )}
+            <View
+              style={[
+                Styles.actionsWrapper,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              {!isBlockedYou && fromUserProfile && (
+                <ActionButtons
+                  rtl={Rtl}
+                  isBlocked={userData?.blocked === 1}
+                  isBlockedByYou={userData?.block_by_you === 1}
+                  onBlockPress={onBlockPress}
+                  onMessagePress={onMessagePress}
+                  onLikePress={handleLikeToggle}
+                  messageButtonLoader={messageButtonLoader}
+                  liked={liked}
+                />
+              )}
+              {!isBlockedYou && (
+                <AllPicturesButton
+                  rtl={Rtl}
+                  fromUserProfile={fromUserProfile}
+                  hasPublicGallery={Boolean(
+                    userData?.media?.public_gallery?.length
+                  )}
+                  privatePhotoCount={userData?.media?.private_photo_count}
+                  onSeeAllPress={onSeeAllPicPress}
+                  onEditPress={onEditPress}
+                />
+              )}
+            </View>
           </View>
         </View>
       </View>
@@ -659,17 +711,19 @@ const Header = (props: any) => {
             </ReactText>
             <ReactText style={Styles.tootltipTitle}>Quranic Verse:</ReactText>
             <ReactText style={Styles.tootltipText}>
-              "And tell the believing women to lower their gaze and guard their
-              private parts and not expose their adornment except that which
-              (necessarily)..." <ReactText>(Surah An-Nur, 24:31)</ReactText>
+              {
+                '"And tell the believing women to lower their gaze and guard their private parts and not expose their adornment except that which (necessarily)..."'
+              }{' '}
+              <ReactText>(Surah An-Nur, 24:31)</ReactText>
             </ReactText>
             <ReactText style={[Styles.tootltipTitle, { marginTop: 30 }]}>
               Hadith:
             </ReactText>
             <ReactText style={Styles.tootltipText}>
-              "Modesty is part of faith and faith is in Paradise, but obscenity
-              is a part of hardness of the heart and hardness of the heart is in
-              Hell." <ReactText>(Sahih Muslim)</ReactText>
+              {
+                '"Modesty is part of faith and faith is in Paradise, but obscenity is a part of hardness of the heart and hardness of the heart is in Hell."'
+              }{' '}
+              <ReactText>(Sahih Muslim)</ReactText>
             </ReactText>
           </View>
 
@@ -687,31 +741,68 @@ const Header = (props: any) => {
 
 export default Header;
 
-const hasNotch = DeviceInfo.hasNotch();
-const { width } = Dimensions.get('window');
-const containerHeight = !isIOS ? hp(52) : hp(50);
 const Styles = StyleSheet.create({
-  imageCon: {
-    height: containerHeight,
-    width: wp(100),
-    position: 'absolute',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Colors.color2,
-  },
-  image: {
-    width: wp(100),
-    height: containerHeight,
-  },
   container: {
-    height: containerHeight,
+    height: height * 0.4,
+    // marginBottom: hp(3),
     justifyContent: 'flex-end',
-    width: wp(100),
   },
-  header: {
-    paddingHorizontal: wp(4),
-    paddingVertical: !isIOS ? hp(1) : hp(1),
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp(1),
+  },
+  navButton: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.color2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.color8,
     position: 'absolute',
+    left: wp(2),
+    top: wp(2),
+    zIndex: 10,
+  },
+  surface: {
+    padding: wp(4),
+  },
+  profileRow: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  profileInfo: {
+    flex: 1,
+    paddingHorizontal: wp(2),
+  },
+  nameWrapper: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: hp(0.5),
+  },
+  infoChip: {
+    position: 'absolute',
+    top: wp(2),
+    zIndex: 10,
+    padding: wp(2),
+    borderRadius: 12,
+    backgroundColor: Colors.color3,
+    borderWidth: 1,
+    borderColor: Colors.color8,
+  },
+  infoIconSmall: {
+    width: 20,
+    height: 20,
+  },
+  actionsWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: hp(1),
+    // marginHorizontal: wp(1),
   },
   onlineStatus: {
     width: width * 0.04,
@@ -801,7 +892,7 @@ const Styles = StyleSheet.create({
   },
   allPhotosTxt: {
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small,
     marginBottom: Constants.fontFamilyMarginBottom,
     marginHorizontal: wp(0.4),
