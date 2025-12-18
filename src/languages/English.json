@@ -502,6 +502,8 @@
     "goPremiumButtonDescriptionTwo": "Enhanced visibility & More!",
     "searchMoreProfiles": "Search more profiles",
     "restoreSubscription": "Restore Subscription",
-    "restoreSubscriptionErrorMessage": "You dont have any pending subscription"
+    "restoreSubscriptionErrorMessage": "You dont have any pending subscription",
+    "locationConsentHeading": "Location Access Required",
+    "locationConsentDescription": "We need your location to help you find matches nearby and improve your matchmaking experience. Your location data is used only for matching purposes and is kept secure."
   }
 }

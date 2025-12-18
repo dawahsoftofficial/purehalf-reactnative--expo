@@ -1,16 +1,21 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete';
+import MapView, {
+  Marker,
+  PROVIDER_GOOGLE,
+  type Region,
+} from 'react-native-maps';
 import Ripple from 'react-native-material-ripple';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import { Button } from '../buttons';
 import { wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors } from '../../res';
 import { isIOS } from '../../services';
+import { Button } from '../buttons';
 
 interface MapWithMarkerProps {
   mapRef?: React.RefObject<MapView>;
@@ -20,10 +25,20 @@ interface MapWithMarkerProps {
   loading?: boolean;
   onUpdate: () => void;
   getCurrentLocation: () => void;
-  navigation: any
+  navigation: any;
 }
 
-const MapWithMarker: React.FC<MapWithMarkerProps> = ({ mapRef, position, setPosition, dragable = true, loading, onUpdate, getCurrentLocation, navigation }) => {
+const MapWithMarker: React.FC<MapWithMarkerProps> = ({
+  mapRef,
+  position,
+  setPosition,
+  dragable = true,
+  loading,
+  onUpdate,
+  getCurrentLocation,
+  navigation,
+}) => {
+  const { top } = useSafeAreaInsets();
   const onPlaceSelected = (data: any, details: any) => {
     const { lat, lng } = details?.geometry?.location;
 
@@ -42,10 +57,8 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({ mapRef, position, setPosi
 
   return (
     <View style={Styles.container}>
-      <View style={Styles.headerWrapper}>
-        <Ripple
-          onPress={() => navigation?.goBack()}
-        >
+      <View style={[Styles.headerWrapper, { paddingTop: top + 10 }]}>
+        <Ripple onPress={() => navigation?.goBack()}>
           <AntDesign
             name={'arrowleft'}
             color={Colors.color1}
@@ -59,18 +72,19 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({ mapRef, position, setPosi
           onPress={onPlaceSelected}
           enablePoweredByContainer={false}
           query={{
-            key: 'AIzaSyAyqvD_HZo402WmbfQ3AbvM60jYljrGbu8',
+            key: 'AIzaSyAuJHAOwye_HX_Zvpn_cR7CE1PdNl401tY',
             language: 'en',
           }}
           styles={{
             textInputContainer: Styles.textInputContainer,
             textInput: Styles.textInput,
-            description: { color: Colors.color1 }
+            description: { color: Colors.color1 },
           }}
         />
       </View>
       <MapView
         ref={mapRef}
+        provider={isIOS ? undefined : PROVIDER_GOOGLE}
         style={Styles.map}
         initialRegion={position}
         showsUserLocation={dragable}
@@ -81,12 +95,18 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({ mapRef, position, setPosi
         zoomEnabled={dragable}
         pitchEnabled={dragable}
         rotateEnabled={dragable}
-        onRegionChangeComplete={(location: Region) => dragable && setPosition(location)}
+        onRegionChangeComplete={(location: Region) =>
+          dragable && setPosition(location)
+        }
       >
         <Marker title="You are here" coordinate={position} />
       </MapView>
       <Ripple style={Styles.gpsIcon} onPress={getCurrentLocation}>
-        <MaterialCommunityIcons name="crosshairs-gps" color={Colors.color22} size={24} />
+        <MaterialCommunityIcons
+          name="crosshairs-gps"
+          color={Colors.color22}
+          size={24}
+        />
       </Ripple>
       <View style={Styles.footerWrapper}>
         <Button
@@ -102,18 +122,18 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({ mapRef, position, setPosi
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'red',
   },
   headerWrapper: {
     flexDirection: 'row',
-    width: "95%",
+    width: '95%',
     gap: 5,
     position: 'absolute',
-    top: isIOS ? 70 : 20,
     left: wp(2.5),
-    zIndex: 9
+    zIndex: 9,
   },
   textInputContainer: {
-    overflow: 'hidden'
+    overflow: 'hidden',
   },
   textInput: {
     height: 40,
@@ -123,10 +143,10 @@ const Styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
-    height: "105%"
+    height: '105%',
   },
   footerWrapper: {
-    width: "95%",
+    width: '95%',
     position: 'absolute',
     bottom: 20,
     left: wp(2.5),
@@ -146,7 +166,7 @@ const Styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-  }
+  },
 });
 
 export default MapWithMarker;

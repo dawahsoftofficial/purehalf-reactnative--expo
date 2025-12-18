@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useMemo } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet } from 'react-native';
 import Rate from 'react-native-rate';
 
@@ -8,6 +8,7 @@ import {
   SettingsHeader,
   SocialLinks,
 } from '../../components';
+import LocationConsentModal from '../../components/alerts/LocationConsentModal';
 import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Images } from '../../res';
@@ -29,14 +30,25 @@ type SettingsMenuItem = {
 function Settings(props: SettingsProps) {
   const { currentUser } = useGlobalContext();
   const { navigate } = props.navigation;
+  const [showLocationConsentModal, setShowLocationConsentModal] =
+    useState<boolean>(false);
 
   const onBasicInfoPress = useCallback(() => {
     navigate('UserInput', { fromSettings: true });
   }, [navigate]);
 
   const onLocationPress = useCallback(() => {
+    setShowLocationConsentModal(true);
+  }, []);
+
+  const handleLocationConsentContinue = useCallback(() => {
+    setShowLocationConsentModal(false);
     navigate('UserLocation');
   }, [navigate]);
+
+  const handleLocationConsentClose = useCallback(() => {
+    setShowLocationConsentModal(false);
+  }, []);
 
   const onBlockListPress = useCallback(() => {
     navigate('BlockedList');
@@ -188,6 +200,11 @@ function Settings(props: SettingsProps) {
         ))}
         <SocialLinks />
       </ScrollView>
+      <LocationConsentModal
+        visible={showLocationConsentModal}
+        onClose={handleLocationConsentClose}
+        onContinue={handleLocationConsentContinue}
+      />
     </Container>
   );
 }

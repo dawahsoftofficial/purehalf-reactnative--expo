@@ -477,6 +477,8 @@ const Keys = {
   adviceThirteenText: 'adviceThirteenText',
   welcome: 'welcome',
   updateLocation: 'updateLocation',
+  locationConsentHeading: 'locationConsentHeading',
+  locationConsentDescription: 'locationConsentDescription',
 };
 
 export default Keys;
