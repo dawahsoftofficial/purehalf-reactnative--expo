@@ -126,6 +126,8 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
                   }}
                   onPress={onRadioPress.bind(null, data, element, item)}
                   key={index}
+                  hitSlop={20}
+                  rippleColor={Colors.theme}
                 >
                   <View
                     style={{
@@ -147,6 +149,8 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
             alignSelf: Rtl ? 'flex-start' : 'flex-end',
           }}
           onPress={onRadioClearPress.bind(null, item)}
+          hitSlop={20}
+          rippleColor={Colors.theme}
         >
           <Text style={Styles.clearButtonText}>{LanguageKeys.clear}</Text>
         </Ripple>
@@ -300,6 +304,8 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
             alignSelf: Rtl ? 'flex-end' : 'flex-start',
           }}
           onPress={openPicker.bind(null, item)}
+          hitSlop={20}
+          rippleColor={Colors.theme}
           disabled={
             (peopleSearch === 'location' && item?.id === 'country') ||
             (peopleSearch === 'country' && item?.id === 'distance')
@@ -328,6 +334,8 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
             alignSelf: Rtl ? 'flex-start' : 'flex-end',
           }}
           onPress={onPickerClearPress.bind(null, item)}
+          hitSlop={20}
+          rippleColor={Colors.theme}
         >
           <Text style={Styles.clearButtonText}>{LanguageKeys.clear}</Text>
         </Ripple>
@@ -496,7 +504,9 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
           ...Styles.clearAllButton,
           alignSelf: Rtl ? 'flex-start' : 'flex-end',
         }}
+        hitSlop={20}
         onPress={onClearAllPress}
+        rippleColor={Colors.theme}
       >
         <Text style={Styles.clearButtonText}>{LanguageKeys.clearAll}</Text>
       </Ripple>
