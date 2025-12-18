@@ -493,6 +493,7 @@
     "yearAgo": "A Year Ago",
     "any": "Any",
     "filter": "Filter",
+    "filterName": "Filter name:",
     "delete": "Delete",
     "minimumAge": "Minimum age",
     "maximumAge": "Maximum age",

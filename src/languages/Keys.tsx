@@ -327,6 +327,7 @@ const Keys = {
   yearAgo: 'yearAgo',
   any: 'any',
   filter: 'filter',
+  filterName: 'filterName',
   delete: 'delete',
   minimumAge: 'minimumAge',
   maximumAge: 'maximumAge',
