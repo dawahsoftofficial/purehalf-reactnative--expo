@@ -257,23 +257,49 @@ const Messages = (props: any) => {
       )}
       <Header
         title={LanguageKeys.messages}
-        customConponent={() =>
-          currentUser?.role === 'guardian' && (
-            <View style={[Styles.gaurdianHeader]}>
-              <OptionsMenu
-                button={Images.verticalDots}
-                buttonStyle={Styles.menuBtn}
-                destructiveIndex={2}
-                options={[
-                  t(LanguageKeys.changePassword),
-                  t(LanguageKeys.logOut),
-                  t(LanguageKeys.cancel),
-                ]}
-                actions={[onChangePasswordPress, onLogoutPress]}
-              />
-            </View>
-          )
-        }
+        customConponent={() => (
+          <View
+            style={[
+              Styles.headerRightContainer,
+              { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
+          >
+            {currentUser?.chat_credits !== undefined &&
+              currentUser?.chat_credits !== null && (
+                <View
+                  style={[
+                    Styles.chatCreditsContainer,
+                    {
+                      marginRight: Rtl ? 0 : wp(2),
+                      marginLeft: Rtl ? wp(2) : 0,
+                    },
+                  ]}
+                >
+                  <Text style={Styles.chatCreditsLabel}>
+                    {LanguageKeys.chatCredits}:
+                  </Text>
+                  <Text style={Styles.chatCreditsValue}>
+                    {currentUser?.chat_credits}
+                  </Text>
+                </View>
+              )}
+            {currentUser?.role === 'guardian' && (
+              <View style={[Styles.gaurdianHeader]}>
+                <OptionsMenu
+                  button={Images.verticalDots}
+                  buttonStyle={Styles.menuBtn}
+                  destructiveIndex={2}
+                  options={[
+                    t(LanguageKeys.changePassword),
+                    t(LanguageKeys.logOut),
+                    t(LanguageKeys.cancel),
+                  ]}
+                  actions={[onChangePasswordPress, onLogoutPress]}
+                />
+              </View>
+            )}
+          </View>
+        )}
       />
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
@@ -448,10 +474,35 @@ const Styles = StyleSheet.create({
     width: width * 0.05,
     height: width * 0.05 * 1,
   },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  chatCreditsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.theme,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.8),
+    borderRadius: wp(4),
+  },
+  chatCreditsLabel: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small,
+    includeFontPadding: false,
+    marginRight: wp(1),
+  },
+  chatCreditsValue: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small1,
+    includeFontPadding: false,
+  },
   gaurdianHeader: {
-    position: 'absolute',
     paddingHorizontal: wp(1),
-    right: 0,
   },
   menuBtn: {
     width: wp(8),

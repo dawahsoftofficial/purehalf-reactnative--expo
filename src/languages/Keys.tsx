@@ -144,6 +144,7 @@ const Keys = {
   turnOnBlur: 'turnOnBlur',
   turnOffBlur: 'turnOffBlur',
   messages: 'messages',
+  chatCredits: 'chatCredits',
   message: 'message',
   unread: 'unread',
   all: 'all',
