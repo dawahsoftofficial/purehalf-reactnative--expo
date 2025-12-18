@@ -15,7 +15,6 @@ import {
   StatusBar,
   StyleSheet,
   Text as ReactText,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
@@ -297,86 +296,6 @@ const AllPicturesButton = React.memo(function AllPicturesButton({
   );
 });
 
-type ProfileAvatarProps = {
-  userData: User;
-  profileImageError: boolean;
-  profileImageLoader: boolean;
-  onEditPress: () => void;
-  onProfileImageLoadStart: () => void;
-  onProfileImageLoadEnd: () => void;
-  onProfileImageError: () => void;
-  fromUserProfile: boolean;
-};
-
-const ProfileAvatar = React.memo(function ProfileAvatar({
-  userData,
-  profileImageError,
-  profileImageLoader,
-  onEditPress,
-  onProfileImageLoadStart,
-  onProfileImageLoadEnd,
-  onProfileImageError,
-  fromUserProfile,
-}: ProfileAvatarProps): ReactElement {
-  return (
-    <TouchableOpacity
-      activeOpacity={1}
-      disabled={fromUserProfile}
-      onPress={onEditPress}
-    >
-      <View style={{ ...Styles.profileImageCon, ...Styles.shadow }}>
-        {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null}
-        {userData?.media?.primary_image &&
-        userData?.media?.primary_image?.length !== 0 &&
-        !profileImageError ? (
-          <Image
-            source={{ uri: userData.media.primary_image }}
-            resizeMode="cover"
-            onLoadStart={onProfileImageLoadStart}
-            onLoadEnd={onProfileImageLoadEnd}
-            onError={onProfileImageError}
-            style={Styles.profileImage}
-          />
-        ) : (
-          <View style={Styles.profileImage}>
-            <FontAwesome5
-              name="user-alt"
-              color={Colors.color8}
-              size={wp(24)}
-              style={Styles.userIcon}
-            />
-          </View>
-        )}
-        {profileImageLoader && !profileImageError && (
-          <ActivityIndicator
-            style={{ position: 'absolute' }}
-            color={Colors.theme}
-            size={wp(8)}
-          />
-        )}
-        {(!userData?.media?.primary_image ||
-          userData?.media?.primary_image?.length === 0 ||
-          profileImageError) &&
-          !fromUserProfile && (
-            <Ripple style={Styles.profileCameraIcon} onPress={onEditPress}>
-              <Entypo name={'camera'} size={wp(5.5)} color={Colors.color1} />
-            </Ripple>
-          )}
-        {userData?.membership_expiry !== null &&
-          moment(userData?.membership_expiry).isAfter(moment()) && (
-            <View style={Styles.premiumBadge}>
-              <Image
-                source={Images.membershipWhite}
-                resizeMode="contain"
-                style={Styles.premiumBadgeIcon}
-              />
-            </View>
-          )}
-      </View>
-    </TouchableOpacity>
-  );
-});
-
 const Header = ({
   navigation,
   fromUserProfile = false,
@@ -612,17 +531,40 @@ const Header = ({
       {fromUserProfile && <CheckMembershipStatus />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
 
-      <ImageBackground
-        style={{
-          ...StyleSheet.absoluteFill,
-          backgroundColor: Colors.color1,
-        }}
-        source={{ uri: userData?.media?.primary_image }}
-        resizeMode="contain"
-        onLoadStart={onProfileImageLoadStart}
-        onLoadEnd={onProfileImageLoadEnd}
-        onError={onProfileImageError}
-      />
+      {userData?.media?.primary_image &&
+      userData?.media?.primary_image?.length !== 0 &&
+      !profileImageError ? (
+        <ImageBackground
+          style={{
+            ...StyleSheet.absoluteFill,
+            backgroundColor: Colors.color1,
+          }}
+          source={{ uri: userData?.media?.primary_image }}
+          resizeMode="contain"
+          onLoadStart={onProfileImageLoadStart}
+          onLoadEnd={onProfileImageLoadEnd}
+          onError={onProfileImageError}
+        />
+      ) : (
+        <View
+          style={{
+            ...StyleSheet.absoluteFill,
+            backgroundColor: Colors.color1,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <FontAwesome5 name="user-alt" color={Colors.color8} size={wp(24)} />
+        </View>
+      )}
+      {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null}
+      {profileImageLoader && !profileImageError && (
+        <ActivityIndicator
+          style={{ position: 'absolute' }}
+          color={Colors.theme}
+          size={wp(8)}
+        />
+      )}
       <LinearGradient
         colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
         style={{ ...StyleSheet.absoluteFill }}
@@ -637,41 +579,42 @@ const Header = ({
             },
           ]}
           onPress={() => setToolTipVisible(true)}
+          hitSlop={20}
+          rippleColor={Colors.theme}
         >
           <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
         </Ripple>
       ) : null}
+      {fromUserProfile && (
+        <Ripple
+          style={[
+            Styles.navButton,
+            {
+              left: Rtl ? undefined : wp(2),
+              right: Rtl ? wp(2) : undefined,
+            },
+          ]}
+          hitSlop={20}
+          rippleColor={Colors.theme}
+          onPress={onBackPress}
+        >
+          <AntDesign
+            name={Rtl ? 'arrowright' : 'arrowleft'}
+            color={Colors.color1}
+            size={wp(7)}
+          />
+        </Ripple>
+      )}
 
-      <View style={Styles.topBar}>
-        {fromUserProfile && (
-          <Ripple style={Styles.navButton} onPress={onBackPress}>
-            <AntDesign
-              name={Rtl ? 'arrowright' : 'arrowleft'}
-              color={Colors.color1}
-              size={wp(7)}
-            />
-          </Ripple>
-        )}
-      </View>
-
-      <View style={Styles.surface}>
+      <View
+        style={[Styles.surface, fromUserProfile ? { paddingBottom: 0 } : {}]}
+      >
         <View
           style={[
             Styles.profileRow,
             { flexDirection: Rtl ? 'row-reverse' : 'row' },
           ]}
         >
-          {/* <ProfileAvatar
-            userData={userData}
-            profileImageError={profileImageError}
-            profileImageLoader={profileImageLoader}
-            onEditPress={onEditPress}
-            onProfileImageLoadStart={onProfileImageLoadStart}
-            onProfileImageLoadEnd={onProfileImageLoadEnd}
-            onProfileImageError={onProfileImageError}
-            fromUserProfile={fromUserProfile}
-          /> */}
-
           <View
             style={[
               Styles.profileInfo,
@@ -819,6 +762,10 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.color8,
+    position: 'absolute',
+    left: wp(2),
+    top: wp(2),
+    zIndex: 10,
   },
   surface: {
     padding: wp(4),
