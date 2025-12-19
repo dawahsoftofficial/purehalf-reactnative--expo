@@ -12,7 +12,12 @@ import {
   VirtualizedList,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import OptionsMenu from 'react-native-option-menu';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+} from 'react-native-popup-menu';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
 import {
@@ -132,11 +137,10 @@ const Messages = (props: any) => {
     )[0];
 
     const formattedDate = formatDate(convDetails?.latestMessageCreatedAt);
-    const unReadCount = convDetails?.unReadCount[currentUser?.id];
+    const unReadCount = convDetails?.unReadCount?.[currentUser?.id];
     const isBlockedYou =
-      convDetails?.participantsBlockFlag[currentUser?.id]?.blockStatus === true
-        ? true
-        : false;
+      convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
+      true;
 
     let hideLatestMessage = false;
     if (item?.messages) {
@@ -339,17 +343,28 @@ const Messages = (props: any) => {
               )}
             {currentUser?.role === 'guardian' && (
               <View style={[Styles.gaurdianHeader]}>
-                <OptionsMenu
-                  button={Images.verticalDots}
-                  buttonStyle={Styles.menuBtn}
-                  destructiveIndex={2}
-                  options={[
-                    t(LanguageKeys.changePassword),
-                    t(LanguageKeys.logOut),
-                    t(LanguageKeys.cancel),
-                  ]}
-                  actions={[onChangePasswordPress, onLogoutPress]}
-                />
+                <Menu>
+                  <MenuTrigger>
+                    <Image
+                      source={Images.verticalDots}
+                      style={Styles.menuBtn}
+                      resizeMode="contain"
+                    />
+                  </MenuTrigger>
+                  <MenuOptions
+                    optionsContainerStyle={Styles.menuOptionsContainer}
+                  >
+                    <MenuOption
+                      onSelect={onChangePasswordPress}
+                      text={t(LanguageKeys.changePassword)}
+                    />
+                    <MenuOption
+                      onSelect={onLogoutPress}
+                      text={t(LanguageKeys.logOut)}
+                      style={Styles.destructiveOption}
+                    />
+                  </MenuOptions>
+                </Menu>
               </View>
             )}
           </View>
@@ -562,6 +577,13 @@ const Styles = StyleSheet.create({
     width: wp(8),
     height: hp(3.5),
     resizeMode: 'contain',
+  },
+  menuOptionsContainer: {
+    borderRadius: wp(2),
+    paddingVertical: hp(0.5),
+  },
+  destructiveOption: {
+    backgroundColor: Colors.color2,
   },
   guardianTextWrapper: {
     backgroundColor: Colors.color55,

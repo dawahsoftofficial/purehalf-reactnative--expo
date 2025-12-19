@@ -1,17 +1,16 @@
 import { getApp } from '@react-native-firebase/app';
 import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
 import {
-  getDatabase,
-  ref,
-  set,
-  update,
-  remove,
-  query,
-  orderByChild,
-  startAt,
   equalTo,
   get,
-  onValue,
+  getDatabase,
+  orderByChild,
+  query,
+  ref,
+  remove,
+  set,
+  startAt,
+  update,
 } from '@react-native-firebase/database';
 import { getFunctions } from '@react-native-firebase/functions';
 import {
@@ -27,6 +26,7 @@ import {
 
 import { flashErrorMessage } from '../FlashMessages';
 import { StorageManager } from '../storageManager';
+import conversationsPath from './FirebaseConfig';
 const { storageKeys, setData } = StorageManager;
 
 const firebaseApp = getApp();
@@ -135,7 +135,10 @@ class GFirebase {
   createChat = (conversationData: any) => {
     return new Promise((resolve, reject) => {
       const conversationId = conversationData?.id;
-      const conversationRef = ref(database, `conversations/${conversationId}`);
+      const conversationRef = ref(
+        database,
+        `${conversationsPath}/${conversationId}`
+      );
       set(conversationRef, {
         convDetails: conversationData,
         messages: [],
@@ -164,13 +167,13 @@ class GFirebase {
       const messageId = messageData?.id;
       const messagesRef = ref(
         database,
-        `/conversations/${id}/messages/${messageId}`
+        `/${conversationsPath}/${id}/messages/${messageId}`
       );
       set(messagesRef, { ...messageData })
         .then(() => {
           const convDetailsRef = ref(
             database,
-            `/conversations/${id}/convDetails`
+            `/${conversationsPath}/${id}/convDetails`
           );
           update(convDetailsRef, {
             participantsDeleteFlag: participantsDeleteFlag,
@@ -271,7 +274,7 @@ class GFirebase {
     return new Promise((resolve, reject) => {
       const unReadCountRef = ref(
         database,
-        `/conversations/${convId}/convDetails/unReadCount`
+        `/${conversationsPath}/${convId}/convDetails/unReadCount`
       );
       update(unReadCountRef, { [userId]: 0 })
         .then(() => resolve(''))
@@ -294,7 +297,7 @@ class GFirebase {
     filteredMessages.forEach((message: any) => {
       const messageId = message?.id;
       updates[
-        `/conversations/${conversationId}/messages/${messageId}/readBy/${currentUserId}`
+        `/${conversationsPath}/${conversationId}/messages/${messageId}/readBy/${currentUserId}`
       ] = message?.readBy[currentUserId];
     });
     const rootRef = ref(database);
@@ -307,7 +310,7 @@ class GFirebase {
     return new Promise((resolve, reject) => {
       const messageRef = ref(
         database,
-        `/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`
+        `/${conversationsPath}/${conversationId}/messages/${lastMessageId}/deletedBy`
       );
       update(messageRef, {
         [currentUserId]: true,
@@ -330,11 +333,11 @@ class GFirebase {
     return new Promise((resolve, reject) => {
       const conversationRef = ref(
         database,
-        `/conversations/${conversationId}/convDetails/participantsDeleteFlag`
+        `/${conversationsPath}/${conversationId}/convDetails/participantsDeleteFlag`
       );
       const messageRef = ref(
         database,
-        `/conversations/${conversationId}/messages/${lastMessageId}/deletedBy`
+        `/${conversationsPath}/${conversationId}/messages/${lastMessageId}/deletedBy`
       );
       update(conversationRef, {
         [currentUserId]: {
@@ -360,7 +363,7 @@ class GFirebase {
 
   getSingleConversation = (currentUserId: any, otherUserId: any) => {
     return new Promise((resolve, reject) => {
-      const conversationsRef = ref(database, 'conversations');
+      const conversationsRef = ref(database, conversationsPath);
       const conversationsQuery = query(
         conversationsRef,
         orderByChild(
@@ -396,7 +399,7 @@ class GFirebase {
     return new Promise((resolve, reject) => {
       const conversationRef = ref(
         database,
-        `/conversations/${conversationId}/convDetails/participantsBlockFlag`
+        `/${conversationsPath}/${conversationId}/convDetails/participantsBlockFlag`
       );
       update(
         conversationRef,
@@ -424,7 +427,7 @@ class GFirebase {
   getNoOfChats = (userId: number, conversationId: string) => {
     const todayTimestamp = new Date().setHours(0, 0, 0, 0);
     return new Promise((resolve, reject) => {
-      const conversationsRef = ref(database, 'conversations');
+      const conversationsRef = ref(database, conversationsPath);
       const conversationsQuery = query(
         conversationsRef,
         orderByChild('convDetails/createdAt'),

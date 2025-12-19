@@ -29,6 +29,8 @@ import {
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import conversationsPath from '@/services/firebase/FirebaseConfig';
+
 import { Container, PremiumButton } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -205,11 +207,11 @@ const SingleChat = (props: any) => {
 
       setConversationId(convDetails?.id);
       setIsBlockedByYou(
-        convDetails?.participantsBlockFlag[otherUserData?.id]?.blockStatus ===
+        convDetails?.participantsBlockFlag?.[otherUserData?.id]?.blockStatus ===
           true
       );
       setIsBlockedYou(
-        convDetails?.participantsBlockFlag[currentUser?.id]?.blockStatus ===
+        convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
           true
       );
     } else if (!fromNotification) {
@@ -226,11 +228,11 @@ const SingleChat = (props: any) => {
   };
 
   useEffect(() => {
-    if (conversationId.length !== 0) {
+    if (conversationId?.length !== 0) {
       setOpenedConversation(conversationId);
       const messagesDatabaseRef = ref(
         database,
-        `/conversations/${conversationId}/messages`
+        `/${conversationsPath}/${conversationId}/messages`
       );
       const messagesQuery = query(
         messagesDatabaseRef,
@@ -256,7 +258,7 @@ const SingleChat = (props: any) => {
 
       const blockFlagRef = ref(
         database,
-        `/conversations/${conversationId}/convDetails/participantsBlockFlag`
+        `/${conversationsPath}/${conversationId}/convDetails/participantsBlockFlag`
       );
       const unsubscribeBlockChanged = onChildChanged(
         blockFlagRef,
