@@ -1,1 +1,1 @@
-export { default as BlockedList } from './BlockedList'
+export { default as BlockedList } from './BlockedList';

@@ -447,7 +447,7 @@ class GApiServices {
     });
   };
 
-  loginUser = async (phoneNumber: any, onLogin: Function) => {
+  loginUser = async (phoneNumber: any, onLogin: any) => {
     return new Promise(async (resolve, reject) => {
       let fcmToken;
       try {
@@ -484,11 +484,7 @@ class GApiServices {
     });
   };
 
-  authenticateUser = (
-    phoneNumber: any,
-    onLogin: Function,
-    fromOtp: boolean
-  ) => {
+  authenticateUser = (phoneNumber: any, onLogin: any, fromOtp: boolean) => {
     return new Promise(async (resolve, reject) => {
       // const fcmToken = await getData(storageKeys.FCM_TOKEN)
       if (fromOtp) {
@@ -496,7 +492,7 @@ class GApiServices {
       } else {
         Firebase.sendVerificationCode(phoneNumber)
           .then(async (verificationRes) => {
-            const res = {
+            const res: any = {
               verificationRes: verificationRes,
             };
             const verificationId = await getData(
@@ -582,7 +578,9 @@ class GApiServices {
     });
   };
 
-  getUsers = (params = { page: 1, type: -1 }) => {
+  getUsers = (
+    params: { page: number; type: number | string } = { page: 1, type: -1 }
+  ) => {
     return new Promise((resolve, reject) => {
       const { page, type } = params;
       console.log('[getUsers] API call initiated:', {
@@ -699,7 +697,6 @@ class GApiServices {
 
       const formdata = new FormData();
       if (file?.uri && key) {
-        //@ts-ignore
         formdata.append('file', {
           uri: file.uri,
           type: file?.type ? file.type : 'image/jpeg',
@@ -1279,7 +1276,6 @@ class GApiServices {
         });
     });
   };
-
 
   snedMessageNotification = (params: any) => {
     return new Promise((resolve, reject) => {

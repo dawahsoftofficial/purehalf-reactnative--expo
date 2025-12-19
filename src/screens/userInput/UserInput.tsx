@@ -4,7 +4,7 @@ import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
 import _ from 'lodash';
 import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { hasNotch } from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
@@ -22,7 +22,7 @@ import {
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { CheckRtl, LanguageKeys } from '../../languages';
+import { LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
 import { Images } from '../../res';
 import { Colors, Fonts } from '../../res';
@@ -41,7 +41,6 @@ const firebaseApp = getApp();
 const auth = getAuth(firebaseApp);
 
 const UserInput = (props: any) => {
-  const Rtl = CheckRtl();
   const fromSettings = props?.route?.params?.fromSettings;
   // const [countryPickerVisible, setCountryPickerVisible] = useState(false)
   // const [selectedCountry, setSelectedCountry] = useState('')
@@ -72,13 +71,6 @@ const UserInput = (props: any) => {
   //     setCountryPickerVisible(false)
   // }
 
-  const navigateTo = (route: any) => {
-    props.navigation.reset({
-      index: 0,
-      routes: [{ name: route }],
-    });
-  };
-
   const onContinuePress = () => {
     const age = moment().diff(
       moment(dateOfBirth).format('YYYY-MM-DD'),
@@ -96,11 +88,15 @@ const UserInput = (props: any) => {
       // country: selectedCountry,
       in_app_notifications: 1,
     };
-    fromSettings && setLoaderMessage(LanguageKeys.updating);
+    if (fromSettings) {
+      setLoaderMessage(LanguageKeys.updating);
+    }
     setSubmitLoader(true);
     ApiServices.updateUserInfo(params)
       .then(async (res) => {
-        fromSettings && flashSuccessMessage();
+        if (fromSettings) {
+          flashSuccessMessage();
+        }
         if (res) {
           const userData: any = {
             ...currentUser,
@@ -141,27 +137,33 @@ const UserInput = (props: any) => {
       .catch(hideLoader);
   };
 
-  const setData = () => {
+  const setData = useCallback(() => {
     if (currentUser) {
-      const { first_name, last_name, date_of_birth, gender, country } =
-        currentUser;
-      first_name && setFirstName(first_name);
-      last_name && setLastName(last_name);
-      date_of_birth && setDateOfBirth(new Date(date_of_birth));
-      gender &&
+      const { first_name, last_name, date_of_birth, gender } = currentUser;
+      if (first_name) {
+        setFirstName(first_name);
+      }
+      if (last_name) {
+        setLastName(last_name);
+      }
+      if (date_of_birth) {
+        setDateOfBirth(new Date(date_of_birth));
+      }
+      if (gender) {
         setGender(
           gender?.toLowerCase() === 'male'
             ? LanguageKeys.male
             : LanguageKeys.female
         );
+      }
       // country && setSelectedCountry(country)
       setLoader(false);
     } else {
       setLoader(false);
     }
-  };
+  }, [currentUser]);
 
-  const getLanguages = async () => {
+  const getLanguages = useCallback(async () => {
     getData(storageKeys.LANGUAGE).then((language: any) => {
       ApiServices.getLanguages().then((data: any) => {
         if (data?.length !== 0) {
@@ -176,12 +178,15 @@ const UserInput = (props: any) => {
         }
       });
     });
-  };
+  }, [getData, storageKeys]);
 
   useEffect(() => {
-    setData();
+    // Defer state updates to avoid cascading renders
+    Promise.resolve().then(() => {
+      setData();
+    });
     getLanguages();
-  }, []);
+  }, [setData, getLanguages]);
 
   const onLogoutPress = async () => {
     const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);

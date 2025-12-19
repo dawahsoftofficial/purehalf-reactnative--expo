@@ -1,1 +1,1 @@
-export { default as MembershipInfo } from './MembershipInfo'
+export { default as MembershipInfo } from './MembershipInfo';

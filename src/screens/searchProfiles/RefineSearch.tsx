@@ -54,6 +54,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
   const [listLoader, setListLoader] = useState(true);
   const { getData, storageKeys } = StorageManager;
   const [ignore, forceUpdate] = useReducer((x) => x + 1, 0);
+  console.log('ignore', ignore);
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
   const [picker, setPicker] = useState<any>({
     visible: false,

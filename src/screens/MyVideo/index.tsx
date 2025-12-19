@@ -1,1 +1,1 @@
-export { default as MyVideo } from '../MyVideo/MyVideo'
+export { default as MyVideo } from '../MyVideo/MyVideo';

@@ -1,1 +1,1 @@
-export { default as GiftMembershipCongrats } from './GiftMembershipCongrats'
+export { default as GiftMembershipCongrats } from './GiftMembershipCongrats';

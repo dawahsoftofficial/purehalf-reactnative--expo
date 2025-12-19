@@ -1,1 +1,1 @@
-export { default as AccountSuspended } from './AccountSuspended'
+export { default as AccountSuspended } from './AccountSuspended';

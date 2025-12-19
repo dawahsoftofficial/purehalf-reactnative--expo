@@ -1,17 +1,18 @@
+import Geolocation from '@react-native-community/geolocation';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  StyleSheet,
   Image,
   Linking,
   PermissionsAndroid,
+  StyleSheet,
+  View,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import Geolocation from '@react-native-community/geolocation';
 import Ripple from 'react-native-material-ripple';
+
 import { Button, Container, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { Fonts, Colors, Images } from '../../res';
 import { LanguageKeys } from '../../languages';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -42,7 +43,7 @@ const Location: React.FC = (props: any) => {
     } else {
       try {
         const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
         );
         if (granted === PermissionsAndroid.RESULTS.GRANTED) {
           getOneTimeLocation();
@@ -61,10 +62,10 @@ const Location: React.FC = (props: any) => {
     Geolocation.getCurrentPosition(
       (position: any) => {
         const currentLongitude: number = +JSON.stringify(
-          position.coords.longitude,
+          position.coords.longitude
         );
         const currentLatitude: number = +JSON.stringify(
-          position.coords.latitude,
+          position.coords.latitude
         );
         getCountryAndCity(currentLatitude, currentLongitude);
       },
@@ -78,7 +79,7 @@ const Location: React.FC = (props: any) => {
         enableHighAccuracy: false,
         timeout: 30000,
         maximumAge: 1000,
-      },
+      }
     );
   };
 
@@ -111,7 +112,7 @@ const Location: React.FC = (props: any) => {
         }
         // onTagLineSubmit({ lat: 24.9064253, long: 67.0345873 })
       })
-      .catch(err => {
+      .catch((err) => {
         setLoading(false);
       });
   };
@@ -127,8 +128,13 @@ const Location: React.FC = (props: any) => {
     country?: string;
     city?: string;
   }) => {
-    ApiServices.updateUserInfo({ latitude: lat, longitude: long, country, city })
-      .then(async res => {
+    ApiServices.updateUserInfo({
+      latitude: lat,
+      longitude: long,
+      country,
+      city,
+    })
+      .then(async (res) => {
         currentUser.detail = res;
         currentUser.latitude = lat;
         currentUser.longitude = long;
@@ -151,7 +157,7 @@ const Location: React.FC = (props: any) => {
           });
         }
       })
-      .catch(err => {
+      .catch((err) => {
         setLoading(false);
       });
   };
@@ -162,13 +168,13 @@ const Location: React.FC = (props: any) => {
 
   const onReport = () => {
     ApiServices.storeQuery({ type: 3 })
-      .then(res => {
+      .then((res) => {
         if (!res?.data?.error) {
-          flashSuccessMessage("Reported successfully");
+          flashSuccessMessage('Reported successfully');
           setIsReported(true);
         }
       })
-      .catch(err => {});
+      .catch((err) => {});
   };
 
   return (
@@ -193,18 +199,24 @@ const Location: React.FC = (props: any) => {
         <Button
           buttonStyle={Styles.locationBtn}
           text={loading ? LanguageKeys.processing : LanguageKeys.enableLocation}
-          onPress={loading ? () => { } : onEnablePress}
+          onPress={loading ? () => {} : onEnablePress}
           // loading={failed ? false : loading}
           loading={loading}
         />
       </View>
       {report && (
-        <Ripple onPress={isReported ? () => { } : onReport}>
-          <Text style={[Styles.reportText, { color: isReported ? Colors.randomRGBA70 : Colors.color44 }]}>{LanguageKeys.report}</Text>
+        <Ripple onPress={isReported ? () => {} : onReport}>
+          <Text
+            style={[
+              Styles.reportText,
+              { color: isReported ? Colors.randomRGBA70 : Colors.color44 },
+            ]}
+          >
+            {LanguageKeys.report}
+          </Text>
         </Ripple>
-      )
-      }
-    </Container >
+      )}
+    </Container>
   );
 };
 

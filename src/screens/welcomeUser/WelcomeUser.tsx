@@ -91,7 +91,7 @@ const WelcomeUser = (props: any) => {
               .join('\n')}
           </Text>
           <Text style={Styles.descriptionBold}>
-            I commit to honor these teachings insha'Allah.
+            I commit to honor these teachings {"insha'Allah"}.
           </Text>
           <View style={Styles.finalTextContainer}>
             <Text style={Styles.finalText}>

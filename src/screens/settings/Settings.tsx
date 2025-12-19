@@ -2,12 +2,7 @@ import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet } from 'react-native';
 import Rate from 'react-native-rate';
 
-import {
-  Container,
-  SettingsButton,
-  SettingsHeader,
-  SocialLinks,
-} from '../../components';
+import { Container, SettingsButton, SettingsHeader } from '../../components';
 import LocationConsentModal from '../../components/alerts/LocationConsentModal';
 import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
@@ -198,7 +193,6 @@ function Settings(props: SettingsProps) {
             accessibilityLabel={item.name}
           />
         ))}
-        <SocialLinks />
       </ScrollView>
       <LocationConsentModal
         visible={showLocationConsentModal}

@@ -22,7 +22,7 @@ import Bank from './Bank';
 import EasyPaisa from './EasyPaisa';
 import JazzCash from './JazzCash';
 
-const paymentMethodList = (props: any) => {
+const PaymentMethodList = (props: any) => {
   const Rtl = CheckRtl();
   const { visible = false, selectedPackage = {} } = props;
   const { currentUser } = useGlobalContext();
@@ -60,11 +60,9 @@ const paymentMethodList = (props: any) => {
       if (mobile) {
         if (msg) {
           const url = 'whatsapp://send?text=' + msg + '&phone=' + mobile;
-          Linking.openURL(url)
-            .then((data) => {})
-            .catch(() => {
-              console.log('Make sure WhatsApp installed on your device');
-            });
+          Linking.openURL(url).catch(() => {
+            console.log('Make sure WhatsApp installed on your device');
+          });
         } else {
           console.log('Please insert message to send');
         }
@@ -73,19 +71,21 @@ const paymentMethodList = (props: any) => {
       if (mobile) {
         if (msg) {
           const url = 'whatsapp://send?text=' + msg + '&phone=' + mobile;
-          Linking.openURL(url)
-            .then((data) => {})
-            .catch(() => {
-              console.log('Make sure WhatsApp installed on your device');
-            });
+          Linking.openURL(url).catch(() => {
+            console.log('Make sure WhatsApp installed on your device');
+          });
         } else {
           console.log('Please insert message to send');
         }
       }
     } else if (item?.type === 6) {
-      props?.onPlayOrAppStorePress && props?.onPlayOrAppStorePress();
+      if (props?.onPlayOrAppStorePress) {
+        props?.onPlayOrAppStorePress();
+      }
     } else if (item?.type === 5) {
-      props?.onPlayOrAppStorePress && props?.onPlayOrAppStorePress();
+      if (props?.onPlayOrAppStorePress) {
+        props?.onPlayOrAppStorePress();
+      }
     }
   };
 
@@ -141,7 +141,9 @@ const paymentMethodList = (props: any) => {
     if (bankVisible) {
       setBankVisible(false);
     }
-    props?.onClose && props.onClose();
+    if (props?.onClose) {
+      props.onClose();
+    }
   };
 
   const onRequestClose = () => {
@@ -151,7 +153,9 @@ const paymentMethodList = (props: any) => {
     if (jazzCashVisible) {
       setJazzCashVisible(false);
     } else {
-      props?.onClose && props.onClose();
+      if (props?.onClose) {
+        props.onClose();
+      }
     }
   };
 
@@ -201,7 +205,7 @@ const paymentMethodList = (props: any) => {
   );
 };
 
-export default paymentMethodList;
+export default PaymentMethodList;
 
 const Styles = StyleSheet.create({
   container: {

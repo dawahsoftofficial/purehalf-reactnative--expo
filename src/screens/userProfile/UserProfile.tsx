@@ -1,16 +1,17 @@
-import React from 'react'
-import { Profile } from '../profile'
+import React from 'react';
+
+import { Profile } from '../profile';
 
 const UserProfile = (props: any) => {
-    const userData = props?.route?.params?.userData
+  const userData = props?.route?.params?.userData;
 
-    return (
-        <Profile
-            fromUserProfile={true}
-            userData={userData}
-            navigation={props.navigation}
-        />
-    )
-}
+  return (
+    <Profile
+      fromUserProfile={true}
+      userData={userData}
+      navigation={props.navigation}
+    />
+  );
+};
 
-export default UserProfile
+export default UserProfile;

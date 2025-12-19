@@ -9,10 +9,9 @@ import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import {
-  ApiServices,
-  StorageManager,
   flashErrorMessage,
   flashSuccessMessage,
+  StorageManager,
   useGlobalContext,
 } from '../../services';
 import { updateDetails } from './Funtions';
@@ -53,9 +52,12 @@ const EditInterestCardModal = ({
     updateDetails({ interestAndHobbies: ids })
       .then(async (res: any) => {
         if (Object.keys(res).length !== 0) {
-          currentUser.detail = res;
-          await setData(storageKeys.USER, currentUser);
-          updateCurrentUser(currentUser);
+          const updatedUser = {
+            ...currentUser,
+            detail: res,
+          };
+          await setData(storageKeys.USER, updatedUser);
+          updateCurrentUser(updatedUser);
         }
         fetchData();
         flashSuccessMessage();
