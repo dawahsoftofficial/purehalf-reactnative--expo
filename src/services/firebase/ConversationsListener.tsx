@@ -13,6 +13,8 @@ import {
   ref,
 } from '@react-native-firebase/database';
 
+import conversationsPath from './FirebaseConfig';
+
 const firebaseApp = getApp();
 const database = getDatabase(firebaseApp);
 
@@ -36,7 +38,7 @@ let activeListeners: {
  * Creates a query reference for conversations filtered by user ID
  */
 const getConversationsQuery = (userId: string): Query => {
-  const conversationsRef = ref(database, 'conversations');
+  const conversationsRef = ref(database, conversationsPath);
   return query(
     conversationsRef,
     orderByChild(`convDetails/participantsDeleteFlag/${userId}/deleteStatus`),
@@ -97,7 +99,7 @@ export const startConversationsListener = (
   );
 
   // Set up child_removed listener (no query filter needed)
-  const conversationsRef = ref(database, 'conversations');
+  const conversationsRef = ref(database, conversationsPath);
   const childRemovedUnsubscribe = onChildRemoved(
     conversationsRef,
     (snapshot: DataSnapshot) => {

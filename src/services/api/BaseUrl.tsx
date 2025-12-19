@@ -1,3 +1,5 @@
-// const BaseUrl = 'https://admin.purehalf.com/api/v1/app';
-const BaseUrl = 'https://staging-admin.purehalf.com/api/v1/app';
+import { API_BASE_URL } from '@env';
+
+const BaseUrl = API_BASE_URL;
+
 export default BaseUrl;
