@@ -14,7 +14,8 @@
     "test:watch": "jest --watch",
     "check-all": "npm run lint && npm run type-check && npm run test",
     "prepare": "husky",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@bam.tech/react-native-image-resizer": "^3.0.11",
@@ -43,6 +44,8 @@
     "i18next": "^25.7.2",
     "lodash": "^4.17.21",
     "moment": "^2.30.1",
+    "patch-package": "^8.0.1",
+    "postinstall-postinstall": "^2.1.0",
     "react": "19.1.1",
     "react-i18next": "^16.4.1",
     "react-native": "0.82.1",
