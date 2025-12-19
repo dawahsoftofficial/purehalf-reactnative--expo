@@ -109,12 +109,15 @@ const ProFeaturesPromotion = (props: any) => {
         (customerInfo?.latestExpirationDate ||
           customerInfo?.customerInfo?.latestExpirationDate)
       ) {
-        currentUser.membership_expiry =
-          customerInfo?.latestExpirationDate ||
-          customerInfo?.customerInfo?.latestExpirationDate;
-        currentUser.membership_status = 1;
-        updateCurrentUser(currentUser);
-        await setData(storageKeys.USER, currentUser);
+        const updatedUser = {
+          ...currentUser,
+          membership_expiry:
+            customerInfo?.latestExpirationDate ||
+            customerInfo?.customerInfo?.latestExpirationDate,
+          membership_status: 1,
+        };
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
         hideLoaderModal();
         flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
         const navigateTo = props?.route?.params?.navigateTo;

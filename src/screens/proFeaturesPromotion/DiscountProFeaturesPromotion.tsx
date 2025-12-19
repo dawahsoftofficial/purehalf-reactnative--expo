@@ -41,7 +41,6 @@ const DiscountProFeaturesPromotion = (props: any) => {
     visible: false,
     message: '',
   });
-  const [packagesList, setPackagesList] = useState([]);
   const [selectedPackage, setSelectedPackage] = useState<any>('');
   const [seconds, setSeconds] = useState(3600);
   const [timerActive, setTimerActive] = useState(true);
@@ -163,12 +162,15 @@ const DiscountProFeaturesPromotion = (props: any) => {
         (customerInfo?.latestExpirationDate ||
           customerInfo?.customerInfo?.latestExpirationDate)
       ) {
-        currentUser.membership_expiry =
-          customerInfo?.latestExpirationDate ||
-          customerInfo?.customerInfo?.latestExpirationDate;
-        currentUser.membership_status = 1;
-        updateCurrentUser(currentUser);
-        await setData(storageKeys.USER, currentUser);
+        const updatedUser = {
+          ...currentUser,
+          membership_expiry:
+            customerInfo?.latestExpirationDate ||
+            customerInfo?.customerInfo?.latestExpirationDate,
+          membership_status: 1,
+        };
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
         hideLoaderModal();
         flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
         const navigateTo = props?.route?.params?.navigateTo;
@@ -276,7 +278,7 @@ const DiscountProFeaturesPromotion = (props: any) => {
           </Ripple>
         </View>
         <View>
-          <Text style={Styles.heading}>{LanguageKeys.goProWithPurehalf}</Text>
+          <Text style={Styles.heading}>{LanguageKeys.goProWithPureHalf}</Text>
           <FlatList
             data={proFeatures}
             renderItem={renderProFeatures}
@@ -323,13 +325,13 @@ const DiscountProFeaturesPromotion = (props: any) => {
               <View style={Styles.tryAgainCon}>
                 <Text style={Styles.tryAgainTxt}>
                   {/* {LanguageKeys.resendOtp} */}
-                  {hours}h {minutes}m {secs}s
+                  {`${hours}h ${minutes}m ${secs}s`}
                 </Text>
                 {/* <AntDesign
-                                            name='clockcircleo'
-                                            color={Colors.color2}
-                                            size={wp(5)}
-                                        /> */}
+                  name="clockcircleo"
+                  color={Colors.color2}
+                  size={wp(5)}
+                /> */}
               </View>
               {/* } */}
               <Ripple

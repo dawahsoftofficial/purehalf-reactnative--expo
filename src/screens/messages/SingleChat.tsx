@@ -9,9 +9,16 @@ import {
   ref,
   startAt,
 } from '@react-native-firebase/database';
+import { useFocusEffect } from '@react-navigation/native';
 import _ from 'lodash';
 import moment from 'moment';
-import React, { useEffect, useReducer, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -54,7 +61,9 @@ const SingleChat = (props: any) => {
   const { setData, storageKeys } = StorageManager;
   const flatListRef: any = useRef(null);
   const inputRef: any = useRef(null);
-  const chatOpenTimeStamp = getTimeStamp();
+  const [chatOpenTimeStamp, setChatOpenTimeStamp] = useState<number | null>(
+    null
+  );
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { t }: any = useTranslation();
   const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
@@ -91,7 +100,7 @@ const SingleChat = (props: any) => {
     messages: any,
     lastDeleted = lastDeletedByFound
   ) => {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
       messages = await _.reject(
         messages,
         (message) =>
@@ -196,10 +205,10 @@ const SingleChat = (props: any) => {
       } else {
         const last15Messages = _.slice(messagesArray, 0, 15);
         handleLastDeletedBy(last15Messages)
-          .then((res: any) => {
+          .then(async (res: any) => {
             if (res !== 'ignore') {
               setMessages(res);
-              handleReadBy(convDetails, res);
+              await handleReadBy(convDetails, res);
             }
           })
           .finally(() => setLoader(false));
@@ -227,8 +236,17 @@ const SingleChat = (props: any) => {
     await setData(storageKeys.OPENED_CONVERSATION_ID, conversationId);
   };
 
+  // Initialize chatOpenTimeStamp
   useEffect(() => {
-    if (conversationId?.length !== 0) {
+    const initializeTimestamp = async () => {
+      const timestamp = await getTimeStamp();
+      setChatOpenTimeStamp(timestamp);
+    };
+    initializeTimestamp();
+  }, []);
+
+  useEffect(() => {
+    if (conversationId?.length !== 0 && chatOpenTimeStamp !== null) {
       setOpenedConversation(conversationId);
       const messagesDatabaseRef = ref(
         database,
@@ -250,8 +268,7 @@ const SingleChat = (props: any) => {
           if (messageIndex !== -1) {
             messagesRef.current[messageIndex] = updatedMessage;
           }
-          setMessages(messagesRef.current);
-          setConversationData(conversationData);
+          setMessages([...messagesRef.current]);
           forceUpdate();
         }
       );
@@ -274,7 +291,9 @@ const SingleChat = (props: any) => {
               setIsBlockedYou(true);
             } else {
               setIsBlockedYou(false);
-              handleReadBy(updatedConversationData, messagesRef?.current);
+              handleReadBy(updatedConversationData, messagesRef?.current).catch(
+                () => {}
+              );
             }
             if (
               updatedConversationData?.participantsBlockFlag[otherUserData?.id]
@@ -296,6 +315,7 @@ const SingleChat = (props: any) => {
           const newMessage = snapshot.val();
           if (newMessage?.sender !== currentUser?.id) {
             if (newMessage?.blockedParticipants?.[otherUserData?.id] === true) {
+              // Skip blocked messages
             } else {
               const lastMessage: any = _.first(messagesRef?.current);
               if (
@@ -308,7 +328,11 @@ const SingleChat = (props: any) => {
                   ...prevMessages,
                 ]);
                 forceUpdate();
-                handleReadBy(conversationData, messagesRef?.current, true);
+                handleReadBy(
+                  conversationData,
+                  messagesRef?.current,
+                  true
+                ).catch(() => {});
               }
             }
           }
@@ -326,7 +350,50 @@ const SingleChat = (props: any) => {
         clearOpenedConvId();
       };
     }
-  }, [conversationId]);
+  }, [conversationId, chatOpenTimeStamp]);
+
+  // Add focus effect to refresh messages when screen comes back into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (conversationId?.length !== 0) {
+        // Find the current conversation in the global context
+        const currentConversation = conversations.find(
+          (conv: any) => conv?.convDetails?.id === conversationId
+        );
+
+        if (currentConversation) {
+          const { convDetails, messages: convMessages } = currentConversation;
+
+          // Update conversation data
+          setConversationData(convDetails);
+
+          // Process messages
+          const messagesArray = convMessages
+            ? _.orderBy(Object.values(convMessages), ['createdAt'], ['desc'])
+            : [];
+
+          setTotalMessages(messagesArray as any);
+
+          if (messagesArray.length > 0) {
+            const last15Messages = _.slice(messagesArray, 0, 15);
+            handleLastDeletedBy(last15Messages).then(async (res: any) => {
+              if (res !== 'ignore') {
+                setMessages(res);
+                if (convDetails?.length !== 0) {
+                  await handleReadBy(convDetails, res);
+                }
+                forceUpdate();
+              }
+            });
+          }
+        }
+      }
+
+      return () => {
+        // Cleanup if needed
+      };
+    }, [conversationId, conversations])
+  );
 
   useEffect(() => {
     const quotes = [
@@ -347,7 +414,7 @@ const SingleChat = (props: any) => {
     setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
   }, []);
 
-  const handleReadBy = (
+  const handleReadBy = async (
     convDetails: any,
     messages: any,
     fromNewMessage = false
@@ -373,6 +440,7 @@ const SingleChat = (props: any) => {
         );
       }
 
+      const seenAtTimestamp = await getTimeStamp();
       const filteredMessages = messages.reduce((acc: any, message: any) => {
         if (
           message?.readBy[currentUser?.id]?.seen === false &&
@@ -384,7 +452,7 @@ const SingleChat = (props: any) => {
               ...message.readBy,
               [currentUser?.id]: {
                 seen: true,
-                seenAt: getTimeStamp(),
+                seenAt: seenAtTimestamp,
               },
             },
           };
@@ -443,7 +511,7 @@ const SingleChat = (props: any) => {
   };
 
   const isPremiumUser = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const now = moment();
       const membershipExpiry = currentUser?.membership_expiry;
       if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
@@ -479,14 +547,15 @@ const SingleChat = (props: any) => {
 
   const sendMessage = async () => {
     setInputMessage('');
+    const timestamp = await getTimeStamp();
     const messageData: any = {
-      createdAt: getTimeStamp(),
-      id: `id-${getTimeStamp()}`,
+      createdAt: timestamp,
+      id: `id-${timestamp}`,
       sender: currentUser?.id,
       message: inputMessage,
       status: 'sending',
       readBy: {
-        [currentUser?.id]: { seen: true, seenAt: getTimeStamp() },
+        [currentUser?.id]: { seen: true, seenAt: timestamp },
         [otherUserData?.id]: { seen: false, seenAt: null },
       },
     };
@@ -507,7 +576,7 @@ const SingleChat = (props: any) => {
           await setData(storageKeys.USER, currentUser);
           updateCurrentUser(currentUser);
         })
-        .catch((err) => {});
+        .catch(() => {});
     }
     if (conversationData?.length === 0) {
       messages.push(messageData);
@@ -540,8 +609,8 @@ const SingleChat = (props: any) => {
             id: otherUserData?.id,
           },
         ],
-        createdAt: getTimeStamp(),
-        id: `id-${getTimeStamp()}`,
+        createdAt: timestamp,
+        id: `id-${timestamp}`,
         latestMessage: inputMessage,
         latestMessageCreatedAt: messageData?.createdAt,
       };
@@ -649,7 +718,7 @@ const SingleChat = (props: any) => {
 
         if (timeDifference > 1) {
           // Change from 8 hours to 1 minute
-          const res = await ApiServices.snedMessageNotification({
+          await ApiServices.snedMessageNotification({
             other_user_id: otherUserData?.id,
             other_username: currentUser?.full_name,
             country: 'Pakistan',
@@ -661,7 +730,7 @@ const SingleChat = (props: any) => {
           );
         }
       } else {
-        const res = await ApiServices.snedMessageNotification({
+        await ApiServices.snedMessageNotification({
           other_user_id: otherUserData?.id,
           other_username: otherUserData?.name,
           country: 'Pakistan',

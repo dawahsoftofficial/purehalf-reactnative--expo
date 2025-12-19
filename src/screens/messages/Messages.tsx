@@ -126,8 +126,8 @@ const Messages = (props: any) => {
   };
 
   const renderConversations = ({ item }: any) => {
+    console.log('first item', JSON.stringify(item, null, 2));
     const convDetails = item?.convDetails;
-    console.log('convDetails', JSON.stringify(convDetails, null, 2));
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
 
@@ -149,7 +149,10 @@ const Messages = (props: any) => {
     }
 
     // Check if last message was sent by current user and seen by receiver
+    // Also get the actual latest message text from messages array
     let isLastMessageSeen = false;
+    let latestMessageText = convDetails?.latestMessage || '';
+
     if (!hideLatestMessage && item?.messages) {
       const messagesArray = Object.values(item.messages);
       if (messagesArray.length > 0) {
@@ -160,6 +163,11 @@ const Messages = (props: any) => {
           ['desc']
         );
         const lastMessage: any = sortedMessages[0];
+
+        // Use the actual latest message text from messages array
+        if (lastMessage?.message) {
+          latestMessageText = lastMessage.message;
+        }
 
         // Check if last message was sent by current user
         if (lastMessage?.sender === currentUserId) {
@@ -210,7 +218,7 @@ const Messages = (props: any) => {
             <Text style={Styles.itemHeading}>{otherUserData?.name}</Text>
             {!hideLatestMessage && (
               <Text style={Styles.itemMessage} numberOfLines={2}>
-                {convDetails?.latestMessage}
+                {latestMessageText}
               </Text>
             )}
           </View>

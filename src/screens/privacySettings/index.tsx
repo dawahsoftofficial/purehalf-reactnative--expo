@@ -1,1 +1,1 @@
-export { default as PrivacySettings } from './PrivacySettings'
+export { default as PrivacySettings } from './PrivacySettings';

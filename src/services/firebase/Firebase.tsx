@@ -12,7 +12,7 @@ import {
   startAt,
   update,
 } from '@react-native-firebase/database';
-import { getFunctions } from '@react-native-firebase/functions';
+import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import {
   AuthorizationStatus,
   getMessaging,
@@ -215,7 +215,7 @@ class GFirebase {
   };
 
   sendMessageNotification = async (token: any, data: any) => {
-    const sendNotification = functions.httpsCallable('sendNotification');
+    const sendNotification = httpsCallable(functions, 'sendNotification');
     try {
       await sendNotification({
         token: token,

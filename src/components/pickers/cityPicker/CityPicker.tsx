@@ -1,21 +1,22 @@
+import React, { useState } from 'react';
 import {
-  View,
-  Text,
+  FlatList,
   Modal,
   StyleSheet,
+  Text,
   TextInput,
-  FlatList,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useState } from 'react';
-import Cities from './Cities';
-import { hp, Typography, wp } from '../../../global';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import { Colors, Fonts } from '../../../res';
-import Constants from '../../../global/Constants';
 import Ripple from 'react-native-material-ripple';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+
 import { Animation } from '../../../animations';
+import { hp, Typography, wp } from '../../../global';
+import Constants from '../../../global/Constants';
+import { Colors, Fonts } from '../../../res';
 import { isIOS } from '../../../services';
+import Cities from './Cities';
 
 const CountryPicker = (props: any) => {
   const { onClose = () => null, onPress = () => null, visible = false } = props;

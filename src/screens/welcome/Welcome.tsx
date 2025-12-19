@@ -192,6 +192,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [optionTab, setOptionTab] = useState<string>('');
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userListPage, setUserListPage] = useState(1);
+  console.log('userListPage', userListPage);
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
   const [headerModal, setHeaderModal] = useState<boolean>(false);
@@ -221,11 +222,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const getUsers = useCallback(
     (
-      params: { page: number; type: string } = { page: 1, type: '-1' },
+      params: { page: number; type: number | string } = { page: 1, type: -1 },
       replace = false
     ) => {
       ApiServices.getUsers(params)
-        .then((res: any[]) => {
+        .then((res) => {
           const list = Array.isArray(res) ? res : [];
           setUsersList((prev) => (replace ? list : [...prev, ...list]));
         })
@@ -240,7 +241,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const getUserStats = useCallback(() => {
     ApiServices.getUserStats()
-      .then(setUserStats)
+      .then((res: any) => {
+        setUserStats(res);
+      })
       .catch(() => {});
   }, []);
 
@@ -258,7 +261,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
     setModalLoader(true);
     try {
-      const refreshedUser = await ApiServices.getCurrentUserDetail();
+      const refreshedUser: any = await ApiServices.getCurrentUserDetail();
       updateCurrentUser(refreshedUser);
       const refreshedExpiry = refreshedUser?.membership_expiry;
       return (
@@ -266,7 +269,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         refreshedExpiry !== undefined &&
         moment(refreshedExpiry).isAfter(now)
       );
-    } catch (error) {
+    } catch (err) {
+      console.log('error while ensuring active membership =>', err);
       return false;
     } finally {
       setModalLoader(false);
@@ -437,7 +441,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       }));
       return updated.sort(sortByCompletion);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
 
   const checkNewTransaction = useCallback(() => {
@@ -457,7 +460,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       hasInitializedUsers = true;
       getUsers(undefined, true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -491,7 +493,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     React.useCallback(() => {
       getUserStats();
       handleProfileCompleteData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
   );
 
@@ -919,12 +920,12 @@ const Styles = StyleSheet.create({
   },
   headerlistCounterText: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
   },
   accordTitle: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
   },
   accordBody: {
@@ -955,12 +956,12 @@ const Styles = StyleSheet.create({
   },
   infoItemText: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
   },
   completeProfileText: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
     lineHeight: Typography.large1,
   },

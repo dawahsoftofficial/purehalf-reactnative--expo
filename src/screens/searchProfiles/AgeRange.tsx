@@ -55,10 +55,14 @@ const AgeRange = (props: any) => {
     if (pickerVisible.button === 'start') {
       setMinAge(item.value);
       closePicker();
-      props?.onMinAgeChange && props.onMinAgeChange(item.value);
+      if (props?.onMinAgeChange) {
+        props.onMinAgeChange(item.value);
+      }
     } else {
       setMaxAge(item.value);
-      props?.onMaxAgeChange && props.onMaxAgeChange(item.value);
+      if (props?.onMaxAgeChange) {
+        props.onMaxAgeChange(item.value);
+      }
       closePicker();
     }
   };

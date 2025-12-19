@@ -407,7 +407,7 @@ const DisplayForegroundNotification = () => {
       userImage = userData?.user?.image;
     }
   }
-
+  return null;
   return remoteMessage ? (
     <SafeAreaView style={Styles.container} {...panResponder.panHandlers}>
       <Ripple onPress={onNotificationPress}>

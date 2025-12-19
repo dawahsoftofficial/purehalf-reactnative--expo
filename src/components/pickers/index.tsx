@@ -1,11 +1,11 @@
-export { default as LanguagePicker } from './LanguagePicker'
-export { default as CountryPicker } from './country_picker'
-export { default as DateTimePicker } from './DateTimePicker'
-export { default as GenderPicker } from './GenderPicker'
-export { default as Picker } from './Picker'
-export { default as LocationPicker } from './LocationPicker'
-export { default as HeightWeightPicker } from './HeightWeightPicker'
-export { default as ImagePicker } from './ImagePicker'
-export { default as ButtonPicker } from './ButtonPicker'
-export { default as DeletePicker } from './DeletePicker'
-export * from './cityPicker'
+export { default as ButtonPicker } from './ButtonPicker';
+export * from './cityPicker';
+export { default as CountryPicker } from './country_picker';
+export { default as DateTimePicker } from './DateTimePicker';
+export { default as DeletePicker } from './DeletePicker';
+export { default as GenderPicker } from './GenderPicker';
+export { default as HeightWeightPicker } from './HeightWeightPicker';
+export { default as ImagePicker } from './ImagePicker';
+export { default as LanguagePicker } from './LanguagePicker';
+export { default as LocationPicker } from './LocationPicker';
+export { default as Picker } from './Picker';

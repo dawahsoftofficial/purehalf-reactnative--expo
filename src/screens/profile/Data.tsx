@@ -1,400 +1,459 @@
-import { LanguageKeys } from "../../languages"
+import { LanguageKeys } from '../../languages';
 
 const Data: any = {
-    appearanceAndHealth:
-        [
-            {
-                title: LanguageKeys.height,
-                data: [
-                    {
-                        scale: 'ft',
-                        values: [4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.10, 4.11, 4.12, 5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 5.11, 5.12, 6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10, 6.11, 6.12, 7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.10, 7.11, 7.12]
-                    },
-                    {
-                        scale: 'cm',
-                        values: [122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158, 152, 155, 158, 162, 165, 168, 171, 174, 177, 180, 183, 186, 189, 183, 186, 189, 192, 195, 198, 201, 204, 207, 210, 213, 216, 219, 213, 216, 219, 223, 226, 229, 232, 235, 238, 241, 244, 247, 250]
-                    }
-                ],
-                type: 'scalling',
-                id: 'height',
-                selected: { scale: 'ft' },
-                category: 'appearance-0',
-                apiKey: 'height',
-            },
-            {
-                title: LanguageKeys.weight,
-                data: [
-                    {
-                        scale: 'kg',
-                        values: [40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196, 197, 198, 199, 200]
-                    },
-                    {
-                        scale: 'lbs',
-                        values: [90, 93, 95, 97, 99, 101, 104, 106, 108, 110, 112, 115, 117, 119, 121, 123, 126, 128, 130, 132, 134, 137, 139, 141, 143, 146, 148, 150, 152, 154, 157, 159, 161, 163, 165, 168, 170, 172, 174, 176, 179, 181, 183, 185, 187, 190, 192, 194, 196, 198, 201, 203, 205, 207, 209, 212, 214, 216, 218, 220, 223, 225, 227, 229, 231, 234, 236, 238, 240, 243, 245, 247, 249, 251, 254, 256, 258, 260, 262, 265, 267, 269, 271, 273, 276, 278, 280, 282, 284, 287, 289, 291, 293, 295, 298, 300, 302, 304, 306, 309, 311, 313, 315, 317, 320, 322, 324, 326, 328, 331, 333, 335, 337, 340, 342, 344, 346, 348, 351, 353, 355, 357, 359, 362, 364, 366, 368, 370, 373, 375, 377, 379, 381, 384, 386, 388, 390, 392, 395, 397, 399, 401, 403, 406, 408, 410, 412, 414, 417, 419, 421, 423, 425, 428, 430, 432, 434, 437, 439, 441]
-                    }
-                ],
-                type: 'scalling',
-                id: 'weight',
-                selected: { scale: 'kg' },
-                category: 'appearance-0',
-                apiKey: 'weight',
-            },
-            {
-                title: LanguageKeys.disabilities,
-                data: [],
-                type: 'dropDown',
-                id: 'dis-0',
-                category: 'appearance-0',
-                selected: {},
-                apiKey: 'disability_id'
-            },
-            {
-                title: LanguageKeys.bodyType,
-                data: [],
-                type: 'dropDown',
-                id: 'bdy-0',
-                selected: {},
-                category: 'appearance-0',
-                apiKey: 'body_type_id'
-            },
-            {
-                title: LanguageKeys.eyesColor,
-                data: [],
-                type: 'dropDown',
-                id: 'eye-0',
-                selected: {},
-                category: 'appearance-0',
-                apiKey: 'eyes_color_id'
-            },
-            {
-                title: LanguageKeys.skinTone,
-                data: [],
-                type: 'dropDown',
-                id: 'skin-0',
-                selected: {},
-                category: 'appearance-0',
-                apiKey: 'skin_tone_id'
-            },
-        ],
-    familyBackground: [
+  appearanceAndHealth: [
+    {
+      title: LanguageKeys.height,
+      data: [
         {
-            title: LanguageKeys.ethinicity,
-            data: [],
-            type: 'dropDown',
-            id: 'ethini-0',
-            selected: {},
-            category: 'familybg-0',
-            apiKey: 'ethinicity_id'
+          scale: 'ft',
+          values: [
+            4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.1, 4.11, 4.12,
+            5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.1, 5.11, 5.12,
+            6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.1, 6.11, 6.12,
+            7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.1, 7.11, 7.12,
+          ],
         },
         {
-            title: LanguageKeys.language,
-            data: [],
-            type: 'dropDown',
-            id: 'language',
-            selected: {},
-            category: 'familybg-0',
-            apiKey: 'language'
+          scale: 'cm',
+          values: [
+            122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158,
+            152, 155, 158, 162, 165, 168, 171, 174, 177, 180, 183, 186, 189,
+            183, 186, 189, 192, 195, 198, 201, 204, 207, 210, 213, 216, 219,
+            213, 216, 219, 223, 226, 229, 232, 235, 238, 241, 244, 247, 250,
+          ],
+        },
+      ],
+      type: 'scalling',
+      id: 'height',
+      selected: { scale: 'ft' },
+      category: 'appearance-0',
+      apiKey: 'height',
+    },
+    {
+      title: LanguageKeys.weight,
+      data: [
+        {
+          scale: 'kg',
+          values: [
+            40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+            57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
+            74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
+            91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105,
+            106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118,
+            119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131,
+            132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144,
+            145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157,
+            158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170,
+            171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183,
+            184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196,
+            197, 198, 199, 200,
+          ],
         },
         {
-            title: LanguageKeys.nationality,
-            data: [],
-            type: 'dropDown',
-            id: 'nationality',
-            selected: {},
-            category: 'familybg-0',
-            apiKey: 'nationality'
+          scale: 'lbs',
+          values: [
+            90, 93, 95, 97, 99, 101, 104, 106, 108, 110, 112, 115, 117, 119,
+            121, 123, 126, 128, 130, 132, 134, 137, 139, 141, 143, 146, 148,
+            150, 152, 154, 157, 159, 161, 163, 165, 168, 170, 172, 174, 176,
+            179, 181, 183, 185, 187, 190, 192, 194, 196, 198, 201, 203, 205,
+            207, 209, 212, 214, 216, 218, 220, 223, 225, 227, 229, 231, 234,
+            236, 238, 240, 243, 245, 247, 249, 251, 254, 256, 258, 260, 262,
+            265, 267, 269, 271, 273, 276, 278, 280, 282, 284, 287, 289, 291,
+            293, 295, 298, 300, 302, 304, 306, 309, 311, 313, 315, 317, 320,
+            322, 324, 326, 328, 331, 333, 335, 337, 340, 342, 344, 346, 348,
+            351, 353, 355, 357, 359, 362, 364, 366, 368, 370, 373, 375, 377,
+            379, 381, 384, 386, 388, 390, 392, 395, 397, 399, 401, 403, 406,
+            408, 410, 412, 414, 417, 419, 421, 423, 425, 428, 430, 432, 434,
+            437, 439, 441,
+          ],
         },
-        {
-            title: LanguageKeys.caste,
-            placeholder: 'Enter caste',
-            data: [],
-            id: 'caste',
-            type: 'input',
-            selected: {},
-            category: 'familybg-0',
-            apiKey: 'caste'
-        },
-    ],
-    lifeStyle: [
-        {
-            title: LanguageKeys.educationLevel,
-            data: [],
-            type: 'dropDown',
-            id: 'edu-0',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'education_level_id'
-        },
-        {
-            title: LanguageKeys.profession,
-            data: [],
-            type: 'dropDown',
-            id: 'prof-0',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'profession_id'
-        },
-        {
-            title: LanguageKeys.earningsPerMonth,
-            data: [],
-            type: 'dropDown',
-            id: 'earn-0',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'earnings_per_month_id'
-        },
-        {
-            title: LanguageKeys.maritalStatus,
-            data: [],
-            type: 'dropDown',
-            id: 'martial-0',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'maritial_status_id'
-        },
-        {
-            title: LanguageKeys.haveChildren,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'haveChildren',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'have_children'
-        },
-        {
-            title: LanguageKeys.doYouSmoke,
-            data: [],
-            type: 'dropDown',
-            id: 'smoke-0',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'smoking_id'
-        },
-        {
-            title: LanguageKeys.doYouDrink,
-            data: [],
-            type: 'dropDown',
-            id: 'drink-0',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'drinking_id'
-        },
-        {
-            title: LanguageKeys.doYouOwnACar,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'doYouOwnACar',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'have_car'
-        },
-        {
-            title: LanguageKeys.doYouOwnABusiness,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'doYouOwnABusiness',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'have_business'
-        },
-        {
-            title: LanguageKeys.doYouKeepPets,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'doYouKeepPets',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'have_pets'
-        },
-        {
-            title: LanguageKeys.doYouOwnAHouse,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'doYouOwnAHouse',
-            selected: {},
-            category: 'life-0',
-            apiKey: 'have_house'
-        }
-    ],
-    waliInformation:
-        [
-            {
-                title: LanguageKeys.firstName,
-                placeholder: LanguageKeys.notYetProvided,
-                data: [],
-                type: 'input',
-                id: 'firstName',
-                selected: {},
-                category: 'wali-0',
-                apiKey: 'wali_first_name'
-            },
-            {
-                title: LanguageKeys.lastName,
-                placeholder: LanguageKeys.notYetProvided,
-                data: [],
-                type: 'input',
-                id: 'lastName',
-                selected: {},
-                category: 'wali-0',
-                apiKey: 'wali_last_name'
-            },
-            {
-                title: LanguageKeys.phoneNumber,
-                placeholder: LanguageKeys.notYetProvided,
-                data: [],
-                type: 'input',
-                id: 'phoneNumber',
-                selected: {},
-                category: 'wali-0',
-                apiKey: 'wali_phone'
-            },
-            {
-                title: LanguageKeys.email,
-                placeholder: LanguageKeys.notYetProvided,
-                data: [],
-                type: 'input',
-                id: 'email',
-                selected: {},
-                category: 'wali-0',
-                apiKey: 'wali_email'
-            }
-        ],
-    islamicValues: [
-        {
-            title: LanguageKeys.howMuchDoYouPray,
-            data: [],
-            type: 'dropDown',
-            id: 'pray-0',
-            selected: {},
-            category: 'islamicval-0',
-            apiKey: 'prayers_punctuality_id'
-        },
-        {
-            title: LanguageKeys.doYouCoverYourself,
-            data: [],
-            type: 'dropDown',
-            id: 'hijab-0',
-            selected: {},
-            category: 'islamicval-0',
-            apiKey: 'hijab_level_id'
-        },
-        {
-            title: LanguageKeys.doYouHaveABeard,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'doYouHaveABeard',
-            selected: {},
-            category: 'islamicval-0',
-            apiKey: 'have_beard'
-        },
-        {
-            title: LanguageKeys.overallPracticeLevel,
-            data: [],
-            type: 'dropDown',
-            id: 'islam-0',
-            selected: {},
-            category: 'islamicval-0',
-            apiKey: 'islamic_practice_level_id'
-        },
-        {
-            title: LanguageKeys.sect,
-            data: [],
-            type: 'dropDown',
-            id: 'sect-0',
-            selected: {},
-            category: 'islamicval-0',
-            apiKey: 'sect_id'
-        },
-        {
-            title: LanguageKeys.muslimType,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'muslim-0',
-            selected: {},
-            category: 'islamicval-0',
-            apiKey: 'is_new_muslim'
-        }
-    ],
-    personalityRequirements: [
-        {
-            title: LanguageKeys.aboutYourself,
-            placeholder: LanguageKeys.notYetProvided,
-            data: [],
-            type: 'input',
-            id: 'aboutYourself',
-            selected: {},
-            category: 'personality-0',
-            apiKey: 'about_you'
-        },
-        {
-            title: LanguageKeys.aboutPartner,
-            placeholder: LanguageKeys.notYetProvided,
-            data: [],
-            type: 'input',
-            id: 'aboutPartner',
-            selected: {},
-            category: 'personality-0',
-            apiKey: 'about_partner'
-        },
-        {
-            title: LanguageKeys.likes,
-            placeholder: LanguageKeys.notYetProvided,
-            data: [],
-            type: 'input',
-            id: 'likes',
-            selected: {},
-            category: 'personality-0',
-            apiKey: 'likes'
-        },
-        {
-            title: LanguageKeys.disLikes,
-            placeholder: LanguageKeys.notYetProvided,
-            data: [],
-            type: 'input',
-            id: 'disLikes',
-            selected: {},
-            category: 'personality-0',
-            apiKey: 'dislikes'
-        },
-        {
-            title: LanguageKeys.openForPolygamy,
-            data: [{ id: LanguageKeys.yes, value: 1 }, { id: LanguageKeys.no, value: 0 }],
-            type: 'dropDownBinary',
-            id: 'openForPolygamy',
-            selected: {},
-            category: 'personality-0',
-            apiKey: 'open_for_polygamy'
-        }
-    ],
-    futurePlan: [
-        {
-            title: "What are your plans for having children?",
-            data: [],
-            type: 'dropDown',
-            id: 'familyplan-0',
-            selected: {},
-            category: 'futureplan-0',
-            apiKey: 'family_plan_id'
-        },
-        {
-            title: "When do you plan to get married?",
-            data: [],
-            type: 'dropDown',
-            id: 'marriageplan-0',
-            selected: {},
-            category: 'futureplan-0',
-            apiKey: 'marriage_plan_id'
-        },
-        {
-            title: "Are you open to relocating?",
-            data: [],
-            type: 'dropDown',
-            id: 'relocationplan-0',
-            selected: {},
-            category: 'futureplan-0',
-            apiKey: 'relocation_plan_id'
-        },
-    ],
-}
+      ],
+      type: 'scalling',
+      id: 'weight',
+      selected: { scale: 'kg' },
+      category: 'appearance-0',
+      apiKey: 'weight',
+    },
+    {
+      title: LanguageKeys.disabilities,
+      data: [],
+      type: 'dropDown',
+      id: 'dis-0',
+      category: 'appearance-0',
+      selected: {},
+      apiKey: 'disability_id',
+    },
+    {
+      title: LanguageKeys.bodyType,
+      data: [],
+      type: 'dropDown',
+      id: 'bdy-0',
+      selected: {},
+      category: 'appearance-0',
+      apiKey: 'body_type_id',
+    },
+    {
+      title: LanguageKeys.eyesColor,
+      data: [],
+      type: 'dropDown',
+      id: 'eye-0',
+      selected: {},
+      category: 'appearance-0',
+      apiKey: 'eyes_color_id',
+    },
+    {
+      title: LanguageKeys.skinTone,
+      data: [],
+      type: 'dropDown',
+      id: 'skin-0',
+      selected: {},
+      category: 'appearance-0',
+      apiKey: 'skin_tone_id',
+    },
+  ],
+  familyBackground: [
+    {
+      title: LanguageKeys.ethinicity,
+      data: [],
+      type: 'dropDown',
+      id: 'ethini-0',
+      selected: {},
+      category: 'familybg-0',
+      apiKey: 'ethinicity_id',
+    },
+    {
+      title: LanguageKeys.language,
+      data: [],
+      type: 'dropDown',
+      id: 'language',
+      selected: {},
+      category: 'familybg-0',
+      apiKey: 'language',
+    },
+    {
+      title: LanguageKeys.nationality,
+      data: [],
+      type: 'dropDown',
+      id: 'nationality',
+      selected: {},
+      category: 'familybg-0',
+      apiKey: 'nationality',
+    },
+    {
+      title: LanguageKeys.caste,
+      placeholder: 'Enter caste',
+      data: [],
+      id: 'caste',
+      type: 'input',
+      selected: {},
+      category: 'familybg-0',
+      apiKey: 'caste',
+    },
+  ],
+  lifeStyle: [
+    {
+      title: LanguageKeys.educationLevel,
+      data: [],
+      type: 'dropDown',
+      id: 'edu-0',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'education_level_id',
+    },
+    {
+      title: LanguageKeys.profession,
+      data: [],
+      type: 'dropDown',
+      id: 'prof-0',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'profession_id',
+    },
+    {
+      title: LanguageKeys.earningsPerMonth,
+      data: [],
+      type: 'dropDown',
+      id: 'earn-0',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'earnings_per_month_id',
+    },
+    {
+      title: LanguageKeys.maritalStatus,
+      data: [],
+      type: 'dropDown',
+      id: 'martial-0',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'maritial_status_id',
+    },
+    {
+      title: LanguageKeys.haveChildren,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'haveChildren',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'have_children',
+    },
+    {
+      title: LanguageKeys.doYouSmoke,
+      data: [],
+      type: 'dropDown',
+      id: 'smoke-0',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'smoking_id',
+    },
+    {
+      title: LanguageKeys.doYouDrink,
+      data: [],
+      type: 'dropDown',
+      id: 'drink-0',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'drinking_id',
+    },
+    {
+      title: LanguageKeys.doYouOwnACar,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'doYouOwnACar',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'have_car',
+    },
+    {
+      title: LanguageKeys.doYouOwnABusiness,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'doYouOwnABusiness',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'have_business',
+    },
+    {
+      title: LanguageKeys.doYouKeepPets,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'doYouKeepPets',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'have_pets',
+    },
+    {
+      title: LanguageKeys.doYouOwnAHouse,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'doYouOwnAHouse',
+      selected: {},
+      category: 'life-0',
+      apiKey: 'have_house',
+    },
+  ],
+  waliInformation: [
+    {
+      title: LanguageKeys.firstName,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'firstName',
+      selected: {},
+      category: 'wali-0',
+      apiKey: 'wali_first_name',
+    },
+    {
+      title: LanguageKeys.lastName,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'lastName',
+      selected: {},
+      category: 'wali-0',
+      apiKey: 'wali_last_name',
+    },
+    {
+      title: LanguageKeys.phoneNumber,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'phoneNumber',
+      selected: {},
+      category: 'wali-0',
+      apiKey: 'wali_phone',
+    },
+    {
+      title: LanguageKeys.email,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'email',
+      selected: {},
+      category: 'wali-0',
+      apiKey: 'wali_email',
+    },
+  ],
+  islamicValues: [
+    {
+      title: LanguageKeys.howMuchDoYouPray,
+      data: [],
+      type: 'dropDown',
+      id: 'pray-0',
+      selected: {},
+      category: 'islamicval-0',
+      apiKey: 'prayers_punctuality_id',
+    },
+    {
+      title: LanguageKeys.doYouCoverYourself,
+      data: [],
+      type: 'dropDown',
+      id: 'hijab-0',
+      selected: {},
+      category: 'islamicval-0',
+      apiKey: 'hijab_level_id',
+    },
+    {
+      title: LanguageKeys.doYouHaveABeard,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'doYouHaveABeard',
+      selected: {},
+      category: 'islamicval-0',
+      apiKey: 'have_beard',
+    },
+    {
+      title: LanguageKeys.overallPracticeLevel,
+      data: [],
+      type: 'dropDown',
+      id: 'islam-0',
+      selected: {},
+      category: 'islamicval-0',
+      apiKey: 'islamic_practice_level_id',
+    },
+    {
+      title: LanguageKeys.sect,
+      data: [],
+      type: 'dropDown',
+      id: 'sect-0',
+      selected: {},
+      category: 'islamicval-0',
+      apiKey: 'sect_id',
+    },
+    {
+      title: LanguageKeys.muslimType,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'muslim-0',
+      selected: {},
+      category: 'islamicval-0',
+      apiKey: 'is_new_muslim',
+    },
+  ],
+  personalityRequirements: [
+    {
+      title: LanguageKeys.aboutYourself,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'aboutYourself',
+      selected: {},
+      category: 'personality-0',
+      apiKey: 'about_you',
+    },
+    {
+      title: LanguageKeys.aboutPartner,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'aboutPartner',
+      selected: {},
+      category: 'personality-0',
+      apiKey: 'about_partner',
+    },
+    {
+      title: LanguageKeys.likes,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'likes',
+      selected: {},
+      category: 'personality-0',
+      apiKey: 'likes',
+    },
+    {
+      title: LanguageKeys.disLikes,
+      placeholder: LanguageKeys.notYetProvided,
+      data: [],
+      type: 'input',
+      id: 'disLikes',
+      selected: {},
+      category: 'personality-0',
+      apiKey: 'dislikes',
+    },
+    {
+      title: LanguageKeys.openForPolygamy,
+      data: [
+        { id: LanguageKeys.yes, value: 1 },
+        { id: LanguageKeys.no, value: 0 },
+      ],
+      type: 'dropDownBinary',
+      id: 'openForPolygamy',
+      selected: {},
+      category: 'personality-0',
+      apiKey: 'open_for_polygamy',
+    },
+  ],
+  futurePlan: [
+    {
+      title: 'What are your plans for having children?',
+      data: [],
+      type: 'dropDown',
+      id: 'familyplan-0',
+      selected: {},
+      category: 'futureplan-0',
+      apiKey: 'family_plan_id',
+    },
+    {
+      title: 'When do you plan to get married?',
+      data: [],
+      type: 'dropDown',
+      id: 'marriageplan-0',
+      selected: {},
+      category: 'futureplan-0',
+      apiKey: 'marriage_plan_id',
+    },
+    {
+      title: 'Are you open to relocating?',
+      data: [],
+      type: 'dropDown',
+      id: 'relocationplan-0',
+      selected: {},
+      category: 'futureplan-0',
+      apiKey: 'relocation_plan_id',
+    },
+  ],
+};
 
-export default Data
+export default Data;

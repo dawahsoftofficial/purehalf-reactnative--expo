@@ -19,21 +19,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig([
   globalIgnores([
-    'dist/*',
-    'node_modules/**',
-    '__tests__/',
-    'coverage',
-    '.expo',
-    '.expo-shared',
-    'android',
-    'ios',
-    '.vscode',
-    'docs/',
-    'cli/',
-    'expo-env.d.ts',
+    '**/dist/**',
+    '**/node_modules/**',
+    '**/__tests__/**',
+    '**/coverage/**',
+    '**/.expo/**',
+    '**/.expo-shared/**',
+    '**/android/**',
+    '**/ios/**',
+    '**/.vscode/**',
+    '**/docs/**',
+    '**/cli/**',
+    '**/expo-env.d.ts',
+    '**/build/**',
+    '**/*.config.js',
+    '**/*.config.mjs',
+    '**/vendor/**',
   ]),
   {
-    files: ['**/*.js', '**/*.jsx'],
+    files: ['src/**/*.js', 'src/**/*.jsx'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -108,17 +112,18 @@ export default defineConfig([
   },
   ...configs.recommended.map((config) => ({
     ...config,
-    files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['node_modules/**', '**/node_modules/**'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['**/node_modules/**', 'node_modules/**'],
   })),
   {
-    files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['node_modules/**', '**/node_modules/**'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['**/node_modules/**', 'node_modules/**'],
     languageOptions: {
       parser: parser,
       parserOptions: {
         project: './tsconfig.json',
         sourceType: 'module',
+        tsconfigRootDir: __dirname,
       },
     },
     rules: {

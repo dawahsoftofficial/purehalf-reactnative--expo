@@ -29,7 +29,6 @@ import {
   ModalLoader,
   Text,
 } from '../../components';
-import BlurView from '../../components/BlurView';
 import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -557,7 +556,7 @@ const Header = ({
           <FontAwesome5 name="user-alt" color={Colors.color8} size={wp(24)} />
         </View>
       )}
-      {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null}
+      {/* {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null} */}
       {profileImageLoader && !profileImageError && (
         <ActivityIndicator
           style={{ position: 'absolute' }}

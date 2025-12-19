@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useCallback, useState } from 'react';
 import { FlatList, Modal, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';

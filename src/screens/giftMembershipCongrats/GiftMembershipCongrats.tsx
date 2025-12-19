@@ -1,18 +1,18 @@
+import React, { useEffect } from 'react';
 import {
-  View,
+  BackHandler,
   Image,
   ImageBackground,
   StatusBar,
-  BackHandler,
   StyleSheet,
+  View,
 } from 'react-native';
-import React, { useEffect } from 'react';
 
-import { Button, Text } from '../../components';
-import { Images, Colors, Fonts } from '../../res';
 import { Animation } from '../../animations';
+import { Button, Text } from '../../components';
+import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { hp, wp, Typography } from '../../global';
+import { Colors, Fonts, Images } from '../../res';
 
 const GiftMembershipCongrats = (props: any) => {
   const onGetStartedPress = () => {
@@ -29,7 +29,7 @@ const GiftMembershipCongrats = (props: any) => {
     };
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backAction,
+      backAction
     );
     return () => backHandler.remove();
   }, []);

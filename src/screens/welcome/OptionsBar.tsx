@@ -1,12 +1,18 @@
-import { View, StyleSheet, FlatList, Text as ReactText, Dimensions } from 'react-native';
 import React from 'react';
+import {
+  Dimensions,
+  FlatList,
+  StyleSheet,
+  Text as ReactText,
+  View,
+} from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
+import { Animation } from '../../animations';
 import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { Colors, Fonts } from '../../res';
-import { Animation } from '../../animations';
 import { CheckRtl } from '../../languages';
+import { Colors, Fonts } from '../../res';
 
 const OptionsBar = (props: any) => {
   const {
@@ -36,19 +42,20 @@ const OptionsBar = (props: any) => {
         animation={activeOptionButton.value === value ? 'zoomIn' : ''}
         style={{
           alignSelf: 'center',
-          borderBottomWidth: activeOptionButton.value === value ?
-            1 : 0.2,
+          borderBottomWidth: activeOptionButton.value === value ? 1 : 0.2,
           marginRight: value === '3' ? 3 : 0,
-        }}>
-        <Ripple
-          style={Styles.btn}
-          onPress={onPress.bind(null, item)}>
+        }}
+      >
+        <Ripple style={Styles.btn} onPress={onPress.bind(null, item)}>
           <Text
             style={{
               ...Styles.btnTxt,
-              fontFamily: activeOptionButton.value === value ?
-                Fonts.APPFONT_SB : Fonts.APPFONT_R,
-            }}>
+              fontFamily:
+                activeOptionButton.value === value
+                  ? Fonts.APPFONT_SB
+                  : Fonts.APPFONT_R,
+            }}
+          >
             {name}
           </Text>
         </Ripple>
@@ -77,7 +84,7 @@ const OptionsBar = (props: any) => {
 
 export default OptionsBar;
 
-const { width } = Dimensions.get('window')
+const { width } = Dimensions.get('window');
 
 const Styles = StyleSheet.create({
   container: {
@@ -111,6 +118,6 @@ const Styles = StyleSheet.create({
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.tiny,
-    top: 1
+    top: 1,
   },
 });
