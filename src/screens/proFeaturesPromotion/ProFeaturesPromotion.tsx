@@ -218,7 +218,7 @@ const ProFeaturesPromotion = (props: any) => {
           </Ripple>
         </View>
         <View>
-          <Text style={Styles.heading}>{LanguageKeys.goProWithPurehalf}</Text>
+          <Text style={Styles.heading}>{LanguageKeys.goProWithPureHalf}</Text>
           <FlatList
             data={proFeatures}
             renderItem={renderProFeatures}

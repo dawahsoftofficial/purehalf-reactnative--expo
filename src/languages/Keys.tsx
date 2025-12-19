@@ -37,7 +37,7 @@ const Keys = {
   upTo500KmAway: 'upTo500KmAway',
   country: 'country',
   city: 'city',
-  goProWithPurehalf: 'goProWithPureHalf',
+  goProWithPureHalf: 'goProWithPureHalf',
   months: 'months',
   month: 'month',
   week: 'week',
