@@ -182,11 +182,11 @@ const UserInput = (props: any) => {
 
   useEffect(() => {
     // Defer state updates to avoid cascading renders
-    Promise.resolve().then(() => {
-      setData();
-    });
+    // Promise.resolve().then(() => {
+    setData();
+    // });
     getLanguages();
-  }, [setData, getLanguages]);
+  }, []);
 
   const onLogoutPress = async () => {
     const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);

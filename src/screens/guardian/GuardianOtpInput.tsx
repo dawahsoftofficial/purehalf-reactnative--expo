@@ -54,41 +54,46 @@ const GuardianOtpInput = ({ navigation }: any) => {
     await setData(storageKeys.USER, currentUser);
     await setData(storageKeys.IS_LOGGED_IN, true);
 
-    getConversationsOnce(currentUser?.user?.id, async (snapshot: any) => {
-      if (snapshot) {
-        const conversationsData: any = snapshot.val()
-          ? _.orderBy(
-              Object.values(snapshot.val()),
-              ['convDetails.latestMessageCreatedAt'],
-              ['desc']
-            )
-          : [];
-        updateConversations(conversationsData);
-        updateConversationLoading(false);
-        await setData(storageKeys.CONVERSATIONS, conversationsData)
-          .then(() => {
-            setModalLoader(false);
-            navigation.dispatch(
-              CommonActions.reset({
-                index: 1,
-                routes: [{ name: 'Messages' }],
-              })
-            );
-          })
-          .catch(() => {
-            setModalLoader(false);
-            flashErrorMessage();
-          });
-      } else {
-        setModalLoader(false);
-        flashErrorMessage();
+    getConversationsOnce(
+      currentUser?.user?.id.toString(),
+      async (snapshot: any) => {
+        if (snapshot) {
+          const conversationsData: any = snapshot.val()
+            ? _.orderBy(
+                Object.values(snapshot.val()),
+                ['convDetails.latestMessageCreatedAt'],
+                ['desc']
+              )
+            : [];
+          updateConversations(conversationsData);
+          updateConversationLoading(false);
+          await setData(storageKeys.CONVERSATIONS, conversationsData)
+            .then(() => {
+              setModalLoader(false);
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 1,
+                  routes: [{ name: 'Messages' }],
+                })
+              );
+            })
+            .catch(() => {
+              setModalLoader(false);
+              flashErrorMessage();
+            });
+        } else {
+          setModalLoader(false);
+          flashErrorMessage();
+        }
       }
-    });
+    );
   };
 
   useEffect(() => {
     if (value.length === 6) {
-      onContinuePress();
+      setTimeout(() => {
+        onContinuePress();
+      }, 0);
     }
   }, [value]);
 
@@ -110,7 +115,7 @@ const GuardianOtpInput = ({ navigation }: any) => {
               {LanguageKeys.guardianOtpDesription}
             </Text>
             <Text style={[Styles.description, { marginHorizontal: wp(1) }]}>
-              Alina Raza's
+              {"Alina Raza's"}
             </Text>
             <Text style={Styles.description}>{LanguageKeys.number}</Text>
           </View>

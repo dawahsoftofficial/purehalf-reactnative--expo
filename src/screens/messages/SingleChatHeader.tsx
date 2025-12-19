@@ -33,8 +33,20 @@ const SingleChatHeader = (props: any) => {
   const { setData, storageKeys } = StorageManager;
   const { currentUser, conversations, updateConversations } =
     useGlobalContext();
-  const [isBlockedByYou, setIsBlockedByYou] = useState(false);
-  const [isBlockedYou, setIsBlockedYou] = useState(false);
+
+  const [isBlockedByYou, setIsBlockedByYou] = useState(props?.isBlockedByYou);
+  const [isBlockedYou, setIsBlockedYou] = useState(props?.isBlockedYou);
+
+  const setBlockedStatus = () => {
+    setIsBlockedByYou(props?.isBlockedByYou);
+    setIsBlockedYou(props?.isBlockedYou);
+  };
+  useEffect(() => {
+    setTimeout(() => {
+      setBlockedStatus();
+    }, 0);
+  }, []); // run once only
+
   const [isBlurred, setIsBlurred] = useState(true);
 
   const [deleteAlert, setDeleteAlert] = useState({
@@ -61,22 +73,23 @@ const SingleChatHeader = (props: any) => {
       visible: false,
       message: LanguageKeys.loading,
     });
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const fetchData = async () => {
     ApiServices.getUsers({ page: 1, type: 9 })
       .then((res: any) => {
         if (res?.length) {
-          setIsBlurred(!!res?.find((user) => user?.id !== otherUserData?.id));
+          setIsBlurred(
+            !!res?.find((user: any) => user?.id !== otherUserData?.id)
+          );
         } else {
           setIsBlurred(true);
         }
       })
       .catch((err) => console.log({ err }));
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const onViewProfilePress = () => {
     navigation.navigate('UserProfile', { userData: otherUserData });
@@ -250,11 +263,6 @@ const SingleChatHeader = (props: any) => {
       from: 'chat',
     });
   };
-
-  useEffect(() => {
-    setIsBlockedByYou(props?.isBlockedByYou);
-    setIsBlockedYou(props?.isBlockedYou);
-  }, [props?.isBlockedByYou, props?.isBlockedYou]);
 
   const onChangeBlur = () => {
     const newParams = {

@@ -17,6 +17,18 @@ import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { ApiServices, StorageManager, useGlobalContext } from '../../services';
 
+type RenderFieldProps = {
+  heading: string;
+  description: string;
+};
+
+const RenderField = ({ heading, description }: RenderFieldProps) => (
+  <View style={Styles.fieldCon}>
+    <Text style={Styles.heading}>{heading}</Text>
+    <Text style={Styles.description}>{description}</Text>
+  </View>
+);
+
 const MembershipInfo = (props: any) => {
   const { setData, storageKeys } = StorageManager;
   const { currentUser, updateCurrentUser } = useGlobalContext();
@@ -24,13 +36,6 @@ const MembershipInfo = (props: any) => {
   const [loader, setLoader] = useState(true);
   const [membershipInfo, setMembershipInfo] = useState<any>(null);
   const isFocused = useIsFocused();
-
-  const RenderField = ({ heading, description }: any) => (
-    <View style={Styles.fieldCon}>
-      <Text style={Styles.heading}>{heading}</Text>
-      <Text style={Styles.description}>{description}</Text>
-    </View>
-  );
 
   const onUpdateToProPress = () => {
     props.navigation.navigate('ProFeaturesPromotion', {
@@ -59,7 +64,9 @@ const MembershipInfo = (props: any) => {
 
   useEffect(() => {
     if (isFocused) {
-      getMembershipInfo();
+      setTimeout(() => {
+        getMembershipInfo();
+      }, 0);
     }
   }, [isFocused]);
 

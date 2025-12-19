@@ -102,8 +102,8 @@ const AddWali = ({ navigation, route }: any) => {
       setFirstName(first_name);
       setLastName(last_name);
       setEmail(email);
-      const userRelation = relations?.find(
-        (rel) => rel?.id === relationship_id
+      const userRelation: any = relations?.find(
+        (rel: any) => rel?.id === relationship_id
       );
       setRelation({
         id: userRelation?.id,
@@ -174,9 +174,12 @@ const AddWali = ({ navigation, route }: any) => {
               );
             })
             .catch(async () => {
-              currentUser.guardian = params;
-              updateCurrentUser(currentUser);
-              await setData(storageKeys.USER, currentUser);
+              const updatedUser = {
+                ...currentUser,
+                guardian: params,
+              };
+              updateCurrentUser(updatedUser);
+              await setData(storageKeys.USER, updatedUser);
             });
 
           setAddWaliLoader(false);
@@ -224,9 +227,12 @@ const AddWali = ({ navigation, route }: any) => {
             );
           })
           .catch(async () => {
-            currentUser.guardian = null;
-            updateCurrentUser(currentUser);
-            await setData(storageKeys.USER, currentUser);
+            const updatedUser = {
+              ...currentUser,
+              guardian: null,
+            };
+            updateCurrentUser(updatedUser);
+            await setData(storageKeys.USER, updatedUser);
             setRelation(null);
           });
 

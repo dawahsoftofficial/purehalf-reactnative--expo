@@ -10,15 +10,20 @@ import Constants from '../../global/Constants';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 
+type RenderBankDetailProps = {
+  heading: string;
+  description: string;
+};
+
+const RenderBankDetail = ({ heading, description }: RenderBankDetailProps) => (
+  <View style={Styles.bankDetailContainer}>
+    <Text style={Styles.bankDetailHeading}>{heading}</Text>
+    <Text style={Styles.bankDetailDescription}>{description}</Text>
+  </View>
+);
+
 const BankTransfer = (props: any) => {
   const onArrowLeftPress = () => props.navigation.goBack();
-
-  const RenderBankDetail = (props: any) => (
-    <View style={Styles.bankDetailContainer}>
-      <Text style={Styles.bankDetailHeading}>{props.heading}</Text>
-      <Text style={Styles.bankDetailDescription}>{props.description}</Text>
-    </View>
-  );
   return (
     <Container style={Styles.container}>
       <View style={{ flex: 1 }}>

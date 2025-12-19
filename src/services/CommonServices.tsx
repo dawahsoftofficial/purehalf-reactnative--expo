@@ -1,5 +1,11 @@
 import { getApp } from '@react-native-firebase/app';
-import { get, getDatabase, ref } from '@react-native-firebase/database';
+import {
+  get,
+  getDatabase,
+  ref,
+  ServerValue,
+  set,
+} from '@react-native-firebase/database';
 import moment from 'moment';
 import { Platform } from 'react-native';
 import Purchases, { LOG_LEVEL } from 'react-native-purchases';
@@ -68,11 +74,15 @@ const getTimeStamp = async (): Promise<number> => {
   try {
     const firebaseApp = getApp();
     const database = getDatabase(firebaseApp);
-    const tempRef = ref(database, '.info/serverTimeOffset');
+    // Write a temporary value with ServerValue.TIMESTAMP and read it back
+    // to get the actual server timestamp
+    const tempRef = ref(database, '_temp/serverTime');
+    await set(tempRef, ServerValue.TIMESTAMP);
     const snapshot = await get(tempRef);
-    const offset = snapshot.val() || 0;
-    // Calculate server time: client time + offset
-    return Date.now() + offset;
+    const serverTime = snapshot.val();
+    // Clean up the temporary value
+    await set(tempRef, null);
+    return serverTime;
   } catch (error) {
     // Fallback to device time if Firebase is unavailable
     console.warn(

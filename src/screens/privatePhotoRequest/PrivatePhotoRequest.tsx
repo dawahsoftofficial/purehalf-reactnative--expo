@@ -10,6 +10,38 @@ import { Colors, Fonts } from '../../res';
 import { ApiServices } from '../../services';
 import RequestedList from './RequestedList';
 
+type TopBarButtonProps = {
+  selectedTopBarBtn: string;
+  onTopBarPress: (btn: string) => void;
+  btnType: 'othersRequests' | 'yourRequests';
+  label: string;
+};
+
+const RenderTopBarButton = ({
+  selectedTopBarBtn,
+  onTopBarPress,
+  btnType,
+  label,
+}: TopBarButtonProps) => (
+  <Ripple
+    style={{
+      ...Styles.topBarBtn,
+      backgroundColor:
+        selectedTopBarBtn === btnType ? Colors.theme : Colors.color2,
+    }}
+    onPress={() => onTopBarPress(btnType)}
+  >
+    <Text
+      style={{
+        ...Styles.topBarBtnTxt,
+        color: selectedTopBarBtn === btnType ? Colors.color2 : Colors.color1,
+      }}
+    >
+      {label}
+    </Text>
+  </Ripple>
+);
+
 const PrivatePhotoRequest = (props: any) => {
   const [loader, setLoader] = useState(true);
   const [selectedTopBarBtn, setSelectedTopBarBtn] = useState('othersRequests');
@@ -20,52 +52,6 @@ const PrivatePhotoRequest = (props: any) => {
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
 
   const onTopBarPress = (btn: any) => setSelectedTopBarBtn(btn);
-
-  const RenderOthersRequestedBtn = () => (
-    <Ripple
-      style={{
-        ...Styles.topBarBtn,
-        backgroundColor:
-          selectedTopBarBtn === 'othersRequests' ? Colors.theme : Colors.color2,
-      }}
-      onPress={onTopBarPress.bind(null, 'othersRequests')}
-    >
-      <Text
-        style={{
-          ...Styles.topBarBtnTxt,
-          color:
-            selectedTopBarBtn === 'othersRequests'
-              ? Colors.color2
-              : Colors.color1,
-        }}
-      >
-        {LanguageKeys.othersRequested}
-      </Text>
-    </Ripple>
-  );
-
-  const RenderYouRequested = () => (
-    <Ripple
-      style={{
-        ...Styles.topBarBtn,
-        backgroundColor:
-          selectedTopBarBtn === 'yourRequests' ? Colors.theme : Colors.color2,
-      }}
-      onPress={onTopBarPress.bind(null, 'yourRequests')}
-    >
-      <Text
-        style={{
-          ...Styles.topBarBtnTxt,
-          color:
-            selectedTopBarBtn === 'yourRequests'
-              ? Colors.color2
-              : Colors.color1,
-        }}
-      >
-        {LanguageKeys.youRequested}
-      </Text>
-    </Ripple>
-  );
 
   const hideLoader = () => setLoader(false);
 
@@ -135,8 +121,18 @@ const PrivatePhotoRequest = (props: any) => {
       <Header title="Private Photo request" navigation={props.navigation} />
       <View style={Styles.container}>
         <View style={Styles.topBarContainer}>
-          <RenderOthersRequestedBtn />
-          <RenderYouRequested />
+          <RenderTopBarButton
+            selectedTopBarBtn={selectedTopBarBtn}
+            onTopBarPress={onTopBarPress}
+            btnType="othersRequests"
+            label={LanguageKeys.othersRequested}
+          />
+          <RenderTopBarButton
+            selectedTopBarBtn={selectedTopBarBtn}
+            onTopBarPress={onTopBarPress}
+            btnType="yourRequests"
+            label={LanguageKeys.youRequested}
+          />
         </View>
         {loader ? (
           <AnimatedLoader text="Loading..." style={Styles.loader} />

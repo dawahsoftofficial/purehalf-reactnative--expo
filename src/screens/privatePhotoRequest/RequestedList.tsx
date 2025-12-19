@@ -24,6 +24,7 @@ const RequestedList = (props: any) => {
   const Rtl = CheckRtl();
   const navigation: any = useNavigation();
   const [ignore, forceUpdate] = useReducer((x) => x + 1, 0);
+  console.log('ignore', ignore);
   const [imageLoader, setImageLoader] = useState(false);
   const [modalLoader, setModalLoader] = useState({
     visible: false,

@@ -40,10 +40,10 @@ const SearchResults = (props: any) => {
 
   useEffect(() => {
     // Defer state updates to avoid cascading renders
-    Promise.resolve().then(() => {
-      onLoadMoreData();
-    });
-  }, [onLoadMoreData]);
+    // Promise.resolve().then(() => {
+    onLoadMoreData();
+    // });
+  }, []);
 
   return (
     <Container>
