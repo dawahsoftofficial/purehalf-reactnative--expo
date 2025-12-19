@@ -1,5 +1,6 @@
 const Colors = {
-  theme: '#8E0798',
+  theme: '#66298E',
+  themeLight: '#F5F5F5',
   color1: '#000',
   color2: '#fff',
   color3: '#F9F9F9',

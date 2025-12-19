@@ -533,6 +533,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     titleStyle?: TextStyle;
     counterWrapperStyle?: ViewStyle;
     counterTextStyle?: TextStyle;
+    accordionContainerStyle?: ViewStyle;
   }> = ({
     children,
     title,
@@ -540,6 +541,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     type,
     titleStyle,
     counterWrapperStyle,
+    accordionContainerStyle,
     counterTextStyle,
   }) => {
     const [expanded, setExpanded] = useState(false);
@@ -549,7 +551,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     };
 
     return (
-      <View style={Styles.accordContainer}>
+      <View style={[Styles.accordContainer, accordionContainerStyle]}>
         <Ripple style={Styles.accordHeader} onPress={toggleItem}>
           <View style={Styles.headerListLeftWrapper}>
             <View
@@ -666,12 +668,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       >
         <View style={Styles.modalContent}>
           <View style={Styles.modalHeader}>
-            <TouchableOpacity
-              onPress={() => setHeaderModal(false)}
-              style={Styles.modalCloseBtn}
-            >
-              <Entypo name="cross" size={wp(6)} />
-            </TouchableOpacity>
             <View style={Styles.modalHeaderContent}>
               <Text style={Styles.modalHeaderTitle}>
                 {t(LanguageKeys.myAccount)}
@@ -680,6 +676,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                 {t(LanguageKeys.profileComplete)}
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={() => setHeaderModal(false)}
+              style={Styles.modalCloseBtn}
+            >
+              <Entypo name="cross" size={wp(6)} />
+            </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={Styles.modalBody}>
@@ -714,6 +716,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               {!currentUser?.is_approved ? (
                 <AccordionItem
                   title={t(LanguageKeys.profileInReview)}
+                  accordionContainerStyle={{ marginBottom: 0 }}
                   count={
                     <MaterialCommunityIcons
                       name="information-variant"
@@ -740,6 +743,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   titleStyle={{ color: Colors.color10 }}
                   counterWrapperStyle={{ borderColor: Colors.color10 }}
                   counterTextStyle={{ color: Colors.color10 }}
+                  accordionContainerStyle={{ marginBottom: 0 }}
                 >
                   <View style={Styles.completeProfileWrapper}>
                     <Text style={Styles.completeProfileText}>
@@ -845,23 +849,24 @@ const Styles = StyleSheet.create({
     right: -7,
   },
   headerCounterText: {
-    fontFamily: Fonts.APPFONT_S,
+    fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small1,
-    color: Colors.white,
+    color: Colors.color2,
   },
   modal: {
     margin: 0,
+    // justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.color2,
     borderRadius: 10,
-    padding: 10,
+    padding: hp(2),
     maxHeight: hp(80),
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: hp(2),
   },
   modalCloseBtn: {
@@ -878,17 +883,17 @@ const Styles = StyleSheet.create({
   },
   modalHeaderSubTitle: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
-    color: Colors.color26,
+    fontSize: Typography.small,
+    color: Colors.color28,
   },
   modalBody: {
-    paddingBottom: hp(2),
+    // paddingBottom: hp(2),
   },
   accordContainer: {
     marginBottom: hp(2),
     borderRadius: wp(2),
     borderWidth: 1,
-    borderColor: Colors.color46,
+    borderColor: Colors.themeLight,
     overflow: 'hidden',
   },
   accordHeader: {

@@ -1,8 +1,16 @@
 import { getApp } from '@react-native-firebase/app';
 import {
   type DataSnapshot,
+  equalTo,
+  get,
   getDatabase,
+  onChildAdded,
+  onChildChanged,
+  onChildRemoved,
+  orderByChild,
   type Query,
+  query,
+  ref,
 } from '@react-native-firebase/database';
 
 const firebaseApp = getApp();
@@ -28,10 +36,12 @@ let activeListeners: {
  * Creates a query reference for conversations filtered by user ID
  */
 const getConversationsQuery = (userId: string): Query => {
-  return database
-    .ref('conversations')
-    .orderByChild(`convDetails/participantsDeleteFlag/${userId}/deleteStatus`)
-    .equalTo(false);
+  const conversationsRef = ref(database, 'conversations');
+  return query(
+    conversationsRef,
+    orderByChild(`convDetails/participantsDeleteFlag/${userId}/deleteStatus`),
+    equalTo(false)
+  );
 };
 
 type StartConversationsListenerParams = {
@@ -48,49 +58,56 @@ type StartConversationsListenerParams = {
 export const startConversationsListener = (
   params: StartConversationsListenerParams
 ): (() => void) => {
-  const { userId, onChildAdded, onChildChanged, onChildRemoved } = params;
+  const {
+    userId,
+    onChildAdded: onChildAddedCallback,
+    onChildChanged: onChildChangedCallback,
+    onChildRemoved: onChildRemovedCallback,
+  } = params;
 
   // Clean up any existing listeners first
   stopConversationsListener();
 
-  const query = getConversationsQuery(userId);
+  const conversationsQuery = getConversationsQuery(userId);
 
   // Set up child_added listener
-  const childAddedUnsubscribe = query.on(
-    'child_added',
+  const childAddedUnsubscribe = onChildAdded(
+    conversationsQuery,
     (snapshot: DataSnapshot) => {
       if (!snapshot || !snapshot.key) {
         return;
       }
       const conversationId = snapshot.key;
       const conversationData = snapshot.val();
-      onChildAdded(conversationId, conversationData);
+      onChildAddedCallback(conversationId, conversationData);
     }
   );
 
   // Set up child_changed listener
-  const childChangedUnsubscribe = query.on(
-    'child_changed',
+  const childChangedUnsubscribe = onChildChanged(
+    conversationsQuery,
     (snapshot: DataSnapshot) => {
       if (!snapshot || !snapshot.key) {
         return;
       }
       const conversationId = snapshot.key;
       const conversationData = snapshot.val();
-      onChildChanged(conversationId, conversationData);
+      onChildChangedCallback(conversationId, conversationData);
     }
   );
 
   // Set up child_removed listener (no query filter needed)
-  const childRemovedUnsubscribe = database
-    .ref('conversations')
-    .on('child_removed', (snapshot: DataSnapshot) => {
+  const conversationsRef = ref(database, 'conversations');
+  const childRemovedUnsubscribe = onChildRemoved(
+    conversationsRef,
+    (snapshot: DataSnapshot) => {
       if (!snapshot || !snapshot.key) {
         return;
       }
       const conversationId = snapshot.key;
-      onChildRemoved(conversationId);
-    });
+      onChildRemovedCallback(conversationId);
+    }
+  );
 
   // Store unsubscribe functions
   activeListeners = {
@@ -130,6 +147,12 @@ export const getConversationsOnce = (
   userId: string,
   onValue: ValueCallback
 ): void => {
-  const query = getConversationsQuery(userId);
-  query.once('value', onValue);
+  const conversationsQuery = getConversationsQuery(userId);
+  get(conversationsQuery)
+    .then((snapshot: DataSnapshot) => {
+      onValue(snapshot);
+    })
+    .catch((error) => {
+      console.error('Error fetching conversations:', error);
+    });
 };

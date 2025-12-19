@@ -590,8 +590,8 @@ const Header = ({
           style={[
             Styles.navButton,
             {
-              left: Rtl ? undefined : wp(2),
-              right: Rtl ? wp(2) : undefined,
+              left: Rtl ? undefined : wp(4),
+              right: Rtl ? wp(4) : undefined,
             },
           ]}
           hitSlop={20}
@@ -743,7 +743,7 @@ export default Header;
 
 const Styles = StyleSheet.create({
   container: {
-    height: height * 0.4,
+    height: height * 0.45,
     // marginBottom: hp(3),
     justifyContent: 'flex-end',
   },
@@ -763,8 +763,8 @@ const Styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.color8,
     position: 'absolute',
-    left: wp(2),
-    top: wp(2),
+    left: wp(4),
+    top: wp(4),
     zIndex: 10,
   },
   surface: {
@@ -776,7 +776,6 @@ const Styles = StyleSheet.create({
   },
   profileInfo: {
     flex: 1,
-    paddingHorizontal: wp(2),
   },
   nameWrapper: {
     alignItems: 'center',

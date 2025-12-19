@@ -1,6 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
-import { getDatabase } from '@react-native-firebase/database';
+import {
+  getDatabase,
+  onChildAdded,
+  onChildChanged,
+  orderByChild,
+  query,
+  ref,
+  startAt,
+} from '@react-native-firebase/database';
 import _ from 'lodash';
 import moment from 'moment';
 import React, { useEffect, useReducer, useRef, useState } from 'react';
@@ -220,11 +228,19 @@ const SingleChat = (props: any) => {
   useEffect(() => {
     if (conversationId.length !== 0) {
       setOpenedConversation(conversationId);
-      const onChildChanged = database
-        .ref(`/conversations/${conversationId}/messages`)
-        .orderByChild('createdAt')
-        .startAt(chatOpenTimeStamp)
-        .on('child_changed', (snapshot: any) => {
+      const messagesDatabaseRef = ref(
+        database,
+        `/conversations/${conversationId}/messages`
+      );
+      const messagesQuery = query(
+        messagesDatabaseRef,
+        orderByChild('createdAt'),
+        startAt(chatOpenTimeStamp)
+      );
+
+      const unsubscribeChildChanged = onChildChanged(
+        messagesQuery,
+        (snapshot: any) => {
           const updatedMessage = snapshot.val();
           const messageIndex = messagesRef?.current.findIndex(
             (message: any) => message.id === updatedMessage.id
@@ -235,13 +251,16 @@ const SingleChat = (props: any) => {
           setMessages(messagesRef.current);
           setConversationData(conversationData);
           forceUpdate();
-        });
+        }
+      );
 
-      const onBlockChanged = database
-        .ref(
-          `/conversations/${conversationId}/convDetails/participantsBlockFlag`
-        )
-        .on('child_changed', (snapshot: any) => {
+      const blockFlagRef = ref(
+        database,
+        `/conversations/${conversationId}/convDetails/participantsBlockFlag`
+      );
+      const unsubscribeBlockChanged = onChildChanged(
+        blockFlagRef,
+        (snapshot: any) => {
           setConversationData((prevConversationData: any) => {
             const updatedConversationData = { ...prevConversationData };
             updatedConversationData.participantsBlockFlag[snapshot.key] =
@@ -262,13 +281,12 @@ const SingleChat = (props: any) => {
             return updatedConversationData;
           });
           forceUpdate();
-        });
+        }
+      );
 
-      const onChildAdd = database
-        .ref(`/conversations/${conversationId}/messages`)
-        .orderByChild('createdAt')
-        .startAt(chatOpenTimeStamp)
-        .on('child_added', (snapshot: any) => {
+      const unsubscribeChildAdded = onChildAdded(
+        messagesQuery,
+        (snapshot: any) => {
           const newMessage = snapshot.val();
           if (newMessage?.sender !== currentUser?.id) {
             if (newMessage?.blockedParticipants?.[otherUserData?.id] === true) {
@@ -288,21 +306,17 @@ const SingleChat = (props: any) => {
               }
             }
           }
-        });
+        }
+      );
+
       const clearOpenedConvId = async () => {
         await setData(storageKeys.OPENED_CONVERSATION_ID, null);
       };
 
       return () => {
-        database
-          .ref(`/conversations/${conversationId}/messages`)
-          .off('child_changed', onChildChanged);
-        database
-          .ref(`/conversations/${conversationId}/messages`)
-          .off('child_added', onChildAdd);
-        database
-          .ref(`/conversations/${conversationId}/convDetails/blocked`)
-          .off('child_changed', onBlockChanged);
+        unsubscribeChildChanged();
+        unsubscribeChildAdded();
+        unsubscribeBlockChanged();
         clearOpenedConvId();
       };
     }
@@ -685,7 +699,26 @@ const SingleChat = (props: any) => {
     }
   };
 
-  const renderMessages = ({ item }: any) => {
+  const getLastSeenMessageIndex = () => {
+    const currentUserID = currentUser?.id;
+    const otherUserId = otherUserData?.id;
+
+    // Find the last message sent by current user that was seen by the receiver
+    // Since list is inverted, we need to find the first (most recent) seen message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const message = messages[i];
+      if (
+        message?.sender === currentUserID &&
+        message?.readBy?.[otherUserId]?.seen === true
+      ) {
+        // Return the index as it appears in the inverted list
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  const renderMessages = ({ item, index }: any) => {
     const itemSender = item?.sender;
     const currentUserID = currentUser?.id;
     const guardianUserId = currentUser?.user?.id;
@@ -694,6 +727,8 @@ const SingleChat = (props: any) => {
 
     const isCurrentUser = itemSender === currentUserID;
     const otherUserReadBy = itemReadBy?.[otherUserId];
+    const lastSeenMessageIndex = getLastSeenMessageIndex();
+    const isLastSeenMessage = isCurrentUser && index === lastSeenMessageIndex;
 
     const isGuardian =
       itemSender === 'guardian' || itemSender === guardianUserId;
@@ -726,7 +761,7 @@ const SingleChat = (props: any) => {
           </Text>
           {isCurrentUser && otherUserReadBy?.seen === true && (
             <Ionicons
-              name="md-checkmark-done"
+              name="checkmark-done"
               color={Colors.color2}
               size={wp(5)}
               style={Styles.seenIcon}
@@ -745,6 +780,20 @@ const SingleChat = (props: any) => {
                 <Text style={Styles.sendingText}>Sending</Text>
               </View>
             )}
+          </View>
+        )}
+        {isLastSeenMessage && otherUserData?.image && (
+          <View
+            style={[
+              Styles.seenProfileImageContainer,
+              { alignSelf: isCurrentUser ? 'flex-end' : 'flex-start' },
+            ]}
+          >
+            <Image
+              source={{ uri: otherUserData.image }}
+              style={Styles.seenProfileImage}
+              resizeMode="cover"
+            />
           </View>
         )}
         <View>
@@ -1139,5 +1188,17 @@ const Styles = StyleSheet.create({
     width: wp(91),
     height: hp(6.9),
     borderRadius: 30,
+  },
+  seenProfileImageContainer: {
+    marginTop: hp(0.5),
+    marginRight: wp(1),
+    marginLeft: wp(1),
+  },
+  seenProfileImage: {
+    width: wp(4),
+    height: wp(4),
+    borderRadius: wp(2),
+    borderWidth: 1,
+    borderColor: Colors.color2,
   },
 });

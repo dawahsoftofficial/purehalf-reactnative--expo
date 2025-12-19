@@ -122,6 +122,7 @@ const Messages = (props: any) => {
 
   const renderConversations = ({ item }: any) => {
     const convDetails = item?.convDetails;
+    console.log('convDetails', JSON.stringify(convDetails, null, 2));
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
 
@@ -141,6 +142,28 @@ const Messages = (props: any) => {
     if (item?.messages) {
       hideLatestMessage =
         Object.keys(item?.messages).length === 0 ? true : false;
+    }
+
+    // Check if last message was sent by current user and seen by receiver
+    let isLastMessageSeen = false;
+    if (!hideLatestMessage && item?.messages) {
+      const messagesArray = Object.values(item.messages);
+      if (messagesArray.length > 0) {
+        // Get the last message (most recent)
+        const sortedMessages = _.orderBy(
+          messagesArray,
+          ['createdAt'],
+          ['desc']
+        );
+        const lastMessage: any = sortedMessages[0];
+
+        // Check if last message was sent by current user
+        if (lastMessage?.sender === currentUserId) {
+          // Check if receiver has seen it
+          const otherUserId = otherUserData?.id;
+          isLastMessageSeen = lastMessage?.readBy?.[otherUserId]?.seen === true;
+        }
+      }
     }
 
     return (
@@ -198,18 +221,49 @@ const Messages = (props: any) => {
                 {formattedDate}
               </ReactText>
             )}
-            {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
-              <View
-                style={[
-                  Styles.unReadCountCon,
-                  { alignSelf: Rtl ? 'flex-start' : 'flex-end' },
-                ]}
-              >
-                <ReactText numberOfLines={1} style={Styles.unReadCount}>
-                  {unReadCount}
-                </ReactText>
-              </View>
-            ) : null}
+            <View
+              style={[
+                Styles.timeAndSeenCon,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
+                <View
+                  style={[
+                    Styles.unReadCountCon,
+                    {
+                      alignSelf: Rtl ? 'flex-start' : 'flex-end',
+                      marginRight: Rtl ? 0 : wp(1.5),
+                      marginLeft: Rtl ? wp(1.5) : 0,
+                    },
+                  ]}
+                >
+                  <ReactText numberOfLines={1} style={Styles.unReadCount}>
+                    {unReadCount}
+                  </ReactText>
+                </View>
+              ) : null}
+              {isLastMessageSeen &&
+              otherUserData?.image &&
+              otherUserData?.image?.length !== 0 &&
+              !isBlockedYou ? (
+                <View
+                  style={[
+                    Styles.seenProfileIconContainer,
+                    {
+                      marginRight: Rtl ? 0 : wp(1),
+                      marginLeft: Rtl ? wp(1) : 0,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={{ uri: otherUserData.image }}
+                    style={Styles.seenProfileIcon}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
       </Ripple>
@@ -234,7 +288,7 @@ const Messages = (props: any) => {
     );
   };
 
-  const keyExtractor = (item: any, index: any) => item?.convDetails?.id;
+  const keyExtractor = (item: any) => item?.convDetails?.id;
   const getItemCount = () => conversations?.length;
   const getItem = (data: any, index: any) => data[index];
 
@@ -257,23 +311,49 @@ const Messages = (props: any) => {
       )}
       <Header
         title={LanguageKeys.messages}
-        customConponent={() =>
-          currentUser?.role === 'guardian' && (
-            <View style={[Styles.gaurdianHeader]}>
-              <OptionsMenu
-                button={Images.verticalDots}
-                buttonStyle={Styles.menuBtn}
-                destructiveIndex={2}
-                options={[
-                  t(LanguageKeys.changePassword),
-                  t(LanguageKeys.logOut),
-                  t(LanguageKeys.cancel),
-                ]}
-                actions={[onChangePasswordPress, onLogoutPress]}
-              />
-            </View>
-          )
-        }
+        customConponent={() => (
+          <View
+            style={[
+              Styles.headerRightContainer,
+              { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
+          >
+            {currentUser?.chat_credits !== undefined &&
+              currentUser?.chat_credits !== null && (
+                <View
+                  style={[
+                    Styles.chatCreditsContainer,
+                    {
+                      marginRight: Rtl ? 0 : wp(2),
+                      marginLeft: Rtl ? wp(2) : 0,
+                    },
+                  ]}
+                >
+                  <Text style={Styles.chatCreditsLabel}>
+                    {LanguageKeys.chatCredits}:
+                  </Text>
+                  <Text style={Styles.chatCreditsValue}>
+                    {currentUser?.chat_credits}
+                  </Text>
+                </View>
+              )}
+            {currentUser?.role === 'guardian' && (
+              <View style={[Styles.gaurdianHeader]}>
+                <OptionsMenu
+                  button={Images.verticalDots}
+                  buttonStyle={Styles.menuBtn}
+                  destructiveIndex={2}
+                  options={[
+                    t(LanguageKeys.changePassword),
+                    t(LanguageKeys.logOut),
+                    t(LanguageKeys.cancel),
+                  ]}
+                  actions={[onChangePasswordPress, onLogoutPress]}
+                />
+              </View>
+            )}
+          </View>
+        )}
       />
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
@@ -448,10 +528,35 @@ const Styles = StyleSheet.create({
     width: width * 0.05,
     height: width * 0.05 * 1,
   },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  chatCreditsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.theme,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.8),
+    borderRadius: wp(4),
+  },
+  chatCreditsLabel: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small,
+    includeFontPadding: false,
+    marginRight: wp(1),
+  },
+  chatCreditsValue: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small1,
+    includeFontPadding: false,
+  },
   gaurdianHeader: {
-    position: 'absolute',
     paddingHorizontal: wp(1),
-    right: 0,
   },
   menuBtn: {
     width: wp(8),
@@ -467,5 +572,24 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small2,
     fontFamily: Fonts.APPFONT_R,
     color: Colors.color2,
+  },
+  timeAndSeenCon: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: hp(0.5),
+  },
+  seenProfileIconContainer: {
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
+    borderWidth: 1,
+    borderColor: Colors.color2,
+    overflow: 'hidden',
+    backgroundColor: Colors.color18,
+  },
+  seenProfileIcon: {
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
   },
 });

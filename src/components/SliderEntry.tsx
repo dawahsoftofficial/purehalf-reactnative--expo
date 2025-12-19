@@ -1,7 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { t } from 'i18next';
 import moment from 'moment';
-import PropTypes from 'prop-types';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -228,11 +227,13 @@ const SliderEntry = ({
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
           style={Styles.image}
+          resizeMode="contain"
         />
       ) : (
         <Image
           source={Images.userPlaceholderVertical}
           style={{ ...Styles.image, height: '100%' }}
+          resizeMode="contain"
         />
       )}
       {profileImageLoader && (
@@ -374,13 +375,6 @@ const SliderEntry = ({
       />
     </View>
   );
-};
-
-SliderEntry.propTypes = {
-  data: PropTypes.object.isRequired,
-  even: PropTypes.bool,
-  parallax: PropTypes.bool,
-  parallaxProps: PropTypes.object,
 };
 
 export default SliderEntry;
