@@ -29,7 +29,9 @@ const Picker = (props: any) => {
   } = props;
 
   useEffect(() => {
-    setData(props?.data);
+    setTimeout(() => {
+      setData(props?.data);
+    }, 0);
   }, [props?.data]);
 
   const renderList = ({ item }: any) => {

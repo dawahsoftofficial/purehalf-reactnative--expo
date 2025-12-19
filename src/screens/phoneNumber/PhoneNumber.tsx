@@ -79,7 +79,10 @@ const PhoneNumber = (props: any) => {
   const onLoggedIn = async (currentUser: any) => {
     await setRevenueCat(currentUser?.id);
     const user = await ApiServices.getCurrentUserDetail();
-    const obj = { ...currentUser, ...user };
+    const obj = {
+      ...(currentUser as Record<string, unknown>),
+      ...(user as Record<string, unknown>),
+    };
     updateCurrentUser(obj);
     if (currentUser?.results?.first_name) {
       if (

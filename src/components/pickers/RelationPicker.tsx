@@ -29,7 +29,7 @@ const RelationPicker = (props: any) => {
     setRelations,
   } = props;
   const [relationModalVisible, setRelationModalVisible] = useState(false);
-  const [activeRelation, setActiveRelation] = useState(null);
+  const [activeRelation, setActiveRelation] = useState<any>(null);
 
   useEffect(() => {
     setActiveRelation(value);

@@ -28,9 +28,9 @@ const DeletePicker = (props: any) => {
 
   const onPickerButtonPress = (item: any) => {
     if (item?.value === 'delete') {
-      props?.onDeletePress && props.onDeletePress();
+      if (props?.onDeletePress) props.onDeletePress();
     } else {
-      props?.onCancelPress && props.onCancelPress();
+      if (props?.onCancelPress) props.onCancelPress();
     }
   };
 

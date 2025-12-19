@@ -181,11 +181,10 @@ const UserInput = (props: any) => {
   }, [getData, storageKeys]);
 
   useEffect(() => {
-    // Defer state updates to avoid cascading renders
-    // Promise.resolve().then(() => {
-    setData();
-    // });
-    getLanguages();
+    setTimeout(() => {
+      setData();
+      getLanguages();
+    }, 0);
   }, []);
 
   const onLogoutPress = async () => {

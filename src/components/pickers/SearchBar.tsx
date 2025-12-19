@@ -14,11 +14,15 @@ const SearchBar = (props: any) => {
 
   const onChangeText = (text: any) => {
     setSearchValue(text);
-    props?.onChangeText && props?.onChangeText(text);
+    if (props?.onChangeText) {
+      props.onChangeText(text);
+    }
   };
 
   const onSearchPress = () => {
-    props?.onChangeText && props?.onChangeText(searchValue);
+    if (props?.onChangeText) {
+      props.onChangeText(searchValue);
+    }
   };
 
   return (

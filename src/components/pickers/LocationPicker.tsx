@@ -33,13 +33,17 @@ const LocationPicker = (props: any) => {
   const onSelect = (data: any, details: any) => {
     setInputText('');
     setInputFocused(false);
-    props?.onSelect && props.onSelect(data, details);
+    if (props?.onSelect) {
+      props.onSelect(data, details);
+    }
   };
 
   const onClose = () => {
     setInputText('');
     setInputFocused(false);
-    props?.onClose && props.onClose();
+    if (props?.onClose) {
+      props.onClose();
+    }
   };
 
   return (

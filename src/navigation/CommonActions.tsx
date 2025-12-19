@@ -95,8 +95,11 @@ const CommonActionsFun = (props: CommonActionProps) => {
       });
     };
 
-    const onChildAdded = (conversationId: string, conversationData: any) => {
-      if (!conversationData) {
+    const onChildAdded = (
+      conversationId: string | null,
+      conversationData: any
+    ) => {
+      if (!conversationData || !conversationId) {
         return;
       }
 
@@ -128,9 +131,13 @@ const CommonActionsFun = (props: CommonActionProps) => {
       });
     };
 
-    const onChildChanged = (conversationId: string, conversationData: any) => {
+    const onChildChanged = (
+      conversationId: string | null,
+      conversationData: any
+    ) => {
       if (
         !conversationData ||
+        !conversationId ||
         conversationData?.convDetails?.participantsDeleteFlag?.[userId]
           ?.deleteStatus === true
       ) {
@@ -157,7 +164,7 @@ const CommonActionsFun = (props: CommonActionProps) => {
       });
     };
 
-    const onChildRemoved = (conversationId: string) => {
+    const onChildRemoved = (conversationId: string | null) => {
       if (conversationId) {
         getData(storageKeys.CONVERSATIONS).then(async (res: any) => {
           if (res && res?.length !== 0) {

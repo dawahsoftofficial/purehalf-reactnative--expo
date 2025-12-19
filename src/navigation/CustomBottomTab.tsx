@@ -1,5 +1,4 @@
-import _ from 'lodash';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { hasNotch } from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
@@ -18,25 +17,25 @@ const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
     return null;
   }
 
-  useEffect(() => {
-    const totalUnreadMessages = _.reduce(
-      conversations,
-      (sum, conv) => {
-        if (
-          !conv?.convDetails?.participantsBlockFlag?.[currentUser?.id]
-            ?.blockStatus
-        ) {
-          const convUnreadCount =
-            conv.convDetails.unReadCount[currentUser?.id] || 0;
-          return sum + convUnreadCount;
-        } else {
-          return sum;
-        }
-      },
-      0
-    );
-    setTotalUnReadMessages(totalUnreadMessages);
-  }, [updateConversations]);
+  // useEffect(() => {
+  //   const totalUnreadMessages = _.reduce(
+  //     conversations,
+  //     (sum, conv) => {
+  //       if (
+  //         !conv?.convDetails?.participantsBlockFlag?.[currentUser?.id]
+  //           ?.blockStatus
+  //       ) {
+  //         const convUnreadCount =
+  //           conv.convDetails.unReadCount[currentUser?.id] || 0;
+  //         return sum + convUnreadCount;
+  //       } else {
+  //         return sum;
+  //       }
+  //     },
+  //     0
+  //   );
+  //   setTotalUnReadMessages(totalUnreadMessages);
+  // }, [updateConversations]);
 
   return (
     <View style={[Styles.tabContainer, Styles.shadow]}>

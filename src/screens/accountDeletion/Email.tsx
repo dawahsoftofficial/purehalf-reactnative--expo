@@ -13,7 +13,7 @@ const Email = () => {
   const { currentUser } = useGlobalContext();
   const navigation: any = useNavigation();
   const [loading, setLoading] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState(currentUser?.email);
+  const [phoneNumber] = useState(currentUser?.email);
   const [loadingMessage] = useState('Submitting...');
   const Rtl = CheckRtl();
 

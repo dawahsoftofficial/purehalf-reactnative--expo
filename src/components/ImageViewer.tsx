@@ -34,8 +34,8 @@ const ImageViewer = (props: any) => {
     message: LanguageKeys.loading,
   });
 
-  const sliderRef: any = useRef();
-  const dotsRef: any = useRef();
+  const sliderRef: any = useRef<any>(null);
+  const dotsRef: any = useRef<any>(null);
 
   const [privacyProtectedAlertVisible, setPrivacyProtectedAlertVisible] =
     useState(false);
@@ -58,8 +58,8 @@ const ImageViewer = (props: any) => {
     ApiServices.privatePhotoAccessRequest(userData?.id)
       .then(() => {
         setRequestSentAlertVisible(true);
-        userData.photo_access_action = 0;
-        setUserData(userData);
+        const updatedUserData = { ...userData, photo_access_action: 0 };
+        setUserData(updatedUserData);
         hideLoader();
       })
       .catch(hideLoader);
@@ -146,10 +146,13 @@ const ImageViewer = (props: any) => {
   };
 
   useEffect(() => {
-    getPhotos();
+    const timer = setTimeout(() => {
+      getPhotos();
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
-  const renderList = ({ item, index }: any) => {
+  const renderList = ({ item }: any) => {
     return (
       <View style={Styles.itemContainer}>
         {item === 'privateImage' ? (
@@ -201,7 +204,7 @@ const ImageViewer = (props: any) => {
     </View>
   );
 
-  const renderDots = ({ item, index }: any) => {
+  const renderDots = ({ index }: any) => {
     return index === activeIndex.index ? (
       <Animation style={Styles.activeDot} animation={'zoomIn'} duration={500} />
     ) : (

@@ -9,7 +9,7 @@ import Text from '../Text';
 import AlertContainer from './AlertContainer';
 
 const RequestSentAlert = (props: any) => {
-  const { visible = false, onClose = () => null, onPress = () => null } = props;
+  const { visible = false, onClose = () => null } = props;
   return (
     <AlertContainer visible={visible} onClose={onClose}>
       <View style={Styles.contentContainer}>

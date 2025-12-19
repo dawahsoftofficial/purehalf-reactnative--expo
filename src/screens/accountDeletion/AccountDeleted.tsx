@@ -36,7 +36,7 @@ const AccountDeleted = (props: any) => {
           })
         );
       });
-    } catch (error) {
+    } catch {
       await deleteAll().then(async () => {
         updateCurrentUser(null);
         await setData(storageKeys.LANGUAGE, language);

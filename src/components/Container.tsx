@@ -1,11 +1,9 @@
 import React from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
-import DeviceInfo from 'react-native-device-info';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors } from '../res';
 
-const hasNotch = DeviceInfo.hasNotch();
 const Container = (props: any) => {
   const {
     style = null,

@@ -102,7 +102,10 @@ function App() {
               } else {
                 const user = await ApiServices.getCurrentUserDetail();
                 // console.log("UPdated Userrr", user)
-                updateCurrentUser({ ...user, ...res });
+                updateCurrentUser({
+                  ...(user as Record<string, unknown>),
+                  ...(res as Record<string, unknown>),
+                });
                 setRevenueCat(res?.id);
                 setInitialRouteName('BottomTab');
               }

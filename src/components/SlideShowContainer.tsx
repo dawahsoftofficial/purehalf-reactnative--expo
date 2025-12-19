@@ -41,7 +41,6 @@ const SlideShowContainer = (props: any) => {
         data={images}
         scrollAnimationDuration={10000}
         renderItem={RenderSliderImages}
-        panGestureHandlerProps={{ enableTrackpadTwoFingerGesture: false }}
       />
       <View style={Styles.container}>{props.children}</View>
     </View>

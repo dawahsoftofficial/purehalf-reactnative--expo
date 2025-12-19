@@ -55,6 +55,7 @@ type UserDetail = {
   weight_scale?: string;
   weight?: number;
   personality_id_value?: unknown;
+  gender?: string;
 };
 
 type User = {
@@ -576,7 +577,6 @@ const Profile = ({
                       <InterestAndHobbyCardStatic
                         data={matchingData}
                         headerHeading={LanguageKeys.matching}
-                        onEditPress={onInterestCardEdit}
                         fromUserProfile={fromUserProfile}
                         matchPercentage={userData?.match_percentage}
                       />

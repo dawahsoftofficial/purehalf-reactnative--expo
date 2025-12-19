@@ -21,7 +21,7 @@ const PhoneNumber = () => {
   const { currentUser } = useGlobalContext();
   const navigation: any = useNavigation();
   const [loading, setLoading] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState(
+  const [phoneNumber] = useState(
     currentUser?.phone_number?.slice(3, currentUser?.phone_number?.length)
   );
   const [loadingMessage] = useState('Submitting...');
@@ -41,10 +41,6 @@ const PhoneNumber = () => {
   const onSelectCountry = (item: any) => {
     setSelectedCountry(item);
     setCountryPickerVisible(false);
-  };
-
-  const onChangePhoneNumber = (text: any) => {
-    setPhoneNumber(text);
   };
 
   const onContinuePress = () => {
