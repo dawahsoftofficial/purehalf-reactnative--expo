@@ -122,6 +122,7 @@ const Messages = (props: any) => {
 
   const renderConversations = ({ item }: any) => {
     const convDetails = item?.convDetails;
+    console.log('convDetails', JSON.stringify(convDetails, null, 2));
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
 
@@ -141,6 +142,28 @@ const Messages = (props: any) => {
     if (item?.messages) {
       hideLatestMessage =
         Object.keys(item?.messages).length === 0 ? true : false;
+    }
+
+    // Check if last message was sent by current user and seen by receiver
+    let isLastMessageSeen = false;
+    if (!hideLatestMessage && item?.messages) {
+      const messagesArray = Object.values(item.messages);
+      if (messagesArray.length > 0) {
+        // Get the last message (most recent)
+        const sortedMessages = _.orderBy(
+          messagesArray,
+          ['createdAt'],
+          ['desc']
+        );
+        const lastMessage: any = sortedMessages[0];
+
+        // Check if last message was sent by current user
+        if (lastMessage?.sender === currentUserId) {
+          // Check if receiver has seen it
+          const otherUserId = otherUserData?.id;
+          isLastMessageSeen = lastMessage?.readBy?.[otherUserId]?.seen === true;
+        }
+      }
     }
 
     return (
@@ -198,18 +221,49 @@ const Messages = (props: any) => {
                 {formattedDate}
               </ReactText>
             )}
-            {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
-              <View
-                style={[
-                  Styles.unReadCountCon,
-                  { alignSelf: Rtl ? 'flex-start' : 'flex-end' },
-                ]}
-              >
-                <ReactText numberOfLines={1} style={Styles.unReadCount}>
-                  {unReadCount}
-                </ReactText>
-              </View>
-            ) : null}
+            <View
+              style={[
+                Styles.timeAndSeenCon,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
+                <View
+                  style={[
+                    Styles.unReadCountCon,
+                    {
+                      alignSelf: Rtl ? 'flex-start' : 'flex-end',
+                      marginRight: Rtl ? 0 : wp(1.5),
+                      marginLeft: Rtl ? wp(1.5) : 0,
+                    },
+                  ]}
+                >
+                  <ReactText numberOfLines={1} style={Styles.unReadCount}>
+                    {unReadCount}
+                  </ReactText>
+                </View>
+              ) : null}
+              {isLastMessageSeen &&
+              otherUserData?.image &&
+              otherUserData?.image?.length !== 0 &&
+              !isBlockedYou ? (
+                <View
+                  style={[
+                    Styles.seenProfileIconContainer,
+                    {
+                      marginRight: Rtl ? 0 : wp(1),
+                      marginLeft: Rtl ? wp(1) : 0,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={{ uri: otherUserData.image }}
+                    style={Styles.seenProfileIcon}
+                    resizeMode="cover"
+                  />
+                </View>
+              ) : null}
+            </View>
           </View>
         </View>
       </Ripple>
@@ -234,7 +288,7 @@ const Messages = (props: any) => {
     );
   };
 
-  const keyExtractor = (item: any, index: any) => item?.convDetails?.id;
+  const keyExtractor = (item: any) => item?.convDetails?.id;
   const getItemCount = () => conversations?.length;
   const getItem = (data: any, index: any) => data[index];
 
@@ -518,5 +572,24 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small2,
     fontFamily: Fonts.APPFONT_R,
     color: Colors.color2,
+  },
+  timeAndSeenCon: {
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: hp(0.5),
+  },
+  seenProfileIconContainer: {
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
+    borderWidth: 1,
+    borderColor: Colors.color2,
+    overflow: 'hidden',
+    backgroundColor: Colors.color18,
+  },
+  seenProfileIcon: {
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
   },
 });
