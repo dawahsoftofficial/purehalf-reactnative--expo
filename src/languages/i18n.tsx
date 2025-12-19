@@ -1,4 +1,3 @@
-//@ts-nocheck
 import i18next from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
@@ -9,7 +8,7 @@ import Urdu from './Urdu.json';
 const { getData, storageKeys, setData } = StorageManager;
 
 const languageDetector = {
-  type: 'languageDetector',
+  type: 'languageDetector' as const,
   async: true,
   detect: async (language: any) => {
     getData(storageKeys.LANGUAGE)
@@ -33,7 +32,7 @@ i18next
   .use(languageDetector)
   .use(initReactI18next)
   .init({
-    compatibilityJSON: 'v3',
+    compatibilityJSON: 'v4',
     resources: {
       en: English,
       ur: Urdu,

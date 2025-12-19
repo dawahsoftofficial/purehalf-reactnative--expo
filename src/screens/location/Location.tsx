@@ -30,57 +30,52 @@ const Location: React.FC = (props: any) => {
   const [isReported, setIsReported] = useState<boolean>(false);
   const [failed, setFailed] = useState<boolean>(false);
 
-  useEffect(() => {
-    requestLocationPermission();
-    setTimeout(() => {
-      setReport(true);
-    }, 20000);
-  }, []);
-
-  const requestLocationPermission = async () => {
-    if (isIOS) {
-      getOneTimeLocation();
-    } else {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          getOneTimeLocation();
+  const onTagLineSubmit = ({
+    lat,
+    long,
+    country,
+    city,
+  }: {
+    lat: number;
+    long: number;
+    country?: string;
+    city?: string;
+  }) => {
+    ApiServices.updateUserInfo({
+      latitude: lat,
+      longitude: long,
+      country,
+      city,
+    })
+      .then(async (res) => {
+        const updatedUser = {
+          ...currentUser,
+          detail: res,
+          latitude: lat,
+          longitude: long,
+        };
+        await setData(storageKeys.USER, updatedUser);
+        updateCurrentUser(updatedUser);
+        if (
+          !updatedUser?.first_name ||
+          !updatedUser?.last_name ||
+          !updatedUser?.gender ||
+          !updatedUser?.date_of_birth
+        ) {
+          props?.navigation.reset({
+            index: 0,
+            routes: [{ name: 'UserInput' }],
+          });
         } else {
-          flashErrorMessage('Allow Permission to access your location');
-          setFailed(true);
+          props?.navigation.reset({
+            index: 0,
+            routes: [{ name: 'BottomTab' }],
+          });
         }
-      } catch (err) {
-        console.warn(err);
-      }
-    }
-  };
-
-  const getOneTimeLocation = () => {
-    setLoading(true);
-    Geolocation.getCurrentPosition(
-      (position: any) => {
-        const currentLongitude: number = +JSON.stringify(
-          position.coords.longitude
-        );
-        const currentLatitude: number = +JSON.stringify(
-          position.coords.latitude
-        );
-        getCountryAndCity(currentLatitude, currentLongitude);
-      },
-      (error: any) => {
-        flashErrorMessage('Please enable location from settings');
+      })
+      .catch((err) => {
         setLoading(false);
-        setFailed(true);
-        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 30000,
-        maximumAge: 1000,
-      }
-    );
+      });
   };
 
   const getCountryAndCity = (lat: number, long: number) => {
@@ -117,50 +112,60 @@ const Location: React.FC = (props: any) => {
       });
   };
 
-  const onTagLineSubmit = ({
-    lat,
-    long,
-    country,
-    city,
-  }: {
-    lat: number;
-    long: number;
-    country?: string;
-    city?: string;
-  }) => {
-    ApiServices.updateUserInfo({
-      latitude: lat,
-      longitude: long,
-      country,
-      city,
-    })
-      .then(async (res) => {
-        currentUser.detail = res;
-        currentUser.latitude = lat;
-        currentUser.longitude = long;
-        await setData(storageKeys.USER, currentUser);
-        updateCurrentUser(currentUser);
-        if (
-          !currentUser?.first_name ||
-          !currentUser?.last_name ||
-          !currentUser?.gender ||
-          !currentUser?.date_of_birth
-        ) {
-          props?.navigation.reset({
-            index: 0,
-            routes: [{ name: 'UserInput' }],
-          });
-        } else {
-          props?.navigation.reset({
-            index: 0,
-            routes: [{ name: 'BottomTab' }],
-          });
-        }
-      })
-      .catch((err) => {
+  const getOneTimeLocation = () => {
+    setLoading(true);
+    Geolocation.getCurrentPosition(
+      (position: any) => {
+        const currentLongitude: number = +JSON.stringify(
+          position.coords.longitude
+        );
+        const currentLatitude: number = +JSON.stringify(
+          position.coords.latitude
+        );
+        getCountryAndCity(currentLatitude, currentLongitude);
+      },
+      (error: any) => {
+        flashErrorMessage('Please enable location from settings');
         setLoading(false);
-      });
+        setFailed(true);
+        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 30000,
+        maximumAge: 1000,
+      }
+    );
   };
+
+  const requestLocationPermission = async () => {
+    if (isIOS) {
+      getOneTimeLocation();
+    } else {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          getOneTimeLocation();
+        } else {
+          flashErrorMessage('Allow Permission to access your location');
+          setFailed(true);
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      requestLocationPermission();
+    }, 0);
+    setTimeout(() => {
+      setReport(true);
+    }, 20000);
+  }, []);
 
   const onEnablePress = () => {
     Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
