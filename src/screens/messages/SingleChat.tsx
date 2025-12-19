@@ -274,10 +274,14 @@ const SingleChat = (props: any) => {
               setIsBlockedYou(false);
               handleReadBy(updatedConversationData, messagesRef?.current);
             }
-            updatedConversationData?.participantsBlockFlag[otherUserData?.id]
-              ?.blockStatus === true
-              ? setIsBlockedByYou(true)
-              : setIsBlockedByYou(false);
+            if (
+              updatedConversationData?.participantsBlockFlag[otherUserData?.id]
+                ?.blockStatus === true
+            ) {
+              setIsBlockedByYou(true);
+            } else {
+              setIsBlockedByYou(false);
+            }
             return updatedConversationData;
           });
           forceUpdate();
@@ -703,18 +707,31 @@ const SingleChat = (props: any) => {
     const currentUserID = currentUser?.id;
     const otherUserId = otherUserData?.id;
 
-    // Find the last message sent by current user that was seen by the receiver
-    // Since list is inverted, we need to find the first (most recent) seen message
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const message = messages[i];
+    if (!messages || messages.length === 0) {
+      return -1;
+    }
+
+    // Ensure messages are sorted in ascending order (oldest first) to find the most recent
+    const sortedMessages = _.orderBy(messages, ['createdAt'], ['asc']);
+
+    // Find the last (most recent) message sent by current user that was seen by the receiver
+    let lastSeenMessage = null;
+    for (let i = sortedMessages.length - 1; i >= 0; i--) {
+      const message = sortedMessages[i];
       if (
         message?.sender === currentUserID &&
         message?.readBy?.[otherUserId]?.seen === true
       ) {
-        // Return the index as it appears in the inverted list
-        return i;
+        lastSeenMessage = message;
+        break;
       }
     }
+
+    // Find the index of this message in the original messages array
+    if (lastSeenMessage) {
+      return messages.findIndex((msg: any) => msg?.id === lastSeenMessage?.id);
+    }
+
     return -1;
   };
 
@@ -759,14 +776,31 @@ const SingleChat = (props: any) => {
           <Text style={[Styles.messageTxt, { color: textColour }]}>
             {item?.message}
           </Text>
-          {isCurrentUser && otherUserReadBy?.seen === true && (
-            <Ionicons
-              name="checkmark-done"
-              color={Colors.color2}
-              size={wp(5)}
-              style={Styles.seenIcon}
-            />
-          )}
+          <View style={Styles.messageTimeAndStatusWrapper}>
+            <Text
+              style={[
+                Styles.messageTimeInline,
+                {
+                  color:
+                    isCurrentUser || isGuardian
+                      ? Colors.color2
+                      : Colors.color34,
+                },
+              ]}
+            >
+              {getMessageTime(item?.createdAt)}
+            </Text>
+            {isCurrentUser && (
+              <MessageStatusIcon
+                status={item?.status || 'sent'}
+                isSeen={otherUserReadBy?.seen === true}
+                isBlocked={isBlockedYou}
+                wasSentWhileBlocked={
+                  item?.blockedParticipants?.[currentUserID] === true
+                }
+              />
+            )}
+          </View>
         </TouchableOpacity>
         {isCurrentUser && (
           <View>
@@ -796,8 +830,8 @@ const SingleChat = (props: any) => {
             />
           </View>
         )}
-        <View>
-          {messagePressedId && messagePressedId === item?.id && (
+        {messagePressedId && messagePressedId === item?.id && (
+          <View>
             <View style={Styles.messageTimeCon}>
               <Text style={Styles.messageTime}>
                 Sent {getTimeAgo(item?.createdAt)}
@@ -808,8 +842,8 @@ const SingleChat = (props: any) => {
                 </Text>
               )}
             </View>
-          )}
-        </View>
+          </View>
+        )}
       </View>
     );
   };
@@ -832,6 +866,93 @@ const SingleChat = (props: any) => {
     }
 
     return `${time.format('DD-MMM-YY')} at ${time.format('hh:mm A')}`;
+  };
+
+  const getMessageTime = (timestamp: any) => {
+    return moment(timestamp).format('hh:mm A');
+  };
+
+  const MessageStatusIcon = ({
+    status,
+    isSeen,
+    isBlocked,
+    wasSentWhileBlocked,
+  }: {
+    status: string;
+    isSeen: boolean;
+    isBlocked: boolean;
+    wasSentWhileBlocked: boolean;
+  }) => {
+    // If seen, show double tick blue (preserve seen status even if blocked)
+    if (isSeen) {
+      return (
+        <Ionicons
+          name="checkmark-done"
+          color="#0084FF"
+          size={wp(4)}
+          style={Styles.seenIconInline}
+        />
+      );
+    }
+
+    // If message was sent while blocked and not seen, show single tick only (gray)
+    // This preserves the single tick even after unblocking
+    if (wasSentWhileBlocked) {
+      return (
+        <Ionicons
+          name="checkmark"
+          color={Colors.color34}
+          size={wp(4)}
+          style={Styles.seenIconInline}
+        />
+      );
+    }
+
+    // If currently blocked and not seen, show single tick only (gray)
+    if (isBlocked) {
+      return (
+        <Ionicons
+          name="checkmark"
+          color={Colors.color34}
+          size={wp(4)}
+          style={Styles.seenIconInline}
+        />
+      );
+    }
+
+    // If sent (delivered but not seen), show double tick gray
+    if (status === 'sent') {
+      return (
+        <Ionicons
+          name="checkmark-done"
+          color={Colors.color34}
+          size={wp(4)}
+          style={Styles.seenIconInline}
+        />
+      );
+    }
+
+    // If sending, show single tick (gray)
+    if (status === 'sending') {
+      return (
+        <Ionicons
+          name="checkmark"
+          color={Colors.color34}
+          size={wp(4)}
+          style={Styles.seenIconInline}
+        />
+      );
+    }
+
+    // Default: single tick (gray) - for failed or unknown status
+    return (
+      <Ionicons
+        name="checkmark"
+        color={Colors.color34}
+        size={wp(4)}
+        style={Styles.seenIconInline}
+      />
+    );
   };
 
   const handleEndReached = () => {
@@ -1141,15 +1262,32 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(3),
     paddingVertical: hp(1),
     borderRadius: 20,
+    maxWidth: wp(75),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    flexWrap: 'wrap',
   },
   messageTxt: {
     fontSize: Typography.small2,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
-    maxWidth: wp(70),
+    flexShrink: 1,
+    marginRight: wp(2),
+  },
+  messageTimeAndStatusWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+  },
+  messageTimeInline: {
+    fontSize: Typography.tiny1,
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
+    opacity: 0.8,
+  },
+  seenIconInline: {
+    marginLeft: wp(0.5),
   },
   messageTime: {
     fontSize: Typography.tiny1,
@@ -1166,7 +1304,7 @@ const Styles = StyleSheet.create({
   sendingText: {
     alignSelf: 'center',
     fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.tiny2,
+    fontSize: Typography.tiny1,
     includeFontPadding: false,
     color: Colors.color1,
   },
