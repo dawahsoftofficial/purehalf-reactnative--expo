@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const Images = {
   logoColoured: require('../assets/images/logo_colored.png'),
   logoTextColoured: require('../assets/images/logo_text_colored.png'),

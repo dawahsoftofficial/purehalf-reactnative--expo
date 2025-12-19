@@ -117,9 +117,15 @@ const MyVideo = (props: any) => {
       .then(() => {
         setIntroVideo(null);
         hideLoader();
-        currentUser.media.intro_video = null;
-        setData(storageKeys.USER, currentUser);
-        updateCurrentUser(currentUser);
+        const updatedUser = {
+          ...currentUser,
+          media: {
+            ...currentUser.media,
+            intro_video: null,
+          },
+        };
+        setData(storageKeys.USER, updatedUser);
+        updateCurrentUser(updatedUser);
       })
       .catch(hideLoader);
   };
@@ -135,11 +141,17 @@ const MyVideo = (props: any) => {
     };
     ApiServices.deleteImage(params)
       .then(() => {
-        currentUser.media.primary_image = null;
+        const updatedUser = {
+          ...currentUser,
+          media: {
+            ...currentUser.media,
+            primary_image: null,
+          },
+        };
         setProfileImage('');
         hideLoader();
-        setData(storageKeys.USER, currentUser);
-        updateCurrentUser(currentUser);
+        setData(storageKeys.USER, updatedUser);
+        updateCurrentUser(updatedUser);
       })
       .catch(hideLoader);
   };
@@ -190,9 +202,14 @@ const MyVideo = (props: any) => {
         .then(async (res: any) => {
           if (res) {
             const { intro_video, intro_voice } = res;
-            intro_video && setIntroVideo(intro_video);
+            if (intro_video) setIntroVideo(intro_video);
             // intro_voice && setProfileImage(intro_voice)
-            currentUser.media = res;
+            const updatedUser = {
+              ...currentUser,
+              media: res,
+            };
+            updateCurrentUser(updatedUser);
+            await setData(storageKeys.USER, updatedUser);
             hideUploadingLoader();
           }
         })
@@ -227,9 +244,12 @@ const MyVideo = (props: any) => {
           forceUpdate();
           hideLoader();
         }
-        currentUser.media = res;
-        setData(storageKeys.USER, currentUser);
-        updateCurrentUser(currentUser);
+        const updatedUser = {
+          ...currentUser,
+          media: res,
+        };
+        setData(storageKeys.USER, updatedUser);
+        updateCurrentUser(updatedUser);
       })
       .catch(hideLoader);
   };
