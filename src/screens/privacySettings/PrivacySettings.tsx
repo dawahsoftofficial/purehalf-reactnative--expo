@@ -114,12 +114,15 @@ const PrivacySettings = (props: any) => {
     };
     ApiServices.updateUserInfo(newParams)
       .then(async () => {
-        currentUser.search_visibility = newParams.search_visibility;
-        currentUser.in_app_notifications = newParams.in_app_notifications;
-        currentUser.email_notification = newParams.email_notification;
-        currentUser.sms_notification = newParams.sms_notification;
-        updateCurrentUser(currentUser);
-        await setData(storageKeys.USER, currentUser);
+        const updatedUser = {
+          ...currentUser,
+          search_visibility: newParams.search_visibility,
+          in_app_notifications: newParams.in_app_notifications,
+          email_notification: newParams.email_notification,
+          sms_notification: newParams.sms_notification,
+        };
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
         flashSuccessMessage(LanguageKeys.updated);
         hideLoader();
       })
@@ -128,7 +131,7 @@ const PrivacySettings = (props: any) => {
 
   const RenderField = ({
     heading,
-    description,
+    // description,
     switchEnabled,
     onChangeSwitch,
   }: any) => (

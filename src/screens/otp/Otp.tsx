@@ -173,22 +173,22 @@ const Otp = (props: any) => {
 
   const onOTPVerified = async () => {
     if (!currentUser) {
-      ApiServices.loginUser(phoneNumber, (currentUser) =>
+      ApiServices.loginUser(phoneNumber, (currentUser: any) =>
         onLoggedIn(currentUser)
       );
     } else {
       await setRevenueCat(currentUser?.id);
       ApiServices.getMembershipStatus().then(async (res: any) => {
-        if (res || currentUser.membership_status) {
-          currentUser.membership_expiry =
-            res?.membership_expiry || currentUser.membership_expiry;
-          currentUser.membership_status = 1;
-        } else {
-          currentUser.membership_expiry = null;
-          currentUser.membership_status = 0;
-        }
-        updateCurrentUser(currentUser);
-        await setData(storageKeys.USER, currentUser);
+        const updatedUser = {
+          ...currentUser,
+          membership_expiry:
+            res || currentUser.membership_status
+              ? res?.membership_expiry || currentUser.membership_expiry
+              : null,
+          membership_status: res || currentUser.membership_status ? 1 : 0,
+        };
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
       });
 
       setContinueLoader(false);
@@ -371,7 +371,8 @@ const Otp = (props: any) => {
               >
                 <Text style={[Styles.tryAgainTxt, { color: textColor }]}>
                   {' '}
-                  {LanguageKeys.resendOtp} {seconds} {LanguageKeys.seconds}
+                  {LanguageKeys.resendOtp} {seconds as any}{' '}
+                  {LanguageKeys.seconds}
                   ...
                 </Text>
                 <AntDesign name="clockcircleo" color={textColor} size={wp(5)} />

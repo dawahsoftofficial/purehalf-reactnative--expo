@@ -95,9 +95,15 @@ const PhotosAndVideos = (props: any) => {
         public_gallery,
         private_gallery,
       } = media;
-      cover_image && setCoverImage(cover_image);
-      primary_image && setProfileImage(primary_image);
-      youtube_url && setYoutubeURL(youtube_url);
+      if (cover_image) {
+        setCoverImage(cover_image);
+      }
+      if (primary_image) {
+        setProfileImage(primary_image);
+      }
+      if (youtube_url) {
+        setYoutubeURL(youtube_url);
+      }
       if (public_gallery && public_gallery.length !== 0) {
         const publicPhotosData: any = [];
         for await (const element of public_gallery) {
@@ -409,8 +415,12 @@ const PhotosAndVideos = (props: any) => {
       .then(async (res: any) => {
         if (res) {
           const { cover_image, primary_image } = res;
-          cover_image && setCoverImage(cover_image);
-          primary_image && setProfileImage(primary_image);
+          if (cover_image) {
+            setCoverImage(cover_image);
+          }
+          if (primary_image) {
+            setProfileImage(primary_image);
+          }
           currentUser.media = res;
           await setData(storageKeys.USER, currentUser);
           hideUploadingLoader();
@@ -623,9 +633,9 @@ const PhotosAndVideos = (props: any) => {
     });
   };
 
-  const onChangeYoutubeURL = (text: any) => {
-    setYoutubeURL(text);
-  };
+  // const onChangeYoutubeURL = (text: any) => {
+  //   setYoutubeURL(text);
+  // };
 
   const hideImagePicker = () =>
     setImagePicker({
@@ -851,56 +861,56 @@ const PhotosAndVideos = (props: any) => {
     }
   };
 
-  const RenderCover = () => {
-    return uploadingCoverLoader ? (
-      <View style={Styles.coverPhoto}>
-        <AnimatedLoader text="Uploading cover image..." visible={true} />
-      </View>
-    ) : coverImage.length === 0 ? (
-      <Ripple style={Styles.coverPhoto} onPress={onAddCoverPress}>
-        <Image
-          source={Images.camera}
-          resizeMode="contain"
-          style={Styles.cameraIcon}
-        />
-        <Text style={Styles.uploadPhoto}>{LanguageKeys.uploadPhoto}</Text>
-      </Ripple>
-    ) : (
-      <View style={Styles.coverPhoto}>
-        <Image
-          source={{ uri: coverImage }}
-          resizeMode="cover"
-          style={Styles.coverPhoto}
-          onLoadStart={onCoverImageLoadStart}
-          onLoadEnd={onCoverImageLoadEnd}
-        />
-        <View
-          style={{
-            ...Styles.deleteCoverBtnCon,
-            alignItems: Rtl ? 'flex-start' : 'flex-end',
-          }}
-        >
-          <Ripple
-            style={{ ...Styles.deleteCoverBtn, ...Styles.shadow }}
-            onPress={onCoverDeletePress}
-          >
-            <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
-          </Ripple>
-        </View>
-        {coverImageLoader && (
-          <ActivityIndicator
-            color={Colors.theme}
-            size={wp(5)}
-            style={{ position: 'absolute' }}
-          />
-        )}
-      </View>
-    );
-  };
+  // const RenderCover = () => {
+  //   return uploadingCoverLoader ? (
+  //     <View style={Styles.coverPhoto}>
+  //       <AnimatedLoader text="Uploading cover image..." visible={true} />
+  //     </View>
+  //   ) : coverImage.length === 0 ? (
+  //     <Ripple style={Styles.coverPhoto} onPress={onAddCoverPress}>
+  //       <Image
+  //         source={Images.camera}
+  //         resizeMode="contain"
+  //         style={Styles.cameraIcon}
+  //       />
+  //       <Text style={Styles.uploadPhoto}>{LanguageKeys.uploadPhoto}</Text>
+  //     </Ripple>
+  //   ) : (
+  //     <View style={Styles.coverPhoto}>
+  //       <Image
+  //         source={{ uri: coverImage }}
+  //         resizeMode="cover"
+  //         style={Styles.coverPhoto}
+  //         onLoadStart={onCoverImageLoadStart}
+  //         onLoadEnd={onCoverImageLoadEnd}
+  //       />
+  //       <View
+  //         style={{
+  //           ...Styles.deleteCoverBtnCon,
+  //           alignItems: Rtl ? 'flex-start' : 'flex-end',
+  //         }}
+  //       >
+  //         <Ripple
+  //           style={{ ...Styles.deleteCoverBtn, ...Styles.shadow }}
+  //           onPress={onCoverDeletePress}
+  //         >
+  //           <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
+  //         </Ripple>
+  //       </View>
+  //       {coverImageLoader && (
+  //         <ActivityIndicator
+  //           color={Colors.theme}
+  //           size={wp(5)}
+  //           style={{ position: 'absolute' }}
+  //         />
+  //       )}
+  //     </View>
+  //   );
+  // };
 
-  const onVideoPress = () => {
-    props.navigation.navigate('MyVideo');
-  };
+  // const onVideoPress = () => {
+  //   props.navigation.navigate('MyVideo');
+  // };
 
   return (
     <Container>
@@ -936,17 +946,17 @@ const PhotosAndVideos = (props: any) => {
                   </Text>
                   <Text style={Styles.tootltipTitle}>Quranic Versed:</Text>
                   <Text style={Styles.tootltipText}>
-                    "And tell the believing women to lower their gaze and guard
-                    their private parts and not expose their adornment except
-                    that which (necessarily)..." (Qur'an 24:31)
+                    {
+                      "And tell the believing women to lower their gaze and guard their private parts and not expose their adornment except that which (necessarily)... (Qur'an 24:31)"
+                    }
                   </Text>
                   <ReactText style={[Styles.tootltipTitle, { marginTop: 30 }]}>
                     Hadith:
                   </ReactText>
                   <Text style={Styles.tootltipText}>
-                    "Modesty is part of faith and faith is in Paradise, but
-                    obscenity is a part of hardness of the heart and hardness of
-                    the heart is in Hell." (Sahih Muslim)
+                    {
+                      'Modesty is part of faith and faith is in Paradise, but obscenity is a part of hardness of the heart and hardness of the heart is in Hell. (Sahih Muslim)'
+                    }
                   </Text>
                 </View>
 

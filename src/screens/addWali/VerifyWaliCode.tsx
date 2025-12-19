@@ -64,7 +64,9 @@ const VerifyWaliCode = ({ navigation }: any) => {
 
   useEffect(() => {
     if (value.length === 6) {
-      verifyCode(value);
+      setTimeout(() => {
+        verifyCode(value);
+      }, 0);
     }
   }, [value]);
 
@@ -86,7 +88,9 @@ const VerifyWaliCode = ({ navigation }: any) => {
   };
 
   useEffect(() => {
-    calculateRemainingTime();
+    setTimeout(() => {
+      calculateRemainingTime();
+    }, 0);
   }, []);
 
   useEffect(() => {

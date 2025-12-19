@@ -104,7 +104,7 @@ const AuthWelcome = (props: any) => {
             });
             try {
               console.log('[Google Login] Fetching current user details...');
-              const user = await ApiServices.getCurrentUserDetail();
+              const user: any = await ApiServices.getCurrentUserDetail();
               console.log('[Google Login] getCurrentUserDetail success:', {
                 hasUser: !!user,
                 userId: user?.id,
@@ -173,7 +173,7 @@ const AuthWelcome = (props: any) => {
             });
             try {
               console.log('[Apple Login] Fetching current user details...');
-              const user = await ApiServices.getCurrentUserDetail();
+              const user: any = await ApiServices.getCurrentUserDetail();
               console.log('[Apple Login] getCurrentUserDetail success:', {
                 hasUser: !!user,
                 userId: user?.id,
@@ -301,7 +301,7 @@ const AuthWelcome = (props: any) => {
             console.log(
               '[Google Login - onVerified] Fetching updated user data...'
             );
-            const userData = await ApiServices.getCurrentUserDetail();
+            const userData: any = await ApiServices.getCurrentUserDetail();
             console.log('[Google Login - onVerified] User data retrieved:', {
               userId: userData?.id,
               hasUserData: !!userData,

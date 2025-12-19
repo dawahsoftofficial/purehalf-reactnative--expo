@@ -28,7 +28,9 @@ const DiscountPackagesList = (props: any) => {
       }
     }
     setSelectedPackage({ index: index, data: item });
-    props?.onPackageSelection && props.onPackageSelection(item);
+    if (props?.onPackageSelection) {
+      props.onPackageSelection(item);
+    }
   };
 
   const renderPackages = ({ item, index }: any) => {

@@ -1,5 +1,5 @@
 import Geolocation from '@react-native-community/geolocation';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dimensions, PermissionsAndroid } from 'react-native';
 import type MapView from 'react-native-maps';
 
@@ -160,10 +160,9 @@ const Location = (props: any) => {
 
   return (
     <MapWithMarker
-      mapRef={mapRef}
+      mapRef={mapRef as React.RefObject<MapView>}
       position={position}
       setPosition={setPosition}
-      initialRegion={position}
       loading={loading}
       onUpdate={onUpdate}
       getCurrentLocation={getCurrentLocation}
