@@ -1,0 +1,12 @@
+diff --git a/node_modules/react-native-swiper-flatlist/src/components/SwiperFlatList/SwiperFlatList.tsx b/node_modules/react-native-swiper-flatlist/src/components/SwiperFlatList/SwiperFlatList.tsx
+index 9f6aaf0..fcdafe3 100644
+--- a/node_modules/react-native-swiper-flatlist/src/components/SwiperFlatList/SwiperFlatList.tsx
++++ b/node_modules/react-native-swiper-flatlist/src/components/SwiperFlatList/SwiperFlatList.tsx
+@@ -235,6 +235,7 @@ export const SwiperFlatList = React.forwardRef(
+ 
+     const flatListProps: FlatListProps<unknown> & { ref: React.RefObject<RNFlatList<unknown>> } = {
+       scrollEnabled,
++      // @ts-ignore
+       ref: flatListElement,
+       keyExtractor: (_item, _index) => {
+         const item = _item as { key?: string; id?: string };
