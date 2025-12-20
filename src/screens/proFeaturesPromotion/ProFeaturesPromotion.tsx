@@ -42,6 +42,7 @@ const ProFeaturesPromotion = (props: any) => {
   });
   const [packagesList, setPackagesList] = useState([]);
   const [selectedPackage, setSelectedPackage] = useState<any>('');
+  const [showSubscribeButton, setShowSubscribeButton] = useState(false);
 
   const hideLoading = () => setLoading(false);
   const hideLoaderModal = () =>
@@ -168,6 +169,7 @@ const ProFeaturesPromotion = (props: any) => {
   const getPackages = async () => {
     Purchases.getOfferings()
       .then((res) => {
+        console.warn('getPackages', res);
         if (res) {
           const availablePackages: any = res?.current?.availablePackages;
           setPackagesList(availablePackages);
@@ -187,8 +189,67 @@ const ProFeaturesPromotion = (props: any) => {
     getPackages();
   }, []);
 
-  const onPackageSelection = (item: any) => {
+  const onPackageSelection = async (item: any) => {
     setSelectedPackage(item);
+    setShowSubscribeButton(false);
+
+    // Skip RevenueCat for free package
+    if (item?.title === 'free') {
+      return;
+    }
+
+    // Try RevenueCat purchase first
+    try {
+      setLoaderModal({
+        visible: true,
+        message: LanguageKeys.loading,
+      });
+
+      const customerInfo: any = await Purchases.purchasePackage(item);
+
+      if (
+        customerInfo?.activeSubscriptions?.length !== 0 &&
+        (customerInfo?.latestExpirationDate ||
+          customerInfo?.customerInfo?.latestExpirationDate)
+      ) {
+        const updatedUser = {
+          ...currentUser,
+          membership_expiry:
+            customerInfo?.latestExpirationDate ||
+            customerInfo?.customerInfo?.latestExpirationDate,
+          membership_status: 1,
+        };
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
+        hideLoaderModal();
+        flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
+        const navigateTo = props?.route?.params?.navigateTo;
+        if (navigateTo && navigateTo === 'goBack') {
+          props.navigation.goBack();
+        } else {
+          props.navigation.reset({
+            index: 0,
+            routes: [
+              {
+                name: 'MembershipCongrats',
+                params: {
+                  amount: item?.product?.price,
+                  title: item?.product?.title,
+                },
+              },
+            ],
+          });
+        }
+      } else {
+        hideLoaderModal();
+        setShowSubscribeButton(true);
+      }
+    } catch (e: any) {
+      hideLoaderModal();
+      console.log('error while purchasing package =>', e);
+      // If user cancels or RevenueCat fails, show subscribe button
+      setShowSubscribeButton(true);
+    }
   };
 
   const hidePaymentMethodList = () => {
@@ -208,114 +269,121 @@ const ProFeaturesPromotion = (props: any) => {
       />
       <LinearGradient
         colors={[Colors.blackRGBA70, Colors.color36]}
-        style={Styles.linearContainer}
+        style={Styles.container}
       >
-        <View
-          style={{
-            ...Styles.headerContainer,
-            alignItems: Rtl ? 'flex-start' : 'flex-end',
-          }}
-        >
-          <Ripple onPress={onClosePress}>
-            <AntDesign name="close" size={wp(10)} color={Colors.color2} />
-          </Ripple>
-        </View>
-        <View>
-          <Text style={Styles.heading}>{LanguageKeys.goProWithPureHalf}</Text>
-          <FlatList
-            data={proFeatures}
-            renderItem={renderProFeatures}
-            keyExtractor={(item) => item.id}
-            scrollEnabled={false}
-          />
-        </View>
-        {loading ? (
-          <ActivityIndicator
-            color={Colors.color2}
-            size={wp(5)}
-            style={{ marginTop: hp(10) }}
-          />
-        ) : (
-          <View style={Styles.listOuterCon}>
-            <PackagesList
-              data={packagesList}
-              onPackageSelection={onPackageSelection}
-              navigation={props.navigation}
-            />
-            <Ripple style={Styles.subscribeNowBtn} onPress={onBuyNowPress}>
-              {selectedPackage?.title === 'free' ? (
-                <Text style={Styles.subscribeBtnTxt}>
-                  {props?.route?.params?.from === 'SignUp'
-                    ? 'continue'
-                    : 'goBack'}
-                </Text>
-              ) : (
-                <Text style={Styles.subscribeBtnTxt}>subscribeNow</Text>
-              )}
+        <View style={Styles.linearContainer}>
+          <View
+            style={{
+              ...Styles.headerContainer,
+              alignItems: Rtl ? 'flex-start' : 'flex-end',
+            }}
+          >
+            <Ripple onPress={onClosePress}>
+              <AntDesign name="close" size={wp(10)} color={Colors.color2} />
             </Ripple>
-            <View
-              style={{
-                ...Styles.termsCon,
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-              }}
-            >
-              <Text style={Styles.termsDes}>bySubscribingDes</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  Linking.openURL('https://purehalf.com/terms-conditions/')
-                }
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={{
-                    ...Styles.termsDes,
-                    marginHorizontal: wp(1),
-                    textDecorationLine: 'underline',
-                  }}
-                >
-                  termsAndConditions
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View
-              style={{
-                ...Styles.termsCon,
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-                marginTop: 0,
-              }}
-            >
-              <Text style={Styles.termsDes}>alsoRefund</Text>
-              <TouchableOpacity
-                onPress={() =>
-                  Linking.openURL('https://purehalf.com/refund-policy/')
-                }
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={{
-                    ...Styles.termsDes,
-                    marginHorizontal: wp(1),
-                    textDecorationLine: 'underline',
-                  }}
-                >
-                  refundPolicyText
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity
-              style={Styles.restoreBtn}
-              onPress={onPlayOrAppStorePress.bind(null, true)}
-            >
-              <Text style={Styles.restoreTxt}>restoreSubscription</Text>
-            </TouchableOpacity>
           </View>
-        )}
-        <PaymentMethodList
-          visible={paymentMethodListVisible}
-          onClose={hidePaymentMethodList}
-          selectedPackage={selectedPackage}
-          onPlayOrAppStorePress={onPlayOrAppStorePress}
-        />
+          <View>
+            <Text style={Styles.heading}>{LanguageKeys.goProWithPureHalf}</Text>
+            <FlatList
+              data={proFeatures}
+              renderItem={renderProFeatures}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+            />
+          </View>
+          {loading ? (
+            <ActivityIndicator
+              color={Colors.color2}
+              size={wp(5)}
+              style={{ marginTop: hp(10) }}
+            />
+          ) : (
+            <View style={Styles.listOuterCon}>
+              <PackagesList
+                data={packagesList}
+                onPackageSelection={onPackageSelection}
+                navigation={props.navigation}
+              />
+              {showSubscribeButton && selectedPackage?.title !== 'free' && (
+                <Ripple style={Styles.subscribeNowBtn} onPress={onBuyNowPress}>
+                  <Text style={Styles.subscribeBtnTxt}>
+                    {LanguageKeys.moreWaysToSubscribe}
+                  </Text>
+                </Ripple>
+              )}
+              {selectedPackage?.title === 'free' && (
+                <Ripple style={Styles.subscribeNowBtn} onPress={onBuyNowPress}>
+                  <Text style={Styles.subscribeBtnTxt}>
+                    {props?.route?.params?.from === 'SignUp'
+                      ? 'continue'
+                      : 'goBack'}
+                  </Text>
+                </Ripple>
+              )}
+              <View
+                style={{
+                  ...Styles.termsCon,
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
+                }}
+              >
+                <Text style={Styles.termsDes}>bySubscribingDes</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    Linking.openURL('https://purehalf.com/terms-conditions/')
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={{
+                      ...Styles.termsDes,
+                      marginHorizontal: wp(1),
+                      textDecorationLine: 'underline',
+                    }}
+                  >
+                    termsAndConditions
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <View
+                style={{
+                  ...Styles.termsCon,
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
+                  marginTop: 0,
+                }}
+              >
+                <Text style={Styles.termsDes}>alsoRefund</Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    Linking.openURL('https://purehalf.com/refund-policy/')
+                  }
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={{
+                      ...Styles.termsDes,
+                      marginHorizontal: wp(1),
+                      textDecorationLine: 'underline',
+                    }}
+                  >
+                    refundPolicyText
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity
+                style={Styles.restoreBtn}
+                onPress={onPlayOrAppStorePress.bind(null, true)}
+              >
+                <Text style={Styles.restoreTxt}>restoreSubscription</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          <PaymentMethodList
+            visible={paymentMethodListVisible}
+            onClose={hidePaymentMethodList}
+            selectedPackage={selectedPackage}
+            onPlayOrAppStorePress={onPlayOrAppStorePress}
+          />
+        </View>
       </LinearGradient>
     </ImageBackground>
   );

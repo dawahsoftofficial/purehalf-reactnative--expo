@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -30,22 +30,66 @@ const PaymentMethodList = (props: any) => {
   const [jazzCashVisible, setJazzCashVisible] = useState(false);
   const [bankVisible, setBankVisible] = useState(false);
   const [bankDetails, setBankDetails] = useState(null);
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
   const [os] = useState(Platform.OS === 'android' ? '2' : '1');
 
-  const getData = () => {
+  const getData = useCallback(() => {
+    const userCountry = currentUser?.country || null;
+
+    const filterPaymentMethodsByCountry = (methods: any[]) => {
+      return methods.filter((item: any) => {
+        // Get country from detail.COUNTRY or detail_complete.COUNTRY
+        const paymentMethodCountry =
+          item?.detail?.COUNTRY || item?.detail_complete?.COUNTRY || null;
+
+        // If country is -1, show for everyone
+        if (paymentMethodCountry === -1 || paymentMethodCountry === '-1') {
+          return true;
+        }
+
+        // If no payment method country specified, show it (fallback)
+        if (!paymentMethodCountry) {
+          return true;
+        }
+
+        // If no user country, show all (fallback)
+        if (!userCountry) {
+          return true;
+        }
+
+        // Normalize country values for comparison (handle both string and number)
+        const normalizedPaymentCountry = String(
+          paymentMethodCountry || ''
+        ).toUpperCase();
+        const normalizedUserCountry = String(userCountry || '').toUpperCase();
+
+        // If payment method country is PK
+        if (normalizedPaymentCountry === 'PK') {
+          // Only show if user country is also PK
+          return normalizedUserCountry === 'PK';
+        }
+
+        // For other countries, show only if user country matches
+        return normalizedPaymentCountry === normalizedUserCountry;
+      });
+    };
+
     ApiServices.getPaymentInfo()
       .then((res: any) => {
-        setPaymentMethods(
-          res?.sort((a: any, b: any) => a?.position - b?.position)
+        const sortedMethods = res?.sort(
+          (a: any, b: any) => a?.position - b?.position
         );
+        const filteredMethods = filterPaymentMethodsByCountry(
+          sortedMethods || []
+        );
+        setPaymentMethods(filteredMethods);
       })
       .catch(() => {});
-  };
+  }, [currentUser?.country]);
 
   useEffect(() => {
     getData();
-  }, []);
+  }, [getData]);
 
   const onItemPress = (item: any) => {
     const msg = `Salaam, its ${currentUser?.first_name + ' ' + currentUser?.last_name}, I would like to purchase a ${selectedPackage?.packageType} Subscription (${selectedPackage?.product?.priceString}). My Payment number is ${JSON.stringify(currentUser?.id * 3146)}. Jazak Allah Khayran`;

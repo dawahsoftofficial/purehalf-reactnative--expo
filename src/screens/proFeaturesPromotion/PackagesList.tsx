@@ -12,8 +12,8 @@ const PackagesList = (props: any) => {
   const { data } = props;
 
   const [selectedPackage, setSelectedPackage] = useState<any>({
-    index: 2,
-    data: data[2],
+    index: -1,
+    data: null,
   });
 
   const onItemPress = (item: any, index: any) => {
