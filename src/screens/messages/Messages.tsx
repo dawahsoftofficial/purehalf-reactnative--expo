@@ -157,12 +157,7 @@ const Messages = (props: any) => {
       const messagesArray = Object.values(item.messages);
       if (messagesArray.length > 0) {
         // Get the last message (most recent)
-        const sortedMessages = _.orderBy(
-          messagesArray,
-          ['createdAt'],
-          ['desc']
-        );
-        const lastMessage: any = sortedMessages[0];
+        const lastMessage: any = messagesArray[0];
 
         // Use the actual latest message text from messages array
         if (lastMessage?.message) {

@@ -1,15 +1,12 @@
 import { getApp } from '@react-native-firebase/app';
 import {
   type DataSnapshot,
-  equalTo,
   get,
   getDatabase,
   onChildAdded,
   onChildChanged,
   onChildRemoved,
-  orderByChild,
   type Query,
-  query,
   ref,
 } from '@react-native-firebase/database';
 
@@ -39,11 +36,7 @@ let activeListeners: {
  */
 const getConversationsQuery = (userId: string): Query => {
   const conversationsRef = ref(database, conversationsPath);
-  return query(
-    conversationsRef,
-    orderByChild(`convDetails/participantsDeleteFlag/${userId}/deleteStatus`),
-    equalTo(false)
-  );
+  return conversationsRef;
 };
 
 type StartConversationsListenerParams = {

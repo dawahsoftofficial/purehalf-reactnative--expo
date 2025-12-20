@@ -186,9 +186,7 @@ const SingleChat = (props: any) => {
       const { convDetails, messages } = conversationData;
       setConversationData(convDetails);
 
-      const messagesArray: any = messages
-        ? _.orderBy(Object.values(messages), ['createdAt'], ['desc'])
-        : [];
+      const messagesArray: any = messages ? Object.values(messages) : [];
       setTotalMessages(messagesArray);
 
       if (messagesArray.length === 0) {
@@ -303,9 +301,7 @@ const SingleChat = (props: any) => {
           setConversationData(convDetails);
 
           // Process messages
-          const messagesArray = convMessages
-            ? _.orderBy(Object.values(convMessages), ['createdAt'], ['desc'])
-            : [];
+          const messagesArray = convMessages ? Object.values(convMessages) : [];
 
           setTotalMessages(messagesArray as any);
 

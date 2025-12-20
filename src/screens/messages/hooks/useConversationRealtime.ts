@@ -3,10 +3,7 @@ import {
   getDatabase,
   onChildAdded,
   onChildChanged,
-  orderByChild,
-  query,
   ref,
-  startAt,
 } from '@react-native-firebase/database';
 import _ from 'lodash';
 import { useEffect } from 'react';
@@ -76,11 +73,7 @@ export const useConversationRealtime = ({
       `/${conversationsPath}/${conversationId}/messages`
     );
 
-    const messagesQuery = query(
-      messagesDatabaseRef,
-      orderByChild('createdAt'),
-      startAt(chatOpenTimeStamp)
-    );
+    const messagesQuery = messagesDatabaseRef;
 
     const unsubscribeChildChanged = onChildChanged(
       messagesQuery,
