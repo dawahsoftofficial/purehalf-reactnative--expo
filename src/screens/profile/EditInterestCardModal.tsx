@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Modal from 'react-native-modal';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { Animation } from '../../animations';
 import { Button, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -108,45 +108,48 @@ const EditInterestCardModal = ({
   );
 
   return (
-    <Modal visible={visible} transparent={true}>
-      <View style={Styles.container}>
-        <Animation animation={'zoomIn'} style={Styles.innerCon}>
-          <Ripple
-            style={{
-              alignSelf: Rtl ? 'flex-start' : 'flex-end',
-              marginHorizontal: wp(-2),
-            }}
-            onPress={onClose}
-          >
-            <AntDesign name="close" size={wp(8)} color={Colors.color1} />
-          </Ripple>
-          <Text style={Styles.header}>{from}</Text>
-          <ScrollView
-            contentContainerStyle={{
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-              flexWrap: 'wrap',
-            }}
-          >
-            {data?.map((item) => {
-              const isSelected = ids.includes(item?.id);
-              return (
-                <Ripple
-                  key={item?.id}
-                  onPress={() => updateIdArray(item?.id)}
-                  style={{
-                    ...Styles.item,
-                    backgroundColor: isSelected
-                      ? Colors.color59
-                      : Colors.color3,
-                  }}
-                >
-                  <Text style={Styles.itemText}>{item?.value}</Text>
-                </Ripple>
-              );
-            })}
-          </ScrollView>
-          {footer}
-        </Animation>
+    <Modal
+      isVisible={visible}
+      onBackdropPress={onClose}
+      backdropOpacity={0.5}
+      animationIn="zoomIn"
+      animationOut="zoomOut"
+      style={Styles.modal}
+    >
+      <View style={Styles.innerCon}>
+        <Ripple
+          style={{
+            alignSelf: Rtl ? 'flex-start' : 'flex-end',
+            marginHorizontal: wp(-2),
+          }}
+          onPress={onClose}
+        >
+          <AntDesign name="close" size={wp(8)} color={Colors.color1} />
+        </Ripple>
+        <Text style={Styles.header}>{from}</Text>
+        <ScrollView
+          contentContainerStyle={{
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+            flexWrap: 'wrap',
+          }}
+        >
+          {data?.map((item) => {
+            const isSelected = ids.includes(item?.id);
+            return (
+              <Ripple
+                key={item?.id}
+                onPress={() => updateIdArray(item?.id)}
+                style={{
+                  ...Styles.item,
+                  backgroundColor: isSelected ? Colors.color59 : Colors.color3,
+                }}
+              >
+                <Text style={Styles.itemText}>{item?.value}</Text>
+              </Ripple>
+            );
+          })}
+        </ScrollView>
+        {footer}
       </View>
     </Modal>
   );
@@ -155,11 +158,10 @@ const EditInterestCardModal = ({
 export default React.memo(EditInterestCardModal);
 
 const Styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.blackRGBA50,
+  modal: {
     justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
+    margin: 0,
   },
   innerCon: {
     backgroundColor: Colors.color2,
@@ -168,7 +170,6 @@ const Styles = StyleSheet.create({
     height: hp(80),
     paddingVertical: hp(1),
     paddingHorizontal: wp(4),
-    marginVertical: hp(15),
   },
   header: {
     color: Colors.color1,

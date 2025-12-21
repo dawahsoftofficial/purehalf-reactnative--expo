@@ -54,8 +54,13 @@ const ProfilePicture = (props: any) => {
           size: image?.size,
         };
         setUploading(true);
+        setUploadingProgress(0);
         ApiServices.addProfilePicture(resizedImageObj, (progress: any) => {
-          setUploadingProgress(progress.toFixed());
+          const progressValue = Math.min(
+            Math.max(Number(progress) || 0, 0),
+            100
+          );
+          setUploadingProgress(progressValue);
         })
           .then(async (res: any) => {
             const result = res?.results;
@@ -196,11 +201,11 @@ const ProfilePicture = (props: any) => {
                     value={uploadingProgress}
                     maxValue={100}
                     radius={110}
-                    duration={2000}
+                    duration={100}
                     progressValueColor={Colors.color1}
                     title={'Uploading'}
                     titleColor={Colors.color1}
-                    titleStyle={{ fontSize: 25 }}
+                    titleStyle={{ fontSize: 25, fontFamily: Fonts.APPFONT_B }}
                     progressValueStyle={{ fontSize: 65 }}
                     inActiveStrokeColor={Colors.color18}
                     activeStrokeColor={Colors.theme}
@@ -222,11 +227,11 @@ const ProfilePicture = (props: any) => {
                   />
                 </View>
                 {/* <Button
-                                            text="Change Picture"
-                                            buttonStyle={Styles.changeImageButton}
-                                            textStyle={Styles.buttonText}
-                                            onPress={onAddImagePress}
-                                        /> */}
+                  text="Change Picture"
+                  buttonStyle={Styles.changeImageButton}
+                  textStyle={Styles.buttonText}
+                  onPress={onAddImagePress}
+                /> */}
               </Ripple>
             ) : (
               <Ripple style={Styles.addImageCon} onPress={onAddImagePress}>
@@ -242,10 +247,9 @@ const ProfilePicture = (props: any) => {
             )}
           </View>
           <View style={Styles.btnWrapper}>
-            {/* {currentUser?.gender === "female" ? <Button
-                            text={"Skip for now"}
-                            onPress={onContinuePress}
-                        /> : null} */}
+            {/* {currentUser?.gender === 'female' ? (
+              <Button text={'Skip for now'} onPress={onContinuePress} />
+            ) : null} */}
             <Button
               disabled={image?.length === 0 ? true : false}
               text={LanguageKeys.continue}

@@ -74,7 +74,10 @@ const ContactSupport = ({ navigation }: any) => {
         >
           <Text style={Styles.heading}>{LanguageKeys.helpandsupport}</Text>
           <Text style={Styles.description}>
-            {LanguageKeys.contactSupportDescription}
+            {LanguageKeys.whatWouldYouLikeToTalkAbout}
+          </Text>
+          <Text style={Styles.description1}>
+            {LanguageKeys.shareSomeDetails}
           </Text>
           <Ripple style={Styles.reasonBtn} onPress={showPicker}>
             <Text
@@ -172,11 +175,20 @@ const Styles = StyleSheet.create({
   },
   description: {
     textAlign: 'center',
-    marginHorizontal: wp(8),
+    marginHorizontal: wp(4),
     marginTop: hp(2),
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: Typography.small2,
+    alignSelf: 'center',
+  },
+  description1: {
+    textAlign: 'center',
+    marginHorizontal: wp(4),
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
+    fontSize: Typography.small2,
+    alignSelf: 'center',
   },
   reasonBtn: {
     borderWidth: 1,

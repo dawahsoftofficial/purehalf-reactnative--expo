@@ -5,7 +5,6 @@ import {
   Image,
   ImageBackground,
   Linking,
-  LogBox,
   StatusBar,
   TouchableOpacity,
   View,
@@ -13,6 +12,7 @@ import {
 import { StyleSheet } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Purchases from 'react-native-purchases';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import { LinearGradient, ModalLoader, Text } from '../../components';
@@ -29,7 +29,7 @@ import PackagesList from './PackagesList';
 import PaymentMethodList from './PaymentMethodList';
 
 const ProFeaturesPromotion = (props: any) => {
-  LogBox.ignoreAllLogs(true);
+  const { top } = useSafeAreaInsets();
   const Rtl = CheckRtl();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
@@ -258,11 +258,7 @@ const ProFeaturesPromotion = (props: any) => {
 
   return (
     <ImageBackground style={Styles.container} source={Images.slide4}>
-      <StatusBar
-        translucent
-        backgroundColor={'transparent'}
-        barStyle={'light-content'}
-      />
+      <StatusBar backgroundColor={Colors.color33} barStyle={'light-content'} />
       <ModalLoader
         visible={loaderModal.visible}
         message={loaderModal.message}
@@ -273,10 +269,13 @@ const ProFeaturesPromotion = (props: any) => {
       >
         <View style={Styles.linearContainer}>
           <View
-            style={{
-              ...Styles.headerContainer,
-              alignItems: Rtl ? 'flex-start' : 'flex-end',
-            }}
+            style={[
+              Styles.headerContainer,
+              {
+                paddingTop: top,
+                alignItems: Rtl ? 'flex-start' : 'flex-end',
+              },
+            ]}
           >
             <Ripple onPress={onClosePress}>
               <AntDesign name="close" size={wp(10)} color={Colors.color2} />
@@ -400,7 +399,6 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
   },
   headerContainer: {
-    paddingTop: hp(5),
     paddingBottom: hp(2),
   },
   heading: {
