@@ -471,9 +471,11 @@ const RefineSearch = React.forwardRef<RefineSearchRef>((props, ref) => {
     const hasAgeRange =
       minAge !== LanguageKeys.any || maxAge !== LanguageKeys.any;
 
-    // Check if any filter has a selected value
+    // Check if any filter (excluding default "Search For People") has a selected value
     const hasFilterSelected = filtersDataList.some(
-      (element: any) => Object.keys(element?.selected || {}).length !== 0
+      (element: any) =>
+        element?.id !== 'search_for_people' &&
+        Object.keys(element?.selected || {}).length !== 0
     );
 
     return hasAgeRange || hasFilterSelected;
