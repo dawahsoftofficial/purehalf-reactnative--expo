@@ -238,9 +238,8 @@ const Styles = StyleSheet.create({
   description: {
     color: Colors.color2,
     includeFontPadding: false,
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.tiny2,
-    fontWeight: '700',
   },
   saveCon: {
     backgroundColor: Colors.color37,

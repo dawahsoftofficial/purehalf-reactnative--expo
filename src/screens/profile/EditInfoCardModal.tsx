@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useState } from 'react';
-import { FlatList, Modal, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Modal from 'react-native-modal';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { Animation } from '../../animations';
 import {
   Button,
   HeightWeightPicker,
@@ -58,7 +58,15 @@ const EditInfoCardModal = (props: any) => {
 
   const { details = {}, onClose = () => null } = props;
 
-  const { visible = false, data = [], from = '' } = details;
+  const { visible = false, data: initialData = [], from = '' } = details;
+
+  const [formData, setFormData] = useState<any[]>(initialData);
+
+  useEffect(() => {
+    if (visible) {
+      setFormData(JSON.parse(JSON.stringify(initialData)));
+    }
+  }, [visible, initialData]);
 
   const [heightWeightPicker, setHeightWeightPicker] =
     useState<HeightWeightPickerState>({
@@ -186,16 +194,22 @@ const EditInfoCardModal = (props: any) => {
   const onBlurInput = useCallback(() => {
     const { activeInputId, item, value } = focusedInput;
     const { category } = item;
-    data.forEach((element: any) => {
-      if (element.id === activeInputId) {
-        element.selected = {
-          id: activeInputId,
-          value: value,
-          category: category,
-        };
-      }
-    });
-  }, [data, focusedInput]);
+    setFormData((prevData: any[]) =>
+      prevData.map((element: any) => {
+        if (element.id === activeInputId) {
+          return {
+            ...element,
+            selected: {
+              id: activeInputId,
+              value: value,
+              category: category,
+            },
+          };
+        }
+        return element;
+      })
+    );
+  }, [focusedInput]);
 
   const onChangeInput = useCallback(
     (text: any) => {
@@ -203,57 +217,81 @@ const EditInfoCardModal = (props: any) => {
         ...focusedInput,
         value: text,
       });
-      data.forEach((element: any) => {
-        if (element.title === focusedInput?.item?.title) {
-          element.selected.value = text;
-        }
-      });
+      setFormData((prevData: any[]) =>
+        prevData.map((element: any) => {
+          if (element.title === focusedInput?.item?.title) {
+            return {
+              ...element,
+              selected: {
+                ...element.selected,
+                value: text,
+              },
+            };
+          }
+          return element;
+        })
+      );
     },
-    [data, focusedInput]
+    [focusedInput]
   );
 
   const onPickerItemPress = useCallback(
     (item: any) => {
-      data.forEach((element: any) => {
-        if (element.title === picker.activePicker) {
-          element.selected = item;
-        }
-      });
+      setFormData((prevData: any[]) =>
+        prevData.map((element: any) => {
+          if (element.title === picker.activePicker) {
+            return {
+              ...element,
+              selected: item,
+            };
+          }
+          return element;
+        })
+      );
       onClosePicker();
     },
-    [data, onClosePicker, picker.activePicker]
+    [onClosePicker, picker.activePicker]
   );
 
   const onHeightWeightPickerItemPress = useCallback(
     (item: any) => {
-      data.forEach((element: any) => {
-        if (element.type === 'scalling') {
-          if (heightWeightPicker.activePicker === element.title) {
-            element.selected = {
-              ...element.selected,
-              value: item,
-            };
-          } else if (
-            heightWeightPicker.activePicker === `${element.title}Scale`
-          ) {
-            element.selected = {
-              value:
-                element?.selected?.scale === item
-                  ? element?.selected?.value
-                  : null,
-              scale: item,
-            };
+      setFormData((prevData: any[]) =>
+        prevData.map((element: any) => {
+          if (element.type === 'scalling') {
+            if (heightWeightPicker.activePicker === element.title) {
+              return {
+                ...element,
+                selected: {
+                  ...element.selected,
+                  value: item,
+                },
+              };
+            } else if (
+              heightWeightPicker.activePicker === `${element.title}Scale`
+            ) {
+              return {
+                ...element,
+                selected: {
+                  value:
+                    element?.selected?.scale === item
+                      ? element?.selected?.value
+                      : null,
+                  scale: item,
+                },
+              };
+            }
           }
-        }
-      });
+          return element;
+        })
+      );
       onCloseHeightWeightPicker();
     },
-    [data, heightWeightPicker.activePicker, onCloseHeightWeightPicker]
+    [heightWeightPicker.activePicker, onCloseHeightWeightPicker]
   );
 
   const onUpdatePress = useCallback(async () => {
     setUpdateLoader(true);
-    updateDetails(data)
+    updateDetails(formData)
       .then(async (res: any) => {
         if (Object.keys(res).length !== 0) {
           currentUser.detail = res;
@@ -267,7 +305,7 @@ const EditInfoCardModal = (props: any) => {
       .catch(() => setUpdateLoader(false));
   }, [
     currentUser,
-    data,
+    formData,
     setData,
     storageKeys.USER,
     updateCurrentUser,
@@ -393,46 +431,51 @@ const EditInfoCardModal = (props: any) => {
   }, [onUpdatePress, updateLoader]);
 
   return (
-    <Modal visible={visible} transparent={true}>
-      <View style={Styles.container}>
-        <Animation animation={'zoomIn'} style={Styles.innerCon}>
-          <Ripple
-            style={{
-              alignSelf: Rtl ? 'flex-start' : 'flex-end',
-              marginHorizontal: wp(-2),
-            }}
-            onPress={onClose}
-          >
-            <AntDesign name="close" size={wp(8)} color={Colors.color1} />
-          </Ripple>
-          <Text style={Styles.header}>{from}</Text>
-          <FlatList
-            data={data}
-            renderItem={renderList}
-            contentContainerStyle={Styles.listContainer}
-            showsVerticalScrollIndicator={false}
-            // ListFooterComponent={renderListFooter}
-            keyboardDismissMode={'none'}
-          />
-          {renderListFooter()}
-        </Animation>
-
-        <Picker
-          visible={picker.visible}
-          onClose={onClosePicker}
-          onPress={onPickerItemPress}
-          data={picker.data}
-          headerTitle={picker.headerTitle}
-          loader={pickerDataLoader}
+    <Modal
+      isVisible={visible}
+      onBackdropPress={onClose}
+      backdropOpacity={0.5}
+      animationIn="zoomIn"
+      animationOut="zoomOut"
+      style={Styles.modal}
+    >
+      <View style={Styles.innerCon}>
+        <Ripple
+          style={{
+            alignSelf: Rtl ? 'flex-start' : 'flex-end',
+            marginHorizontal: wp(-2),
+          }}
+          onPress={onClose}
+        >
+          <AntDesign name="close" size={wp(8)} color={Colors.color1} />
+        </Ripple>
+        <Text style={Styles.header}>{from}</Text>
+        <FlatList
+          data={formData}
+          renderItem={renderList}
+          contentContainerStyle={Styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          // ListFooterComponent={renderListFooter}
+          keyboardDismissMode={'none'}
         />
-        <HeightWeightPicker
-          visible={heightWeightPicker.visible}
-          onClose={onCloseHeightWeightPicker}
-          onPress={onHeightWeightPickerItemPress}
-          data={heightWeightPicker.data}
-          headerTitle={heightWeightPicker.headerTitle}
-        />
+        {renderListFooter()}
       </View>
+
+      <Picker
+        visible={picker.visible}
+        onClose={onClosePicker}
+        onPress={onPickerItemPress}
+        data={picker.data}
+        headerTitle={picker.headerTitle}
+        loader={pickerDataLoader}
+      />
+      <HeightWeightPicker
+        visible={heightWeightPicker.visible}
+        onClose={onCloseHeightWeightPicker}
+        onPress={onHeightWeightPickerItemPress}
+        data={heightWeightPicker.data}
+        headerTitle={heightWeightPicker.headerTitle}
+      />
     </Modal>
   );
 };
@@ -440,11 +483,10 @@ const EditInfoCardModal = (props: any) => {
 export default EditInfoCardModal;
 
 const Styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.blackRGBA50,
+  modal: {
     justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
+    margin: 0,
   },
   innerCon: {
     backgroundColor: Colors.color2,
@@ -453,7 +495,6 @@ const Styles = StyleSheet.create({
     height: hp(80),
     paddingVertical: hp(1),
     paddingHorizontal: wp(4),
-    marginVertical: hp(15),
   },
   header: {
     color: Colors.color1,

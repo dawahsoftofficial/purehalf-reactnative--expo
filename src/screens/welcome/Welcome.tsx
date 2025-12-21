@@ -112,12 +112,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         navigation: 'PhotosAndVideos',
         completed: false,
       },
-      {
-        label: LanguageKeys.coverImage,
-        id: 'cover_image',
-        navigation: 'PhotosAndVideos',
-        completed: false,
-      },
+      // Currently not entertaining cover photo
+      // {
+      //   label: LanguageKeys.coverImage,
+      //   id: 'cover_image',
+      //   navigation: 'PhotosAndVideos',
+      //   completed: false,
+      // },
       {
         label: LanguageKeys.tagline,
         id: 'tagline',
@@ -387,7 +388,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const handleProfileCompleteData = useCallback(async () => {
     const baseState: Record<string, boolean> = {
       primary_image: Boolean(currentUser?.media?.primary_image),
-      cover_image: Boolean(currentUser?.media?.cover_image),
+      // Currently not entertaining cover photo
+      // cover_image: Boolean(currentUser?.media?.cover_image),
       tagline: Boolean(currentUser?.detail?.tagline),
       'appearance-0': true,
       'familybg-0': true,
@@ -553,16 +555,28 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
     return (
       <View style={[Styles.accordContainer, accordionContainerStyle]}>
-        <Ripple style={Styles.accordHeader} onPress={toggleItem}>
+        <Ripple
+          rippleColor={Colors.theme}
+          style={Styles.accordHeader}
+          onPress={toggleItem}
+        >
           <View style={Styles.headerListLeftWrapper}>
-            <View
-              style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
-            >
-              <Text style={[Styles.headerlistCounterText, counterTextStyle]}>
-                {count}
-              </Text>
-            </View>
-            <View>
+            {count !== undefined && count !== 0 && (
+              <View
+                style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
+              >
+                {typeof count === 'string' || typeof count === 'number' ? (
+                  <Text
+                    style={[Styles.headerlistCounterText, counterTextStyle]}
+                  >
+                    {count}
+                  </Text>
+                ) : (
+                  count
+                )}
+              </View>
+            )}
+            <View style={{}}>
               <Text style={[Styles.accordTitle, titleStyle]}>{title}</Text>
             </View>
           </View>
@@ -670,12 +684,14 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         <View style={Styles.modalContent}>
           <View style={Styles.modalHeader}>
             <View style={Styles.modalHeaderContent}>
-              <Text style={Styles.modalHeaderTitle}>
-                {t(LanguageKeys.myAccount)}
-              </Text>
-              <Text style={Styles.modalHeaderSubTitle}>
-                {t(LanguageKeys.profileComplete)}
-              </Text>
+              <View style={Styles.modalHeaderTextWrapper}>
+                <Text style={Styles.modalHeaderTitle}>
+                  {t(LanguageKeys.myAccount)}
+                </Text>
+                <Text style={Styles.modalHeaderSubTitle}>
+                  {t(LanguageKeys.profileComplete)}
+                </Text>
+              </View>
             </View>
             <TouchableOpacity
               onPress={() => setHeaderModal(false)}
@@ -687,9 +703,19 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={Styles.modalBody}>
               <AccordionItem
-                title={t(LanguageKeys.profileCompletion)}
-                count={`${profileCompleteProgress.filter((item) => item.completed).length}/${profileCompleteProgress.length}`}
+                title={`${t(LanguageKeys.profileCompletion)} (${profileCompleteProgress.filter((item) => item.completed).length} out of ${profileCompleteProgress.length})`}
                 type="profile"
+                count={
+                  <Image
+                    source={Images.userCircle}
+                    style={Styles.modalHeaderIcon}
+                  />
+                }
+                counterWrapperStyle={{
+                  borderWidth: 0,
+                  width: wp(7),
+                  height: wp(7),
+                }}
               >
                 <View style={Styles.completeProfileWrapper}>
                   {profileCompleteProgress?.map((item, ind) => (
@@ -855,7 +881,7 @@ const Styles = StyleSheet.create({
     color: Colors.color2,
   },
   modal: {
-    margin: 0,
+    marginHorizontal: hp(2),
     // justifyContent: 'flex-end',
   },
   modalContent: {
@@ -875,7 +901,24 @@ const Styles = StyleSheet.create({
   },
   modalHeaderContent: {
     flex: 1,
-    marginLeft: wp(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalHeaderIconWrapper: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(6),
+    backgroundColor: Colors.themeLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: wp(3),
+  },
+  modalHeaderIcon: {
+    width: wp(7),
+    height: wp(7),
+  },
+  modalHeaderTextWrapper: {
+    flex: 1,
   },
   modalHeaderTitle: {
     fontFamily: Fonts.APPFONT_B,

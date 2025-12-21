@@ -392,6 +392,8 @@ const Keys = {
   disabledChatDescription: 'disabledChatDescription',
   helpandsupport: 'helpandsupport',
   contactSupportDescription: 'contactSupportDescription',
+  whatWouldYouLikeToTalkAbout: 'whatWouldYouLikeToTalkAbout',
+  shareSomeDetails: 'shareSomeDetails',
   selectAReason: 'selectAReason',
   submit: 'submit',
   addYourComment: 'addYourComment',

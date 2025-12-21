@@ -83,6 +83,7 @@ const Images = {
   recommendationIcon: require('../assets/images/recommendationIcon.png'),
   recommendationIcon2: require('../assets/images/recommendationIcon2.png'),
   mapIcon: require('../assets/images/mapIcon.png'),
+  userCircle: require('../assets/images/user-circle.png'),
 };
 
 export default Images;
