@@ -172,7 +172,7 @@ const EditInfoCardModal = (props: any) => {
         });
       }
     },
-    [currentUser.gender, getApiData]
+    [currentUser, getApiData]
   );
 
   const onInputFocus = useCallback((id: any, value: any, item: any) => {

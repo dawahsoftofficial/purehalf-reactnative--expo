@@ -356,6 +356,7 @@ const Keys = {
   proFeature3: 'proFeature3',
   proFeature4: 'proFeature4',
   subscribeNow: 'subscribeNow',
+  moreWaysToSubscribe: 'moreWaysToSubscribe',
   goBack: 'goBack',
   bySubscribingDes: 'bySubscribingDes',
   termsAndConditions: 'termsAndConditions',
