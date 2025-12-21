@@ -1,7 +1,6 @@
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { t } from 'i18next';
 import moment from 'moment';
-import PropTypes from 'prop-types';
 import React, { useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -44,9 +43,6 @@ const entryBorderRadius = 8;
 const SliderEntry = ({
   data,
   even,
-  parallax,
-  parallaxProps,
-  swipeNext,
   onLikePress,
   onPassPress,
   onPress,
@@ -61,7 +57,6 @@ const SliderEntry = ({
   const [profileImageLoader, setProfileImageLoader] = useState(false);
   const [profileImageError, setProfileImageError] = useState(false);
   const [matchingData, setMatchingData] = useState<any>([]);
-  const { illustration } = data;
   const likeIconRef = useRef<any>(null);
   const unLikeIconRef = useRef<any>(null);
 
@@ -116,7 +111,7 @@ const SliderEntry = ({
   };
 
   const isPremiumUser = () => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const now = moment();
       const membershipExpiry = currentUser?.membership_expiry;
       if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
@@ -228,11 +223,13 @@ const SliderEntry = ({
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
           style={Styles.image}
+          resizeMode="contain"
         />
       ) : (
         <Image
           source={Images.userPlaceholderVertical}
           style={{ ...Styles.image, height: '100%' }}
+          resizeMode="contain"
         />
       )}
       {profileImageLoader && (
@@ -376,16 +373,7 @@ const SliderEntry = ({
   );
 };
 
-SliderEntry.propTypes = {
-  data: PropTypes.object.isRequired,
-  even: PropTypes.bool,
-  parallax: PropTypes.bool,
-  parallaxProps: PropTypes.object,
-};
-
 export default SliderEntry;
-
-const { width } = Dimensions.get('window');
 
 const Styles = StyleSheet.create({
   nullSlideInnerContainer: {
@@ -440,11 +428,11 @@ const Styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowOffset: { width: 0, height: 5 },
     shadowRadius: 10,
-    backgroundColor: Colors.colors2,
+    backgroundColor: Colors.color2,
   },
   imageContainer: {
     marginBottom: isIOS ? 0 : -1,
-    backgroundColor: Colors.colors2,
+    backgroundColor: Colors.color2,
     position: 'absolute',
     top: 0,
     left: 0,

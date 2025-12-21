@@ -43,7 +43,6 @@ const EndPoints = {
   storeQuerySupport: '/auth/query/store',
   getButtonsActiveStatus: '/settings',
   paymentInfo: '/auth/list/paymentinfo',
-  appUpdateInfo: '/auth/force-update',
   snedMessageNotification: '/auth/send/message/notification',
 };
 

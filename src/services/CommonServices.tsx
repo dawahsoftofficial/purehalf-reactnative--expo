@@ -62,9 +62,9 @@ const setRevenueCat = async (userID = null) => {
   }
 };
 
-const getTimeStamp = () => {
-  const date = new Date();
-  return date.getTime();
+const getTimeStamp = async (): Promise<number> => {
+  // Always use device time for sending messages to avoid delay
+  return Date.now();
 };
 
 const LOG = (data: any) => {

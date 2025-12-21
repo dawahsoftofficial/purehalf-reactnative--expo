@@ -112,12 +112,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         navigation: 'PhotosAndVideos',
         completed: false,
       },
-      {
-        label: LanguageKeys.coverImage,
-        id: 'cover_image',
-        navigation: 'PhotosAndVideos',
-        completed: false,
-      },
+      // Currently not entertaining cover photo
+      // {
+      //   label: LanguageKeys.coverImage,
+      //   id: 'cover_image',
+      //   navigation: 'PhotosAndVideos',
+      //   completed: false,
+      // },
       {
         label: LanguageKeys.tagline,
         id: 'tagline',
@@ -192,6 +193,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [optionTab, setOptionTab] = useState<string>('');
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userListPage, setUserListPage] = useState(1);
+  console.log('userListPage', userListPage);
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
   const [headerModal, setHeaderModal] = useState<boolean>(false);
@@ -221,11 +223,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const getUsers = useCallback(
     (
-      params: { page: number; type: string } = { page: 1, type: '-1' },
+      params: { page: number; type: number | string } = { page: 1, type: -1 },
       replace = false
     ) => {
       ApiServices.getUsers(params)
-        .then((res: any[]) => {
+        .then((res) => {
           const list = Array.isArray(res) ? res : [];
           setUsersList((prev) => (replace ? list : [...prev, ...list]));
         })
@@ -240,7 +242,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const getUserStats = useCallback(() => {
     ApiServices.getUserStats()
-      .then(setUserStats)
+      .then((res: any) => {
+        setUserStats(res);
+      })
       .catch(() => {});
   }, []);
 
@@ -258,7 +262,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
     setModalLoader(true);
     try {
-      const refreshedUser = await ApiServices.getCurrentUserDetail();
+      const refreshedUser: any = await ApiServices.getCurrentUserDetail();
       updateCurrentUser(refreshedUser);
       const refreshedExpiry = refreshedUser?.membership_expiry;
       return (
@@ -266,7 +270,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         refreshedExpiry !== undefined &&
         moment(refreshedExpiry).isAfter(now)
       );
-    } catch (error) {
+    } catch (err) {
+      console.log('error while ensuring active membership =>', err);
       return false;
     } finally {
       setModalLoader(false);
@@ -383,7 +388,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const handleProfileCompleteData = useCallback(async () => {
     const baseState: Record<string, boolean> = {
       primary_image: Boolean(currentUser?.media?.primary_image),
-      cover_image: Boolean(currentUser?.media?.cover_image),
+      // Currently not entertaining cover photo
+      // cover_image: Boolean(currentUser?.media?.cover_image),
       tagline: Boolean(currentUser?.detail?.tagline),
       'appearance-0': true,
       'familybg-0': true,
@@ -426,7 +432,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           });
         });
       }
-    } catch (error) {
+    } catch {
       // ignore read errors and keep existing completion defaults
     }
 
@@ -437,12 +443,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       }));
       return updated.sort(sortByCompletion);
     });
-  }, [
-    currentUser,
-    getData,
-    profileProgressTemplate,
-    storageKeys.PROFILE_DETAIL_LOCAL,
-  ]);
+  }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
 
   const checkNewTransaction = useCallback(() => {
     if (currentUser?.latest_transaction?.paid_tracking === 0) {
@@ -461,7 +462,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       hasInitializedUsers = true;
       getUsers(undefined, true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -495,7 +495,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     React.useCallback(() => {
       getUserStats();
       handleProfileCompleteData();
-    }, [getUserStats, handleProfileCompleteData])
+    }, [])
   );
 
   useFocusEffect(
@@ -536,6 +536,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     titleStyle?: TextStyle;
     counterWrapperStyle?: ViewStyle;
     counterTextStyle?: TextStyle;
+    accordionContainerStyle?: ViewStyle;
   }> = ({
     children,
     title,
@@ -543,6 +544,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     type,
     titleStyle,
     counterWrapperStyle,
+    accordionContainerStyle,
     counterTextStyle,
   }) => {
     const [expanded, setExpanded] = useState(false);
@@ -552,17 +554,29 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     };
 
     return (
-      <View style={Styles.accordContainer}>
-        <Ripple style={Styles.accordHeader} onPress={toggleItem}>
+      <View style={[Styles.accordContainer, accordionContainerStyle]}>
+        <Ripple
+          rippleColor={Colors.theme}
+          style={Styles.accordHeader}
+          onPress={toggleItem}
+        >
           <View style={Styles.headerListLeftWrapper}>
-            <View
-              style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
-            >
-              <Text style={[Styles.headerlistCounterText, counterTextStyle]}>
-                {count}
-              </Text>
-            </View>
-            <View>
+            {count !== undefined && count !== 0 && (
+              <View
+                style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
+              >
+                {typeof count === 'string' || typeof count === 'number' ? (
+                  <Text
+                    style={[Styles.headerlistCounterText, counterTextStyle]}
+                  >
+                    {count}
+                  </Text>
+                ) : (
+                  count
+                )}
+              </View>
+            )}
+            <View style={{}}>
               <Text style={[Styles.accordTitle, titleStyle]}>{title}</Text>
             </View>
           </View>
@@ -669,27 +683,39 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       >
         <View style={Styles.modalContent}>
           <View style={Styles.modalHeader}>
+            <View style={Styles.modalHeaderContent}>
+              <View style={Styles.modalHeaderTextWrapper}>
+                <Text style={Styles.modalHeaderTitle}>
+                  {t(LanguageKeys.myAccount)}
+                </Text>
+                <Text style={Styles.modalHeaderSubTitle}>
+                  {t(LanguageKeys.profileComplete)}
+                </Text>
+              </View>
+            </View>
             <TouchableOpacity
               onPress={() => setHeaderModal(false)}
               style={Styles.modalCloseBtn}
             >
               <Entypo name="cross" size={wp(6)} />
             </TouchableOpacity>
-            <View style={Styles.modalHeaderContent}>
-              <Text style={Styles.modalHeaderTitle}>
-                {t(LanguageKeys.myAccount)}
-              </Text>
-              <Text style={Styles.modalHeaderSubTitle}>
-                {t(LanguageKeys.profileComplete)}
-              </Text>
-            </View>
           </View>
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={Styles.modalBody}>
               <AccordionItem
-                title={t(LanguageKeys.profileCompletion)}
-                count={`${profileCompleteProgress.filter((item) => item.completed).length}/${profileCompleteProgress.length}`}
+                title={`${t(LanguageKeys.profileCompletion)} (${profileCompleteProgress.filter((item) => item.completed).length} out of ${profileCompleteProgress.length})`}
                 type="profile"
+                count={
+                  <Image
+                    source={Images.userCircle}
+                    style={Styles.modalHeaderIcon}
+                  />
+                }
+                counterWrapperStyle={{
+                  borderWidth: 0,
+                  width: wp(7),
+                  height: wp(7),
+                }}
               >
                 <View style={Styles.completeProfileWrapper}>
                   {profileCompleteProgress?.map((item, ind) => (
@@ -717,6 +743,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               {!currentUser?.is_approved ? (
                 <AccordionItem
                   title={t(LanguageKeys.profileInReview)}
+                  accordionContainerStyle={{ marginBottom: 0 }}
                   count={
                     <MaterialCommunityIcons
                       name="information-variant"
@@ -743,6 +770,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   titleStyle={{ color: Colors.color10 }}
                   counterWrapperStyle={{ borderColor: Colors.color10 }}
                   counterTextStyle={{ color: Colors.color10 }}
+                  accordionContainerStyle={{ marginBottom: 0 }}
                 >
                   <View style={Styles.completeProfileWrapper}>
                     <Text style={Styles.completeProfileText}>
@@ -848,23 +876,24 @@ const Styles = StyleSheet.create({
     right: -7,
   },
   headerCounterText: {
-    fontFamily: Fonts.APPFONT_S,
+    fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small1,
-    color: Colors.white,
+    color: Colors.color2,
   },
   modal: {
-    margin: 0,
+    marginHorizontal: hp(2),
+    // justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.color2,
     borderRadius: 10,
-    padding: 10,
+    padding: hp(2),
     maxHeight: hp(80),
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: hp(2),
   },
   modalCloseBtn: {
@@ -872,7 +901,24 @@ const Styles = StyleSheet.create({
   },
   modalHeaderContent: {
     flex: 1,
-    marginLeft: wp(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalHeaderIconWrapper: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(6),
+    backgroundColor: Colors.themeLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: wp(3),
+  },
+  modalHeaderIcon: {
+    width: wp(7),
+    height: wp(7),
+  },
+  modalHeaderTextWrapper: {
+    flex: 1,
   },
   modalHeaderTitle: {
     fontFamily: Fonts.APPFONT_B,
@@ -881,17 +927,17 @@ const Styles = StyleSheet.create({
   },
   modalHeaderSubTitle: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
-    color: Colors.color26,
+    fontSize: Typography.small,
+    color: Colors.color28,
   },
   modalBody: {
-    paddingBottom: hp(2),
+    // paddingBottom: hp(2),
   },
   accordContainer: {
     marginBottom: hp(2),
     borderRadius: wp(2),
     borderWidth: 1,
-    borderColor: Colors.color46,
+    borderColor: Colors.themeLight,
     overflow: 'hidden',
   },
   accordHeader: {
@@ -917,12 +963,12 @@ const Styles = StyleSheet.create({
   },
   headerlistCounterText: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
   },
   accordTitle: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
   },
   accordBody: {
@@ -953,12 +999,12 @@ const Styles = StyleSheet.create({
   },
   infoItemText: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
   },
   completeProfileText: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.normal,
+    fontSize: Typography.small,
     color: Colors.color1,
     lineHeight: Typography.large1,
   },

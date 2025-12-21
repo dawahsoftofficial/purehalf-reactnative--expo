@@ -1,6 +1,7 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { type JSX, useCallback, useEffect, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
+import RNBootSplash from 'react-native-bootsplash';
 import Rate from 'react-native-rate';
 
 import { Button, Text } from '../components';
@@ -25,12 +26,16 @@ const Initialization = (): JSX.Element => {
 
   const checkForMandatoryUpdate = useCallback(async () => {
     try {
-      const response = await ApiServices.getAppUpdateInfo();
-      const shouldForceUpdate = Boolean(response?.force_update);
+      const response: any = await ApiServices.getButtonsActiveStatus();
+      const results = response?.results || [];
+      const forceUpdateSetting = results.find(
+        (item: any) => item?.key === 'forceUpdate'
+      );
+      const shouldForceUpdate = Boolean(forceUpdateSetting?.value);
 
       setShowUpdateModal(shouldForceUpdate);
-    } catch (error) {
-      console.error('Failed to fetch the app update information.', error);
+    } catch (_error) {
+      console.error('Failed to fetch the app update information.', _error);
     }
   }, []);
 
@@ -40,7 +45,7 @@ const Initialization = (): JSX.Element => {
       const isUrdu = savedLanguage === 'ur';
 
       updateDirection(isUrdu ? 'rtl' : 'ltr', isUrdu ? 'ur' : 'en');
-    } catch (error) {
+    } catch {
       updateDirection('ltr', 'en');
     } finally {
       setIsLoading(false);
@@ -78,6 +83,12 @@ const Initialization = (): JSX.Element => {
     initializeApp();
   }, [clearOpenedConversationId, configureLanguage]);
 
+  useEffect(() => {
+    if (!isLoading) {
+      RNBootSplash.hide({ fade: true });
+    }
+  }, [isLoading]);
+
   const handleUpdatePress = useCallback(() => {
     const options = {
       AppleAppID: '6450672518',
@@ -98,7 +109,12 @@ const Initialization = (): JSX.Element => {
 
   return (
     <View style={styles.container}>
-      <Modal visible={showUpdateModal} transparent>
+      <Modal
+        visible={showUpdateModal}
+        transparent
+        onRequestClose={() => {}}
+        animationType="fade"
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalBody}>

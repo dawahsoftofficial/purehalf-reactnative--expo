@@ -1,1 +1,1 @@
-export { default as BankTransfer } from './BankTransfer'
+export { default as BankTransfer } from './BankTransfer';

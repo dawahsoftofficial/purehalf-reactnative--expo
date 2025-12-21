@@ -1,1 +1,1 @@
-export { default as PrivatePhotoRequest } from './PrivatePhotoRequest'
+export { default as PrivatePhotoRequest } from './PrivatePhotoRequest';

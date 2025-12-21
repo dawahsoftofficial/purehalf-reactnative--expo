@@ -1,18 +1,18 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { getApp } from '@react-native-firebase/app';
-import { getDatabase } from '@react-native-firebase/database';
+import { useFocusEffect } from '@react-navigation/native';
 import _ from 'lodash';
-import moment from 'moment';
-import React, { useEffect, useReducer, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   Image,
   ScrollView,
-  StatusBar,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -20,32 +20,33 @@ import {
   VirtualizedList,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Container, PremiumButton } from '../../components';
-import { hp, Typography, wp } from '../../global';
+import { hp, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Images } from '../../res';
 import {
   ApiServices,
-  Firebase,
   flashInfoMessage,
   getTimeStamp,
-  isIOS,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import MessageBubble from './components/MessageBubble';
+import { useConversationRealtime } from './hooks/useConversationRealtime';
+import { useMessagePagination } from './hooks/useMessagePagination';
+import { useReadReceipts } from './hooks/useReadReceipts';
+import { useSendMessage } from './hooks/useSendMessage';
+import Styles from './SingleChat.styles';
 import SingleChatHeader from './SingleChatHeader';
-
-const firebaseApp = getApp();
-const database = getDatabase(firebaseApp);
-
 const SingleChat = (props: any) => {
   const Rtl = CheckRtl();
   const { setData, storageKeys } = StorageManager;
   const flatListRef: any = useRef(null);
   const inputRef: any = useRef(null);
-  const chatOpenTimeStamp = getTimeStamp();
+  const [chatOpenTimeStamp, setChatOpenTimeStamp] = useState<number | null>(
+    null
+  );
   const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { t }: any = useTranslation();
   const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
@@ -60,12 +61,10 @@ const SingleChat = (props: any) => {
   const [isBlockedYou, setIsBlockedYou] = useState<any>(false);
   const [listReachedStart, setListReachedStart] = useState(true);
   const [loader, setLoader] = useState(true);
-  const [flastListFooterLoader, setFlastListFooterLoader] = useState(false);
   const [messagePressedId, setMessagePressedId] = useState(null);
   const [quote, setQuote] = useState('');
 
   const [messages, setMessages] = useState<any>([]);
-  const [messagesPage, setMessagesPage] = useState({ start: 0, end: 15 });
   const [lastDeletedByFound, setLastDeletedByFound] = useState(false);
   const [totalMessages, setTotalMessages] = useState([]);
   const [conversationData, setConversationData] = useState<any>('');
@@ -73,7 +72,11 @@ const SingleChat = (props: any) => {
 
   const [inputMessage, setInputMessage] = useState('');
   const messagesRef: any = useRef(messages);
-
+  const { handleReadBy } = useReadReceipts({
+    currentUserId: currentUser?.id,
+    otherUserId: otherUserData?.id,
+    setConversationData,
+  });
   const onChangeInputMessage = (text: any) => {
     setInputMessage(text);
   };
@@ -82,7 +85,7 @@ const SingleChat = (props: any) => {
     messages: any,
     lastDeleted = lastDeletedByFound
   ) => {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
       messages = await _.reject(
         messages,
         (message) =>
@@ -96,10 +99,6 @@ const SingleChat = (props: any) => {
         );
       });
       if (lastDeleted) {
-        setFlastListFooterLoader(false);
-        if (loader) {
-          setLoader(false);
-        }
         resolve('ignore');
       } else if (lastDeletedByIndex !== -1) {
         setLastDeletedByFound(true);
@@ -110,6 +109,16 @@ const SingleChat = (props: any) => {
       }
     });
   };
+  const { footerLoading, handleEndReached, resetToFirstPage } =
+    useMessagePagination({
+      totalMessages,
+      messages,
+      setMessages,
+      handleLastDeletedBy,
+      listReachedStart,
+      setListReachedStart,
+      setLastDeletedByFound,
+    });
 
   const getOtherUserData = async () => {
     if (currentUser?.id === 'guardian') {
@@ -177,9 +186,7 @@ const SingleChat = (props: any) => {
       const { convDetails, messages } = conversationData;
       setConversationData(convDetails);
 
-      const messagesArray: any = messages
-        ? _.orderBy(Object.values(messages), ['createdAt'], ['desc'])
-        : [];
+      const messagesArray: any = messages ? Object.values(messages) : [];
       setTotalMessages(messagesArray);
 
       if (messagesArray.length === 0) {
@@ -187,10 +194,10 @@ const SingleChat = (props: any) => {
       } else {
         const last15Messages = _.slice(messagesArray, 0, 15);
         handleLastDeletedBy(last15Messages)
-          .then((res: any) => {
+          .then(async (res: any) => {
             if (res !== 'ignore') {
               setMessages(res);
-              handleReadBy(convDetails, res);
+              await handleReadBy(convDetails, res);
             }
           })
           .finally(() => setLoader(false));
@@ -198,11 +205,11 @@ const SingleChat = (props: any) => {
 
       setConversationId(convDetails?.id);
       setIsBlockedByYou(
-        convDetails?.participantsBlockFlag[otherUserData?.id]?.blockStatus ===
+        convDetails?.participantsBlockFlag?.[otherUserData?.id]?.blockStatus ===
           true
       );
       setIsBlockedYou(
-        convDetails?.participantsBlockFlag[currentUser?.id]?.blockStatus ===
+        convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
           true
       );
     } else if (!fromNotification) {
@@ -218,96 +225,106 @@ const SingleChat = (props: any) => {
     await setData(storageKeys.OPENED_CONVERSATION_ID, conversationId);
   };
 
+  // Initialize chatOpenTimeStamp
   useEffect(() => {
-    if (conversationId.length !== 0) {
-      setOpenedConversation(conversationId);
-      const onChildChanged = database
-        .ref(`/conversations/${conversationId}/messages`)
-        .orderByChild('createdAt')
-        .startAt(chatOpenTimeStamp)
-        .on('child_changed', (snapshot: any) => {
-          const updatedMessage = snapshot.val();
-          const messageIndex = messagesRef?.current.findIndex(
-            (message: any) => message.id === updatedMessage.id
-          );
-          if (messageIndex !== -1) {
-            messagesRef.current[messageIndex] = updatedMessage;
-          }
-          setMessages(messagesRef.current);
-          setConversationData(conversationData);
-          forceUpdate();
-        });
+    const initializeTimestamp = async () => {
+      const timestamp = await getTimeStamp();
+      setChatOpenTimeStamp(timestamp);
+    };
+    initializeTimestamp();
+  }, []);
 
-      const onBlockChanged = database
-        .ref(
-          `/conversations/${conversationId}/convDetails/participantsBlockFlag`
-        )
-        .on('child_changed', (snapshot: any) => {
-          setConversationData((prevConversationData: any) => {
-            const updatedConversationData = { ...prevConversationData };
-            updatedConversationData.participantsBlockFlag[snapshot.key] =
-              snapshot.val();
-            if (
-              updatedConversationData?.participantsBlockFlag[currentUser?.id]
-                ?.blockStatus === true
-            ) {
-              setIsBlockedYou(true);
-            } else {
-              setIsBlockedYou(false);
-              handleReadBy(updatedConversationData, messagesRef?.current);
-            }
-            updatedConversationData?.participantsBlockFlag[otherUserData?.id]
-              ?.blockStatus === true
-              ? setIsBlockedByYou(true)
-              : setIsBlockedByYou(false);
-            return updatedConversationData;
-          });
-          forceUpdate();
-        });
+  useConversationRealtime({
+    conversationId,
+    chatOpenTimeStamp,
 
-      const onChildAdd = database
-        .ref(`/conversations/${conversationId}/messages`)
-        .orderByChild('createdAt')
-        .startAt(chatOpenTimeStamp)
-        .on('child_added', (snapshot: any) => {
-          const newMessage = snapshot.val();
-          if (newMessage?.sender !== currentUser?.id) {
-            if (newMessage?.blockedParticipants?.[otherUserData?.id] === true) {
-            } else {
-              const lastMessage: any = _.first(messagesRef?.current);
-              if (
-                !lastMessage ||
-                newMessage.createdAt > lastMessage.createdAt
-              ) {
-                newMessage.id = snapshot.key;
-                setMessages((prevMessages: any) => [
-                  newMessage,
-                  ...prevMessages,
-                ]);
+    currentUserId: currentUser?.id,
+    otherUserId: otherUserData?.id,
+
+    conversationData,
+
+    setMessages,
+    messagesRef,
+
+    setConversationData,
+    setIsBlockedYou,
+    setIsBlockedByYou,
+
+    setOpenedConversation: async (id) => {
+      await setOpenedConversation(id);
+    },
+    clearOpenedConversation: async () => {
+      await setData(storageKeys.OPENED_CONVERSATION_ID, null);
+    },
+
+    handleReadBy,
+    forceUpdate,
+  });
+  const { onSendPress } = useSendMessage({
+    currentUser,
+    otherUserData,
+
+    conversationData,
+    setConversationData,
+
+    messages,
+    setMessages,
+
+    setConversationId,
+
+    isBlockedYou,
+    isBlockedByYou,
+
+    setInputMessage,
+
+    updateCurrentUser,
+    setData,
+    storageKeys,
+
+    navigation: props.navigation,
+    forceUpdate,
+  });
+
+  // Add focus effect to refresh messages when screen comes back into focus
+  useFocusEffect(
+    useCallback(() => {
+      if (conversationId?.length !== 0) {
+        // Find the current conversation in the global context
+        const currentConversation = conversations.find(
+          (conv: any) => conv?.convDetails?.id === conversationId
+        );
+
+        if (currentConversation) {
+          const { convDetails, messages: convMessages } = currentConversation;
+
+          // Update conversation data
+          setConversationData(convDetails);
+
+          // Process messages
+          const messagesArray = convMessages ? Object.values(convMessages) : [];
+
+          setTotalMessages(messagesArray as any);
+
+          if (messagesArray.length > 0) {
+            const last15Messages = _.slice(messagesArray, 0, 15);
+            handleLastDeletedBy(last15Messages).then(async (res: any) => {
+              if (res !== 'ignore') {
+                setMessages(res);
+                if (convDetails?.length !== 0) {
+                  await handleReadBy(convDetails, res);
+                }
                 forceUpdate();
-                handleReadBy(conversationData, messagesRef?.current, true);
               }
-            }
+            });
           }
-        });
-      const clearOpenedConvId = async () => {
-        await setData(storageKeys.OPENED_CONVERSATION_ID, null);
-      };
+        }
+      }
 
       return () => {
-        database
-          .ref(`/conversations/${conversationId}/messages`)
-          .off('child_changed', onChildChanged);
-        database
-          .ref(`/conversations/${conversationId}/messages`)
-          .off('child_added', onChildAdd);
-        database
-          .ref(`/conversations/${conversationId}/convDetails/blocked`)
-          .off('child_changed', onBlockChanged);
-        clearOpenedConvId();
+        // Cleanup if needed
       };
-    }
-  }, [conversationId]);
+    }, [conversationId, conversations])
+  );
 
   useEffect(() => {
     const quotes = [
@@ -328,354 +345,6 @@ const SingleChat = (props: any) => {
     setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
   }, []);
 
-  const handleReadBy = (
-    convDetails: any,
-    messages: any,
-    fromNewMessage = false
-  ) => {
-    if (
-      convDetails?.length !== 0 &&
-      !convDetails?.participantsBlockFlag[otherUserData?.id]?.blockStatus
-    ) {
-      if (convDetails?.unReadCount[currentUser?.id] !== 0 || fromNewMessage) {
-        Firebase.updateConvUnReadCount(convDetails?.id, currentUser?.id).then(
-          () => {
-            const updatedUnReadCount = {
-              ...convDetails.unReadCount,
-              [currentUser?.id]: 0,
-            };
-
-            const updatedConvDetails = {
-              ...convDetails,
-              unReadCount: updatedUnReadCount,
-            };
-            setConversationData(updatedConvDetails);
-          }
-        );
-      }
-
-      const filteredMessages = messages.reduce((acc: any, message: any) => {
-        if (
-          message?.readBy[currentUser?.id]?.seen === false &&
-          message?.blockedParticipants?.[otherUserData?.id] !== true
-        ) {
-          const updatedMessage = {
-            ...message,
-            readBy: {
-              ...message.readBy,
-              [currentUser?.id]: {
-                seen: true,
-                seenAt: getTimeStamp(),
-              },
-            },
-          };
-          acc.push(updatedMessage);
-        } else {
-          acc.push(message);
-        }
-        return acc;
-      }, []);
-
-      if (filteredMessages?.length !== 0) {
-        Firebase.updateMessagesReadBy(
-          filteredMessages,
-          currentUser?.id,
-          convDetails?.id
-        );
-      }
-    }
-  };
-
-  const onMessageSendingFailed = (messages: any) => {
-    messages[0].status = 'failed';
-    setMessages(messages);
-    forceUpdate();
-  };
-
-  const sendMessageToFirebase = (
-    messageData: any,
-    conversationData: any,
-    messages: any
-  ) => {
-    Firebase.sendMessage(messageData, conversationData)
-      .then(() => {
-        messages[0].status = 'sent';
-        setMessages(messages);
-        forceUpdate();
-        const data = {
-          title: currentUser?.full_name,
-          body: messageData?.message,
-          pressAction: 'openChat',
-          data: {
-            user: {
-              image: currentUser?.media?.primary_image,
-              name: currentUser?.full_name,
-              id: currentUser?.id,
-            },
-            conversationId: conversationData?.id,
-            message: messageData,
-          },
-        };
-        const token = otherUserData?.token;
-
-        Firebase.sendMessageNotification(token, data);
-      })
-      .catch(onMessageSendingFailed.bind(null, messages));
-  };
-
-  const isPremiumUser = () => {
-    return new Promise((resolve, reject) => {
-      const now = moment();
-      const membershipExpiry = currentUser?.membership_expiry;
-      if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
-        resolve('premiumUser');
-      } else if (
-        membershipExpiry === null ||
-        moment(membershipExpiry).isBefore(now)
-      ) {
-        ApiServices.getCurrentUserDetail()
-          .then((res: any) => {
-            const membershipExpiry = res?.membership_expiry;
-            updateCurrentUser(res);
-            if (
-              membershipExpiry === null ||
-              moment(membershipExpiry).isBefore(now)
-            ) {
-              props.navigation.navigate('ProFeaturesPromotion', {
-                navigateTo: 'goBack',
-              });
-            } else {
-              resolve('premiumUser');
-            }
-          })
-          .catch(() => {});
-      }
-    });
-  };
-
-  const containsRestrictedWord = (message: string) => {
-    const restrictedWords = ['bad', 'inappropriate', 'harmful'];
-    return restrictedWords.some((word) => message.includes(word));
-  };
-
-  const sendMessage = async () => {
-    setInputMessage('');
-    const messageData: any = {
-      createdAt: getTimeStamp(),
-      id: `id-${getTimeStamp()}`,
-      sender: currentUser?.id,
-      message: inputMessage,
-      status: 'sending',
-      readBy: {
-        [currentUser?.id]: { seen: true, seenAt: getTimeStamp() },
-        [otherUserData?.id]: { seen: false, seenAt: null },
-      },
-    };
-    if (isBlockedYou) {
-      messageData.blockedParticipants = {
-        ...messageData?.blockedParticipants,
-        [currentUser?.id]: true,
-      };
-    }
-    // if(messages.length === 0 && totalMessages.length === 0) {
-    if (
-      !currentUser?.is_chat_reported &&
-      containsRestrictedWord(inputMessage)
-    ) {
-      ApiServices.updateUserInfo({ is_chat_reported: true })
-        .then(async (res: any) => {
-          currentUser.is_chat_reported = res?.is_chat_reported;
-          await setData(storageKeys.USER, currentUser);
-          updateCurrentUser(currentUser);
-        })
-        .catch((err) => {});
-    }
-    if (conversationData?.length === 0) {
-      messages.push(messageData);
-      setMessages(messages);
-
-      const conversation = {
-        participantsDeleteFlag: {
-          [currentUser?.id]: { deleteStatus: false },
-          [otherUserData?.id]: { deleteStatus: false },
-        },
-        deletedAt: [],
-        createdBy: currentUser?.id,
-        participantsBlockFlag: {
-          [currentUser?.id]: { blockStatus: false },
-          [otherUserData?.id]: { blockStatus: false },
-        },
-        unReadCount: {
-          [currentUser?.id]: 0,
-          [otherUserData?.id]: 1,
-        },
-        participantsData: [
-          {
-            image: currentUser?.media?.primary_image,
-            name: currentUser?.full_name,
-            id: currentUser?.id,
-          },
-          {
-            image: otherUserData?.image,
-            name: otherUserData?.name,
-            id: otherUserData?.id,
-          },
-        ],
-        createdAt: getTimeStamp(),
-        id: `id-${getTimeStamp()}`,
-        latestMessage: inputMessage,
-        latestMessageCreatedAt: messageData?.createdAt,
-      };
-      setConversationId(conversation?.id);
-      setConversationData(conversation);
-      Firebase.createChat(conversation).then(() => {
-        sendMessageToFirebase(messageData, conversation, messages);
-      });
-    } else {
-      messages.unshift(messageData);
-      setMessages(messages);
-
-      const conversation = {
-        ...conversationData,
-        participantsDeleteFlag: {
-          ...(conversationData?.participantsDeleteFlag || {}),
-          ...(currentUser?.id !== 'guardian' && {
-            [currentUser?.id]: { deleteStatus: false },
-          }),
-          [otherUserData?.id]: { deleteStatus: false },
-        },
-        participantsData: [
-          ...(currentUser?.id !== 'guardian' && currentUser?.id
-            ? [
-                {
-                  image: currentUser?.media?.primary_image,
-                  name: currentUser?.full_name,
-                  id: currentUser?.id,
-                },
-              ]
-            : []),
-          ...(otherUserData?.id
-            ? [
-                {
-                  image: otherUserData?.image,
-                  name: otherUserData?.name,
-                  id: otherUserData?.id,
-                },
-              ]
-            : []),
-          ...(conversationData.participantsData || []).filter(
-            (participant: any) =>
-              participant.id !== currentUser?.id &&
-              participant.id !== otherUserData?.id
-          ),
-        ],
-        unReadCount: {
-          ...conversationData.unReadCount,
-          [currentUser?.id]: 0,
-          [otherUserData?.id]: isBlockedYou
-            ? conversationData?.unReadCount[otherUserData?.id]
-            : conversationData?.unReadCount[otherUserData?.id] + 1,
-        },
-        latestMessage: isBlockedYou
-          ? conversationData?.lastestMessage
-          : inputMessage,
-        latestMessageCreatedAt: isBlockedYou
-          ? conversationData?.latestMessageCreatedAt
-          : messageData?.createdAt,
-      };
-      setConversationData(conversation);
-      sendMessageToFirebase(messageData, conversation, messages);
-    }
-
-    try {
-      // const lastMessageTimestamp = await AsyncStorage.getItem('lastMessageTimestamp');
-      // const wordsArray = inputMessage.split(' ');
-      // const firstFiveWords = wordsArray.slice(0, 5);
-      // const resultWords = firstFiveWords.join(' ');
-      // if (lastMessageTimestamp !== null) {
-      //     const lastMessageTime = new Date(parseInt(lastMessageTimestamp, 10));
-      //     const currentTime = new Date();
-      //     const timeDifference = (currentTime.getTime() - lastMessageTime.getTime()) / (1000 * 60 * 60); // Convert to hours
-
-      //     if (timeDifference > 8) {
-      //         let res = await ApiServices.snedMessageNotification({
-      //             other_user_id: otherUserData?.id,
-      //             other_username: otherUserData?.name,
-      //             country: "Pakistan",
-      //             message_first_five_words: resultWords
-      //         })
-      //         await AsyncStorage.setItem("lastMessageTimestamp", new Date().getTime().toString())
-      //     }
-      // } else {
-      //     let res = await ApiServices.snedMessageNotification({
-      //         other_user_id: otherUserData?.id,
-      //         other_username: otherUserData?.name,
-      //         country: "Pakistan",
-      //         message_first_five_words: resultWords
-      //     })
-      //     await AsyncStorage.setItem("lastMessageTimestamp", new Date().getTime().toString())
-      // }
-      const lastMessageTimestamp = await AsyncStorage.getItem(
-        'lastMessageTimestamp'
-      );
-      const wordsArray = inputMessage.split(' ');
-      const firstFiveWords = wordsArray.slice(0, 5);
-      const resultWords = firstFiveWords.join(' ');
-
-      if (lastMessageTimestamp !== null) {
-        const lastMessageTime = new Date(parseInt(lastMessageTimestamp, 10));
-        const currentTime = new Date();
-        const timeDifference =
-          (currentTime.getTime() - lastMessageTime.getTime()) / (1000 * 60); // Convert to minutes
-
-        if (timeDifference > 1) {
-          // Change from 8 hours to 1 minute
-          const res = await ApiServices.snedMessageNotification({
-            other_user_id: otherUserData?.id,
-            other_username: currentUser?.full_name,
-            country: 'Pakistan',
-            message_first_five_words: resultWords,
-          });
-          await AsyncStorage.setItem(
-            'lastMessageTimestamp',
-            new Date().getTime().toString()
-          );
-        }
-      } else {
-        const res = await ApiServices.snedMessageNotification({
-          other_user_id: otherUserData?.id,
-          other_username: otherUserData?.name,
-          country: 'Pakistan',
-          message_first_five_words: resultWords,
-        });
-        await AsyncStorage.setItem(
-          'lastMessageTimestamp',
-          new Date().getTime().toString()
-        );
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  const onSendPress = async () => {
-    if (isBlockedByYou) {
-      Alert.alert(
-        `You have blocked ${otherUserData?.name} please unblock first to send message`
-      );
-    } else if (
-      (currentUser?.gender === 'male' &&
-        currentUser?.membership_status === 0) ||
-      currentUser?.membership_status === null
-    ) {
-      isPremiumUser().then(() => {
-        sendMessage();
-      });
-    } else {
-      sendMessage();
-    }
-  };
-
   const onMessagePress = (messageId: any) => {
     if (messageId === messagePressedId) {
       setMessagePressedId(null);
@@ -686,141 +355,8 @@ const SingleChat = (props: any) => {
     }
   };
 
-  const renderMessages = ({ item }: any) => {
-    const itemSender = item?.sender;
-    const currentUserID = currentUser?.id;
-    const guardianUserId = currentUser?.user?.id;
-    const otherUserId = otherUserData?.id;
-    const itemReadBy = item?.readBy;
-
-    const isCurrentUser = itemSender === currentUserID;
-    const otherUserReadBy = itemReadBy?.[otherUserId];
-
-    const isGuardian =
-      itemSender === 'guardian' || itemSender === guardianUserId;
-
-    const backgroundColor = isCurrentUser
-      ? Colors.theme
-      : isGuardian
-        ? Colors.color53
-        : Colors.color31;
-
-    const textColour =
-      isGuardian || isCurrentUser ? Colors.color2 : Colors.color1;
-
-    return (
-      <View
-        key={item?.id}
-        style={{
-          marginTop: hp(1),
-          alignItems: isCurrentUser ? 'flex-end' : 'flex-start',
-        }}
-      >
-        <TouchableOpacity
-          style={[Styles.messageCon, { backgroundColor: backgroundColor }]}
-          // disabled={!isCurrentUser}
-          onPress={onMessagePress.bind(null, item?.id)}
-          activeOpacity={0.9}
-        >
-          <Text style={[Styles.messageTxt, { color: textColour }]}>
-            {item?.message}
-          </Text>
-          {isCurrentUser && otherUserReadBy?.seen === true && (
-            <Ionicons
-              name="md-checkmark-done"
-              color={Colors.color2}
-              size={wp(5)}
-              style={Styles.seenIcon}
-            />
-          )}
-        </TouchableOpacity>
-        {isCurrentUser && (
-          <View>
-            {item?.status == 'sending' && (
-              <View style={Styles.messageSendingCon}>
-                <ActivityIndicator
-                  color={Colors.theme}
-                  size={wp(4)}
-                  style={{ marginHorizontal: wp(2) }}
-                />
-                <Text style={Styles.sendingText}>Sending</Text>
-              </View>
-            )}
-          </View>
-        )}
-        <View>
-          {messagePressedId && messagePressedId === item?.id && (
-            <View style={Styles.messageTimeCon}>
-              <Text style={Styles.messageTime}>
-                Sent {getTimeAgo(item?.createdAt)}
-              </Text>
-              {otherUserReadBy?.seen && (
-                <Text style={Styles.messageTime}>
-                  Seen {getTimeAgo(otherUserReadBy?.seenAt)}
-                </Text>
-              )}
-            </View>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const getTimeAgo = (timestamp: any) => {
-    const now = moment();
-    const time = moment(timestamp);
-    const daysDiff = now.diff(time, 'days');
-
-    if (daysDiff === 0) {
-      return `at ${time.format('hh:mm A')}`;
-    }
-
-    if (daysDiff === 1) {
-      return `Yesterday  at ${time.format('hh:mm A')}`;
-    }
-
-    if (daysDiff < 7) {
-      return `${daysDiff} days ago at ${time.format('hh:mm A')}`;
-    }
-
-    return `${time.format('DD-MMM-YY')} at ${time.format('hh:mm A')}`;
-  };
-
-  const handleEndReached = () => {
-    if (totalMessages.length >= 15) {
-      if (listReachedStart) {
-        setListReachedStart(false);
-      }
-      setFlastListFooterLoader(true);
-      const newPage = {
-        start: messagesPage.start + 15,
-        end: messagesPage.end + 15,
-      };
-      const filteredMessages = _.slice(
-        totalMessages,
-        newPage?.start,
-        newPage?.end
-      );
-      if (filteredMessages.length !== 0) {
-        setMessagesPage(newPage);
-        handleLastDeletedBy(filteredMessages).then((res: any) => {
-          if (res !== 'ignore') {
-            setMessages((prevMsgs: any) => [...prevMsgs, ...res]);
-            if (messages.length === totalMessages.length) {
-              setFlastListFooterLoader(false);
-            }
-          } else {
-            setFlastListFooterLoader(false);
-          }
-        });
-      } else {
-        setFlastListFooterLoader(false);
-      }
-    }
-  };
-
   const FooterLoader = () =>
-    flastListFooterLoader ? (
+    footerLoading ? (
       <ActivityIndicator
         color={Colors.theme}
         style={{ marginVertical: hp(2) }}
@@ -831,19 +367,7 @@ const SingleChat = (props: any) => {
     if (flatListRef?.current) {
       flatListRef?.current?.scrollToOffset({ offset: 0, animated: true });
     }
-    if (messages.length > 15) {
-      const filteredMessages = _.slice(messages, 0, 15);
-      setMessagesPage({
-        start: 0,
-        end: 15,
-      });
-      setLastDeletedByFound(false);
-      handleLastDeletedBy(filteredMessages, false).then((res: any) => {
-        if (res !== 'ignore') {
-          setMessages(res);
-        }
-      });
-    }
+    resetToFirstPage().catch(() => {});
   };
 
   const onScrollBegin = () => {
@@ -862,7 +386,6 @@ const SingleChat = (props: any) => {
 
   return (
     <Container>
-      <StatusBar backgroundColor={Colors.color2} barStyle={'dark-content'} />
       {(currentUser?.membership_status === 0 ||
         currentUser?.membership_status === null) && (
         <PremiumButton
@@ -914,7 +437,21 @@ const SingleChat = (props: any) => {
               ref={flatListRef}
               data={messages}
               inverted
-              renderItem={renderMessages}
+              renderItem={({ item, index }) => (
+                <MessageBubble
+                  item={item}
+                  index={index}
+                  currentUserId={currentUser?.id}
+                  guardianUserId={currentUser?.user?.id}
+                  otherUserId={otherUserData?.id}
+                  otherUserImage={otherUserData?.image}
+                  isBlockedYou={isBlockedYou}
+                  messages={messages}
+                  messagePressedId={messagePressedId}
+                  onMessagePress={onMessagePress}
+                  Styles={Styles}
+                />
+              )}
               contentContainerStyle={Styles.messagesListContainer}
               onEndReachedThreshold={0.1}
               onEndReached={handleEndReached}
@@ -974,7 +511,15 @@ const SingleChat = (props: any) => {
                   ? Colors.themeRGBA50
                   : Colors.theme,
             }}
-            onPress={onSendPress}
+            onPress={async () => {
+              const res = await onSendPress(inputMessage);
+
+              if (res?.type === 'blockedByYou') {
+                Alert.alert(
+                  `You have blocked ${otherUserData?.name} please unblock first to send message`
+                );
+              }
+            }}
             disabled={inputMessage.trim().length === 0 ? true : false}
           >
             {Rtl ? (
@@ -1005,141 +550,3 @@ const SingleChat = (props: any) => {
 };
 
 export default SingleChat;
-
-const { width } = Dimensions.get('window');
-const Styles = StyleSheet.create({
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  guardianTextWrapper: {
-    backgroundColor: Colors.color55,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  guardianText: {
-    fontSize: Typography.small2,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color2,
-  },
-  messagesListContainer: {
-    paddingTop: hp(3),
-    paddingHorizontal: wp(3),
-  },
-  textContainer: {
-    width: wp(100),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-  },
-  mainText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_B,
-    color: Colors.color1,
-  },
-  subText: {
-    width: wp(80),
-    textAlign: 'center',
-    fontSize: Typography.small1,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color4,
-    marginTop: 10,
-  },
-  smilyIconBtn: {
-    width: wp(10),
-    height: hp(5),
-    marginLeft: wp(2),
-    borderRadius: hp(5) / 2,
-    marginVertical: hp(1),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  smilyIcon: {
-    width: wp(10),
-    height: hp(5),
-  },
-  messageInputOuter: {
-    flexDirection: 'row',
-    backgroundColor: Colors.color13,
-    marginTop: hp(1),
-    marginBottom: hp(2),
-    marginHorizontal: wp(4),
-    borderRadius: 30,
-    alignItems: 'center',
-    maxHeight: hp(20),
-  },
-  messageInput: {
-    width: wp(79),
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color1,
-    paddingHorizontal: wp(4),
-    textAlignVertical: 'top',
-    paddingTop: !isIOS ? hp(1.9) : hp(0.8),
-    maxHeight: hp(20),
-    minHeight: hp(4.5),
-  },
-  sendBtn: {
-    width: width * 0.12,
-    height: width * 0.12 * 1,
-    borderRadius: (width * 0.12 * 1) / 2,
-    backgroundColor: Colors.theme,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  messageCon: {
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(1),
-    borderRadius: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-  },
-  messageTxt: {
-    fontSize: Typography.small2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    maxWidth: wp(70),
-  },
-  messageTime: {
-    fontSize: Typography.tiny1,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color34,
-    includeFontPadding: false,
-  },
-  messageSendingCon: {
-    flexDirection: 'row',
-    marginVertical: hp(0.5),
-    paddingHorizontal: wp(1),
-    alignSelf: 'flex-end',
-  },
-  sendingText: {
-    alignSelf: 'center',
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.tiny2,
-    includeFontPadding: false,
-    color: Colors.color1,
-  },
-  seenIcon: {
-    marginRight: wp(-1),
-    marginLeft: wp(1.5),
-  },
-  messageTimeCon: {
-    paddingVertical: hp(0.5),
-    alignItems: 'flex-end',
-    paddingRight: wp(2),
-  },
-  sendIcon: {
-    width: wp(7),
-    height: hp(4),
-  },
-  disabledInputCon: {
-    position: 'absolute',
-    width: wp(91),
-    height: hp(6.9),
-    borderRadius: 30,
-  },
-});

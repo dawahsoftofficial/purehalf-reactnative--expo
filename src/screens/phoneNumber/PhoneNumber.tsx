@@ -1,47 +1,51 @@
+import i18next from 'i18next';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
-  TextInput,
-  View,
-  TouchableOpacity,
+  ImageBackground,
   Keyboard,
   KeyboardAvoidingView,
   StatusBar,
-  Dimensions,
-  StyleSheet
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import React, { useEffect, useState } from 'react';
-import i18next from 'i18next';
-import { useTranslation } from 'react-i18next';
+import DeviceInfo, { hasNotch } from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import DeviceInfo, { hasNotch } from 'react-native-device-info';
+
+import { Animation } from '../../animations';
 import {
   CountryPicker,
   LinearGradient,
   SlideShowContainer,
-  Text
+  Text,
 } from '../../components';
-// import { Text } from '../../components';
-import { LanguageKeys, CheckRtl } from '../../languages';
 import { Button } from '../../components';
-import { Animation } from '../../animations';
-import { hp, wp, Typography } from '../../global';
+import { hp, Typography, wp } from '../../global';
+import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
+import {
+  checkEmpty,
+  Firebase,
+  flashErrorMessage,
+  isIOS,
+  setRevenueCat,
+} from '../../services';
+import { StorageManager, useGlobalContext } from '../../services';
 import { ApiServices } from '../../services/api';
-import { checkEmpty, Firebase, flashErrorMessage, isIOS, setRevenueCat } from '../../services';
-import { useGlobalContext, StorageManager } from '../../services';
 import Data from '../profile/Data';
 
 const PhoneNumber = (props: any) => {
-  const { t } = useTranslation()
   const Rtl = CheckRtl();
   const { getData, setData, storageKeys } = StorageManager;
-  const { language, updateCurrentUser, updateDirection } = useGlobalContext();
+  const { updateCurrentUser, updateDirection } = useGlobalContext();
   const [loading, setLoading] = useState(false);
   const [loadingMessage] = useState('Submitting...');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(__DEV__ ? '3048700192' : '');
   const [selectedCountry, setSelectedCountry] = useState({
     code: 'PK',
     dial_code: '+92',
@@ -50,7 +54,6 @@ const PhoneNumber = (props: any) => {
   });
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
-  const [checkBox, setCheckbox] = useState(false);
 
   const onPressFlagBtn = () => setCountryPickerVisible(true);
   const closeCountryPicker = () => setCountryPickerVisible(false);
@@ -71,40 +74,46 @@ const PhoneNumber = (props: any) => {
       index: 0,
       routes: [{ name: route }],
     });
-  }
+  };
 
   const onLoggedIn = async (currentUser: any) => {
-    await setRevenueCat(currentUser?.id)
-    const user = await ApiServices.getCurrentUserDetail()
-    const obj = { ...currentUser, ...user }
-    updateCurrentUser(obj)
+    await setRevenueCat(currentUser?.id);
+    const user = await ApiServices.getCurrentUserDetail();
+    const obj = {
+      ...(currentUser as Record<string, unknown>),
+      ...(user as Record<string, unknown>),
+    };
+    updateCurrentUser(obj);
     if (currentUser?.results?.first_name) {
       if (
-        !currentUser?.results?.media || !currentUser?.results?.media?.primary_image ||
+        !currentUser?.results?.media ||
+        !currentUser?.results?.media?.primary_image ||
         currentUser?.results?.media?.primary_image?.length === 0
       ) {
-        navigateTo('ProfilePicture')
-      }
-      else if (currentUser?.results?.membership_status === null || currentUser?.results?.membership_status === 0) {
+        navigateTo('ProfilePicture');
+      } else if (
+        currentUser?.results?.membership_status === null ||
+        currentUser?.results?.membership_status === 0
+      ) {
         props.navigation.reset({
           index: 0,
-          routes: [{
-            name: 'ProFeaturesPromotion',
-            params: {
-              navigateTo: 'BottomTab',
-              from: 'SignUp'
-            }
-          }],
+          routes: [
+            {
+              name: 'ProFeaturesPromotion',
+              params: {
+                navigateTo: 'BottomTab',
+                from: 'SignUp',
+              },
+            },
+          ],
         });
+      } else {
+        navigateTo('BottomTab');
       }
-      else {
-        navigateTo('BottomTab')
-      }
+    } else {
+      navigateTo('Location');
     }
-    else {
-      navigateTo('Location')
-    }
-  }
+  };
 
   const hideLoading = () => setLoading(false);
   const onContinuePress = () => {
@@ -117,11 +126,15 @@ const PhoneNumber = (props: any) => {
       return flashErrorMessage(LanguageKeys.invalidPhoneNumber);
     } else {
       setLoading(true);
-      let phoneNumberWithCode =
+      const phoneNumberWithCode =
         selectedCountry.dial_code +
         (phoneNumber[0] === '0' ? phoneNumber.slice(1) : phoneNumber);
 
-      ApiServices.authenticateUser(phoneNumberWithCode, (currentUser: any) => onLoggedIn(currentUser), false)
+      ApiServices.authenticateUser(
+        phoneNumberWithCode,
+        (currentUser: any) => onLoggedIn(currentUser),
+        false
+      )
         .then((res: any) => {
           const { user, verificationRes } = res;
           updateCurrentUser(user);
@@ -140,13 +153,13 @@ const PhoneNumber = (props: any) => {
   };
 
   const getToken = async () => {
-    getData(storageKeys.FCM_TOKEN).then(async res => {
+    getData(storageKeys.FCM_TOKEN).then(async (res) => {
       if (!res) {
         const isEmulator = await DeviceInfo.isEmulator();
         if (isEmulator && isIOS) {
           await setData(storageKeys.FCM_TOKEN, 'FcmToken');
         } else {
-          Firebase.getFcmToken().then(async res => {
+          Firebase.getFcmToken().then(async (res) => {
             if (res) {
               await setData(storageKeys.FCM_TOKEN, res);
             } else {
@@ -156,10 +169,6 @@ const PhoneNumber = (props: any) => {
         }
       }
     });
-  };
-
-  const onGuardianPress = () => {
-    props?.navigation.navigate('GuardianEmailInput');
   };
 
   useEffect(() => {
@@ -193,13 +202,15 @@ const PhoneNumber = (props: any) => {
         backgroundColor={'transparent'}
         barStyle="light-content"
       />
-      <View>
-        <Image source={Images.slide1} resizeMode="cover" style={Styles.image} />
-        <LinearGradient
-          style={Styles.imageOuterView}
-          colors={[Colors.blackRGBA25, Colors.blackRGBA38]}
-        />
-      </View>
+      <ImageBackground
+        resizeMode="cover"
+        style={Styles.image}
+        source={Images.slide1}
+      />
+      <LinearGradient
+        style={Styles.imageOuterView}
+        colors={[Colors.blackRGBA25, Colors.blackRGBA38]}
+      />
       <SafeAreaView style={Styles.container}>
         <View
           style={[
@@ -207,14 +218,16 @@ const PhoneNumber = (props: any) => {
             {
               flexDirection: Rtl ? 'row-reverse' : 'row',
             },
-          ]}>
+          ]}
+        >
           <TouchableOpacity
             style={[
               Styles.languageBtnCon,
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
             activeOpacity={0.7}
-            onPress={onLanguagePress}>
+            onPress={onLanguagePress}
+          >
             <TouchableOpacity
               onPress={() => props?.navigation.goBack()}
               activeOpacity={1}
@@ -225,23 +238,32 @@ const PhoneNumber = (props: any) => {
                 size={wp(6)}
               />
             </TouchableOpacity>
-            <MaterialCommunityIcons
+            {/* <MaterialCommunityIcons
               name="web"
               color={Colors.color2}
               size={wp(8)}
             />
-            <Text style={Styles.languageText}>{language === "en" ? LanguageKeys.english : LanguageKeys.romanUrdu}</Text>
+            <Text style={Styles.languageText}>
+              {language === 'en'
+                ? LanguageKeys.english
+                : LanguageKeys.romanUrdu}
+            </Text> */}
           </TouchableOpacity>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={{ marginBottom: hp(0.5) }}
-            onPress={onGuardianPress}>
+            onPress={onGuardianPress}
+          >
             <Text style={[Styles.languageText, { marginHorizontal: 0 }]}>
               {LanguageKeys.guardian}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
-        <KeyboardAvoidingView behavior={'height'} style={{ flex: 1 }} keyboardVerticalOffset={isIOS ? 80 : 10}>
+        <KeyboardAvoidingView
+          behavior={'height'}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={isIOS ? 80 : 10}
+        >
           {!isKeyboardOpen && (
             <View style={Styles.purehalfLogoCon}>
               <Image
@@ -249,7 +271,9 @@ const PhoneNumber = (props: any) => {
                 resizeMode="contain"
                 style={Styles.logo}
               />
-              <Text style={Styles.logoDescription}>logoDescription</Text>
+              <Text style={Styles.logoDescription}>
+                {LanguageKeys.logoDescription}
+              </Text>
             </View>
           )}
           <Animation style={Styles.phoneNumberSectionCon}>
@@ -258,13 +282,15 @@ const PhoneNumber = (props: any) => {
               style={{
                 ...Styles.phoneNumberCon,
                 flexDirection: Rtl ? 'row-reverse' : 'row',
-              }}>
+              }}
+            >
               <Ripple
                 style={{
                   ...Styles.flagBtnCon,
                   flexDirection: Rtl ? 'row-reverse' : 'row',
                 }}
-                onPress={onPressFlagBtn}>
+                onPress={onPressFlagBtn}
+              >
                 <Text style={Styles.flag}>{selectedCountry.flag}</Text>
                 <Text style={Styles.countryPickerTxt}>
                   {selectedCountry.dial_code}
@@ -314,7 +340,6 @@ const PhoneNumber = (props: any) => {
 
 export default PhoneNumber;
 
-const { width } = Dimensions.get('window')
 const Styles = StyleSheet.create({
   imageOuterView: {
     height: '100%',
@@ -338,7 +363,7 @@ const Styles = StyleSheet.create({
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: wp(4),
-    paddingTop: isIOS ? 0 : hp(5),
+    paddingTop: isIOS ? 0 : hp(2),
   },
   languageBtnCon: {
     flexDirection: 'row',
@@ -356,7 +381,6 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: hp(15),
-
   },
   logo: {
     width: wp(40),
@@ -406,7 +430,7 @@ const Styles = StyleSheet.create({
     fontSize: wp(8),
     includeFontPadding: false,
     alignSelf: 'center',
-    paddingBottom: wp(!isIOS ? hp(0.2) : hp(0))
+    paddingBottom: wp(!isIOS ? hp(0.2) : hp(0)),
   },
   countryPickerTxt: {
     fontSize: Typography.medium,

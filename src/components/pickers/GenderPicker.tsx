@@ -26,7 +26,14 @@ type GenderItem = {
   selected: boolean;
 };
 
-const GenderPicker = React.memo((props: any) => {
+interface GenderPickerProps {
+  value?: string;
+  outerLabelStyle?: any;
+  disabled?: boolean;
+  onSelect?: (value: string) => void;
+}
+
+const GenderPicker = React.memo((props: GenderPickerProps) => {
   const Rtl = CheckRtl();
   const { value = '', outerLabelStyle = {}, disabled = false } = props;
   const [genderModalVisible, setGenderModalVisible] = useState(false);

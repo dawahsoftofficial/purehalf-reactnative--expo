@@ -1,17 +1,18 @@
+import Geolocation from '@react-native-community/geolocation';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  StyleSheet,
   Image,
   Linking,
   PermissionsAndroid,
+  StyleSheet,
+  View,
 } from 'react-native';
-import React, { useEffect, useState } from 'react';
-import Geolocation from '@react-native-community/geolocation';
 import Ripple from 'react-native-material-ripple';
+
 import { Button, Container, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { Fonts, Colors, Images } from '../../res';
 import { LanguageKeys } from '../../languages';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -29,57 +30,52 @@ const Location: React.FC = (props: any) => {
   const [isReported, setIsReported] = useState<boolean>(false);
   const [failed, setFailed] = useState<boolean>(false);
 
-  useEffect(() => {
-    requestLocationPermission();
-    setTimeout(() => {
-      setReport(true);
-    }, 20000);
-  }, []);
-
-  const requestLocationPermission = async () => {
-    if (isIOS) {
-      getOneTimeLocation();
-    } else {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          getOneTimeLocation();
+  const onTagLineSubmit = ({
+    lat,
+    long,
+    country,
+    city,
+  }: {
+    lat: number;
+    long: number;
+    country?: string;
+    city?: string;
+  }) => {
+    ApiServices.updateUserInfo({
+      latitude: lat,
+      longitude: long,
+      country,
+      city,
+    })
+      .then(async (res) => {
+        const updatedUser = {
+          ...currentUser,
+          detail: res,
+          latitude: lat,
+          longitude: long,
+        };
+        await setData(storageKeys.USER, updatedUser);
+        updateCurrentUser(updatedUser);
+        if (
+          !updatedUser?.first_name ||
+          !updatedUser?.last_name ||
+          !updatedUser?.gender ||
+          !updatedUser?.date_of_birth
+        ) {
+          props?.navigation.reset({
+            index: 0,
+            routes: [{ name: 'UserInput' }],
+          });
         } else {
-          flashErrorMessage('Allow Permission to access your location');
-          setFailed(true);
+          props?.navigation.reset({
+            index: 0,
+            routes: [{ name: 'BottomTab' }],
+          });
         }
-      } catch (err) {
-        console.warn(err);
-      }
-    }
-  };
-
-  const getOneTimeLocation = () => {
-    setLoading(true);
-    Geolocation.getCurrentPosition(
-      (position: any) => {
-        const currentLongitude: number = +JSON.stringify(
-          position.coords.longitude,
-        );
-        const currentLatitude: number = +JSON.stringify(
-          position.coords.latitude,
-        );
-        getCountryAndCity(currentLatitude, currentLongitude);
-      },
-      (error: any) => {
-        flashErrorMessage('Please enable location from settings');
+      })
+      .catch((err) => {
         setLoading(false);
-        setFailed(true);
-        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 30000,
-        maximumAge: 1000,
-      },
-    );
+      });
   };
 
   const getCountryAndCity = (lat: number, long: number) => {
@@ -111,50 +107,65 @@ const Location: React.FC = (props: any) => {
         }
         // onTagLineSubmit({ lat: 24.9064253, long: 67.0345873 })
       })
-      .catch(err => {
+      .catch((err) => {
         setLoading(false);
       });
   };
 
-  const onTagLineSubmit = ({
-    lat,
-    long,
-    country,
-    city,
-  }: {
-    lat: number;
-    long: number;
-    country?: string;
-    city?: string;
-  }) => {
-    ApiServices.updateUserInfo({ latitude: lat, longitude: long, country, city })
-      .then(async res => {
-        currentUser.detail = res;
-        currentUser.latitude = lat;
-        currentUser.longitude = long;
-        await setData(storageKeys.USER, currentUser);
-        updateCurrentUser(currentUser);
-        if (
-          !currentUser?.first_name ||
-          !currentUser?.last_name ||
-          !currentUser?.gender ||
-          !currentUser?.date_of_birth
-        ) {
-          props?.navigation.reset({
-            index: 0,
-            routes: [{ name: 'UserInput' }],
-          });
-        } else {
-          props?.navigation.reset({
-            index: 0,
-            routes: [{ name: 'BottomTab' }],
-          });
-        }
-      })
-      .catch(err => {
+  const getOneTimeLocation = () => {
+    setLoading(true);
+    Geolocation.getCurrentPosition(
+      (position: any) => {
+        const currentLongitude: number = +JSON.stringify(
+          position.coords.longitude
+        );
+        const currentLatitude: number = +JSON.stringify(
+          position.coords.latitude
+        );
+        getCountryAndCity(currentLatitude, currentLongitude);
+      },
+      (error: any) => {
+        flashErrorMessage('Please enable location from settings');
         setLoading(false);
-      });
+        setFailed(true);
+        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 30000,
+        maximumAge: 1000,
+      }
+    );
   };
+
+  const requestLocationPermission = async () => {
+    if (isIOS) {
+      getOneTimeLocation();
+    } else {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          getOneTimeLocation();
+        } else {
+          flashErrorMessage('Allow Permission to access your location');
+          setFailed(true);
+        }
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    setTimeout(() => {
+      requestLocationPermission();
+    }, 0);
+    setTimeout(() => {
+      setReport(true);
+    }, 20000);
+  }, []);
 
   const onEnablePress = () => {
     Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
@@ -162,13 +173,13 @@ const Location: React.FC = (props: any) => {
 
   const onReport = () => {
     ApiServices.storeQuery({ type: 3 })
-      .then(res => {
+      .then((res) => {
         if (!res?.data?.error) {
-          flashSuccessMessage("Reported successfully");
+          flashSuccessMessage('Reported successfully');
           setIsReported(true);
         }
       })
-      .catch(err => {});
+      .catch((err) => {});
   };
 
   return (
@@ -193,18 +204,24 @@ const Location: React.FC = (props: any) => {
         <Button
           buttonStyle={Styles.locationBtn}
           text={loading ? LanguageKeys.processing : LanguageKeys.enableLocation}
-          onPress={loading ? () => { } : onEnablePress}
+          onPress={loading ? () => {} : onEnablePress}
           // loading={failed ? false : loading}
           loading={loading}
         />
       </View>
       {report && (
-        <Ripple onPress={isReported ? () => { } : onReport}>
-          <Text style={[Styles.reportText, { color: isReported ? Colors.randomRGBA70 : Colors.color44 }]}>{LanguageKeys.report}</Text>
+        <Ripple onPress={isReported ? () => {} : onReport}>
+          <Text
+            style={[
+              Styles.reportText,
+              { color: isReported ? Colors.randomRGBA70 : Colors.color44 },
+            ]}
+          >
+            {LanguageKeys.report}
+          </Text>
         </Ripple>
-      )
-      }
-    </Container >
+      )}
+    </Container>
   );
 };
 

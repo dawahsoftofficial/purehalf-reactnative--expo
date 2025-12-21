@@ -1,1 +1,1 @@
-export { default as MembershipCongrats } from './MembershipCongrats'
+export { default as MembershipCongrats } from './MembershipCongrats';

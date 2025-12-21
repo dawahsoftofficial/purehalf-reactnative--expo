@@ -21,4 +21,3 @@ const validate = (message = '') => {
 };
 
 module.exports = validate;
-

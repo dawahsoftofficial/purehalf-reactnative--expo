@@ -1,45 +1,65 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text, View } from 'react-native';
+import {
+  type StyleProp,
+  Text as RNText,
+  type TextStyle,
+  View,
+  type ViewStyle,
+} from 'react-native';
 
 import { CheckRtl } from '../languages';
 
-const Texts = (props: any) => {
-  const { t } = useTranslation();
-  const Rtl = CheckRtl();
-  const {
-    style = null,
-    numberOfLines = null,
-    containerStyle = {},
-    children = [],
-  } = props;
-
-  return typeof children === 'string' ? (
-    <Text
-      style={[{ alignSelf: Rtl ? 'flex-end' : 'flex-start' }, style]}
-      numberOfLines={numberOfLines && numberOfLines}
-    >
-      {t(props.children)}
-    </Text>
-  ) : children && typeof children === 'object' && children.length !== 0 ? (
-    <View
-      style={[
-        containerStyle,
-        { flexDirection: Rtl ? 'row-reverse' : 'row', alignItems: 'center' },
-      ]}
-    >
-      {children.map((element: any, index: any) => (
-        <Text
-          style={[{ alignSelf: Rtl ? 'flex-end' : 'flex-start' }, style]}
-          key={index}
-        >
-          {t(element)}
-        </Text>
-      ))}
-    </View>
-  ) : (
-    <Text></Text>
-  );
+type TextProps = {
+  style?: StyleProp<TextStyle>;
+  numberOfLines?: number;
+  containerStyle?: StyleProp<ViewStyle>;
+  children: string | string[];
 };
 
-export default Texts;
+const Text = React.memo((props: TextProps) => {
+  const { t } = useTranslation();
+  const Rtl = CheckRtl();
+  const { style, numberOfLines, containerStyle, children } = props;
+
+  const textStyle = useMemo<StyleProp<TextStyle>>(() => {
+    const alignSelf: TextStyle = {
+      alignSelf: Rtl ? ('flex-end' as const) : ('flex-start' as const),
+    };
+    return [alignSelf, style];
+  }, [Rtl, style]);
+
+  // Handle string children
+  if (typeof children === 'string') {
+    return (
+      <RNText style={textStyle} numberOfLines={numberOfLines}>
+        {t(children)}
+      </RNText>
+    );
+  }
+
+  // Handle array of strings
+  if (Array.isArray(children) && children.length > 0) {
+    return (
+      <View
+        style={[
+          containerStyle,
+          { flexDirection: Rtl ? 'row-reverse' : 'row', alignItems: 'center' },
+        ]}
+      >
+        {children.map((element: string, index: number) => (
+          <RNText style={textStyle} key={index}>
+            {t(element)}
+          </RNText>
+        ))}
+      </View>
+    );
+  }
+
+  // Return null for empty/invalid children
+  return null;
+});
+
+Text.displayName = 'Text';
+
+export default Text;

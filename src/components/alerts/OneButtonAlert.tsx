@@ -1,12 +1,12 @@
-import { View, Text } from 'react-native'
-import React from 'react'
+import React from 'react';
+import { Text, View } from 'react-native';
 
 const OneButtonAlert = () => {
-    return (
-        <View>
-            <Text>OneButtonAlert</Text>
-        </View>
-    )
-}
+  return (
+    <View>
+      <Text>OneButtonAlert</Text>
+    </View>
+  );
+};
 
-export default OneButtonAlert
+export default OneButtonAlert;

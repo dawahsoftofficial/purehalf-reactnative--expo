@@ -5,7 +5,7 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 
-import { CustomModal, ImageViewer, Loader } from '../components';
+import { CustomModal, ImageViewer } from '../components';
 import { CheckRtl } from '../languages';
 import DisplayForegroundNotificaton from '../notifications/DisplayForegroundNotificaton';
 import {
@@ -102,7 +102,10 @@ function App() {
               } else {
                 const user = await ApiServices.getCurrentUserDetail();
                 // console.log("UPdated Userrr", user)
-                updateCurrentUser({ ...user, ...res });
+                updateCurrentUser({
+                  ...(user as Record<string, unknown>),
+                  ...(res as Record<string, unknown>),
+                });
                 setRevenueCat(res?.id);
                 setInitialRouteName('BottomTab');
               }
@@ -124,9 +127,7 @@ function App() {
     <NavigationContainer ref={navigationRef}>
       <DisplayForegroundNotificaton />
       <CustomModal />
-      {loader ? (
-        <Loader />
-      ) : (
+      {!loader && (
         <Stack.Navigator
           screenOptions={() => ({
             presentation: 'card',
@@ -147,6 +148,9 @@ function App() {
           <Stack.Screen
             name="ProFeaturesPromotion"
             component={ProFeaturesPromotion}
+            options={{
+              presentation: 'fullScreenModal',
+            }}
           />
           <Stack.Screen
             name="DiscountProFeaturesPromotion"

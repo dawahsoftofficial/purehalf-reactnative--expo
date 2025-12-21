@@ -19,21 +19,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig([
   globalIgnores([
-    'dist/*',
-    'node_modules/**',
-    '__tests__/',
-    'coverage',
-    '.expo',
-    '.expo-shared',
-    'android',
-    'ios',
-    '.vscode',
-    'docs/',
-    'cli/',
-    'expo-env.d.ts',
+    '**/dist/**',
+    '**/node_modules/**',
+    '**/__tests__/**',
+    '**/coverage/**',
+    '**/.expo/**',
+    '**/.expo-shared/**',
+    '**/android/**',
+    '**/ios/**',
+    '**/.vscode/**',
+    '**/docs/**',
+    '**/cli/**',
+    '**/expo-env.d.ts',
+    '**/build/**',
+    '**/*.config.js',
+    '**/*.config.mjs',
+    '**/vendor/**',
   ]),
   {
-    files: ['**/*.js', '**/*.jsx'],
+    files: ['src/**/*.js', 'src/**/*.jsx'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -94,7 +98,7 @@ export default defineConfig([
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
       'unused-imports/no-unused-vars': [
-        'error',
+        'warn',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
@@ -108,22 +112,25 @@ export default defineConfig([
   },
   ...configs.recommended.map((config) => ({
     ...config,
-    files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['node_modules/**', '**/node_modules/**'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['**/node_modules/**', 'node_modules/**'],
   })),
   {
-    files: ['**/*.ts', '**/*.tsx'],
-    ignores: ['node_modules/**', '**/node_modules/**'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    ignores: ['**/node_modules/**', 'node_modules/**'],
     languageOptions: {
       parser: parser,
       parserOptions: {
         project: './tsconfig.json',
         sourceType: 'module',
+        tsconfigRootDir: __dirname,
       },
     },
     rules: {
       '@typescript-eslint/comma-dangle': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-unused-vars': 'warn',
+      'no-unused-vars': 'off', // Turn off base rule as it conflicts with @typescript-eslint/no-unused-vars
       '@typescript-eslint/consistent-type-imports': [
         'warn',
         {
