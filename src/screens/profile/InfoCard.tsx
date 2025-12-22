@@ -133,6 +133,7 @@ const InfoCard = ({
       onPress={onEdit}
       style={Styles.container}
       rippleColor={Colors.theme}
+      disabled={fromUserProfile}
     >
       <View
         style={[

@@ -47,6 +47,7 @@ const InterestAndHobbyCard = ({
       onPress={onEdit}
       style={Styles.container}
       rippleColor={Colors.theme}
+      disabled={fromUserProfile}
     >
       <View
         style={[
@@ -152,10 +153,12 @@ const Styles = StyleSheet.create({
   item: {
     backgroundColor: Colors.color3,
     paddingHorizontal: wp(2),
-    paddingVertical: hp(1),
+    paddingVertical: hp(0.5),
     margin: hp(0.5),
+    marginTop: 0,
+    marginBottom: hp(1),
     borderRadius: 50,
-    borderColor: Colors.color4,
+    borderColor: Colors.color8,
     borderWidth: 1,
   },
   itemValue: {
