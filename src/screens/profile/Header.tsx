@@ -673,6 +673,7 @@ const Header = ({
                   liked={liked}
                 />
               )}
+
               {!isBlockedYou && (
                 <AllPicturesButton
                   rtl={Rtl}
@@ -799,8 +800,10 @@ const Styles = StyleSheet.create({
   actionsWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: hp(1),
-    // marginHorizontal: wp(1),
+    marginBottom: hp(2),
+    width: '100%',
   },
   onlineStatus: {
     width: width * 0.04,
@@ -898,7 +901,7 @@ const Styles = StyleSheet.create({
   actionBtnCon: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: hp(2),
+    gap: wp(1),
   },
   actionIcon: {
     width: width * 0.1,
@@ -907,7 +910,6 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.color2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: wp(0.5),
   },
   actionIconInner: {
     width: width * 0.1,

@@ -73,10 +73,10 @@ const ContactSupport = ({ navigation }: any) => {
           duration={500}
         >
           <Text style={Styles.heading}>{LanguageKeys.helpandsupport}</Text>
-          <Text style={Styles.description}>
+          {/* <Text style={Styles.description}>
             {LanguageKeys.whatWouldYouLikeToTalkAbout}
-          </Text>
-          <Text style={Styles.description1}>
+          </Text> */}
+          <Text style={Styles.description}>
             {LanguageKeys.shareSomeDetails}
           </Text>
           <Ripple style={Styles.reasonBtn} onPress={showPicker}>

@@ -746,13 +746,14 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   accordionContainerStyle={{ marginBottom: 0 }}
                   count={
                     <MaterialCommunityIcons
-                      name="information-variant"
                       size={wp(5)}
+                      color={Colors.color37}
+                      name="information-variant"
                     />
                   }
-                  titleStyle={{ color: Colors.color25 }}
-                  counterWrapperStyle={{ borderColor: Colors.color25 }}
-                  counterTextStyle={{ color: Colors.color25 }}
+                  titleStyle={{ color: Colors.color37 }}
+                  counterWrapperStyle={{ borderColor: Colors.color37 }}
+                  counterTextStyle={{ color: Colors.color37 }}
                 >
                   <View style={Styles.completeProfileWrapper}>
                     <Text style={Styles.completeProfileText}>
@@ -766,7 +767,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               ) : (
                 <AccordionItem
                   title="Your profile has been approved!"
-                  count={<AntDesign name="check" size={wp(5)} />}
+                  count={
+                    <AntDesign
+                      name="check"
+                      size={wp(5)}
+                      color={Colors.color10}
+                    />
+                  }
                   titleStyle={{ color: Colors.color10 }}
                   counterWrapperStyle={{ borderColor: Colors.color10 }}
                   counterTextStyle={{ color: Colors.color10 }}
