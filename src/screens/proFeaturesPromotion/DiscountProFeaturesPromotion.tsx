@@ -6,7 +6,6 @@ import {
   Image,
   ImageBackground,
   Linking,
-  LogBox,
   StatusBar,
   StyleSheet,
   Text as RText,
@@ -30,7 +29,6 @@ import {
 import PaymentMethodList from './PaymentMethodList';
 
 const DiscountProFeaturesPromotion = (props: any) => {
-  LogBox.ignoreAllLogs(true);
   const Rtl = CheckRtl();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;

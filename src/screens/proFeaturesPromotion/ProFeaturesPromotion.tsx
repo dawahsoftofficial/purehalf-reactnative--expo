@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -44,7 +44,6 @@ const ProFeaturesPromotion = (props: any) => {
   const [selectedPackage, setSelectedPackage] = useState<any>('');
   const [showSubscribeButton, setShowSubscribeButton] = useState(false);
 
-  const hideLoading = () => setLoading(false);
   const hideLoaderModal = () =>
     setLoaderModal({
       visible: false,
@@ -95,9 +94,6 @@ const ProFeaturesPromotion = (props: any) => {
       message: LanguageKeys.loading,
     });
     try {
-      // const userID = JSON.stringify(currentUser?.id)
-      // await Purchases.logIn(userID)
-
       let customerInfo: any = null;
       if (fromRestore) {
         customerInfo = await Purchases.restorePurchases();
@@ -122,7 +118,6 @@ const ProFeaturesPromotion = (props: any) => {
         hideLoaderModal();
         flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
         const navigateTo = props?.route?.params?.navigateTo;
-        console.log('navigateTo', navigateTo);
         if (navigateTo && navigateTo === 'goBack') {
           props.navigation.goBack();
         } else {
@@ -145,9 +140,8 @@ const ProFeaturesPromotion = (props: any) => {
         }
         hideLoaderModal();
       }
-    } catch (e: any) {
+    } catch {
       hideLoaderModal();
-      console.log('error while purchasing package =>', e);
     }
   };
 
@@ -166,10 +160,9 @@ const ProFeaturesPromotion = (props: any) => {
     else setPaymentMethodListVisible(true);
   };
 
-  const getPackages = async () => {
+  const getPackages = useCallback(async () => {
     Purchases.getOfferings()
       .then((res) => {
-        console.warn('getPackages', res);
         if (res) {
           const availablePackages: any = res?.current?.availablePackages;
           setPackagesList(availablePackages);
@@ -179,15 +172,14 @@ const ProFeaturesPromotion = (props: any) => {
           setLoading(false);
         }
       })
-      .catch((error) => {
-        console.log('error while getting packages =>', error);
-        hideLoading();
+      .catch(() => {
+        setLoading(false);
       });
-  };
+  }, []);
 
   useEffect(() => {
     getPackages();
-  }, []);
+  }, [getPackages]);
 
   const onPackageSelection = async (item: any) => {
     setSelectedPackage(item);
@@ -244,9 +236,8 @@ const ProFeaturesPromotion = (props: any) => {
         hideLoaderModal();
         setShowSubscribeButton(true);
       }
-    } catch (e: any) {
+    } catch {
       hideLoaderModal();
-      console.log('error while purchasing package =>', e);
       // If user cancels or RevenueCat fails, show subscribe button
       setShowSubscribeButton(true);
     }

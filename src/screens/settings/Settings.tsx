@@ -2,6 +2,8 @@ import React, { memo, useCallback, useMemo, useState } from 'react';
 import { Linking, ScrollView, StyleSheet } from 'react-native';
 import Rate from 'react-native-rate';
 
+import { usePremiumStore } from '@/stores';
+
 import { Container, SettingsButton, SettingsHeader } from '../../components';
 import LocationConsentModal from '../../components/alerts/LocationConsentModal';
 import { hp, wp } from '../../global';
@@ -24,6 +26,7 @@ type SettingsMenuItem = {
 
 function Settings(props: SettingsProps) {
   const { currentUser } = useGlobalContext();
+  const { premium } = usePremiumStore();
   const { navigate } = props.navigation;
   const [showLocationConsentModal, setShowLocationConsentModal] =
     useState<boolean>(false);
@@ -58,15 +61,12 @@ function Settings(props: SettingsProps) {
   }, [navigate]);
 
   const onMembershipPress = useCallback(() => {
-    if (
-      currentUser?.membership_status === 0 ||
-      currentUser?.membership_status === null
-    ) {
+    if (!premium) {
       navigate('ProFeaturesPromotion');
     } else {
       navigate('MembershipInfo');
     }
-  }, [currentUser?.membership_status, navigate]);
+  }, [premium, navigate]);
 
   const onAddWaliPress = useCallback(() => {
     navigate('AddWali', { fromSettings: true });

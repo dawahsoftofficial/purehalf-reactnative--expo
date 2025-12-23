@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
+  ImageBackground,
   Linking,
   StatusBar,
   StyleSheet,
@@ -210,15 +211,17 @@ function AuthWelcome(props: AuthWelcomeProps) {
         backgroundColor={'transparent'}
         barStyle="light-content"
       />
-      <View>
-        <Image source={Images.slide1} resizeMode="cover" style={Styles.image} />
-        <LinearGradient
-          style={Styles.imageOuterView}
-          colors={[Colors.blackRGBA70, Colors.blackRGBA38]}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 0, y: 0 }}
-        />
-      </View>
+      <ImageBackground
+        resizeMode="cover"
+        source={Images.slide1}
+        style={Styles.image}
+      />
+      <LinearGradient
+        style={Styles.imageOuterView}
+        colors={[Colors.blackRGBA70, Colors.blackRGBA38]}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 0, y: 0 }}
+      />
       <View style={Styles.container}>
         <View style={Styles.purehalfLogoCon}>
           <Image

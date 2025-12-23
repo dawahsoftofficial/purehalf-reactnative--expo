@@ -55,7 +55,7 @@ const ProfilePicture = (props: any) => {
         };
         setUploading(true);
         setUploadingProgress(0);
-        ApiServices.addProfilePicture(resizedImageObj, (progress: any) => {
+        ApiServices.addProfilePicture(resizedImageObj, (progress: number) => {
           const progressValue = Math.min(
             Math.max(Number(progress) || 0, 0),
             100
@@ -201,7 +201,7 @@ const ProfilePicture = (props: any) => {
                     value={uploadingProgress}
                     maxValue={100}
                     radius={110}
-                    duration={100}
+                    duration={200}
                     progressValueColor={Colors.color1}
                     title={'Uploading'}
                     titleColor={Colors.color1}
@@ -209,6 +209,7 @@ const ProfilePicture = (props: any) => {
                     progressValueStyle={{ fontSize: 65 }}
                     inActiveStrokeColor={Colors.color18}
                     activeStrokeColor={Colors.theme}
+                    showProgressValue={true}
                   />
                 </Animation>
               </View>

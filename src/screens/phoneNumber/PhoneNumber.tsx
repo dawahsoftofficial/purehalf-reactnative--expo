@@ -1,5 +1,5 @@
 import i18next from 'i18next';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Image,
   ImageBackground,
@@ -11,9 +11,12 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DeviceInfo, { hasNotch } from 'react-native-device-info';
+import DeviceInfo from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -39,14 +42,25 @@ import { StorageManager, useGlobalContext } from '../../services';
 import { ApiServices } from '../../services/api';
 import Data from '../profile/Data';
 
-const PhoneNumber = (props: any) => {
+type PhoneNumberProps = {
+  navigation: any;
+};
+
+type Country = {
+  code: string;
+  dial_code: string;
+  flag: string;
+  name: string;
+};
+
+function PhoneNumber(props: PhoneNumberProps) {
+  const { top, bottom } = useSafeAreaInsets();
   const Rtl = CheckRtl();
   const { getData, setData, storageKeys } = StorageManager;
   const { updateCurrentUser, updateDirection } = useGlobalContext();
   const [loading, setLoading] = useState(false);
-  const [loadingMessage] = useState('Submitting...');
   const [phoneNumber, setPhoneNumber] = useState(__DEV__ ? '3048700192' : '');
-  const [selectedCountry, setSelectedCountry] = useState({
+  const [selectedCountry, setSelectedCountry] = useState<Country>({
     code: 'PK',
     dial_code: '+92',
     flag: '🇵🇰',
@@ -55,121 +69,147 @@ const PhoneNumber = (props: any) => {
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
   const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
-  const onPressFlagBtn = () => setCountryPickerVisible(true);
-  const closeCountryPicker = () => setCountryPickerVisible(false);
+  const onPressFlagBtn = useCallback(() => {
+    setCountryPickerVisible(true);
+  }, []);
 
-  const onSelectCountry = (item: any) => {
+  const closeCountryPicker = useCallback(() => {
+    setCountryPickerVisible(false);
+  }, []);
+
+  const onSelectCountry = useCallback((item: Country) => {
     setSelectedCountry(item);
     setCountryPickerVisible(false);
-  };
-  const onChangePhoneNumber = (text: any) => {
+  }, []);
+
+  const onChangePhoneNumber = useCallback((text: string) => {
     setPhoneNumber(text);
-  };
+  }, []);
 
-  const onLanguagePress = () => {
+  const onLanguagePress = useCallback(() => {
     props.navigation.navigate('Languages');
-  };
-  const navigateTo = (route: any) => {
-    props.navigation.reset({
-      index: 0,
-      routes: [{ name: route }],
-    });
-  };
+  }, [props.navigation]);
 
-  const onLoggedIn = async (currentUser: any) => {
-    await setRevenueCat(currentUser?.id);
-    const user = await ApiServices.getCurrentUserDetail();
-    const obj = {
-      ...(currentUser as Record<string, unknown>),
-      ...(user as Record<string, unknown>),
-    };
-    updateCurrentUser(obj);
-    if (currentUser?.results?.first_name) {
-      if (
-        !currentUser?.results?.media ||
-        !currentUser?.results?.media?.primary_image ||
-        currentUser?.results?.media?.primary_image?.length === 0
-      ) {
-        navigateTo('ProfilePicture');
-      } else if (
-        currentUser?.results?.membership_status === null ||
-        currentUser?.results?.membership_status === 0
-      ) {
-        props.navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'ProFeaturesPromotion',
-              params: {
-                navigateTo: 'BottomTab',
-                from: 'SignUp',
+  const navigateTo = useCallback(
+    (route: string) => {
+      props.navigation.reset({
+        index: 0,
+        routes: [{ name: route }],
+      });
+    },
+    [props.navigation]
+  );
+
+  const onLoggedIn = useCallback(
+    async (currentUser: any) => {
+      await setRevenueCat(currentUser?.id);
+      const user = await ApiServices.getCurrentUserDetail();
+      const obj = {
+        ...(currentUser as Record<string, unknown>),
+        ...(user as Record<string, unknown>),
+      };
+      updateCurrentUser(obj);
+      if (currentUser?.results?.first_name) {
+        if (
+          !currentUser?.results?.media ||
+          !currentUser?.results?.media?.primary_image ||
+          currentUser?.results?.media?.primary_image?.length === 0
+        ) {
+          navigateTo('ProfilePicture');
+        } else if (
+          currentUser?.results?.membership_status === null ||
+          currentUser?.results?.membership_status === 0
+        ) {
+          props.navigation.reset({
+            index: 0,
+            routes: [
+              {
+                name: 'ProFeaturesPromotion',
+                params: {
+                  navigateTo: 'BottomTab',
+                  from: 'SignUp',
+                },
               },
-            },
-          ],
-        });
+            ],
+          });
+        } else {
+          navigateTo('BottomTab');
+        }
       } else {
-        navigateTo('BottomTab');
+        navigateTo('Location');
       }
-    } else {
-      navigateTo('Location');
-    }
-  };
+    },
+    [navigateTo, props.navigation, updateCurrentUser]
+  );
 
-  const hideLoading = () => setLoading(false);
-  const onContinuePress = () => {
+  const hideLoading = useCallback(() => setLoading(false), []);
+
+  const validatePhoneNumber = useCallback(() => {
     if (
       selectedCountry.dial_code === '+92' &&
       (phoneNumber.length < 10 || phoneNumber.length > 12)
     ) {
-      return flashErrorMessage(LanguageKeys.invalidPhoneNumber);
-    } else if (selectedCountry.dial_code !== '+92' && phoneNumber.length < 6) {
-      return flashErrorMessage(LanguageKeys.invalidPhoneNumber);
-    } else {
-      setLoading(true);
-      const phoneNumberWithCode =
-        selectedCountry.dial_code +
-        (phoneNumber[0] === '0' ? phoneNumber.slice(1) : phoneNumber);
-
-      ApiServices.authenticateUser(
-        phoneNumberWithCode,
-        (currentUser: any) => onLoggedIn(currentUser),
-        false
-      )
-        .then((res: any) => {
-          const { user, verificationRes } = res;
-          updateCurrentUser(user);
-          setLoading(false);
-          props.navigation.navigate('Otp', {
-            phoneNumber: phoneNumberWithCode,
-            phoneNumberFirebaseRes: verificationRes,
-          });
-        })
-        .catch(hideLoading);
+      return false;
     }
-  };
+    if (selectedCountry.dial_code !== '+92' && phoneNumber.length < 6) {
+      return false;
+    }
+    return true;
+  }, [selectedCountry.dial_code, phoneNumber.length]);
 
-  const saveDataLocal = async () => {
+  const onContinuePress = useCallback(() => {
+    if (!validatePhoneNumber()) {
+      return flashErrorMessage(LanguageKeys.invalidPhoneNumber);
+    }
+
+    setLoading(true);
+    const phoneNumberWithCode =
+      selectedCountry.dial_code +
+      (phoneNumber[0] === '0' ? phoneNumber.slice(1) : phoneNumber);
+
+    ApiServices.authenticateUser(
+      phoneNumberWithCode,
+      (currentUser: any) => onLoggedIn(currentUser),
+      false
+    )
+      .then((res: any) => {
+        const { user, verificationRes } = res;
+        updateCurrentUser(user);
+        setLoading(false);
+        props.navigation.navigate('Otp', {
+          phoneNumber: phoneNumberWithCode,
+          phoneNumberFirebaseRes: verificationRes,
+        });
+      })
+      .catch(hideLoading);
+  }, [
+    validatePhoneNumber,
+    selectedCountry.dial_code,
+    phoneNumber,
+    onLoggedIn,
+    hideLoading,
+    props.navigation,
+    updateCurrentUser,
+  ]);
+
+  const saveDataLocal = useCallback(async () => {
     await setData(storageKeys.PROFILE_DETAIL_LOCAL, Data);
-  };
+  }, [setData, storageKeys.PROFILE_DETAIL_LOCAL]);
 
-  const getToken = async () => {
+  const getToken = useCallback(async () => {
     getData(storageKeys.FCM_TOKEN).then(async (res) => {
       if (!res) {
         const isEmulator = await DeviceInfo.isEmulator();
         if (isEmulator && isIOS) {
           await setData(storageKeys.FCM_TOKEN, 'FcmToken');
         } else {
-          Firebase.getFcmToken().then(async (res) => {
-            if (res) {
-              await setData(storageKeys.FCM_TOKEN, res);
-            } else {
-              await setData(storageKeys.FCM_TOKEN, 'FcmToken');
-            }
+          Firebase.getFcmToken().then(async (token) => {
+            await setData(storageKeys.FCM_TOKEN, token || 'FcmToken');
           });
         }
       }
     });
-  };
+  }, [getData, setData, storageKeys.FCM_TOKEN]);
 
   useEffect(() => {
     saveDataLocal();
@@ -179,7 +219,7 @@ const PhoneNumber = (props: any) => {
         updateDirection('ltr', 'en');
       });
     }
-  }, []);
+  }, [Rtl, saveDataLocal, getToken, updateDirection]);
 
   useEffect(() => {
     const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
@@ -195,6 +235,34 @@ const PhoneNumber = (props: any) => {
     };
   }, []);
 
+  const handleGoBack = useCallback(() => {
+    props?.navigation.goBack();
+  }, [props.navigation]);
+
+  const headerStyle = useMemo(
+    () => ({
+      top: top,
+      left: Rtl ? 0 : wp(4),
+      right: Rtl ? wp(4) : 0,
+      flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
+    }),
+    [top, Rtl]
+  );
+
+  const keyboardAvoidingStyle = useMemo(
+    () => ({
+      flex: 1,
+      justifyContent: 'center' as const,
+      paddingBottom: bottom,
+    }),
+    [bottom]
+  );
+
+  const isButtonDisabled = useMemo(
+    () => checkEmpty(phoneNumber) || loading,
+    [phoneNumber, loading]
+  );
+
   return (
     <SlideShowContainer disabled>
       <StatusBar
@@ -209,17 +277,12 @@ const PhoneNumber = (props: any) => {
       />
       <LinearGradient
         style={Styles.imageOuterView}
-        colors={[Colors.blackRGBA25, Colors.blackRGBA38]}
+        colors={[Colors.blackRGBA70, Colors.blackRGBA38]}
+        start={{ x: 0, y: 1 }}
+        end={{ x: 0, y: 0 }}
       />
-      <SafeAreaView style={Styles.container}>
-        <View
-          style={[
-            Styles.headerCon,
-            {
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-            },
-          ]}
-        >
+      <SafeAreaView edges={['top', 'bottom']} style={Styles.container}>
+        <View style={[Styles.headerCon, headerStyle]}>
           <TouchableOpacity
             style={[
               Styles.languageBtnCon,
@@ -228,40 +291,19 @@ const PhoneNumber = (props: any) => {
             activeOpacity={0.7}
             onPress={onLanguagePress}
           >
-            <TouchableOpacity
-              onPress={() => props?.navigation.goBack()}
-              activeOpacity={1}
-            >
+            <TouchableOpacity onPress={handleGoBack} activeOpacity={1}>
               <AntDesign
                 name={Rtl ? 'arrowright' : 'arrowleft'}
                 color={Colors.color2}
                 size={wp(6)}
               />
             </TouchableOpacity>
-            {/* <MaterialCommunityIcons
-              name="web"
-              color={Colors.color2}
-              size={wp(8)}
-            />
-            <Text style={Styles.languageText}>
-              {language === 'en'
-                ? LanguageKeys.english
-                : LanguageKeys.romanUrdu}
-            </Text> */}
           </TouchableOpacity>
-          {/* <TouchableOpacity
-            style={{ marginBottom: hp(0.5) }}
-            onPress={onGuardianPress}
-          >
-            <Text style={[Styles.languageText, { marginHorizontal: 0 }]}>
-              {LanguageKeys.guardian}
-            </Text>
-          </TouchableOpacity> */}
         </View>
 
         <KeyboardAvoidingView
-          behavior={'height'}
-          style={{ flex: 1 }}
+          behavior="height"
+          style={keyboardAvoidingStyle}
           keyboardVerticalOffset={isIOS ? 80 : 10}
         >
           {!isKeyboardOpen && (
@@ -315,11 +357,11 @@ const PhoneNumber = (props: any) => {
               text={LanguageKeys.continue}
               onPress={onContinuePress}
               loading={loading}
-              loadingMessage={loadingMessage}
-              disabled={checkEmpty(phoneNumber) || loading}
+              loadingMessage="Submitting..."
+              disabled={isButtonDisabled}
               icon={
                 <MaterialCommunityIcons
-                  name={'logout-variant'}
+                  name="logout-variant"
                   size={wp(5)}
                   color={Colors.color2}
                 />
@@ -336,7 +378,7 @@ const PhoneNumber = (props: any) => {
       </SafeAreaView>
     </SlideShowContainer>
   );
-};
+}
 
 export default PhoneNumber;
 
@@ -352,18 +394,17 @@ const Styles = StyleSheet.create({
     height: '100%',
   },
   container: {
-    position: 'absolute',
-    height: hp(100),
-    width: wp(100),
-    paddingVertical: hasNotch() && isIOS ? 20 : 0,
     zIndex: 1,
+    width: wp(100),
+    height: hp(100),
+    position: 'absolute',
+    justifyContent: 'center',
   },
   headerCon: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    position: 'absolute',
     justifyContent: 'space-between',
-    paddingHorizontal: wp(4),
-    paddingTop: isIOS ? 0 : hp(2),
   },
   languageBtnCon: {
     flexDirection: 'row',
@@ -380,7 +421,6 @@ const Styles = StyleSheet.create({
   purehalfLogoCon: {
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: hp(15),
   },
   logo: {
     width: wp(40),
@@ -394,13 +434,11 @@ const Styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: wp(6),
     includeFontPadding: false,
-    // width: wp(50),
     marginTop: hp(1),
   },
   phoneNumberSectionCon: {
     position: 'absolute',
     bottom: 0,
-    // paddingBottom: hp(4),
     width: wp(100),
     zIndex: 1,
     paddingHorizontal: wp(4),
@@ -446,31 +484,9 @@ const Styles = StyleSheet.create({
     color: Colors.color2,
     height: wp(11),
     width: wp(70),
-    // marginTop: hp(0.6),
     paddingVertical: hp(1),
     fontSize: Typography.medium,
     fontFamily: Fonts.APPFONT_R,
     paddingHorizontal: wp(2),
-  },
-  radioBtnCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: hp(2),
-    alignSelf: 'flex-start',
-    marginBottom: hp(2),
-  },
-  termsAndConditionText: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    fontSize: Typography.small1,
-    alignSelf: 'center',
-    marginLeft: wp(1),
-  },
-  underline: {
-    textDecorationLine: 'underline',
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small1,
   },
 });

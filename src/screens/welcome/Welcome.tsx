@@ -20,6 +20,8 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import { usePremiumStore } from '@/stores';
+
 import {
   CheckMembershipStatus,
   Container,
@@ -179,6 +181,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     []
   );
 
+  const { premium, loaded } = usePremiumStore();
+
   const { t } = useTranslation();
   const Rtl = CheckRtl();
   const { currentUser, updateCurrentUser } = useGlobalContext();
@@ -284,8 +288,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       setLoader(true);
 
       if (value === '1' || value === '3') {
-        const hasMembership = await ensureActiveMembership();
-        if (!hasMembership) {
+        // const hasMembership = await ensureActiveMembership();
+        if (!premium) {
           const defaultOption = optionBarList[0];
           applyOptionSelection(defaultOption);
           getUsers({ page: 1, type: defaultOption.value }, true);
@@ -303,9 +307,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     },
     [
       applyOptionSelection,
-      ensureActiveMembership,
       getUserStats,
       getUsers,
+      premium,
       navigation,
       optionBarList,
     ]
@@ -510,15 +514,15 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     ])
   );
 
-  const isPremiumUser = useMemo(() => {
-    const now = moment();
-    const membershipExpiry = currentUser?.membership_expiry;
-    return (
-      membershipExpiry !== null &&
-      membershipExpiry !== undefined &&
-      moment(membershipExpiry).isAfter(now)
-    );
-  }, [currentUser?.membership_expiry]);
+  // const isPremiumUser = useMemo(() => {
+  //   const now = moment();
+  //   const membershipExpiry = currentUser?.membership_expiry;
+  //   return (
+  //     membershipExpiry !== null &&
+  //     membershipExpiry !== undefined &&
+  //     moment(membershipExpiry).isAfter(now)
+  //   );
+  // }, [currentUser?.membership_expiry]);
 
   const onInfoItemPress = useCallback(
     (item: ProfileProgressItem) => {
@@ -611,6 +615,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     );
   };
 
+  if (!loaded) return null;
+
+  if (!premium) {
+    // navigation.replace('ProFeaturesPromotion');
+  }
   return (
     <Container style={Styles.container}>
       <View style={Styles.paddingH}>
@@ -618,7 +627,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         <ModalLoader visible={modalLoader} useModalLayout={true} />
         <CommonActions navigation={navigation} userId={currentUser?.id} />
         <View style={Styles.headerWrapper}>
-          {!isPremiumUser ? (
+          {!premium ? (
+            // TODO: Premium Check
             <PremiumButton />
           ) : (
             <TouchableOpacity
@@ -664,7 +674,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   {currentUser?.first_name?.slice(0, 1)}
                 </Text>
               )}
-              {isPremiumUser ? (
+              {premium ? (
                 <View style={Styles.premiumBadge}>
                   <Image
                     source={Images.membership}

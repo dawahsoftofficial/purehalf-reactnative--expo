@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Purchases from 'react-native-purchases';
 
 const checkEmpty = (value: any) => {
   if (typeof value === 'string') {
@@ -44,7 +44,6 @@ const setRevenueCat = async (userID = null) => {
   try {
     const userIDString = (await JSON.stringify(userID)) || null;
     if (userIDString) {
-      Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
       if (Platform.OS === 'ios') {
         await Purchases.configure({
           apiKey: 'appl_QVhBMyOFJKhfsiWaYPwcpMFLXQW',
@@ -57,8 +56,8 @@ const setRevenueCat = async (userID = null) => {
         });
       }
     }
-  } catch (error) {
-    console.error('Error in setRevenueCat:', error);
+  } catch {
+    // Silently handle errors
   }
 };
 
