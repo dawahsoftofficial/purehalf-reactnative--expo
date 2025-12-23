@@ -26,7 +26,8 @@ type SettingsMenuItem = {
 
 function Settings(props: SettingsProps) {
   const { currentUser } = useGlobalContext();
-  const { premium } = usePremiumStore();
+  const { isPremium } = usePremiumStore();
+  const premium = isPremium();
   const { navigate } = props.navigation;
   const [showLocationConsentModal, setShowLocationConsentModal] =
     useState<boolean>(false);

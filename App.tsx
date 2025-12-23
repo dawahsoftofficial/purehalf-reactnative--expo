@@ -16,8 +16,10 @@ const App = (): JSX.Element => {
 
     // Real-time listener
     const listener = (ci: CustomerInfo) => {
+      const isPremiumFromRevenueCat =
+        ci.entitlements.active['2026-packages']?.isActive === true;
       usePremiumStore.setState({
-        premium: ci.entitlements.active['2026-packages']?.isActive === true,
+        premium: isPremiumFromRevenueCat,
         loaded: true,
         customerInfo: ci,
       });

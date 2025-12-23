@@ -21,7 +21,8 @@ const SearchProfiles = () => {
     onSearchPress: () => void;
     hasFiltersSelected: () => boolean;
   }>(null);
-  const { premium } = usePremiumStore();
+  const { isPremium } = usePremiumStore();
+  const premium = isPremium();
 
   const [hasFilters, setHasFilters] = useState(false);
 

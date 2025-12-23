@@ -181,7 +181,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     []
   );
 
-  const { premium, loaded } = usePremiumStore();
+  const { loaded, isPremium } = usePremiumStore();
+  const isPremiumUser = isPremium();
 
   const { t } = useTranslation();
   const Rtl = CheckRtl();
@@ -289,7 +290,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
       if (value === '1' || value === '3') {
         // const hasMembership = await ensureActiveMembership();
-        if (!premium) {
+        if (!isPremiumUser) {
           const defaultOption = optionBarList[0];
           applyOptionSelection(defaultOption);
           getUsers({ page: 1, type: defaultOption.value }, true);
@@ -309,7 +310,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       applyOptionSelection,
       getUserStats,
       getUsers,
-      premium,
+      isPremiumUser,
       navigation,
       optionBarList,
     ]
@@ -514,16 +515,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     ])
   );
 
-  // const isPremiumUser = useMemo(() => {
-  //   const now = moment();
-  //   const membershipExpiry = currentUser?.membership_expiry;
-  //   return (
-  //     membershipExpiry !== null &&
-  //     membershipExpiry !== undefined &&
-  //     moment(membershipExpiry).isAfter(now)
-  //   );
-  // }, [currentUser?.membership_expiry]);
-
   const onInfoItemPress = useCallback(
     (item: ProfileProgressItem) => {
       setHeaderModal(false);
@@ -617,7 +608,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   if (!loaded) return null;
 
-  if (!premium) {
+  if (!isPremiumUser) {
     // navigation.replace('ProFeaturesPromotion');
   }
   return (
@@ -627,7 +618,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         <ModalLoader visible={modalLoader} useModalLayout={true} />
         <CommonActions navigation={navigation} userId={currentUser?.id} />
         <View style={Styles.headerWrapper}>
-          {!premium ? (
+          {!isPremiumUser ? (
             // TODO: Premium Check
             <PremiumButton />
           ) : (
@@ -674,7 +665,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   {currentUser?.first_name?.slice(0, 1)}
                 </Text>
               )}
-              {premium ? (
+              {isPremiumUser ? (
                 <View style={Styles.premiumBadge}>
                   <Image
                     source={Images.membership}
