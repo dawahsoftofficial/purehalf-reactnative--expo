@@ -1509,8 +1509,11 @@ PODS:
   - PromisesObjC (2.4.0)
   - PromisesSwift (2.4.0):
     - PromisesObjC (= 2.4.0)
-  - PurchasesHybridCommon (17.23.0):
-    - RevenueCat (= 5.50.0)
+  - PurchasesHybridCommon (17.25.0):
+    - RevenueCat (= 5.51.1)
+  - PurchasesHybridCommonUI (17.25.0):
+    - PurchasesHybridCommon (= 17.25.0)
+    - RevenueCatUI (= 5.51.1)
   - RCT-Folly (2024.11.18.00):
     - boost
     - DoubleConversion
@@ -4188,7 +4191,9 @@ PODS:
     - React-utils (= 0.82.1)
     - SocketRocket
   - RecaptchaInterop (101.0.0)
-  - RevenueCat (5.50.0)
+  - RevenueCat (5.51.1)
+  - RevenueCatUI (5.51.1):
+    - RevenueCat (= 5.51.1)
   - RNAppleAuthentication (2.5.0):
     - React-Core
   - RNBootSplash (6.3.11):
@@ -4438,8 +4443,11 @@ PODS:
     - RNNotifee/NotifeeCore (= 9.1.8)
   - RNNotifee/NotifeeCore (9.1.8):
     - React-Core
-  - RNPurchases (9.6.10):
-    - PurchasesHybridCommon (= 17.23.0)
+  - RNPaywalls (9.6.12):
+    - PurchasesHybridCommonUI (= 17.25.0)
+    - React-Core
+  - RNPurchases (9.6.12):
+    - PurchasesHybridCommon (= 17.25.0)
     - React-Core
   - RNRate (1.2.12):
     - React-Core
@@ -4874,6 +4882,7 @@ DEPENDENCIES:
   - "RNGoogleSignin (from `../node_modules/@react-native-google-signin/google-signin`)"
   - RNImageCropPicker (from `../node_modules/react-native-image-crop-picker`)
   - "RNNotifee (from `../node_modules/@notifee/react-native`)"
+  - RNPaywalls (from `../node_modules/react-native-purchases-ui`)
   - RNPurchases (from `../node_modules/react-native-purchases`)
   - RNRate (from `../node_modules/react-native-rate`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
@@ -4929,9 +4938,11 @@ SPEC REPOS:
     - PromisesObjC
     - PromisesSwift
     - PurchasesHybridCommon
+    - PurchasesHybridCommonUI
     - React-Codegen
     - RecaptchaInterop
     - RevenueCat
+    - RevenueCatUI
     - SocketRocket
     - TOCropViewController
 
@@ -5137,6 +5148,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-image-crop-picker"
   RNNotifee:
     :path: "../node_modules/@notifee/react-native"
+  RNPaywalls:
+    :path: "../node_modules/react-native-purchases-ui"
   RNPurchases:
     :path: "../node_modules/react-native-purchases"
   RNRate:
@@ -5205,7 +5218,8 @@ SPEC CHECKSUMS:
   nanopb: fad817b59e0457d11a5dfbde799381cd727c1275
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
   PromisesSwift: 9d77319bbe72ebf6d872900551f7eeba9bce2851
-  PurchasesHybridCommon: e95a0b9bb01f6e9101d44f411343fb91030e26ae
+  PurchasesHybridCommon: 6a79a873ab52f777bfa36e9516f3fcd84d3b3428
+  PurchasesHybridCommonUI: 3c1f78addfb3f470713548b4eac8c59254d0efe6
   RCT-Folly: 846fda9475e61ec7bcbf8a3fe81edfcaeb090669
   RCTDeprecation: f17e2ebc07876ca9ab8eb6e4b0a4e4647497ae3a
   RCTRequired: e2c574c1b45231f7efb0834936bd609d75072b63
@@ -5282,7 +5296,8 @@ SPEC CHECKSUMS:
   ReactCodegen: 0bce2d209e2e802589f4c5ff76d21618200e74cb
   ReactCommon: 801eff8cb9c940c04d3a89ce399c343ee3eff654
   RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
-  RevenueCat: a5fcd0a12b5ec9bbddc0cf0dd20c14b7e6213df6
+  RevenueCat: eab035bbab271faccfef5c36eaff2a1ffef14dc0
+  RevenueCatUI: c6acb3648fa58ccb4f0f178556ed0278b796234f
   RNAppleAuthentication: 9027af8aa92b4719ef1b6030a8e954d37079473a
   RNBootSplash: 7fcc9a58ae343aeb1a1dd49f9030832fe432c544
   RNCAsyncStorage: fd44f4b03e007e642e98df6726737bc66e9ba609
@@ -5301,7 +5316,8 @@ SPEC CHECKSUMS:
   RNGoogleSignin: 85c82d6e1494bd4a039804959362e63771f7ad5a
   RNImageCropPicker: 5432d75a3bc7209dc8b6ab189fcfe19bd6339fb9
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPurchases: 393312c7ac9cfb3852e3f14a91520d305fa05be6
+  RNPaywalls: 599481f4480f87c2b3d8c72dc4c74e215dce141e
+  RNPurchases: cc3333cede6c0f040545a95c38ae627d0174c058
   RNRate: 7641919330e0d6688ad885a985b4bd697ed7d14c
   RNReanimated: 97d1a1419c06fdd51105089b551a891d57fe01f7
   RNScreens: 98771ad898d1c0528fc8139606bbacf5a2e9d237

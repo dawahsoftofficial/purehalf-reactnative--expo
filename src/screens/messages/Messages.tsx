@@ -26,6 +26,7 @@ import {
   Header,
   ModalLoader,
   PremiumButton,
+  PurchaseSuccessModal,
   Text,
 } from '../../components';
 import BlurView from '../../components/BlurView';
@@ -35,11 +36,14 @@ import { CommonActions } from '../../navigation';
 import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
+  flashSuccessMessage,
   formatDate,
   stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import { presentChatCreditsPaywall } from '../../services/paywall-service';
 
 const Messages = (props: any) => {
   const { t } = useTranslation();
@@ -50,6 +54,10 @@ const Messages = (props: any) => {
     message: '',
   });
   const [quote, setQuote] = useState('');
+  const [chatCreditsSuccessModalVisible, setChatCreditsSuccessModalVisible] =
+    useState<boolean>(false);
+  const [isChatCreditsLoading, setIsChatCreditsLoading] =
+    useState<boolean>(false);
   const { setData, storageKeys } = StorageManager;
   const {
     conversations,
@@ -101,6 +109,31 @@ const Messages = (props: any) => {
       visible: false,
       message: '',
     });
+  };
+
+  const onChatCreditsPress = async () => {
+    setIsChatCreditsLoading(true);
+    try {
+      const result = await presentChatCreditsPaywall();
+      if (result.success) {
+        setChatCreditsSuccessModalVisible(true);
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(result.error || 'Failed to purchase chat credits');
+      }
+    } catch (error: any) {
+      flashErrorMessage(error.message || 'Failed to purchase chat credits');
+    } finally {
+      setIsChatCreditsLoading(false);
+    }
+  };
+
+  const onChatCreditsSuccessCollect = () => {
+    setChatCreditsSuccessModalVisible(false);
+    // TODO: Backend integration - collect chat credits
+    flashSuccessMessage('Chat credits added successfully!');
   };
 
   const onLogoutPress = async () => {
@@ -325,25 +358,27 @@ const Messages = (props: any) => {
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            {currentUser?.chat_credits !== undefined &&
-              currentUser?.chat_credits !== null && (
-                <View
-                  style={[
-                    Styles.chatCreditsContainer,
-                    {
-                      marginRight: Rtl ? 0 : wp(2),
-                      marginLeft: Rtl ? wp(2) : 0,
-                    },
-                  ]}
-                >
-                  <Text style={Styles.chatCreditsLabel}>
-                    {LanguageKeys.chatCredits}:
-                  </Text>
-                  <Text style={Styles.chatCreditsValue}>
-                    {currentUser?.chat_credits}
-                  </Text>
-                </View>
-              )}
+            {/* {currentUser?.chat_credits !== undefined &&
+              currentUser?.chat_credits !== null && ( */}
+            <Ripple
+              style={[
+                Styles.chatCreditsContainer,
+                {
+                  marginRight: Rtl ? 0 : wp(2),
+                  marginLeft: Rtl ? wp(2) : 0,
+                },
+              ]}
+              onPress={onChatCreditsPress}
+              disabled={isChatCreditsLoading}
+            >
+              <Text style={Styles.chatCreditsLabel}>
+                {LanguageKeys.chatCredits}:
+              </Text>
+              <Text style={Styles.chatCreditsValue}>
+                {currentUser?.chat_credits}
+              </Text>
+            </Ripple>
+            {/* )} */}
             {currentUser?.role === 'guardian' && (
               <View style={[Styles.gaurdianHeader]}>
                 <Menu>
@@ -388,6 +423,12 @@ const Messages = (props: any) => {
           userId={currentUser?.user?.id}
         />
       )}
+      <PurchaseSuccessModal
+        visible={chatCreditsSuccessModalVisible}
+        onCollect={onChatCreditsSuccessCollect}
+        title="Chat Credits Purchased!"
+        message="Your chat credits have been added successfully."
+      />
       <View style={Styles.contentContainer}>
         {coversationLoading ? (
           <AnimatedLoader

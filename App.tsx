@@ -7,12 +7,26 @@ import { Initialization } from './src/initialization';
 import { usePremiumStore } from './src/stores';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 import { AppState } from 'react-native';
-const App = (): JSX.Element => {
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+
+const AppContent = (): JSX.Element => {
+  const { top } = useSafeAreaInsets();
   const refresh = usePremiumStore((s) => s.refresh);
 
   useEffect(() => {
-    // Initial fetch
-    refresh();
+    // Wait a bit to ensure RevenueCat is configured before using it
+    // RevenueCat is configured in RootNavigation after user data is loaded
+    const timer = setTimeout(() => {
+      try {
+        // Initial fetch - only if Purchases is configured
+        refresh();
+      } catch {
+        // Purchases not configured yet, will retry later
+      }
+    }, 1000);
 
     // Real-time listener
     const listener = (ci: CustomerInfo) => {
@@ -33,7 +47,12 @@ const App = (): JSX.Element => {
     });
 
     return () => {
-      Purchases.removeCustomerInfoUpdateListener(listener);
+      clearTimeout(timer);
+      try {
+        Purchases.removeCustomerInfoUpdateListener(listener);
+      } catch {
+        // Listener might not have been added
+      }
       sub.remove();
     };
   }, [refresh]);
@@ -42,10 +61,17 @@ const App = (): JSX.Element => {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <MenuProvider>
         <Initialization />
-        <FlashMessage position="top" />
+        <FlashMessage position="top" statusBarHeight={top} />
       </MenuProvider>
     </GestureHandlerRootView>
   );
 };
 
+const App = (): JSX.Element => {
+  return (
+    <SafeAreaProvider>
+      <AppContent />
+    </SafeAreaProvider>
+  );
+};
 export default App;

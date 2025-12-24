@@ -27,6 +27,7 @@ import {
   Container,
   Loader,
   ModalLoader,
+  PurchaseSuccessModal,
   Swiper,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -35,11 +36,13 @@ import { CommonActions } from '../../navigation';
 import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
   flashSuccessMessage,
   isIOS,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import { presentBoostProfilePaywall } from '../../services/paywall-service';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
@@ -202,6 +205,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
   const [headerModal, setHeaderModal] = useState<boolean>(false);
+  const [boostSuccessModalVisible, setBoostSuccessModalVisible] =
+    useState<boolean>(false);
+  const [isBoostLoading, setIsBoostLoading] = useState<boolean>(false);
   const [profileCompleteProgress, setProfileCompleteProgress] = useState<
     ProfileProgressItem[]
   >(() => profileProgressTemplate.map((item) => ({ ...item })));
@@ -487,6 +493,31 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     };
   }, [checkNewTransaction, getInitialNotification, notifeeBackForHandler]);
 
+  const onBoostProfilePress = useCallback(async () => {
+    setIsBoostLoading(true);
+    try {
+      const result = await presentBoostProfilePaywall();
+      if (result.success) {
+        setBoostSuccessModalVisible(true);
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(result.error || 'Failed to purchase boost');
+      }
+    } catch (error: any) {
+      flashErrorMessage(error.message || 'Failed to purchase boost');
+    } finally {
+      setIsBoostLoading(false);
+    }
+  }, []);
+
+  const onBoostSuccessCollect = useCallback(() => {
+    setBoostSuccessModalVisible(false);
+    // TODO: Backend integration - collect boost credits
+    flashSuccessMessage('Boost profile activated successfully!');
+  }, []);
+
   const onRecommendationPress = useCallback((value?: boolean) => {
     if (value) {
       setShowRecommendationModal(true);
@@ -633,6 +664,17 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             </TouchableOpacity>
           )}
           <View style={Styles.headerRightWrapper}>
+            <Ripple
+              style={Styles.headerIconWrapper}
+              onPress={onBoostProfilePress}
+              disabled={isBoostLoading}
+            >
+              <MaterialCommunityIcons
+                name="rocket"
+                size={wp(6)}
+                color={Colors.theme}
+              />
+            </Ripple>
             {showRecommendationModal && (
               <Ripple
                 style={Styles.headerIconWrapper}
@@ -803,6 +845,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           photoRequests={userStats?.photo_requested_you_counter}
         />
       ) : null}
+      <PurchaseSuccessModal
+        visible={boostSuccessModalVisible}
+        onCollect={onBoostSuccessCollect}
+        title="Boost Profile Purchased!"
+        message="Your profile boost has been activated successfully."
+      />
       <OptionsBar
         onPress={onOptionPress}
         userStats={userStats}

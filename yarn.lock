@@ -2841,22 +2841,22 @@
   dependencies:
     nanoid "^3.3.11"
 
-"@revenuecat/purchases-js-hybrid-mappings@17.23.0":
-  version "17.23.0"
-  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js-hybrid-mappings/-/purchases-js-hybrid-mappings-17.23.0.tgz#2e1c687278975501738447e2aaadde8982664889"
-  integrity sha512-2dYhiRLXEQJ517GfPUzrjS7JOzNWtjZk1mYmJGX+d//7PDLH49lMw4y6sH1rxWUzNaoWJnNpx9PDPeE7U0vt0g==
+"@revenuecat/purchases-js-hybrid-mappings@17.25.0":
+  version "17.25.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js-hybrid-mappings/-/purchases-js-hybrid-mappings-17.25.0.tgz#9ae61b3e25a4951f45a5d4e9b8f0b314406c9522"
+  integrity sha512-+2GCH8OAAU5BJW6q+2vgvcqiKTxYpHK57SCl0tWhMZnqvC6TkZMEexnIv81LIxbLUUasI0QQhDZL3S1Dn4gsyA==
   dependencies:
-    "@revenuecat/purchases-js" "1.20.0"
+    "@revenuecat/purchases-js" "1.22.1"
 
-"@revenuecat/purchases-js@1.20.0":
-  version "1.20.0"
-  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js/-/purchases-js-1.20.0.tgz#ee3e9956bae6b359b0574cc3bbd2e6ecf758c8d2"
-  integrity sha512-1O10B1GLLKnqjnRVIWjX2Fnphy0lEJwaPqzqzaZGB1mSpbZhxeJmNtTpBDK2chMbsQxRePIiVOKzlSEKp29wJQ==
+"@revenuecat/purchases-js@1.22.1":
+  version "1.22.1"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-js/-/purchases-js-1.22.1.tgz#7c876fb169ec77c97bb53d06047f44ad9344c553"
+  integrity sha512-ktjSk8je7t2uVA5krnO8GnIfKudF3hxdIGXxN8Grs9RF7anjS0rWUrZgsCIswi9LvE6/NwkuNOkX/NMBtop/sQ==
 
-"@revenuecat/purchases-typescript-internal@17.23.0":
-  version "17.23.0"
-  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal/-/purchases-typescript-internal-17.23.0.tgz#8f7db348323c62298ca17016297f0d542ceca883"
-  integrity sha512-BraZIf7iiMqIQYDe47adM8Kji4ylaG68OO9MTNzkOTdYRPmBZUyhtFaWAD72gboIUVR4uVgBCjiC54IHwbhjNQ==
+"@revenuecat/purchases-typescript-internal@17.25.0":
+  version "17.25.0"
+  resolved "https://registry.yarnpkg.com/@revenuecat/purchases-typescript-internal/-/purchases-typescript-internal-17.25.0.tgz#8dd475c49dbbbae313ba7c859e06e0c748dd696f"
+  integrity sha512-LHJrpmhIi5u7V/zNiKR8iZS1shXeFeGJMZkEUEywvJwhdFJvC8GK6+QL6b1nYsL3uhccqNk6ksl29qcf7eemKg==
 
 "@rtsao/scc@^1.1.0":
   version "1.1.0"
@@ -8299,13 +8299,20 @@ react-native-popup-menu@^0.18.0:
   resolved "https://registry.yarnpkg.com/react-native-popup-menu/-/react-native-popup-menu-0.18.0.tgz#723c4df6b790ee3cc92ae698e7e5844ee1a170f9"
   integrity sha512-XD3gyp/hwL5YWw2J034DerfvbJ6S2YHqAzvqAFRU+UGnFD4JyTqggfm4UyynBD26O1PDoRb45Loil+NZCGfCnA==
 
-react-native-purchases@^9.6.10:
-  version "9.6.10"
-  resolved "https://registry.yarnpkg.com/react-native-purchases/-/react-native-purchases-9.6.10.tgz#24df542e1e77e16880338ac951e60d22820da49f"
-  integrity sha512-clQ/+qLwF1mil1W0rcqmLKHEWuzjvgSeCgJMttLeFTKEH914oka4+NVZbcQAL24RNAR63ohh6oH2PRNkTdLzPg==
+react-native-purchases-ui@^9.6.12:
+  version "9.6.12"
+  resolved "https://registry.yarnpkg.com/react-native-purchases-ui/-/react-native-purchases-ui-9.6.12.tgz#8a49fb962352896728422395ed231dd5e40ab376"
+  integrity sha512-uelYONtycGTH+AVQkkM6WUawpjpi/NP5C5OMKUawS3oTbe+W+N1sATuJrUKUE5us/nsxBubwuYy8JGGj7mMptg==
   dependencies:
-    "@revenuecat/purchases-js-hybrid-mappings" "17.23.0"
-    "@revenuecat/purchases-typescript-internal" "17.23.0"
+    "@revenuecat/purchases-typescript-internal" "17.25.0"
+
+react-native-purchases@^9.6.12:
+  version "9.6.12"
+  resolved "https://registry.yarnpkg.com/react-native-purchases/-/react-native-purchases-9.6.12.tgz#f47baf7b20cfef2600257cdc2826909e464bb0de"
+  integrity sha512-cPjTB8ONNqDe6vMEEDM5m7k/OY02glW3ZnLIN8VgQ76Q+HiaVphWG5K2zrI4ZsQ23CxXsNDKhzK1Zk6O3Dwp8g==
+  dependencies:
+    "@revenuecat/purchases-js-hybrid-mappings" "17.25.0"
+    "@revenuecat/purchases-typescript-internal" "17.25.0"
 
 react-native-rate@^1.2.12:
   version "1.2.12"

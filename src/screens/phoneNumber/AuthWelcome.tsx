@@ -92,7 +92,7 @@ function AuthWelcome(props: AuthWelcomeProps) {
   const onVerified = useCallback(
     async (user: any) => {
       try {
-        await setRevenueCat(user?.id);
+        setRevenueCat(user?.id);
 
         ApiServices.getMembershipStatus()
           .then(async (res: any) => {

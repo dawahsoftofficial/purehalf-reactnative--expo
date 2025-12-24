@@ -102,7 +102,7 @@ function PhoneNumber(props: PhoneNumberProps) {
 
   const onLoggedIn = useCallback(
     async (currentUser: any) => {
-      await setRevenueCat(currentUser?.id);
+      setRevenueCat(currentUser?.id);
       const user = await ApiServices.getCurrentUserDetail();
       const obj = {
         ...(currentUser as Record<string, unknown>),

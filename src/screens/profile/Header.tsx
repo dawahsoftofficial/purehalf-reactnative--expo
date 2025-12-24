@@ -27,6 +27,7 @@ import {
   CheckMembershipStatus,
   LinearGradient,
   ModalLoader,
+  ProfileBadges,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -568,22 +569,27 @@ const Header = ({
         colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
         style={{ ...StyleSheet.absoluteFill }}
       />
-      {isSelf ? (
-        <Ripple
-          style={[
-            Styles.infoChip,
-            {
-              left: Rtl ? wp(2) : undefined,
-              right: Rtl ? undefined : wp(2),
-            },
-          ]}
-          onPress={() => setToolTipVisible(true)}
-          hitSlop={20}
-          rippleColor={Colors.theme}
-        >
-          <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
-        </Ripple>
-      ) : null}
+      <View
+        style={[
+          Styles.badgesContainer,
+          {
+            left: Rtl ? wp(2) : undefined,
+            right: Rtl ? undefined : wp(2),
+          },
+        ]}
+      >
+        <ProfileBadges userData={userData} isSelf={isSelf} />
+        {isSelf ? (
+          <Ripple
+            style={Styles.infoChip}
+            onPress={() => setToolTipVisible(true)}
+            hitSlop={20}
+            rippleColor={Colors.theme}
+          >
+            <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
+          </Ripple>
+        ) : null}
+      </View>
       {fromUserProfile && (
         <Ripple
           style={[
@@ -783,10 +789,17 @@ const Styles = StyleSheet.create({
     width: '100%',
     marginBottom: hp(0.5),
   },
-  infoChip: {
+  badgesContainer: {
     position: 'absolute',
     top: wp(2),
     zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.5),
+    flexWrap: 'wrap',
+    // maxWidth: wp(60),
+  },
+  infoChip: {
     padding: wp(2),
     borderRadius: 12,
     backgroundColor: Colors.color3,

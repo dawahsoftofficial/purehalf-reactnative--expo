@@ -136,7 +136,7 @@ const Otp = (props: any) => {
 
   const onLoggedIn = async (userObj: any) => {
     console.log('user', userObj);
-    await setRevenueCat(userObj?.results.id);
+    setRevenueCat(userObj?.results.id);
     if (!currentUser) {
       updateCurrentUser(userObj?.results);
     }
@@ -177,7 +177,7 @@ const Otp = (props: any) => {
         onLoggedIn(currentUser)
       );
     } else {
-      await setRevenueCat(currentUser?.id);
+      setRevenueCat(currentUser?.id);
       ApiServices.getMembershipStatus().then(async (res: any) => {
         const updatedUser = {
           ...currentUser,
