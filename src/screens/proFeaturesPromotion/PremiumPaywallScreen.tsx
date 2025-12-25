@@ -18,11 +18,10 @@ import {
   type ViewToken,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import {
+import Purchases, {
   type PurchasesPackage,
   type PurchasesStoreProduct,
 } from 'react-native-purchases';
-import Purchases from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
@@ -121,8 +120,40 @@ function findRecommendedIndex(packages: PurchasesPackage[]) {
 
 function normalizeProductId(id?: string) {
   if (!id) return '';
-  // handle typos like "Elite (Highest Visbility)" in package.identifier — product.identifier is better
-  return id.trim();
+  const trimmed = id.trim().toLowerCase();
+
+  // Try exact match first
+  if (trimmed === 'plus_starter' || trimmed === 'plus (starter)') {
+    return 'plus_starter';
+  }
+  if (
+    trimmed === 'pro_recommended' ||
+    trimmed === 'pro (recommended)' ||
+    (trimmed.includes('pro') && trimmed.includes('recommended'))
+  ) {
+    return 'pro_recommended';
+  }
+  if (
+    trimmed === 'elite_highest_visibility' ||
+    trimmed === 'elite (highest visibility)' ||
+    trimmed === 'elite (highest visbility)' ||
+    (trimmed.includes('elite') && trimmed.includes('highest'))
+  ) {
+    return 'elite_highest_visibility';
+  }
+
+  // Fallback: try to match by keywords
+  if (trimmed.includes('plus') || trimmed.includes('starter')) {
+    return 'plus_starter';
+  }
+  if (trimmed.includes('pro') || trimmed.includes('recommended')) {
+    return 'pro_recommended';
+  }
+  if (trimmed.includes('elite') || trimmed.includes('highest')) {
+    return 'elite_highest_visibility';
+  }
+
+  return trimmed;
 }
 
 function formatMoneyFromProduct(product: PurchasesStoreProduct) {
@@ -138,9 +169,84 @@ function formatMoneyFromProduct(product: PurchasesStoreProduct) {
   );
 }
 
+function formatPerDayPrice(
+  product: PurchasesStoreProduct,
+  pricePerMonth: number | null | undefined
+) {
+  if (!pricePerMonth || pricePerMonth <= 0) return '';
+
+  // Extract currency symbol and value from priceString if available
+  const priceString = product.pricePerMonthString || product.priceString || '';
+
+  // Try to extract currency symbol (e.g., "PKR", "$", "€")
+  const currencyMatch = priceString.match(/^([^\d\s.,]+)/);
+  let currencySymbol = currencyMatch ? currencyMatch[1].trim() : '';
+
+  // If no symbol found, use currency code
+  if (!currencySymbol) {
+    const currency = product.currencyCode || 'USD';
+    currencySymbol =
+      currency === 'USD'
+        ? '$'
+        : currency === 'PKR'
+          ? 'PKR'
+          : currency === 'EUR'
+            ? '€'
+            : currency;
+  }
+
+  // Calculate per day price
+  // Try to extract numeric value from priceString first (more reliable)
+  let numericPrice = pricePerMonth;
+  if (priceString) {
+    // Extract number from price string (handles formats like "PKR4,900.00" or "$19.99")
+    const numberMatch = priceString.replace(/[^\d.,]/g, '').replace(',', '');
+    const parsedPrice = parseFloat(numberMatch);
+    if (!isNaN(parsedPrice) && parsedPrice > 0) {
+      numericPrice = parsedPrice;
+    }
+  }
+
+  // Calculate per day
+  const perDay = numericPrice / 30;
+
+  // Format with proper decimal places
+  const formattedPerDay = perDay.toFixed(2);
+
+  return `${currencySymbol}${formattedPerDay}/day`;
+}
+
 function calcCompareAt(product: PurchasesStoreProduct, multiplier: number) {
-  const base = product.pricePerMonth ?? product.price ?? 0;
-  if (!base || !multiplier) return { compareAtString: '', savePct: 0 };
+  if (!multiplier) return { compareAtString: '', savePct: 0 };
+
+  // Extract numeric value from priceString (more reliable than raw price values)
+  // This handles cases where price might be in different units on different platforms
+  const priceString = product.pricePerMonthString || product.priceString || '';
+  let base = 0;
+
+  if (priceString) {
+    // Extract number from price string (handles formats like "PKR4,900.00" or "$19.99")
+    const numberMatch = priceString.replace(/[^\d.,]/g, '').replace(',', '');
+    const parsedPrice = parseFloat(numberMatch);
+    if (!isNaN(parsedPrice) && parsedPrice > 0) {
+      base = parsedPrice;
+    }
+  }
+
+  // Fallback to raw price values if priceString parsing fails
+  if (!base) {
+    base = product.pricePerMonth ?? product.price ?? 0;
+    // If the value seems too large (might be in cents/paise), divide by 100
+    // For PKR: 1 PKR = 100 paise, for USD: 1 USD = 100 cents
+    if (
+      base > 10000 &&
+      (product.currencyCode === 'PKR' || product.currencyCode === 'USD')
+    ) {
+      base = base / 100;
+    }
+  }
+
+  if (!base) return { compareAtString: '', savePct: 0 };
 
   // Presentation-only compare-at
   const compareAt = Math.round(base * multiplier * 100) / 100;
@@ -149,12 +255,25 @@ function calcCompareAt(product: PurchasesStoreProduct, multiplier: number) {
     Math.round(((compareAt - base) / compareAt) * 100)
   );
 
-  // Build a string that matches the currency format roughly:
-  const currency = product.currencyCode || 'USD';
-  const symbol = currency === 'USD' ? '$' : '';
-  const compareAtString = symbol
-    ? `${symbol}${compareAt.toFixed(2)}`
-    : compareAt.toFixed(2);
+  // Extract currency symbol from priceString if available
+  const currencyMatch = priceString.match(/^([^\d\s.,]+)/);
+  let currencySymbol = currencyMatch ? currencyMatch[1].trim() : '';
+
+  // If no symbol found, use currency code
+  if (!currencySymbol) {
+    const currency = product.currencyCode || 'USD';
+    currencySymbol =
+      currency === 'USD'
+        ? '$'
+        : currency === 'PKR'
+          ? 'PKR'
+          : currency === 'EUR'
+            ? '€'
+            : currency;
+  }
+
+  // Format compareAt string with currency symbol
+  const compareAtString = `${currencySymbol}${compareAt.toFixed(2)}`;
 
   return { compareAtString, savePct };
 }
@@ -211,17 +330,26 @@ export default function PremiumPaywallScreen({
   // Update index when packages are loaded or recommendedIndex changes
   useEffect(() => {
     if (packages.length > 0 && recommendedIndex >= 0) {
-      requestAnimationFrame(() => {
+      // Use setTimeout for Android compatibility
+      const timer = setTimeout(() => {
         setIndex(recommendedIndex);
         try {
           listRef.current?.scrollToIndex({
             index: recommendedIndex,
             animated: false,
           });
-        } catch {}
-      });
+        } catch {
+          // Fallback: scroll to offset if scrollToIndex fails (common on Android)
+          const offset = recommendedIndex * (CARD_WIDTH + CARD_GAP);
+          listRef.current?.scrollToOffset({
+            offset,
+            animated: false,
+          });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [recommendedIndex, packages.length]);
+  }, [recommendedIndex, packages.length, CARD_WIDTH, CARD_GAP]);
 
   const mergedPlanUI = useMemo(() => {
     return { ...DEFAULT_PLAN_UI };
@@ -276,9 +404,110 @@ export default function PremiumPaywallScreen({
       message: '',
     });
 
+  // Helper function to extract expiration date from customerInfo
+  const getExpirationDate = (customerInfo: any): string | null => {
+    return (
+      customerInfo?.latestExpirationDate ||
+      customerInfo?.customerInfo?.latestExpirationDate ||
+      null
+    );
+  };
+
+  // Helper function to check if subscription is active
+  const isSubscriptionActive = (customerInfo: any): boolean => {
+    const hasActiveSubscriptions =
+      customerInfo?.activeSubscriptions?.length > 0;
+    const hasExpirationDate = !!getExpirationDate(customerInfo);
+    return hasActiveSubscriptions || hasExpirationDate;
+  };
+
+  // Helper function to update user and navigate after successful purchase
+  const handlePurchaseSuccess = async (
+    customerInfo: any,
+    packageToPurchase?: PurchasesPackage
+  ) => {
+    const expirationDate = getExpirationDate(customerInfo);
+    if (!expirationDate) {
+      hideLoaderModal();
+      flashErrorMessage(LanguageKeys.commonErrorMessage);
+      return;
+    }
+
+    const updatedUser = {
+      ...currentUser,
+      membership_expiry: expirationDate,
+      membership_status: 1,
+    };
+    updateCurrentUser(updatedUser);
+    await setData(storageKeys.USER, updatedUser);
+    hideLoaderModal();
+    flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
+
+    const navigateTo = route?.params?.navigateTo;
+    if (navigateTo && navigateTo === 'goBack') {
+      navigation?.goBack();
+    } else {
+      navigation?.reset({
+        index: 0,
+        routes: [
+          {
+            name: 'MembershipCongrats',
+            params: {
+              amount: packageToPurchase?.product?.price || 0,
+              title: packageToPurchase?.product?.title || 'Premium',
+            },
+          },
+        ],
+      });
+    }
+  };
+
+  // Helper function to get user-friendly error message
+  const getErrorMessage = (error: any): string => {
+    // Check if user cancelled
+    if (
+      error?.userCancelled === true ||
+      error?.code === 'USER_CANCELLED' ||
+      error?.code === 'PURCHASE_CANCELLED'
+    ) {
+      return ''; // Don't show error for user cancellation
+    }
+
+    // Check for network errors
+    if (
+      error?.code === 'NETWORK_ERROR' ||
+      error?.message?.toLowerCase().includes('network') ||
+      error?.message?.toLowerCase().includes('connection')
+    ) {
+      return 'Network error. Please check your internet connection and try again.';
+    }
+
+    // Check for payment errors
+    if (
+      error?.code === 'PAYMENT_PENDING' ||
+      error?.code === 'PAYMENT_INVALID'
+    ) {
+      return 'Payment error. Please check your payment method and try again.';
+    }
+
+    // Check for store errors
+    if (
+      error?.code === 'STORE_PROBLEM' ||
+      error?.code === 'PRODUCT_NOT_AVAILABLE'
+    ) {
+      return 'Product not available. Please try again later.';
+    }
+
+    // Default error message
+    return error?.message || LanguageKeys.commonErrorMessage;
+  };
+
   const handleSubscribe = async (pkg?: PurchasesPackage) => {
     const packageToPurchase = pkg || selected;
-    if (!packageToPurchase) return;
+    if (!packageToPurchase) {
+      flashErrorMessage('Please select a package to subscribe');
+      return;
+    }
 
     setLoaderModal({
       visible: true,
@@ -286,47 +515,22 @@ export default function PremiumPaywallScreen({
     });
 
     try {
-      const customerInfo: any =
-        await Purchases.purchasePackage(packageToPurchase);
+      const customerInfo = await Purchases.purchasePackage(packageToPurchase);
 
-      if (
-        customerInfo?.activeSubscriptions?.length !== 0 &&
-        (customerInfo?.latestExpirationDate ||
-          customerInfo?.customerInfo?.latestExpirationDate)
-      ) {
-        const updatedUser = {
-          ...currentUser,
-          membership_expiry:
-            customerInfo?.latestExpirationDate ||
-            customerInfo?.customerInfo?.latestExpirationDate,
-          membership_status: 1,
-        };
-        updateCurrentUser(updatedUser);
-        await setData(storageKeys.USER, updatedUser);
-        hideLoaderModal();
-        flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
-        const navigateTo = route?.params?.navigateTo;
-        if (navigateTo && navigateTo === 'goBack') {
-          navigation?.goBack();
-        } else {
-          navigation?.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MembershipCongrats',
-                params: {
-                  amount: packageToPurchase?.product?.price,
-                  title: packageToPurchase?.product?.title,
-                },
-              },
-            ],
-          });
-        }
+      if (isSubscriptionActive(customerInfo)) {
+        await handlePurchaseSuccess(customerInfo, packageToPurchase);
       } else {
         hideLoaderModal();
+        flashErrorMessage(
+          'Subscription purchase completed but could not be verified. Please try restoring purchases.'
+        );
       }
-    } catch {
+    } catch (error: any) {
       hideLoaderModal();
+      const errorMessage = getErrorMessage(error);
+      if (errorMessage) {
+        flashErrorMessage(errorMessage);
+      }
     }
   };
 
@@ -337,47 +541,23 @@ export default function PremiumPaywallScreen({
     });
 
     try {
-      const customerInfo: any = await Purchases.restorePurchases();
+      const customerInfo = await Purchases.restorePurchases();
 
-      if (
-        customerInfo?.activeSubscriptions?.length !== 0 &&
-        (customerInfo?.latestExpirationDate ||
-          customerInfo?.customerInfo?.latestExpirationDate)
-      ) {
-        const updatedUser = {
-          ...currentUser,
-          membership_expiry:
-            customerInfo?.latestExpirationDate ||
-            customerInfo?.customerInfo?.latestExpirationDate,
-          membership_status: 1,
-        };
-        updateCurrentUser(updatedUser);
-        await setData(storageKeys.USER, updatedUser);
-        hideLoaderModal();
-        flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
-        const navigateTo = route?.params?.navigateTo;
-        if (navigateTo && navigateTo === 'goBack') {
-          navigation?.goBack();
-        } else {
-          navigation?.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MembershipCongrats',
-                params: {
-                  amount: 0,
-                  title: 'Restored',
-                },
-              },
-            ],
-          });
-        }
+      if (isSubscriptionActive(customerInfo)) {
+        await handlePurchaseSuccess(customerInfo);
       } else {
         hideLoaderModal();
         flashErrorMessage('restoreSubscriptionErrorMessage');
       }
-    } catch {
+    } catch (error: any) {
       hideLoaderModal();
+      const errorMessage = getErrorMessage(error);
+      if (errorMessage) {
+        flashErrorMessage(errorMessage);
+      } else {
+        // If no specific error message, show generic restore error
+        flashErrorMessage('restoreSubscriptionErrorMessage');
+      }
     }
   };
 
@@ -476,12 +656,29 @@ export default function PremiumPaywallScreen({
             snapToAlignment="center"
             decelerationRate="fast"
             bounces={false}
-            contentContainerStyle={{ paddingHorizontal: 0 }}
+            contentContainerStyle={{
+              paddingHorizontal: 0,
+              paddingVertical: 0,
+            }}
             getItemLayout={(_, i) => ({
               length: CARD_WIDTH + CARD_GAP,
               offset: (CARD_WIDTH + CARD_GAP) * i,
               index: i,
             })}
+            initialScrollIndex={
+              recommendedIndex >= 0 && packages.length > 0
+                ? recommendedIndex
+                : undefined
+            }
+            onScrollToIndexFailed={(info) => {
+              // Fallback for Android if scrollToIndex fails
+              setTimeout(() => {
+                listRef.current?.scrollToOffset({
+                  offset: info.averageItemLength * info.index,
+                  animated: false,
+                });
+              }, 500);
+            }}
             onScroll={Animated.event(
               [{ nativeEvent: { contentOffset: { x: scrollX } } }],
               { useNativeDriver: false }
@@ -492,16 +689,46 @@ export default function PremiumPaywallScreen({
             viewabilityConfig={viewabilityConfig}
             onViewableItemsChanged={onViewableItemsChanged}
             renderItem={({ item, index: i }) => {
-              const pid = normalizeProductId(item.product.identifier);
-              const plan = mergedPlanUI[pid];
+              // Try multiple sources for matching: product identifier, product title, package identifier
+              const productId = normalizeProductId(item.product.identifier);
+              const productTitle = normalizeProductId(item.product.title);
+              const packageId = normalizeProductId(item.identifier);
+
+              // Try to find matching plan
+              let plan =
+                mergedPlanUI[productId] ||
+                mergedPlanUI[productTitle] ||
+                mergedPlanUI[packageId];
+
+              // If still no match, try to find by keywords in any of the identifiers
+              if (!plan) {
+                const searchText =
+                  `${productId} ${productTitle} ${packageId}`.toLowerCase();
+                if (
+                  searchText.includes('plus') ||
+                  searchText.includes('starter')
+                ) {
+                  plan = mergedPlanUI['plus_starter'];
+                } else if (
+                  searchText.includes('pro') ||
+                  searchText.includes('recommended')
+                ) {
+                  plan = mergedPlanUI['pro_recommended'];
+                } else if (
+                  searchText.includes('elite') ||
+                  searchText.includes('highest')
+                ) {
+                  plan = mergedPlanUI['elite_highest_visibility'];
+                }
+              }
 
               const isSelected = i === index;
               const price = formatMoneyFromProduct(item.product);
               const weekly = item.product.pricePerWeekString || '';
-              const perDay =
-                typeof item.product.pricePerMonth === 'number'
-                  ? `$${(item.product.pricePerMonth / 30).toFixed(2)}/day`
-                  : '';
+              const perDay = formatPerDayPrice(
+                item.product,
+                item.product.pricePerMonth
+              );
 
               const { compareAtString, savePct } = calcCompareAt(
                 item.product,
@@ -612,8 +839,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginTop: 14,
-    marginBottom: 18,
+    marginVertical: 10,
   },
   loadingContainer: {
     flex: 1,

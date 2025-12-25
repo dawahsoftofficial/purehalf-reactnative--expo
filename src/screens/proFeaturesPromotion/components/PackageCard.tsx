@@ -72,119 +72,124 @@ export function PackageCard({
   };
 
   return (
-    <Pressable
-      onPress={() => onSelect(index)}
-      style={[
-        styles.card,
-        {
-          width: cardWidth,
-          marginRight: isLast ? 0 : cardGap,
-        },
-        isProEmphasis && styles.cardEmphasis,
-        isSelected && styles.cardSelected,
-      ]}
+    <View
+      style={{
+        width: cardWidth,
+        marginRight: isLast ? 0 : cardGap,
+        alignItems: 'center',
+      }}
     >
-      {/* Pro card glow effect */}
-      {isProEmphasis && <View style={styles.proGlow} pointerEvents="none" />}
-      <LinearGradient
-        colors={
-          isProEmphasis
-            ? ['rgba(167,139,250,0.16)', 'rgba(255,255,255,0.05)']
-            : ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.04)']
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-        pointerEvents="none"
-      />
-      {/* Badge Row */}
-      <View style={styles.badgeRow}>
-        <Text style={styles.planName}>
-          {item.product.title || item.identifier}
+      <Pressable
+        onPress={() => onSelect(index)}
+        style={[
+          styles.card,
+          {
+            width: cardWidth,
+          },
+          isProEmphasis && styles.cardEmphasis,
+          isSelected && styles.cardSelected,
+        ]}
+      >
+        {/* Pro card glow effect */}
+        {isProEmphasis && <View style={styles.proGlow} pointerEvents="none" />}
+        <LinearGradient
+          colors={
+            isProEmphasis
+              ? ['rgba(167,139,250,0.16)', 'rgba(255,255,255,0.05)']
+              : ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.04)']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+        />
+        {/* Badge Row */}
+        <View style={styles.badgeRow}>
+          <Text style={styles.planName}>{item.identifier}</Text>
+
+          <View
+            style={[
+              styles.badge,
+              plan?.badgeVariant === 'recommended'
+                ? styles.badgeReco
+                : styles.badgeNeutral,
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                plan?.badgeVariant === 'recommended'
+                  ? styles.badgeTextReco
+                  : null,
+              ]}
+              numberOfLines={1}
+            >
+              {plan?.badge || 'Plan'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.tagline}>
+          {plan?.tagline || item.product.description || ''}
         </Text>
 
-        <View
-          style={[
-            styles.badge,
-            plan?.badgeVariant === 'recommended'
-              ? styles.badgeReco
-              : styles.badgeNeutral,
-          ]}
-        >
-          <Text
-            style={[
-              styles.badgeText,
-              plan?.badgeVariant === 'recommended'
-                ? styles.badgeTextReco
-                : null,
-            ]}
-            numberOfLines={1}
-          >
-            {plan?.badge || 'Plan'}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.tagline}>
-        {plan?.tagline || item.product.description || ''}
-      </Text>
-
-      {/* Price */}
-      <View style={styles.priceRow}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.now}>{price}</Text>
-          <Text style={styles.per}>
-            per month {perDay ? `· ~${perDay}` : ''}{' '}
-            {weekly ? `· ${weekly}/wk` : ''}
-          </Text>
-
-          {!!compareAtString && (
-            <Text style={styles.was}>
-              <Text style={styles.strike}>{compareAtString}</Text> original
+        {/* Price */}
+        <View style={styles.priceRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.now}>{price}</Text>
+            <Text style={styles.per}>
+              per month {perDay ? `· ~${perDay}` : ''}{' '}
+              {weekly ? `· ${weekly}/wk` : ''}
             </Text>
+
+            {!!compareAtString && (
+              <Text style={styles.was}>
+                <Text style={styles.strike}>{compareAtString}</Text> original
+              </Text>
+            )}
+          </View>
+
+          {!!savePct && (
+            <View style={styles.savePill}>
+              <Text style={styles.saveText}>
+                Save {savePct}%{'\n'}Launch Offer
+              </Text>
+            </View>
           )}
         </View>
 
-        {!!savePct && (
-          <View style={styles.savePill}>
-            <Text style={styles.saveText}>
-              Save {savePct}%{'\n'}Launch Offer
-            </Text>
-          </View>
-        )}
-      </View>
-
-      {/* Bullets */}
-      <View style={styles.bullets}>
-        {(plan?.bullets || []).map((b, bi) => (
-          <View key={`${item.identifier}-${bi}`} style={styles.bulletRow}>
-            <View style={styles.tick}>
-              <Text style={styles.tickText}>✓</Text>
+        {/* Bullets */}
+        <View style={styles.bullets}>
+          {(plan?.bullets || []).map((b, bi) => (
+            <View key={`${item.identifier}-${bi}`} style={styles.bulletRow}>
+              <View style={styles.tick}>
+                <Text style={styles.tickText}>✓</Text>
+              </View>
+              <Text style={styles.bulletText}>{b}</Text>
             </View>
-            <Text style={styles.bulletText}>{b}</Text>
-          </View>
-        ))}
-      </View>
+          ))}
+        </View>
 
-      {/* In-card CTA button */}
-      <Pressable
-        onPress={() => {
-          onSelect(index);
-          onSubscribe(item);
-        }}
-        style={[styles.cardCta, isProEmphasis ? styles.cardCtaPro : null]}
-      >
-        {isProEmphasis ? (
-          <LinearGradient
-            colors={['rgba(167,139,250,0.42)', 'rgba(45,212,191,0.20)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFill}
-          />
-        ) : null}
-        <Text style={styles.cardCtaText}>{getButtonText()}</Text>
+        {/* In-card CTA button */}
+        <Pressable
+          onPress={() => {
+            onSelect(index);
+            onSubscribe(item);
+          }}
+          style={[styles.cardCta, isProEmphasis ? styles.cardCtaPro : null]}
+        >
+          {isProEmphasis ? (
+            <LinearGradient
+              colors={['rgba(167,139,250,0.42)', 'rgba(45,212,191,0.20)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
+          <Text style={styles.cardCtaText}>{getButtonText()}</Text>
+        </Pressable>
       </Pressable>
-    </Pressable>
+    </View>
   );
 }
 
@@ -301,8 +306,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'right',
   },
-  bullets: { marginTop: 10, marginBottom: 14, gap: 9 },
-  bulletRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+  bullets: { marginTop: 10, marginBottom: 14 },
+  bulletRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 9,
+  },
   tick: {
     width: 18,
     height: 18,
@@ -313,7 +322,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.18)',
     backgroundColor: 'rgba(255,255,255,0.06)',
     marginTop: 1,
-    flex: 0,
+    marginRight: 10,
+    flexShrink: 0,
   },
   tickText: {
     color: 'rgba(255,255,255,0.90)',
