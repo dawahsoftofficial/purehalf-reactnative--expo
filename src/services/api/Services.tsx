@@ -540,8 +540,13 @@ class GApiServices {
     return new Promise((resolve, reject) => {
       Api.get(EndPoints.getButtonsActiveStatus)
         .then((data: any) => {
-          const results = data?.data?.results || [];
-          resolve({ results });
+          const response = {
+            message: data?.data?.message || '',
+            error: data?.data?.error || false,
+            code: data?.data?.code || 200,
+            results: data?.data?.results || [],
+          };
+          resolve(response);
         })
         .catch((error) => {
           console.log('error while getting Button Status =>', error);

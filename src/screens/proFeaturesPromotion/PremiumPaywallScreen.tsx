@@ -37,7 +37,7 @@ import {
   useGlobalContext,
 } from '../../services';
 import {
-  Chip,
+  FinePrint,
   Footer,
   PackageCard,
   PaginationDots,
@@ -309,6 +309,10 @@ export default function PremiumPaywallScreen({
       try {
         const offerings = await Purchases.getOfferings();
         if (offerings?.current?.availablePackages) {
+          console.log(
+            'offerings.current.availablePackages',
+            offerings.current.availablePackages
+          );
           setPackages(offerings.current.availablePackages);
         }
       } catch (error) {
@@ -627,13 +631,13 @@ export default function PremiumPaywallScreen({
         </View>
 
         {/* Chips */}
-        <View style={styles.chips}>
+        {/* <View style={styles.chips}>
           <Chip label="Bonus chats instantly" dot="pro" />
           <Chip label="Daily chats included" dot="success" />
           <Chip label="See Likes & Visits" dot="neutral" />
           <Chip label="Premium filters" dot="warn" />
           <Chip label="Priority in search" dot="neutral" />
-        </View>
+        </View> */}
 
         {/* Swipe Cards */}
         {loading ? (
@@ -779,7 +783,7 @@ export default function PremiumPaywallScreen({
         )}
 
         {/* Fine Print */}
-        {/* {!loading && packages.length > 0 && <FinePrint />} */}
+        {!loading && packages.length > 0 && <FinePrint />}
 
         {/* Terms and Conditions */}
         {!loading && packages.length > 0 && <TermsAndConditions />}

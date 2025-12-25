@@ -1,36 +1,17 @@
 import i18next from 'i18next';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Image,
-  ImageBackground,
-  Keyboard,
-  KeyboardAvoidingView,
-  StatusBar,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-import Ripple from 'react-native-material-ripple';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { Animation } from '../../animations';
-import {
-  CountryPicker,
-  LinearGradient,
-  SlideShowContainer,
-  Text,
-} from '../../components';
+import { CountryPicker, SlideShowContainer, Text } from '../../components';
 import { Button } from '../../components';
-import { hp, Typography, wp } from '../../global';
+import { Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   checkEmpty,
   Firebase,
@@ -41,10 +22,9 @@ import {
 import { StorageManager, useGlobalContext } from '../../services';
 import { ApiServices } from '../../services/api';
 import Data from '../profile/Data';
-
-type PhoneNumberProps = {
-  navigation: any;
-};
+import PhoneHeader from './components/phone-header';
+import PhoneLogoSection from './components/phone-logo-section';
+import PhoneNumberInput from './components/phone-number-input';
 
 type Country = {
   code: string;
@@ -53,7 +33,36 @@ type Country = {
   name: string;
 };
 
-function PhoneNumber(props: PhoneNumberProps) {
+type User = {
+  id?: string;
+  first_name?: string;
+  latitude?: number;
+  longitude?: number;
+  media?: {
+    primary_image?: string[];
+  };
+  membership_status?: number | null;
+  results?: {
+    first_name?: string;
+    media?: {
+      primary_image?: string[];
+    };
+    membership_status?: number | null;
+  };
+};
+
+type PhoneNumberProps = {
+  navigation: {
+    navigate: (screen: string, params?: Record<string, unknown>) => void;
+    goBack: () => void;
+    reset: (config: {
+      index: number;
+      routes: Array<{ name: string; params?: Record<string, unknown> }>;
+    }) => void;
+  };
+};
+
+function PhoneNumber({ navigation }: PhoneNumberProps) {
   const { top, bottom } = useSafeAreaInsets();
   const Rtl = CheckRtl();
   const { getData, setData, storageKeys } = StorageManager;
@@ -67,7 +76,6 @@ function PhoneNumber(props: PhoneNumberProps) {
     name: 'Pakistan',
   });
   const [countryPickerVisible, setCountryPickerVisible] = useState(false);
-  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
 
   const onPressFlagBtn = useCallback(() => {
     setCountryPickerVisible(true);
@@ -87,59 +95,78 @@ function PhoneNumber(props: PhoneNumberProps) {
   }, []);
 
   const onLanguagePress = useCallback(() => {
-    props.navigation.navigate('Languages');
-  }, [props.navigation]);
+    navigation.navigate('Languages');
+  }, [navigation]);
 
   const navigateTo = useCallback(
     (route: string) => {
-      props.navigation.reset({
+      navigation.reset({
         index: 0,
         routes: [{ name: route }],
       });
     },
-    [props.navigation]
+    [navigation]
+  );
+
+  const navigateAfterLogin = useCallback(
+    (user: User) => {
+      if (!user?.results?.first_name) {
+        navigateTo('Location');
+        return;
+      }
+
+      const hasPrimaryImage =
+        user?.results?.media?.primary_image &&
+        user.results.media.primary_image.length > 0;
+
+      if (!hasPrimaryImage) {
+        navigateTo('ProfilePicture');
+        return;
+      }
+
+      if (
+        user?.results?.membership_status === null ||
+        user?.results?.membership_status === 0
+      ) {
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'ProFeaturesPromotion',
+              params: {
+                navigateTo: 'BottomTab',
+                from: 'SignUp',
+              },
+            },
+          ],
+        });
+        return;
+      }
+
+      navigateTo('BottomTab');
+    },
+    [navigateTo, navigation]
   );
 
   const onLoggedIn = useCallback(
-    async (currentUser: any) => {
-      setRevenueCat(currentUser?.id);
-      const user = await ApiServices.getCurrentUserDetail();
-      const obj = {
-        ...(currentUser as Record<string, unknown>),
-        ...(user as Record<string, unknown>),
-      };
-      updateCurrentUser(obj);
-      if (currentUser?.results?.first_name) {
-        if (
-          !currentUser?.results?.media ||
-          !currentUser?.results?.media?.primary_image ||
-          currentUser?.results?.media?.primary_image?.length === 0
-        ) {
-          navigateTo('ProfilePicture');
-        } else if (
-          currentUser?.results?.membership_status === null ||
-          currentUser?.results?.membership_status === 0
-        ) {
-          props.navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'ProFeaturesPromotion',
-                params: {
-                  navigateTo: 'BottomTab',
-                  from: 'SignUp',
-                },
-              },
-            ],
-          });
-        } else {
-          navigateTo('BottomTab');
+    async (currentUser: User) => {
+      try {
+        if (currentUser?.id) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setRevenueCat(currentUser.id as any);
         }
-      } else {
-        navigateTo('Location');
+        const user = (await ApiServices.getCurrentUserDetail()) as User;
+        const mergedUser = {
+          ...(currentUser as Record<string, unknown>),
+          ...(user as Record<string, unknown>),
+        };
+        updateCurrentUser(mergedUser);
+        navigateAfterLogin(currentUser);
+      } catch (error) {
+        console.error('Error in onLoggedIn:', error);
       }
     },
-    [navigateTo, props.navigation, updateCurrentUser]
+    [navigateAfterLogin, updateCurrentUser]
   );
 
   const hideLoading = useCallback(() => setLoading(false), []);
@@ -169,46 +196,55 @@ function PhoneNumber(props: PhoneNumberProps) {
 
     ApiServices.authenticateUser(
       phoneNumberWithCode,
-      (currentUser: any) => onLoggedIn(currentUser),
+      (currentUser: User) => onLoggedIn(currentUser),
       false
     )
-      .then((res: any) => {
-        const { user, verificationRes } = res;
-        updateCurrentUser(user);
-        setLoading(false);
-        props.navigation.navigate('Otp', {
-          phoneNumber: phoneNumberWithCode,
-          phoneNumberFirebaseRes: verificationRes,
-        });
+      .then((res: unknown) => {
+        const response = res as { verificationRes?: unknown };
+        if (response?.verificationRes) {
+          setLoading(false);
+          navigation.navigate('Otp', {
+            phoneNumber: phoneNumberWithCode,
+            phoneNumberFirebaseRes: response.verificationRes,
+          });
+        }
       })
-      .catch(hideLoading);
+      .catch((error) => {
+        console.error('Error in authentication:', error);
+        hideLoading();
+      });
   }, [
     validatePhoneNumber,
     selectedCountry.dial_code,
     phoneNumber,
     onLoggedIn,
     hideLoading,
-    props.navigation,
-    updateCurrentUser,
+    navigation,
   ]);
 
   const saveDataLocal = useCallback(async () => {
-    await setData(storageKeys.PROFILE_DETAIL_LOCAL, Data);
+    try {
+      await setData(storageKeys.PROFILE_DETAIL_LOCAL, Data);
+    } catch (error) {
+      console.error('Error saving profile data locally:', error);
+    }
   }, [setData, storageKeys.PROFILE_DETAIL_LOCAL]);
 
   const getToken = useCallback(async () => {
-    getData(storageKeys.FCM_TOKEN).then(async (res) => {
+    try {
+      const res = await getData(storageKeys.FCM_TOKEN);
       if (!res) {
         const isEmulator = await DeviceInfo.isEmulator();
         if (isEmulator && isIOS) {
           await setData(storageKeys.FCM_TOKEN, 'FcmToken');
         } else {
-          Firebase.getFcmToken().then(async (token) => {
-            await setData(storageKeys.FCM_TOKEN, token || 'FcmToken');
-          });
+          const token = await Firebase.getFcmToken();
+          await setData(storageKeys.FCM_TOKEN, token || 'FcmToken');
         }
       }
-    });
+    } catch (error) {
+      console.error('Error getting FCM token:', error);
+    }
   }, [getData, setData, storageKeys.FCM_TOKEN]);
 
   useEffect(() => {
@@ -221,37 +257,13 @@ function PhoneNumber(props: PhoneNumberProps) {
     }
   }, [Rtl, saveDataLocal, getToken, updateDirection]);
 
-  useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
-      setIsKeyboardOpen(true);
-    });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
-      setIsKeyboardOpen(false);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, []);
-
   const handleGoBack = useCallback(() => {
-    props?.navigation.goBack();
-  }, [props.navigation]);
+    navigation.goBack();
+  }, [navigation]);
 
-  const headerStyle = useMemo(
+  const scrollViewContentStyle = useMemo(
     () => ({
-      top: top,
-      left: Rtl ? 0 : wp(4),
-      right: Rtl ? wp(4) : 0,
-      flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
-    }),
-    [top, Rtl]
-  );
-
-  const keyboardAvoidingStyle = useMemo(
-    () => ({
-      flex: 1,
+      flexGrow: 1,
       justifyContent: 'center' as const,
       paddingBottom: bottom,
     }),
@@ -265,94 +277,26 @@ function PhoneNumber(props: PhoneNumberProps) {
 
   return (
     <SlideShowContainer disabled>
-      <StatusBar
-        translucent
-        backgroundColor={'transparent'}
-        barStyle="light-content"
-      />
-      <ImageBackground
-        resizeMode="cover"
-        style={Styles.image}
-        source={Images.slide1}
-      />
-      <LinearGradient
-        style={Styles.imageOuterView}
-        colors={[Colors.blackRGBA70, Colors.blackRGBA38]}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 0, y: 0 }}
-      />
-      <SafeAreaView edges={['top', 'bottom']} style={Styles.container}>
-        <View style={[Styles.headerCon, headerStyle]}>
-          <TouchableOpacity
-            style={[
-              Styles.languageBtnCon,
-              { flexDirection: Rtl ? 'row-reverse' : 'row' },
-            ]}
-            activeOpacity={0.7}
-            onPress={onLanguagePress}
-          >
-            <TouchableOpacity onPress={handleGoBack} activeOpacity={1}>
-              <AntDesign
-                name={Rtl ? 'arrowright' : 'arrowleft'}
-                color={Colors.color2}
-                size={wp(6)}
-              />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </View>
+      <View style={Styles.container}>
+        <PhoneHeader top={top} onGoBack={handleGoBack} />
 
-        <KeyboardAvoidingView
-          behavior="height"
-          style={keyboardAvoidingStyle}
-          keyboardVerticalOffset={isIOS ? 80 : 10}
+        <KeyboardAwareScrollView
+          enableOnAndroid
+          enableAutomaticScroll
+          keyboardShouldPersistTaps="handled"
+          extraScrollHeight={isIOS ? 20 : 10}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={scrollViewContentStyle}
         >
-          {!isKeyboardOpen && (
-            <View style={Styles.purehalfLogoCon}>
-              <Image
-                source={Images.logoWhite}
-                resizeMode="contain"
-                style={Styles.logo}
-              />
-              <Text style={Styles.logoDescription}>
-                {LanguageKeys.logoDescription}
-              </Text>
-            </View>
-          )}
-          <Animation style={Styles.phoneNumberSectionCon}>
+          <PhoneLogoSection />
+          <Animation style={[Styles.phoneNumberSectionCon, { bottom }]}>
             <Text style={Styles.getStarted}>getStarted</Text>
-            <View
-              style={{
-                ...Styles.phoneNumberCon,
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-              }}
-            >
-              <Ripple
-                style={{
-                  ...Styles.flagBtnCon,
-                  flexDirection: Rtl ? 'row-reverse' : 'row',
-                }}
-                onPress={onPressFlagBtn}
-              >
-                <Text style={Styles.flag}>{selectedCountry.flag}</Text>
-                <Text style={Styles.countryPickerTxt}>
-                  {selectedCountry.dial_code}
-                </Text>
-                <AntDesign
-                  name="caretdown"
-                  size={wp(3)}
-                  color={Colors.color2}
-                />
-              </Ripple>
-              <TextInput
-                style={{
-                  ...Styles.phoneNumberInput,
-                  textAlign: Rtl ? 'right' : 'left',
-                }}
-                keyboardType="number-pad"
-                value={phoneNumber}
-                onChangeText={onChangePhoneNumber}
-              />
-            </View>
+            <PhoneNumberInput
+              phoneNumber={phoneNumber}
+              selectedCountry={selectedCountry}
+              onPhoneNumberChange={onChangePhoneNumber}
+              onCountryPress={onPressFlagBtn}
+            />
             <Button
               text={LanguageKeys.continue}
               onPress={onContinuePress}
@@ -368,14 +312,14 @@ function PhoneNumber(props: PhoneNumberProps) {
               }
             />
           </Animation>
-        </KeyboardAvoidingView>
+        </KeyboardAwareScrollView>
 
         <CountryPicker
           visible={countryPickerVisible}
           onClose={closeCountryPicker}
           onPress={onSelectCountry}
         />
-      </SafeAreaView>
+      </View>
     </SlideShowContainer>
   );
 }
@@ -383,110 +327,21 @@ function PhoneNumber(props: PhoneNumberProps) {
 export default PhoneNumber;
 
 const Styles = StyleSheet.create({
-  imageOuterView: {
-    height: '100%',
-    width: wp(100),
-    position: 'absolute',
-    zIndex: 1,
-  },
-  image: {
-    width: wp(100),
-    height: '100%',
-  },
   container: {
-    zIndex: 1,
-    width: wp(100),
-    height: hp(100),
-    position: 'absolute',
+    flex: 1,
     justifyContent: 'center',
-  },
-  headerCon: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    position: 'absolute',
-    justifyContent: 'space-between',
-  },
-  languageBtnCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  languageText: {
-    color: Colors.color2,
-    alignSelf: 'center',
-    marginHorizontal: wp(2),
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small3,
-    includeFontPadding: false,
-  },
-  purehalfLogoCon: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: wp(40),
-    height: hp(16),
-  },
-  logoDescription: {
-    color: Colors.color2,
-    fontSize: Typography.small2,
-    fontFamily: Fonts.APPFONT_R,
-    alignSelf: 'center',
-    textAlign: 'center',
-    lineHeight: wp(6),
-    includeFontPadding: false,
-    marginTop: hp(1),
   },
   phoneNumberSectionCon: {
     position: 'absolute',
-    bottom: 0,
+
     width: wp(100),
     zIndex: 1,
     paddingHorizontal: wp(4),
   },
   getStarted: {
-    color: Colors.color2,
+    color: Colors.color1,
     fontFamily: Fonts.APPFONT_SB,
     includeFontPadding: false,
     fontSize: Typography.medium2,
-  },
-  phoneNumberCon: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderColor: Colors.color2,
-    height: wp(11),
-    alignItems: 'center',
-    marginVertical: hp(3),
-  },
-  flagBtnCon: {
-    height: wp(11),
-    minWidth: wp(18),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  flag: {
-    fontSize: wp(8),
-    includeFontPadding: false,
-    alignSelf: 'center',
-    paddingBottom: wp(!isIOS ? hp(0.2) : hp(0)),
-  },
-  countryPickerTxt: {
-    fontSize: Typography.medium,
-    marginHorizontal: wp(0.5),
-    paddingBottom: wp(!isIOS ? hp(0.2) : hp(0)),
-    paddingRight: wp(!isIOS ? hp(0.2) : hp(0)),
-    includeFontPadding: false,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color2,
-    alignSelf: 'center',
-  },
-  phoneNumberInput: {
-    color: Colors.color2,
-    height: wp(11),
-    width: wp(70),
-    paddingVertical: hp(1),
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
-    paddingHorizontal: wp(2),
   },
 });

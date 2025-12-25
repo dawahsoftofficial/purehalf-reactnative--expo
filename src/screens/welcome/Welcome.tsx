@@ -458,6 +458,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const checkNewTransaction = useCallback(() => {
     if (currentUser?.latest_transaction?.paid_tracking === 0) {
+      flashSuccessMessage('New transaction detected!');
       navigation.navigate('MembershipCongrats', {
         isNewTransaction: true,
         title: currentUser?.latest_transaction?.name,
@@ -657,6 +658,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               activeOpacity={0.6}
               onPress={() => {
                 flashSuccessMessage('You are already a premium member');
+                navigation.navigate('ProFeaturesPromotion', {
+                  navigateTo: 'BottomTab',
+                });
               }}
               style={Styles.headerIconWrapper}
             >

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Dimensions, Image, StatusBar, StyleSheet, View } from 'react-native';
 import Carousel from 'react-native-reanimated-carousel';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LinearGradient } from '../components';
 import { hp, wp } from '../global';
@@ -43,12 +44,8 @@ function SlideShowContainer({
   }
 
   return (
-    <View style={Styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor="transparent"
-        barStyle="light-content"
-      />
+    <SafeAreaView edges={['top', 'bottom']} style={Styles.container}>
+      <StatusBar backgroundColor={Colors.color2} barStyle="light-content" />
       <Carousel
         loop
         width={width}
@@ -59,7 +56,7 @@ function SlideShowContainer({
         renderItem={renderSliderImage}
       />
       <View style={Styles.contentContainer}>{children}</View>
-    </View>
+    </SafeAreaView>
   );
 }
 

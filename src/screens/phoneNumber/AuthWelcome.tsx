@@ -1,79 +1,95 @@
-import CheckBox from '@react-native-community/checkbox';
 import i18next from 'i18next';
-import React, { useCallback, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import {
-  Image,
-  ImageBackground,
-  Linking,
-  StatusBar,
-  StyleSheet,
-  Text as DefaultText,
-  View,
-} from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { StatusBar, StyleSheet, View } from 'react-native';
 import DeviceInfo from 'react-native-device-info';
-import Ripple from 'react-native-material-ripple';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { Animation } from '../../animations';
-import { LinearGradient, SlideShowContainer, Text } from '../../components';
-import { Button } from '../../components';
-import { hp, Typography, wp } from '../../global';
-import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
-import { Firebase, isIOS, setRevenueCat } from '../../services';
+import { SlideShowContainer, Text } from '../../components';
+import { Typography } from '../../global';
+import { CheckRtl } from '../../languages';
+import { Colors, Fonts } from '../../res';
+import { Firebase, setRevenueCat } from '../../services';
 import { StorageManager, useGlobalContext } from '../../services';
 import { ApiServices } from '../../services/api';
+import { type SettingsResponse, useSettingsStore } from '../../stores';
 import Data from '../profile/Data';
+import AuthButtons from './components/auth-buttons';
+import LogoSection from './components/logo-section';
+import TermsAndConditions from './components/terms-and-conditions';
 
-type AuthWelcomeProps = {
-  navigation: any;
+type User = {
+  id?: string;
+  latitude?: number;
+  longitude?: number;
+  first_name?: string;
+  last_name?: string;
+  gender?: string;
+  date_of_birth?: string;
+  media?: {
+    primary_image?: string[];
+  };
+  membership_status?: number | null;
+  membership_expiry?: string | null;
 };
 
-function AuthWelcome(props: AuthWelcomeProps) {
+type AuthWelcomeProps = {
+  navigation: {
+    navigate: (screen: string, params?: Record<string, unknown>) => void;
+    reset: (config: {
+      index: number;
+      routes: Array<{ name: string; params?: Record<string, unknown> }>;
+    }) => void;
+  };
+};
+
+function AuthWelcome({ navigation }: AuthWelcomeProps) {
   const { bottom } = useSafeAreaInsets();
-  const { t } = useTranslation();
   const [checkBox, setCheckbox] = useState(false);
   const Rtl = CheckRtl();
   const { getData, setData, storageKeys } = StorageManager;
   const { updateCurrentUser, updateDirection } = useGlobalContext();
   const [loading, setLoading] = useState(false);
-  const [buttonStatus, setButtonStatus] = useState<any>(null);
+  const { setSettings, getAuthenticationMethod } = useSettingsStore();
+  const buttonStatus = getAuthenticationMethod();
 
   const getButtonStatus = useCallback(() => {
     ApiServices.getButtonsActiveStatus()
-      .then((data: any) => {
-        const results = data?.results || [];
-        const authenticationMethod = results.find(
-          (item: any) => item?.key === 'authentication_method'
-        );
-        if (authenticationMethod?.value) {
-          setButtonStatus(authenticationMethod.value);
-        } else {
-          setButtonStatus({});
+      .then((data: unknown) => {
+        const response = data as SettingsResponse;
+        if (response) {
+          setSettings(response);
         }
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {
+        // Error handled silently, store will keep previous state
+      });
+  }, [setSettings]);
 
   const saveDataLocal = useCallback(async () => {
-    await setData(storageKeys.PROFILE_DETAIL_LOCAL, Data);
+    try {
+      await setData(storageKeys.PROFILE_DETAIL_LOCAL, Data);
+    } catch (error) {
+      console.error('Error saving profile data locally:', error);
+    }
   }, [setData, storageKeys.PROFILE_DETAIL_LOCAL]);
 
   const getToken = useCallback(async () => {
-    getData(storageKeys.FCM_TOKEN).then(async (res) => {
+    try {
+      const res = await getData(storageKeys.FCM_TOKEN);
       if (!res) {
         const isEmulator = await DeviceInfo.isEmulator();
+        const { isIOS } = await import('../../services');
         if (isEmulator && isIOS) {
           await setData(storageKeys.FCM_TOKEN, 'FcmToken');
         } else {
-          Firebase.getFcmToken().then(async (token) => {
-            await setData(storageKeys.FCM_TOKEN, token || 'FcmToken');
-          });
+          const token = await Firebase.getFcmToken();
+          await setData(storageKeys.FCM_TOKEN, token || 'FcmToken');
         }
       }
-    });
+    } catch (error) {
+      console.error('Error getting FCM token:', error);
+    }
   }, [getData, setData, storageKeys.FCM_TOKEN]);
 
   useEffect(() => {
@@ -89,71 +105,93 @@ function AuthWelcome(props: AuthWelcomeProps) {
 
   const hideLoading = useCallback(() => setLoading(false), []);
 
+  const navigateAfterVerification = useCallback(
+    (user: User) => {
+      if (!user?.latitude || !user?.longitude) {
+        navigation.navigate('Location');
+        return;
+      }
+
+      const hasBasicInfo =
+        user?.first_name &&
+        user?.last_name &&
+        user?.gender &&
+        user?.date_of_birth;
+
+      if (!hasBasicInfo) {
+        navigation.navigate('UserInput');
+        return;
+      }
+
+      const hasPrimaryImage =
+        user?.media?.primary_image && user.media.primary_image.length > 0;
+
+      if (!hasPrimaryImage) {
+        navigation.navigate('ProfilePicture');
+        return;
+      }
+
+      if (user?.membership_status === null || user?.membership_status === 0) {
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'ProFeaturesPromotion',
+              params: {
+                navigateTo: 'BottomTab',
+                from: 'SignUp',
+              },
+            },
+          ],
+        });
+        return;
+      }
+
+      navigation.navigate('BottomTab');
+    },
+    [navigation]
+  );
+
   const onVerified = useCallback(
-    async (user: any) => {
+    async (user: User) => {
       try {
-        setRevenueCat(user?.id);
-
-        ApiServices.getMembershipStatus()
-          .then(async (res: any) => {
-            if (res || user?.membership_status) {
-              user.membership_expiry =
-                res?.membership_expiry || user.membership_expiry;
-              user.membership_status = 1;
-            } else {
-              user.membership_expiry = null;
-              user.membership_status = 0;
-            }
-
-            const userData: any = await ApiServices.getCurrentUserDetail();
-            updateCurrentUser({ ...userData, ...user });
-            await setData(storageKeys.USER, { ...userData, ...user });
-          })
-          .catch(() => {});
-
-        setLoading(false);
-
-        if (!user?.latitude || !user?.longitude) {
-          props.navigation.navigate('Location');
-        } else if (
-          user?.first_name &&
-          user?.last_name &&
-          user?.gender &&
-          user?.date_of_birth
-        ) {
-          if (
-            !user?.media ||
-            !user?.media?.primary_image ||
-            user?.media?.primary_image?.length === 0
-          ) {
-            props.navigation.navigate('ProfilePicture');
-          } else if (
-            user?.membership_status === null ||
-            user?.membership_status === 0
-          ) {
-            props.navigation.reset({
-              index: 0,
-              routes: [
-                {
-                  name: 'ProFeaturesPromotion',
-                  params: {
-                    navigateTo: 'BottomTab',
-                    from: 'SignUp',
-                  },
-                },
-              ],
-            });
-          } else {
-            props.navigation.navigate('BottomTab');
-          }
-        } else {
-          props.navigation.navigate('UserInput');
+        if (user?.id) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          setRevenueCat(user.id as any);
         }
-      } catch {
+
+        try {
+          const membershipRes = (await ApiServices.getMembershipStatus()) as {
+            membership_expiry?: string | null;
+            membership_status?: number;
+          } | null;
+          const updatedUser: User = {
+            ...user,
+            membership_expiry:
+              membershipRes?.membership_expiry ||
+              user.membership_expiry ||
+              null,
+            membership_status: membershipRes || user?.membership_status ? 1 : 0,
+          };
+
+          const userData = (await ApiServices.getCurrentUserDetail()) as User;
+          const mergedUser = { ...userData, ...updatedUser };
+
+          updateCurrentUser(mergedUser);
+          await setData(storageKeys.USER, mergedUser);
+
+          navigateAfterVerification(mergedUser);
+        } catch (error) {
+          console.error('Error processing user verification:', error);
+          navigateAfterVerification(user);
+        }
+      } catch (error) {
+        console.error('Error in onVerified:', error);
+      } finally {
         setLoading(false);
       }
     },
-    [props.navigation, setData, storageKeys.USER, updateCurrentUser]
+    [setData, storageKeys.USER, updateCurrentUser, navigateAfterVerification]
   );
 
   const handleSocialAuth = useCallback(
@@ -165,164 +203,68 @@ function AuthWelcome(props: AuthWelcomeProps) {
             ? ApiServices.socialAuthenticate('google')
             : ApiServices.socialAppleAuthenticate('apple');
 
-        authMethod
-          .then(async () => {
-            try {
-              const user: any = await ApiServices.getCurrentUserDetail();
-              updateCurrentUser(user);
-              onVerified(user);
-              setLoading(false);
-            } catch {
-              setLoading(false);
-            }
-          })
-          .catch((error: any) => {
-            if (
-              error?.name === 'AppleSignInCanceled' ||
-              error?.name === 'AppleSignInNotSupported' ||
-              error?.name === 'AppleSignInConfigurationError'
-            ) {
-              // Silently handle cancellation and configuration errors
-            }
-            hideLoading();
-          });
-      } catch {
-        setLoading(false);
+        await authMethod;
+        const user = (await ApiServices.getCurrentUserDetail()) as User;
+        updateCurrentUser(user);
+        await onVerified(user);
+      } catch (error: unknown) {
+        const authError = error as { name?: string };
+        if (
+          authError?.name === 'AppleSignInCanceled' ||
+          authError?.name === 'AppleSignInNotSupported' ||
+          authError?.name === 'AppleSignInConfigurationError'
+        ) {
+          // Silently handle cancellation and configuration errors
+        } else {
+          console.error(`Error in ${type} authentication:`, error);
+        }
+        hideLoading();
       }
     },
     [hideLoading, onVerified, updateCurrentUser]
   );
 
   const onContinuePress = useCallback(
-    (type: string) => {
+    (type: 'phone' | 'google' | 'apple') => {
       if (type === 'phone') {
-        props.navigation.navigate('PhoneNumber');
-      } else if (type === 'google' || type === 'apple') {
-        handleSocialAuth(type as 'google' | 'apple');
+        navigation.navigate('PhoneNumber');
+      } else {
+        handleSocialAuth(type);
       }
     },
-    [handleSocialAuth, props.navigation]
+    [handleSocialAuth, navigation]
+  );
+
+  const handleCheckboxChange = useCallback((value: boolean) => {
+    setCheckbox(value);
+  }, []);
+
+  const buttonSectionStyle = useMemo(
+    () => [Styles.phoneNumberSectionCon, { bottom }],
+    [bottom]
   );
 
   return (
     <SlideShowContainer disabled>
-      <StatusBar
-        translucent
-        backgroundColor={'transparent'}
-        barStyle="light-content"
-      />
-      <ImageBackground
-        resizeMode="cover"
-        source={Images.slide1}
-        style={Styles.image}
-      />
-      <LinearGradient
-        style={Styles.imageOuterView}
-        colors={[Colors.blackRGBA70, Colors.blackRGBA38]}
-        start={{ x: 0, y: 1 }}
-        end={{ x: 0, y: 0 }}
-      />
-      <View style={Styles.container}>
-        <View style={Styles.purehalfLogoCon}>
-          <Image
-            source={Images.logoWhite}
-            resizeMode="contain"
-            style={Styles.logo}
-          />
-          <Text style={Styles.logoDescription}>logoDescription</Text>
-        </View>
+      <StatusBar backgroundColor={Colors.color2} barStyle="dark-content" />
 
-        <Animation
-          style={[Styles.phoneNumberSectionCon, { paddingBottom: bottom }]}
-        >
+      <View style={Styles.container}>
+        <LogoSection />
+
+        <Animation style={buttonSectionStyle}>
           <Text style={Styles.getStarted}>getStarted</Text>
 
-          {isIOS && buttonStatus?.is_apple === 1 && (
-            <Button
-              text={LanguageKeys.startWithWithApple}
-              onPress={() => onContinuePress('apple')}
-              loading={loading}
-              disabled={!checkBox}
-              buttonStyle={[Styles.appleBtn, !checkBox && { opacity: 0.7 }]}
-              icon={
-                <MaterialCommunityIcons
-                  name={'apple'}
-                  size={wp(5)}
-                  color={Colors.color2}
-                />
-              }
-            />
-          )}
-          {buttonStatus?.is_phone === 1 && (
-            <Button
-              text={LanguageKeys.startWithWithPhone}
-              onPress={() => onContinuePress('phone')}
-              loading={loading}
-              disabled={!checkBox}
-              buttonStyle={{ marginTop: hp(2) }}
-              icon={
-                <MaterialCommunityIcons
-                  name={'cellphone'}
-                  size={wp(5)}
-                  color={Colors.color2}
-                />
-              }
-            />
-          )}
-          {buttonStatus?.is_google === 1 && (
-            <Button
-              text={LanguageKeys.startWithWithGoogle}
-              onPress={() => onContinuePress('google')}
-              loading={loading}
-              disabled={!checkBox}
-              buttonStyle={[Styles.googleBtn, !checkBox && { opacity: 0.7 }]}
-              icon={
-                <MaterialCommunityIcons
-                  name={'google'}
-                  size={wp(5)}
-                  color={Colors.color2}
-                />
-              }
-            />
-          )}
+          <TermsAndConditions
+            checkBox={checkBox}
+            onCheckboxChange={handleCheckboxChange}
+          />
 
-          <View style={Styles.radioBtnCon}>
-            <CheckBox
-              disabled={false}
-              value={checkBox}
-              onValueChange={(newValue) => setCheckbox(newValue)}
-              tintColors={{ true: Colors.color57, false: Colors.color2 }}
-            />
-            <View>
-              <View style={{ flexDirection: 'row', marginLeft: 3 }}>
-                <DefaultText style={Styles.termsAndConditionText}>
-                  {t('acceptTermsAndConditions')}{' '}
-                </DefaultText>
-                <Ripple
-                  onPress={() =>
-                    Linking.openURL('https://purehalf.com/terms-conditions/')
-                  }
-                  style={{ paddingTop: isIOS ? 0 : 5 }}
-                >
-                  <DefaultText style={Styles.underline}>
-                    {t('termsAndConditions')}
-                  </DefaultText>
-                </Ripple>
-                <DefaultText style={Styles.termsAndConditionText}>
-                  {t('and')}
-                </DefaultText>
-              </View>
-              <Ripple
-                onPress={() =>
-                  Linking.openURL('https://purehalf.com/privacy-policy/')
-                }
-              >
-                <DefaultText style={[Styles.underline, { marginLeft: 7 }]}>
-                  {t('privacyPolicy')}
-                </DefaultText>
-              </Ripple>
-            </View>
-          </View>
+          <AuthButtons
+            buttonStatus={buttonStatus}
+            loading={loading}
+            checkBox={checkBox}
+            onContinuePress={onContinuePress}
+          />
         </Animation>
       </View>
     </SlideShowContainer>
@@ -332,92 +274,20 @@ function AuthWelcome(props: AuthWelcomeProps) {
 export default AuthWelcome;
 
 const Styles = StyleSheet.create({
-  imageOuterView: {
-    height: '100%',
-    width: wp(100),
-    position: 'absolute',
-    zIndex: 1,
-  },
-  image: {
-    width: wp(100),
-    height: '100%',
-  },
   container: {
-    zIndex: 1,
-    width: wp(100),
-    height: hp(100),
-    position: 'absolute',
+    flex: 1,
     justifyContent: 'center',
-  },
-
-  languageBtnCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  languageText: {
-    color: Colors.color2,
-    alignSelf: 'center',
-    marginHorizontal: wp(2),
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small3,
-    includeFontPadding: false,
-  },
-  purehalfLogoCon: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: wp(40),
-    height: hp(16),
-  },
-  logoDescription: {
-    color: Colors.color2,
-    fontSize: Typography.small2,
-    fontFamily: Fonts.APPFONT_R,
-    alignSelf: 'center',
-    textAlign: 'center',
-    includeFontPadding: false,
-    marginTop: hp(1),
   },
   phoneNumberSectionCon: {
-    bottom: 0,
     zIndex: 1,
-    width: wp(100),
+    width: '100%',
     position: 'absolute',
-    paddingHorizontal: wp(4),
+    paddingHorizontal: 16,
   },
   getStarted: {
-    color: Colors.color2,
+    color: Colors.color1,
     fontFamily: Fonts.APPFONT_SB,
     includeFontPadding: false,
     fontSize: Typography.medium2,
-  },
-  googleBtn: {
-    backgroundColor: Colors.color60,
-    marginTop: hp(2),
-  },
-  radioBtnCon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: hp(2),
-    alignSelf: 'flex-start',
-  },
-  termsAndConditionText: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    fontSize: Typography.small1,
-    alignSelf: 'center',
-    marginLeft: wp(1),
-  },
-  underline: {
-    textDecorationLine: 'underline',
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small1,
-  },
-  appleBtn: {
-    backgroundColor: Colors.color1,
-    marginTop: hp(2),
   },
 });
