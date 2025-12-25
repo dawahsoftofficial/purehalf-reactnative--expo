@@ -1,11 +1,6 @@
 import React from 'react';
-import {
-  Image,
-  StatusBar,
-  StyleSheet,
-  Text as RNText,
-  View,
-} from 'react-native';
+import { Image, StyleSheet, Text as RNText, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -59,12 +54,7 @@ const WelcomeUser = (props: any) => {
   };
 
   return (
-    <View style={Styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor={'transparent'}
-        barStyle={'light-content'}
-      />
+    <SafeAreaView style={Styles.container}>
       <View style={Styles.contentContainer}>
         <Image
           resizeMode="contain"
@@ -98,7 +88,7 @@ const WelcomeUser = (props: any) => {
           />
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -107,13 +97,13 @@ export default WelcomeUser;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.color2,
   },
   contentContainer: {
     flex: 1,
     backgroundColor: Colors.color2,
-    paddingHorizontal: wp(5),
-    paddingVertical: hp(3),
-    paddingTop: hp(10),
+    paddingHorizontal: 16,
+
     justifyContent: 'space-between',
   },
   bismillahText: {

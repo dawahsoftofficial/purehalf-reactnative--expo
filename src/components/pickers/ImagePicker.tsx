@@ -115,7 +115,7 @@ const ImagePicker = (props: any) => {
               buttonStyle={Styles.button}
               icon={
                 <Ionicons
-                  name="md-camera-outline"
+                  name="camera-outline"
                   color={Colors.color2}
                   size={wp(6)}
                   style={{ marginHorizontal: wp(2) }}

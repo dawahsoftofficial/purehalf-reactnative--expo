@@ -1,18 +1,10 @@
 import Geolocation from '@react-native-community/geolocation';
-import React, { useEffect, useState } from 'react';
-import {
-  Image,
-  Linking,
-  PermissionsAndroid,
-  StyleSheet,
-  View,
-} from 'react-native';
-import Ripple from 'react-native-material-ripple';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Linking, PermissionsAndroid, StyleSheet, View } from 'react-native';
 
-import { Button, Container, Text } from '../../components';
-import { hp, Typography, wp } from '../../global';
+import { Button, Container } from '../../components';
+import { hp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -21,8 +13,52 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import LocationHeader from './components/location-header';
+import ReportLink from './components/report-link';
+import TryAgainLink from './components/try-again-link';
 
-const Location: React.FC = (props: any) => {
+type GeolocationPosition = {
+  coords: {
+    latitude: number;
+    longitude: number;
+  };
+};
+
+type GeolocationError = {
+  code: number;
+  message: string;
+};
+
+type AddressComponent = {
+  types: string[];
+  long_name: string;
+};
+
+type GeocodingResponse = {
+  error_message?: string;
+  results?: Array<{
+    address_components: AddressComponent[];
+  }>;
+};
+
+type User = {
+  first_name?: string;
+  last_name?: string;
+  gender?: string;
+  date_of_birth?: string;
+  latitude?: number;
+  longitude?: number;
+  detail?: unknown;
+  [key: string]: unknown;
+};
+
+type LocationProps = {
+  navigation: {
+    reset: (config: { index: number; routes: Array<{ name: string }> }) => void;
+  };
+};
+
+function Location({ navigation }: LocationProps) {
   const { setData, storageKeys } = StorageManager;
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const [loading, setLoading] = useState<boolean>(false);
@@ -30,105 +66,125 @@ const Location: React.FC = (props: any) => {
   const [isReported, setIsReported] = useState<boolean>(false);
   const [failed, setFailed] = useState<boolean>(false);
 
-  const onTagLineSubmit = ({
-    lat,
-    long,
-    country,
-    city,
-  }: {
-    lat: number;
-    long: number;
-    country?: string;
-    city?: string;
-  }) => {
-    ApiServices.updateUserInfo({
-      latitude: lat,
-      longitude: long,
+  const navigateToNextScreen = useCallback(
+    (user: User) => {
+      const hasBasicInfo =
+        user?.first_name &&
+        user?.last_name &&
+        user?.gender &&
+        user?.date_of_birth;
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: hasBasicInfo ? 'BottomTab' : 'UserInput' }],
+      });
+    },
+    [navigation]
+  );
+
+  const onTagLineSubmit = useCallback(
+    ({
+      lat,
+      long,
       country,
       city,
-    })
-      .then(async (res) => {
-        const updatedUser = {
-          ...currentUser,
-          detail: res,
-          latitude: lat,
-          longitude: long,
-        };
-        await setData(storageKeys.USER, updatedUser);
-        updateCurrentUser(updatedUser);
-        if (
-          !updatedUser?.first_name ||
-          !updatedUser?.last_name ||
-          !updatedUser?.gender ||
-          !updatedUser?.date_of_birth
-        ) {
-          props?.navigation.reset({
-            index: 0,
-            routes: [{ name: 'UserInput' }],
-          });
-        } else {
-          props?.navigation.reset({
-            index: 0,
-            routes: [{ name: 'BottomTab' }],
-          });
-        }
+    }: {
+      lat: number;
+      long: number;
+      country?: string;
+      city?: string;
+    }) => {
+      ApiServices.updateUserInfo({
+        latitude: lat,
+        longitude: long,
+        country,
+        city,
       })
-      .catch((err) => {
-        setLoading(false);
-      });
-  };
-
-  const getCountryAndCity = (lat: number, long: number) => {
-    ApiServices.getLocationByLatLong(lat, long)
-      .then(async (res: any) => {
-        if (res?.error_message) {
+        .then(async (res) => {
+          const updatedUser: User = {
+            ...(currentUser as User),
+            detail: res,
+            latitude: lat,
+            longitude: long,
+          };
+          await setData(storageKeys.USER, updatedUser);
+          updateCurrentUser(updatedUser);
+          navigateToNextScreen(updatedUser);
+        })
+        .catch(() => {
           setLoading(false);
-          flashErrorMessage(res?.error_message);
+        });
+    },
+    [
+      currentUser,
+      setData,
+      storageKeys.USER,
+      updateCurrentUser,
+      navigateToNextScreen,
+    ]
+  );
+
+  const extractLocationInfo = useCallback(
+    (addressComponents: AddressComponent[]) => {
+      let country: string | undefined;
+      let city: string | undefined;
+
+      for (const component of addressComponents) {
+        if (component.types.includes('country')) {
+          country = component.long_name;
+        } else if (component.types.includes('locality')) {
+          city = component.long_name;
         }
-        if (res?.results && res?.results.length > 0) {
-          // Extract country and city information from the first result
-          const addressComponents = res?.results[0].address_components;
-          let country, city;
 
-          // Loop through address components to find country and city
-          for (const component of addressComponents) {
-            if (component.types.includes('country')) {
-              country = component.long_name;
-            } else if (component.types.includes('locality')) {
-              city = component.long_name;
-            }
+        if (country && city) {
+          break;
+        }
+      }
 
-            // Break the loop if both country and city are found
-            if (country && city) {
-              break;
-            }
+      return { country, city };
+    },
+    []
+  );
+
+  const getCountryAndCity = useCallback(
+    (lat: number, long: number) => {
+      ApiServices.getLocationByLatLong(lat, long)
+        .then((res: unknown) => {
+          const response = res as GeocodingResponse;
+          if (response?.error_message) {
+            setLoading(false);
+            flashErrorMessage(response.error_message);
+            return;
           }
-          onTagLineSubmit({ lat, long, country, city });
-        }
-        // onTagLineSubmit({ lat: 24.9064253, long: 67.0345873 })
-      })
-      .catch((err) => {
-        setLoading(false);
-      });
-  };
+          if (response?.results && response.results.length > 0) {
+            const addressComponents = response.results[0].address_components;
+            const { country, city } = extractLocationInfo(addressComponents);
+            onTagLineSubmit({ lat, long, country, city });
+          }
+        })
+        .catch(() => {
+          setLoading(false);
+        });
+    },
+    [extractLocationInfo, onTagLineSubmit]
+  );
 
-  const getOneTimeLocation = () => {
+  const getOneTimeLocation = useCallback(() => {
     setLoading(true);
     Geolocation.getCurrentPosition(
-      (position: any) => {
-        const currentLongitude: number = +JSON.stringify(
-          position.coords.longitude
-        );
-        const currentLatitude: number = +JSON.stringify(
-          position.coords.latitude
-        );
+      (position: GeolocationPosition) => {
+        const currentLatitude = position.coords.latitude;
+        const currentLongitude = position.coords.longitude;
         getCountryAndCity(currentLatitude, currentLongitude);
       },
-      (error: any) => {
+      (error: GeolocationError) => {
+        console.error('Geolocation error:', error);
         flashErrorMessage('Please enable location from settings');
         setLoading(false);
         setFailed(true);
-        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+        if (!isIOS) {
+          Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+        }
       },
       {
         enableHighAccuracy: false,
@@ -136,139 +192,103 @@ const Location: React.FC = (props: any) => {
         maximumAge: 1000,
       }
     );
-  };
+  }, [getCountryAndCity]);
 
-  const requestLocationPermission = async () => {
+  const requestLocationPermission = useCallback(async () => {
     if (isIOS) {
       getOneTimeLocation();
-    } else {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          getOneTimeLocation();
-        } else {
-          flashErrorMessage('Allow Permission to access your location');
-          setFailed(true);
-        }
-      } catch (err) {
-        console.warn(err);
-      }
+      return;
     }
-  };
+
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+        getOneTimeLocation();
+      } else {
+        flashErrorMessage('Allow Permission to access your location');
+        setFailed(true);
+      }
+    } catch (error) {
+      console.error('Permission request error:', error);
+      setFailed(true);
+    }
+  }, [getOneTimeLocation]);
 
   useEffect(() => {
-    setTimeout(() => {
+    const permissionTimer = setTimeout(() => {
       requestLocationPermission();
     }, 0);
-    setTimeout(() => {
+
+    const reportTimer = setTimeout(() => {
       setReport(true);
     }, 20000);
+
+    return () => {
+      clearTimeout(permissionTimer);
+      clearTimeout(reportTimer);
+    };
+  }, [requestLocationPermission]);
+
+  const onEnablePress = useCallback(() => {
+    if (!isIOS) {
+      Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+    }
   }, []);
 
-  const onEnablePress = () => {
-    Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
-  };
-
-  const onReport = () => {
+  const onReport = useCallback(() => {
     ApiServices.storeQuery({ type: 3 })
-      .then((res) => {
-        if (!res?.data?.error) {
+      .then((res: unknown) => {
+        const response = res as { data?: { error?: boolean } };
+        if (!response?.data?.error) {
           flashSuccessMessage('Reported successfully');
           setIsReported(true);
         }
       })
-      .catch((err) => {});
-  };
+      .catch((error) => {
+        console.error('Error reporting issue:', error);
+      });
+  }, []);
+
+  const buttonText = useMemo(
+    () => (loading ? LanguageKeys.processing : LanguageKeys.enableLocation),
+    [loading]
+  );
 
   return (
     <Container style={Styles.container}>
-      <View>
-        <View>
-          <Image
-            source={Images.logoColoured}
-            resizeMode="contain"
-            style={Styles.logo}
-          />
-        </View>
-        <View style={Styles.textContainer}>
-          <Text style={Styles.mainText}>{LanguageKeys.meetPartner}</Text>
-          <Text style={Styles.subText}>{LanguageKeys.enableLocationDes}</Text>
-        </View>
-        {failed && (
-          <Ripple onPress={requestLocationPermission}>
-            <Text style={Styles.locationText}>{LanguageKeys.tryAgain}</Text>
-          </Ripple>
-        )}
+      <LocationHeader />
+      <View style={Styles.buttonContainer}>
+        {failed && <TryAgainLink onPress={requestLocationPermission} />}
         <Button
           buttonStyle={Styles.locationBtn}
-          text={loading ? LanguageKeys.processing : LanguageKeys.enableLocation}
+          text={buttonText}
           onPress={loading ? () => {} : onEnablePress}
-          // loading={failed ? false : loading}
           loading={loading}
         />
+        {report && <ReportLink isReported={isReported} onPress={onReport} />}
       </View>
-      {report && (
-        <Ripple onPress={isReported ? () => {} : onReport}>
-          <Text
-            style={[
-              Styles.reportText,
-              { color: isReported ? Colors.randomRGBA70 : Colors.color44 },
-            ]}
-          >
-            {LanguageKeys.report}
-          </Text>
-        </Ripple>
-      )}
     </Container>
   );
-};
+}
 
 export default Location;
 
 const Styles = StyleSheet.create({
   container: {
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-  },
-  logo: {
-    marginTop: hp(15),
-    width: '100%',
-    height: hp(25),
-  },
-  textContainer: {
-    width: wp(80),
-    marginTop: hp(2),
-  },
-  mainText: {
-    fontSize: Typography.medium,
-    alignSelf: 'center',
-    fontFamily: Fonts.APPFONT_B,
-    color: Colors.color1,
-  },
-  subText: {
-    fontSize: Typography.small1,
-    textAlign: 'center',
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color4,
+    flex: 1,
   },
   locationBtn: {
     marginTop: hp(3),
   },
-  locationText: {
-    marginTop: hp(5),
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_M,
-    color: Colors.color4,
-    alignSelf: 'center',
-    textDecorationLine: 'underline',
-  },
-  reportText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_M,
-    alignSelf: 'center',
-    marginBottom: hp(3),
-    textDecorationLine: 'underline',
+  buttonContainer: {
+    bottom: 0,
+    zIndex: 1,
+    width: '100%',
+    position: 'absolute',
+    paddingHorizontal: 16,
   },
 });

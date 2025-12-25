@@ -1223,12 +1223,18 @@ class GApiServices {
           const progressPercentage = Math.round(
             (event.loaded / event.total) * 100
           );
-          onProgress(Math.min(Math.max(progressPercentage, 0), 100));
+          const clampedProgress = Math.min(
+            Math.max(progressPercentage, 0),
+            100
+          );
+          onProgress(clampedProgress);
         } else if (event.loaded > 0) {
           // Fallback: estimate progress if total is unknown
-          onProgress(
-            Math.min(Math.max(Math.round((event.loaded / 1000000) * 50), 0), 99)
+          const estimatedProgress = Math.min(
+            Math.max(Math.round((event.loaded / 1000000) * 50), 0),
+            99
           );
+          onProgress(estimatedProgress);
         }
       };
       xhr.onload = () => {
