@@ -104,7 +104,7 @@ const ProfilePicture = (props: any) => {
       [AppEventsLogger.AppEventParams.RegistrationMethod]: 'email',
       ...info,
     });
-    addAnaylatics('Complete Registration', info);
+    addAnaylatics('complete_registration', info);
     if (guardian || currentUser?.gender !== 'female') {
       props.navigation.reset({
         index: 0,

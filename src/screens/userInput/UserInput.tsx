@@ -77,7 +77,7 @@ const UserInput = (props: any) => {
       'years'
     );
     if (age < 18) {
-      return flashErrorMessage(LanguageKeys.ageLimit, 2);
+      return flashErrorMessage(LanguageKeys.ageLimit);
     }
     const params = {
       first_name: firstName,
@@ -166,7 +166,7 @@ const UserInput = (props: any) => {
   const getLanguages = useCallback(async () => {
     getData(storageKeys.LANGUAGE).then((language: any) => {
       ApiServices.getLanguages().then((data: any) => {
-        if (data?.length !== 0) {
+        if (data?.length !== 0 && language) {
           const result = _.find(data, function (n) {
             if (n.short_code?.toLowerCase() === language.toLowerCase()) {
               return n;

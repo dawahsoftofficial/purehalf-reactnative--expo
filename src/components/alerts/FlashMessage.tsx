@@ -1,7 +1,7 @@
 import { showMessage } from 'react-native-flash-message';
 
 import { hp, Typography } from '../../global';
-import { Colors } from '../../res';
+import { Colors, Fonts } from '../../res';
 import { isIOS } from '../../services';
 
 const FlashMessageFun = (props: any) => {
@@ -15,7 +15,7 @@ const FlashMessageFun = (props: any) => {
     titleStyle: {
       fontSize: Typography.small3,
       color: Colors.color2,
-      fontWeight: 'bold',
+      fontFamily: Fonts.APPFONT_B,
     },
     hideStatusBar: false,
     icon: props?.type || 'none',

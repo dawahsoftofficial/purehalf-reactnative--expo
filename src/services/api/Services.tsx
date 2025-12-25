@@ -149,7 +149,7 @@ class GApiServices {
                 errorData?.results?.[0]?.message ||
                 error?.message ||
                 'Authentication failed';
-              flashErrorMessage(errorMessage, 4);
+              flashErrorMessage(errorMessage);
               reject(error);
             });
         })
@@ -183,8 +183,7 @@ class GApiServices {
           );
           error.name = 'AppleSignInNotSupported';
           flashErrorMessage(
-            'Apple Sign In is not available on this device. Please use another login method.',
-            4
+            'Apple Sign In is not available on this device. Please use another login method.'
           );
           reject(error);
           return;
@@ -350,7 +349,7 @@ class GApiServices {
                   errorData?.results?.[0]?.message ||
                   error?.message ||
                   'Authentication failed';
-                flashErrorMessage(errorMessage, 4);
+                flashErrorMessage(errorMessage);
                 reject(error);
               });
           })
@@ -422,8 +421,7 @@ class GApiServices {
           );
           configError.name = 'AppleSignInConfigurationError';
           flashErrorMessage(
-            'Apple Sign In is not properly configured. Please use another login method or contact support.',
-            4
+            'Apple Sign In is not properly configured. Please use another login method or contact support.'
           );
           reject(configError);
         } else {
@@ -438,8 +436,7 @@ class GApiServices {
           );
           authError.name = 'AppleSignInError';
           flashErrorMessage(
-            'Apple sign in failed. Please try again or use another method.',
-            4
+            'Apple sign in failed. Please try again or use another method.'
           );
           reject(authError);
         }
