@@ -7,7 +7,6 @@ import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   Button,
@@ -318,7 +317,7 @@ function UserInput(props: UserInputProps) {
     return (
       <KeyboardAwareScrollView
         enableOnAndroid
-        enableAutomaticScroll
+        // enableAutomaticScroll
         keyboardShouldPersistTaps="handled"
         extraScrollHeight={isIOS ? 20 : 10}
         showsVerticalScrollIndicator={false}
@@ -365,38 +364,36 @@ function UserInput(props: UserInputProps) {
 
   if (fromSettings) {
     return (
-      <Container>
+      <Container style={Styles.container}>
         <Header
           title={LanguageKeys.basicSettings}
           navigation={props.navigation}
         />
-        <SafeAreaView style={Styles.container}>
-          <CommonActions
-            navigation={props.navigation}
-            userId={(currentUser as User)?.id}
+        <CommonActions
+          navigation={props.navigation}
+          userId={(currentUser as User)?.id}
+        />
+        <CheckMembershipStatus />
+        {renderContent()}
+        <View style={Styles.continueBtnCon}>
+          <Button
+            text={buttonText}
+            onPress={onContinuePress}
+            disabled={isButtonDisabled}
+            loading={submitLoader}
+            loadingMessage={loaderMessage}
           />
-          <CheckMembershipStatus />
-          {renderContent()}
-          <View style={Styles.continueBtnCon}>
-            <Button
-              text={buttonText}
-              onPress={onContinuePress}
-              disabled={isButtonDisabled}
-              loading={submitLoader}
-              loadingMessage={loaderMessage}
-            />
-          </View>
-          <AccountActions
-            onLogoutPress={onLogoutPress}
-            onDeleteAccountPress={onDeleteAccountPress}
-          />
-        </SafeAreaView>
+        </View>
+        <AccountActions
+          onLogoutPress={onLogoutPress}
+          onDeleteAccountPress={onDeleteAccountPress}
+        />
       </Container>
     );
   }
 
   return (
-    <Container disabled>
+    <Container>
       <CommonActions
         navigation={props.navigation}
         userId={(currentUser as User)?.id}

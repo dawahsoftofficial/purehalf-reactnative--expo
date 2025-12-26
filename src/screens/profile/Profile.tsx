@@ -12,7 +12,7 @@ import type { ScrollView } from 'react-native';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Loader, PremiumButton, Text } from '../../components';
+import { Loader, Text } from '../../components';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import {
   ApiServices,
@@ -223,6 +223,23 @@ const Profile = ({
       }
     }, [fromUserProfile, getUserConversation])
   );
+
+  // Sync userData with currentUser when viewing own profile for immediate updates
+  useEffect(() => {
+    if (
+      !fromUserProfile &&
+      currentUser?.id === userData?.id &&
+      currentUser?.detail
+    ) {
+      setUserData((prevUserData) => ({
+        ...prevUserData,
+        detail: currentUser.detail,
+      }));
+      if (currentUser?.detail?.tagline) {
+        setTagLineInput(currentUser.detail.tagline);
+      }
+    }
+  }, [currentUser?.detail, currentUser?.id, fromUserProfile, userData?.id]);
 
   const hideButtonPicker = useCallback(() => {
     setButtonPickerVisible({
@@ -534,7 +551,7 @@ const Profile = ({
   return (
     <SafeAreaView style={Styles.container}>
       <ScreenLoader visible={loader.visible} message={loader.message} />
-      {currentUser?.membership_status === 0 && <PremiumButton />}
+      {/* {currentUser?.membership_status === 0 && <PremiumButton />} */}
       <View style={{ flex: 1 }}>
         <ContentScroll scrollRef={scrollViewRef}>
           <Header
@@ -545,10 +562,6 @@ const Profile = ({
             onLikeUnlikePress={onLikeUnlikePress}
             isBlockedYou={isBlockedYou}
           />
-          {/* {
-                        fromUserProfile &&
-                        <View style={{ marginBottom: hp(5) }} />
-                    } */}
           {isBlockedYou ? (
             <Text style={Styles.userNotAvailDes}>
               {LanguageKeys.userBlockedYouDes}
@@ -638,7 +651,11 @@ const Profile = ({
           )}
         </ContentScroll>
 
-        <EditInfoCardModal details={editInfoCard} onClose={closeEditInfoCard} />
+        <EditInfoCardModal
+          fetchData={fetchData}
+          details={editInfoCard}
+          onClose={closeEditInfoCard}
+        />
         <EditInterestCardModal
           fetchData={fetchData}
           details={editInterestCard}

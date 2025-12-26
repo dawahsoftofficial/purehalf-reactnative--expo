@@ -11,7 +11,7 @@ import {
 import Ripple from 'react-native-material-ripple';
 
 import { Animation } from '../../animations';
-import { Text } from '../../components';
+import { ProfileBadges, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
@@ -52,16 +52,9 @@ const UsersList = (props: any) => {
             {lastOnlineFromCurrentTime === 1 && (
               <View style={Styles.onlineStatus} />
             )}
-            {item?.membership_expiry !== null &&
-              moment(item?.membership_expiry).isAfter(moment()) && (
-                <View style={Styles.premiumBadge}>
-                  <Image
-                    source={Images.membershipWhite}
-                    resizeMode="contain"
-                    style={Styles.premiumBadgeIcon}
-                  />
-                </View>
-              )}
+            <View style={Styles.badgesContainer}>
+              <ProfileBadges userData={item} iconOnly vertical />
+            </View>
           </View>
           <ReactText style={Styles.name} numberOfLines={2}>
             {item?.first_name} {item?.last_name}, {item?.age}
@@ -173,6 +166,12 @@ const Styles = StyleSheet.create({
   premiumBadgeIcon: {
     width: 14,
     height: 14,
+  },
+  badgesContainer: {
+    position: 'absolute',
+    top: hp(0.5),
+    right: wp(1),
+    zIndex: 1,
   },
   name: {
     color: Colors.color1,

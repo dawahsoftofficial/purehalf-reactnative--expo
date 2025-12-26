@@ -524,7 +524,7 @@ const Header = ({
       time: lastOnline.format('(hh:mm a)'),
     };
   }, [userData?.last_online_at]);
-  console.log('userData?.media?.primary_image', userData?.media?.primary_image);
+
   return (
     <View style={Styles.container}>
       {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
@@ -544,7 +544,19 @@ const Header = ({
           onLoadStart={onProfileImageLoadStart}
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
-        />
+        >
+          {profileImageLoader && !profileImageError && (
+            <ActivityIndicator
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              color={Colors.theme}
+              size={wp(8)}
+            />
+          )}
+        </ImageBackground>
       ) : (
         <View
           style={{
@@ -558,13 +570,7 @@ const Header = ({
         </View>
       )}
       {/* {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null} */}
-      {profileImageLoader && !profileImageError && (
-        <ActivityIndicator
-          style={{ position: 'absolute' }}
-          color={Colors.theme}
-          size={wp(8)}
-        />
-      )}
+
       <LinearGradient
         colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
         style={{ ...StyleSheet.absoluteFill }}

@@ -1,10 +1,12 @@
 import moment from 'moment';
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
+import PopularBadgeIcon from '../assets/svgs/badges/popular-badge.svg';
+import ProfileCompleteBadgeIcon from '../assets/svgs/badges/profile-complete-badge.svg';
+import VipBadgeIcon from '../assets/svgs/badges/vip-badge.svg';
 import { hp, Typography, wp } from '../global';
+import { checkProfileCompleted } from '../lib/utils/profile-utils';
 import { Colors, Fonts } from '../res';
 import { StorageManager, useGlobalContext } from '../services';
 import { usePremiumStore } from '../stores';
@@ -30,83 +32,17 @@ type ProfileBadgesProps = {
     membership_expiry?: string | null;
   };
   isSelf?: boolean;
+  showText?: boolean;
+  vertical?: boolean;
+  iconOnly?: boolean;
 };
-
-function checkProfileCompleted(
-  userData: ProfileBadgesProps['userData'],
-  profileDetailLocal: unknown
-): boolean {
-  if (!userData) return false;
-
-  const keysData: Record<string, boolean> = {
-    primary_image: Boolean(userData.media?.primary_image),
-    tagline: Boolean(userData.detail?.tagline),
-    'appearance-0': true,
-    'familybg-0': true,
-    'life-0': true,
-    'islamicval-0': true,
-    'personality-0': true,
-    'futurePlans-0': Boolean(
-      userData.detail?.family_plan_id &&
-      userData.detail?.marriage_plan_id &&
-      userData.detail?.relocation_plan_id
-    ),
-    'myInterestAndHobbies-0': Boolean(userData.detail?.personality_id?.length),
-  };
-
-  if (profileDetailLocal && typeof profileDetailLocal === 'object') {
-    let islamicCount = 0;
-    Object.keys(profileDetailLocal).forEach((childKey) => {
-      const childData = (profileDetailLocal as Record<string, unknown[]>)[
-        childKey
-      ];
-      if (Array.isArray(childData)) {
-        childData.forEach((element) => {
-          if (
-            typeof element === 'object' &&
-            element !== null &&
-            'apiKey' in element &&
-            'category' in element
-          ) {
-            const apiKey = element.apiKey as string;
-            const category = element.category as string;
-
-            if (userData.detail && Object.keys(userData.detail).length) {
-              const value =
-                userData.detail[apiKey as keyof typeof userData.detail];
-              if (value === null || value === undefined) {
-                keysData[category] = false;
-              }
-              if (
-                category === 'islamicval-0' &&
-                (value !== null || value !== undefined)
-              ) {
-                islamicCount += 1;
-              }
-              // Match Welcome.tsx logic exactly: during iteration, if islamicCount < 4, keep as true
-              if (islamicCount < 4) {
-                keysData['islamicval-0'] = true;
-              }
-            } else {
-              keysData[category] = false;
-            }
-          }
-        });
-      }
-    });
-    // Final validation: we need at least 4 islamic values to be complete
-    // This ensures the badge only shows when all requirements are met
-    if (islamicCount < 4) {
-      keysData['islamicval-0'] = false;
-    }
-  }
-
-  return Object.values(keysData).every((value) => value === true);
-}
 
 export function ProfileBadges({
   userData,
   isSelf = false,
+  showText = true,
+  vertical = false,
+  iconOnly = false,
 }: ProfileBadgesProps) {
   const { currentUser } = useGlobalContext();
   const { getData, storageKeys } = StorageManager;
@@ -156,32 +92,28 @@ export function ProfileBadges({
 
   const badges = useMemo(() => {
     const badgeList: Array<{
-      icon: string;
+      icon: React.ReactNode;
       label: string;
-      iconType: 'fontawesome' | 'material';
     }> = [];
 
     if (isVIP || true) {
       badgeList.push({
-        icon: 'crown',
+        icon: <VipBadgeIcon width={wp(4.5)} height={wp(4.5)} />,
         label: 'VIP',
-        iconType: 'fontawesome',
       });
     }
 
     if (isBoosted || true) {
       badgeList.push({
-        icon: 'rocket',
+        icon: <PopularBadgeIcon width={wp(4.5)} height={wp(4.5)} />,
         label: 'Boosted',
-        iconType: 'fontawesome',
       });
     }
 
     if (isProfileCompleted || true) {
       badgeList.push({
-        icon: 'check-circle',
+        icon: <ProfileCompleteBadgeIcon width={wp(4.5)} height={wp(4.5)} />,
         label: 'Complete',
-        iconType: 'material',
       });
     }
 
@@ -192,24 +124,33 @@ export function ProfileBadges({
     return null;
   }
 
+  if (iconOnly) {
+    return (
+      <View style={[Styles.container, vertical && Styles.containerVertical]}>
+        {badges.map((badge, index) => (
+          <View key={index} style={Styles.iconOnlyBadge}>
+            {badge.icon}
+          </View>
+        ))}
+      </View>
+    );
+  }
+
   return (
-    <View style={Styles.container}>
+    <View style={[Styles.container, vertical && Styles.containerVertical]}>
       {badges.map((badge, index) => (
-        <View key={index} style={Styles.badge}>
-          {badge.iconType === 'fontawesome' ? (
-            <FontAwesome5
-              name={badge.icon}
-              size={wp(3.5)}
-              color={Colors.color2}
-            />
-          ) : (
-            <MaterialIcons
-              name={badge.icon}
-              size={wp(4)}
-              color={Colors.color2}
-            />
-          )}
-          <Text style={Styles.badgeLabel}>{badge.label}</Text>
+        <View
+          key={index}
+          style={[
+            Styles.badge,
+            badge.label === 'VIP' && {
+              borderColor: Colors.color47,
+              backgroundColor: Colors.color47,
+            },
+          ]}
+        >
+          {badge.icon}
+          {showText && <Text style={Styles.badgeLabel}>{badge.label}</Text>}
         </View>
       ))}
     </View>
@@ -223,21 +164,29 @@ const Styles = StyleSheet.create({
     gap: wp(1.5),
     flexWrap: 'wrap',
   },
+  containerVertical: {
+    flexDirection: 'column',
+    gap: hp(0.8),
+  },
+  iconOnlyBadge: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color47,
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(0.5),
+    backgroundColor: Colors.theme,
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(0.8),
     borderRadius: wp(3),
-    gap: wp(1),
+    gap: wp(1.5),
     borderWidth: 1,
     borderColor: Colors.theme,
   },
   badgeLabel: {
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
+    fontSize: Typography.tiny2,
     includeFontPadding: false,
   },
 });

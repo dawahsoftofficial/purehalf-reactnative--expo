@@ -44,7 +44,17 @@ type FocusedInputState = {
   item: any;
 };
 
-const EditInfoCardModal = (props: any) => {
+type EditInfoCardModalProps = {
+  details?: {
+    visible?: boolean;
+    data?: any[];
+    from?: string;
+  };
+  onClose?: () => void;
+  fetchData?: () => void;
+};
+
+const EditInfoCardModal = (props: EditInfoCardModalProps) => {
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
@@ -56,7 +66,7 @@ const EditInfoCardModal = (props: any) => {
     item: {},
   });
 
-  const { details = {}, onClose = () => null } = props;
+  const { details = {}, onClose = () => null, fetchData } = props;
 
   const { visible = false, data: initialData = [], from = '' } = details;
 
@@ -294,13 +304,19 @@ const EditInfoCardModal = (props: any) => {
     updateDetails(formData)
       .then(async (res: any) => {
         if (Object.keys(res).length !== 0) {
-          currentUser.detail = res;
-          await setData(storageKeys.USER, currentUser);
-          updateCurrentUser(currentUser);
+          const updatedUser = {
+            ...currentUser,
+            detail: res,
+          };
+          await setData(storageKeys.USER, updatedUser);
+          updateCurrentUser(updatedUser);
         }
         flashSuccessMessage();
         setUpdateLoader(false);
         onClose();
+        if (fetchData) {
+          fetchData();
+        }
       })
       .catch(() => setUpdateLoader(false));
   }, [
@@ -310,6 +326,7 @@ const EditInfoCardModal = (props: any) => {
     storageKeys.USER,
     updateCurrentUser,
     onClose,
+    fetchData,
   ]);
 
   const ScallingButton = useCallback(

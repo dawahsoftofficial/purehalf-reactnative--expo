@@ -2,26 +2,20 @@ import notifee from '@notifee/react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import type { TextStyle, ViewStyle } from 'react-native';
 import {
   ActivityIndicator,
   Dimensions,
   Image,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Modal from 'react-native-modal';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import Entypo from 'react-native-vector-icons/Entypo';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { usePremiumStore } from '@/stores';
 
+import BoostCoinIcon from '../../assets/svgs/coins/boost-coin.svg';
 import {
   CheckMembershipStatus,
   Container,
@@ -31,7 +25,7 @@ import {
   Swiper,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { CheckRtl, LanguageKeys } from '../../languages';
+import { LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
 import { Colors, Fonts, Images } from '../../res';
 import {
@@ -43,6 +37,7 @@ import {
   useGlobalContext,
 } from '../../services';
 import { presentBoostProfilePaywall } from '../../services/paywall-service';
+import { AccountModal } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
@@ -187,8 +182,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const { loaded, isPremium } = usePremiumStore();
   const isPremiumUser = isPremium();
 
-  const { t } = useTranslation();
-  const Rtl = CheckRtl();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, getData, storageKeys } = StorageManager;
   const [loader, setLoader] = useState(true);
@@ -555,89 +548,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     [navigation]
   );
 
-  const AccordionItem: React.FC<{
-    children: React.ReactNode;
-    title: string;
-    count?: React.ReactNode;
-    type?: 'profile';
-    titleStyle?: TextStyle;
-    counterWrapperStyle?: ViewStyle;
-    counterTextStyle?: TextStyle;
-    accordionContainerStyle?: ViewStyle;
-  }> = ({
-    children,
-    title,
-    count = 0,
-    type,
-    titleStyle,
-    counterWrapperStyle,
-    accordionContainerStyle,
-    counterTextStyle,
-  }) => {
-    const [expanded, setExpanded] = useState(false);
-
-    const toggleItem = () => {
-      setExpanded((prev) => !prev);
-    };
-
-    return (
-      <View style={[Styles.accordContainer, accordionContainerStyle]}>
-        <Ripple
-          rippleColor={Colors.theme}
-          style={Styles.accordHeader}
-          onPress={toggleItem}
-        >
-          <View style={Styles.headerListLeftWrapper}>
-            {count !== undefined && count !== 0 && (
-              <View
-                style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
-              >
-                {typeof count === 'string' || typeof count === 'number' ? (
-                  <Text
-                    style={[Styles.headerlistCounterText, counterTextStyle]}
-                  >
-                    {count}
-                  </Text>
-                ) : (
-                  count
-                )}
-              </View>
-            )}
-            <View style={{}}>
-              <Text style={[Styles.accordTitle, titleStyle]}>{title}</Text>
-            </View>
-          </View>
-          <Entypo
-            name={expanded ? 'chevron-up' : 'chevron-down'}
-            size={wp(6)}
-          />
-        </Ripple>
-        {expanded && (
-          <View style={Styles.accordBody}>
-            {type === 'profile' && (
-              <View style={{ flexDirection: 'row', marginLeft: 23 }}>
-                {profileCompleteProgress?.map((item, ind) => (
-                  <View
-                    key={ind}
-                    style={{
-                      ...Styles.profileComDot,
-                      marginRight: Rtl ? 0 : wp(1),
-                      marginLeft: Rtl ? wp(1) : 1,
-                      backgroundColor: item.completed
-                        ? Colors.color53
-                        : Colors.color46,
-                    }}
-                  />
-                ))}
-              </View>
-            )}
-            {children}
-          </View>
-        )}
-      </View>
-    );
-  };
-
   if (!loaded) return null;
 
   if (!isPremiumUser) {
@@ -668,17 +578,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             </TouchableOpacity>
           )}
           <View style={Styles.headerRightWrapper}>
-            <Ripple
-              style={Styles.headerIconWrapper}
-              onPress={onBoostProfilePress}
-              disabled={isBoostLoading}
-            >
-              <MaterialCommunityIcons
-                name="rocket"
-                size={wp(6)}
-                color={Colors.theme}
-              />
-            </Ripple>
             {showRecommendationModal && (
               <Ripple
                 style={Styles.headerIconWrapper}
@@ -723,123 +622,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           </View>
         </View>
       </View>
-      <Modal
-        isVisible={headerModal}
-        style={Styles.modal}
-        onBackdropPress={() => setHeaderModal(false)}
-      >
-        <View style={Styles.modalContent}>
-          <View style={Styles.modalHeader}>
-            <View style={Styles.modalHeaderContent}>
-              <View style={Styles.modalHeaderTextWrapper}>
-                <Text style={Styles.modalHeaderTitle}>
-                  {t(LanguageKeys.myAccount)}
-                </Text>
-                <Text style={Styles.modalHeaderSubTitle}>
-                  {t(LanguageKeys.profileComplete)}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => setHeaderModal(false)}
-              style={Styles.modalCloseBtn}
-            >
-              <Entypo name="cross" size={wp(6)} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={Styles.modalBody}>
-              <AccordionItem
-                title={`${t(LanguageKeys.profileCompletion)} (${profileCompleteProgress.filter((item) => item.completed).length} out of ${profileCompleteProgress.length})`}
-                type="profile"
-                count={
-                  <Image
-                    source={Images.userCircle}
-                    style={Styles.modalHeaderIcon}
-                  />
-                }
-                counterWrapperStyle={{
-                  borderWidth: 0,
-                  width: wp(7),
-                  height: wp(7),
-                }}
-              >
-                <View style={Styles.completeProfileWrapper}>
-                  {profileCompleteProgress?.map((item, ind) => (
-                    <Ripple
-                      key={ind}
-                      style={{
-                        ...Styles.infoItemCon,
-                        flexDirection: Rtl ? 'row-reverse' : 'row',
-                      }}
-                      onPress={() => onInfoItemPress(item)}
-                    >
-                      <View
-                        style={{
-                          ...Styles.checkCircle,
-                          backgroundColor: item.completed
-                            ? Colors.color10
-                            : Colors.color46,
-                        }}
-                      />
-                      <Text style={Styles.infoItemText}>{t(item.label)}</Text>
-                    </Ripple>
-                  ))}
-                </View>
-              </AccordionItem>
-              {!currentUser?.is_approved ? (
-                <AccordionItem
-                  title={t(LanguageKeys.profileInReview)}
-                  accordionContainerStyle={{ marginBottom: 0 }}
-                  count={
-                    <MaterialCommunityIcons
-                      size={wp(5)}
-                      color={Colors.color37}
-                      name="information-variant"
-                    />
-                  }
-                  titleStyle={{ color: Colors.color37 }}
-                  counterWrapperStyle={{ borderColor: Colors.color37 }}
-                  counterTextStyle={{ color: Colors.color37 }}
-                >
-                  <View style={Styles.completeProfileWrapper}>
-                    <Text style={Styles.completeProfileText}>
-                      Your profile is being reviewed! During this brief period,
-                      visibility will be limited. We are just making sure
-                      everything is top-notch to ensure the best experience to
-                      all our members. You will be notified upon approval.
-                    </Text>
-                  </View>
-                </AccordionItem>
-              ) : (
-                <AccordionItem
-                  title="Your profile has been approved!"
-                  count={
-                    <AntDesign
-                      name="check"
-                      size={wp(5)}
-                      color={Colors.color10}
-                    />
-                  }
-                  titleStyle={{ color: Colors.color10 }}
-                  counterWrapperStyle={{ borderColor: Colors.color10 }}
-                  counterTextStyle={{ color: Colors.color10 }}
-                  accordionContainerStyle={{ marginBottom: 0 }}
-                >
-                  <View style={Styles.completeProfileWrapper}>
-                    <Text style={Styles.completeProfileText}>
-                      Your profile is being reviewed! During this brief period,
-                      visibility will be limited. We are just making sure
-                      everything is top-notch to ensure the best experience to
-                      all our members. You will be notified upon approval.
-                    </Text>
-                  </View>
-                </AccordionItem>
-              )}
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
+      <AccountModal
+        visible={headerModal}
+        onClose={() => setHeaderModal(false)}
+        profileCompleteProgress={profileCompleteProgress}
+        onInfoItemPress={onInfoItemPress}
+        currentUser={currentUser}
+      />
       <RecommendationButton onPress={onRecommendationPress} />
       {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
       {userStats?.photo_requested_you_counter &&
@@ -874,6 +663,17 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       {loadMoreLoader && (
         <ActivityIndicator color={Colors.theme} size="small" />
       )}
+      {(activeOptionButton?.value === '-1' ||
+        activeOptionButton?.value === '1' ||
+        activeOptionButton?.value === '3') && (
+        <Ripple
+          style={Styles.fabContainer}
+          onPress={onBoostProfilePress}
+          disabled={isBoostLoading}
+        >
+          <BoostCoinIcon width={wp(8)} height={wp(8)} />
+        </Ripple>
+      )}
     </Container>
   );
 };
@@ -883,6 +683,7 @@ export default Welcome;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.color2,
   },
   paddingH: {
     paddingHorizontal: wp(3),
@@ -940,132 +741,23 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small1,
     color: Colors.color2,
   },
-  modal: {
-    marginHorizontal: hp(2),
-    // justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.color2,
-    borderRadius: 10,
-    padding: hp(2),
-    maxHeight: hp(80),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: hp(2),
-  },
-  modalCloseBtn: {
-    padding: wp(1),
-  },
-  modalHeaderContent: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalHeaderIconWrapper: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
-    backgroundColor: Colors.themeLight,
+  fabContainer: {
+    position: 'absolute',
+    bottom: hp(2),
+    right: wp(4),
+    width: wp(14),
+    height: wp(14),
+    borderRadius: wp(7),
+    backgroundColor: Colors.theme,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: wp(3),
-  },
-  modalHeaderIcon: {
-    width: wp(7),
-    height: wp(7),
-  },
-  modalHeaderTextWrapper: {
-    flex: 1,
-  },
-  modalHeaderTitle: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large2,
-    color: Colors.color1,
-  },
-  modalHeaderSubTitle: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    color: Colors.color28,
-  },
-  modalBody: {
-    // paddingBottom: hp(2),
-  },
-  accordContainer: {
-    marginBottom: hp(2),
-    borderRadius: wp(2),
-    borderWidth: 1,
-    borderColor: Colors.themeLight,
-    overflow: 'hidden',
-  },
-  accordHeader: {
-    paddingVertical: hp(2),
-    paddingHorizontal: wp(4),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerListLeftWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerlistCounterWrapper: {
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    borderWidth: 1,
-    borderColor: Colors.color47,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: wp(3),
-  },
-  headerlistCounterText: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  accordTitle: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  accordBody: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(2),
-    gap: hp(1.2),
-  },
-  profileComDot: {
-    width: wp(2.5),
-    height: wp(2.5),
-    borderRadius: wp(1.25),
-    marginBottom: hp(1),
-  },
-  completeProfileWrapper: {
-    marginTop: hp(2),
-  },
-  infoItemCon: {
-    paddingVertical: hp(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.color46,
-    alignItems: 'center',
-  },
-  checkCircle: {
-    width: wp(3),
-    height: wp(3),
-    borderRadius: wp(1.5),
-    marginRight: wp(2),
-  },
-  infoItemText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  completeProfileText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    color: Colors.color1,
-    lineHeight: Typography.large1,
+    elevation: 8,
+    shadowColor: Colors.color1,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
 });
