@@ -9,8 +9,8 @@ export function FinePrint() {
       <Text style={styles.finePrintText}>
         <Text style={styles.finePrintStrong}>Cancel anytime.</Text> Renews
         monthly unless cancelled in{' '}
-        {Platform.OS === 'ios' ? 'App Store' : 'Google Play Store'}.{'\n'}Bonus
-        chats are added instantly. Daily chats reset every day (PKT).
+        {Platform.OS === 'ios' ? 'App Store' : 'Google Play Store'}. Bonus chats
+        are added instantly. Daily chats reset every day (PKT).
       </Text>
     </View>
   );

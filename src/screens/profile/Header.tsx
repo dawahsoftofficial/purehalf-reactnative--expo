@@ -584,7 +584,7 @@ const Header = ({
           },
         ]}
       >
-        <ProfileBadges userData={userData} isSelf={isSelf} />
+        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
         {isSelf ? (
           <Ripple
             style={Styles.infoChip}
@@ -802,8 +802,6 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(1.5),
-    flexWrap: 'wrap',
-    // maxWidth: wp(60),
   },
   infoChip: {
     padding: wp(2),

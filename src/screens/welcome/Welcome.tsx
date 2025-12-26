@@ -15,7 +15,7 @@ import Ripple from 'react-native-material-ripple';
 
 import { usePremiumStore } from '@/stores';
 
-import BoostCoinIcon from '../../assets/svgs/coins/boost-coin.svg';
+import PopularBadgeIcon from '../../assets/svgs/badges/popular-badge.svg';
 import {
   CheckMembershipStatus,
   Container,
@@ -671,7 +671,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           onPress={onBoostProfilePress}
           disabled={isBoostLoading}
         >
-          <BoostCoinIcon width={wp(8)} height={wp(8)} />
+          <PopularBadgeIcon width={wp(6)} height={wp(6)} />
+          <Text style={Styles.txtBoost}>Boost</Text>
         </Ripple>
       )}
     </Container>
@@ -745,12 +746,14 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     bottom: hp(2),
     right: wp(4),
-    width: wp(14),
-    height: wp(14),
-    borderRadius: wp(7),
+    borderRadius: 100,
+    paddingVertical: hp(2),
+    paddingHorizontal: wp(4),
     backgroundColor: Colors.theme,
-    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: wp(4),
     alignItems: 'center',
+    justifyContent: 'center',
     elevation: 8,
     shadowColor: Colors.color1,
     shadowOffset: {
@@ -759,5 +762,10 @@ const Styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 4.65,
+  },
+  txtBoost: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    color: Colors.color2,
   },
 });

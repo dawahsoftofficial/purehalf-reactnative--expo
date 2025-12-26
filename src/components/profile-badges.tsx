@@ -1,6 +1,6 @@
 import moment from 'moment';
 import React, { useMemo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import PopularBadgeIcon from '../assets/svgs/badges/popular-badge.svg';
 import ProfileCompleteBadgeIcon from '../assets/svgs/badges/profile-complete-badge.svg';
@@ -10,7 +10,6 @@ import { checkProfileCompleted } from '../lib/utils/profile-utils';
 import { Colors, Fonts } from '../res';
 import { StorageManager, useGlobalContext } from '../services';
 import { usePremiumStore } from '../stores';
-import Text from './Text';
 
 type ProfileBadgesProps = {
   userData?: {
@@ -98,21 +97,21 @@ export function ProfileBadges({
 
     if (isVIP || true) {
       badgeList.push({
-        icon: <VipBadgeIcon width={wp(4.5)} height={wp(4.5)} />,
+        icon: <VipBadgeIcon width={wp(6)} height={wp(6)} />,
         label: 'VIP',
       });
     }
 
     if (isBoosted || true) {
       badgeList.push({
-        icon: <PopularBadgeIcon width={wp(4.5)} height={wp(4.5)} />,
+        icon: <PopularBadgeIcon width={wp(6)} height={wp(6)} />,
         label: 'Boosted',
       });
     }
 
     if (isProfileCompleted || true) {
       badgeList.push({
-        icon: <ProfileCompleteBadgeIcon width={wp(4.5)} height={wp(4.5)} />,
+        icon: <ProfileCompleteBadgeIcon width={wp(6)} height={wp(6)} />,
         label: 'Complete',
       });
     }
@@ -139,16 +138,7 @@ export function ProfileBadges({
   return (
     <View style={[Styles.container, vertical && Styles.containerVertical]}>
       {badges.map((badge, index) => (
-        <View
-          key={index}
-          style={[
-            Styles.badge,
-            badge.label === 'VIP' && {
-              borderColor: Colors.color47,
-              backgroundColor: Colors.color47,
-            },
-          ]}
-        >
+        <View key={index} style={[Styles.badge]}>
           {badge.icon}
           {showText && <Text style={Styles.badgeLabel}>{badge.label}</Text>}
         </View>
@@ -165,7 +155,7 @@ const Styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   containerVertical: {
-    flexDirection: 'column',
+    flexDirection: 'row',
     gap: hp(0.8),
   },
   iconOnlyBadge: {
@@ -175,13 +165,10 @@ const Styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.theme,
     paddingHorizontal: wp(2.5),
     paddingVertical: hp(0.8),
     borderRadius: wp(3),
     gap: wp(1.5),
-    borderWidth: 1,
-    borderColor: Colors.theme,
   },
   badgeLabel: {
     color: Colors.color2,
