@@ -2,6 +2,8 @@ import Geolocation from '@react-native-community/geolocation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Linking, PermissionsAndroid, StyleSheet, View } from 'react-native';
 
+import { Colors } from '@/res';
+
 import { Button, Container } from '../../components';
 import { hp } from '../../global';
 import { LanguageKeys } from '../../languages';
@@ -280,6 +282,7 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flex: 1,
+    backgroundColor: Colors.color2,
   },
   locationBtn: {
     marginTop: hp(3),

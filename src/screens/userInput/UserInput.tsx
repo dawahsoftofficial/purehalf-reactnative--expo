@@ -423,6 +423,7 @@ const Styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 16,
     justifyContent: 'center',
+    backgroundColor: Colors.color2,
   },
   inputFieldCon: {
     marginBottom: hp(3),

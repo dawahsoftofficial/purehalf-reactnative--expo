@@ -33,7 +33,7 @@ function TermsAndConditions({
         disabled={false}
         value={checkBox}
         onValueChange={onCheckboxChange}
-        tintColors={{ true: Colors.color57, false: Colors.color2 }}
+        tintColors={{ true: Colors.theme, false: Colors.color15 }}
       />
       <View>
         <View style={Styles.textRow}>

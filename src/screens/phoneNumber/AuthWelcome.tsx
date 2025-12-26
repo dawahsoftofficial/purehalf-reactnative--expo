@@ -277,6 +277,7 @@ const Styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
+    backgroundColor: Colors.color2,
   },
   phoneNumberSectionCon: {
     zIndex: 1,

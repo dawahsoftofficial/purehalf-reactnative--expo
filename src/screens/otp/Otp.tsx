@@ -428,6 +428,7 @@ export default Otp;
 
 const Styles = StyleSheet.create({
   container: {
+    backgroundColor: Colors.color2,
     justifyContent: 'flex-end',
     paddingHorizontal: 16,
   },
