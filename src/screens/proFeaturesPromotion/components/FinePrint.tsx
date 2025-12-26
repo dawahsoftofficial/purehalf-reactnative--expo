@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Fonts } from '@/res';
 
@@ -8,10 +8,9 @@ export function FinePrint() {
     <View style={styles.finePrint}>
       <Text style={styles.finePrintText}>
         <Text style={styles.finePrintStrong}>Cancel anytime.</Text> Renews
-        monthly unless cancelled in Google Play/App Store.
-      </Text>
-      <Text style={styles.finePrintText}>
-        Bonus chats are added instantly. Daily chats reset every day (PKT).
+        monthly unless cancelled in{' '}
+        {Platform.OS === 'ios' ? 'App Store' : 'Google Play Store'}.{'\n'}Bonus
+        chats are added instantly. Daily chats reset every day (PKT).
       </Text>
     </View>
   );
@@ -31,6 +30,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.62)',
     fontSize: 12,
     fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
   },
   finePrintStrong: {
     color: 'rgba(255,255,255,0.78)',

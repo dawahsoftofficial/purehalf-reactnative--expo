@@ -31,5 +31,6 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     fontFamily: Fonts.APPFONT_M,
     fontSize: 12,
+    includeFontPadding: false,
   },
 });

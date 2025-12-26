@@ -62,6 +62,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontFamily: FONT.regular,
     color: 'rgba(255,255,255,0.68)',
+    includeFontPadding: false,
   },
   termsLink: {
     textDecorationLine: 'underline',

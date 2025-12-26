@@ -105,7 +105,7 @@ export function PackageCard({
         />
         {/* Badge Row */}
         <View style={styles.badgeRow}>
-          <Text style={styles.planName}>{item.identifier}</Text>
+          <Text style={styles.planName}>{item.identifier?.split('(')[0]}</Text>
 
           <View
             style={[
@@ -226,13 +226,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   planName: {
     color: 'rgba(255,255,255,0.95)',
     fontFamily: Fonts.APPFONT_B,
+    includeFontPadding: false,
     fontSize: 18,
-    letterSpacing: -0.36,
   },
   badge: {
     paddingHorizontal: 10,
@@ -251,27 +251,31 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontFamily: Fonts.APPFONT_B,
+    includeFontPadding: false,
     color: 'rgba(255,255,255,0.82)',
   },
   badgeTextReco: { color: 'rgba(255,239,190,0.95)' },
   tagline: {
     marginTop: 0,
-    marginBottom: 12,
+    marginBottom: 6,
     color: 'rgba(255,255,255,0.84)',
     fontFamily: Fonts.APPFONT_R,
-    fontSize: 13.5,
+    includeFontPadding: false,
+    fontSize: 12,
+    // backgroundColor: 'blue',
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     gap: 10,
-    marginTop: 10,
-    marginBottom: 12,
+    marginVertical: 6,
+    // backgroundColor: 'red',
   },
   now: {
     color: 'rgba(255,255,255,0.95)',
     fontFamily: Fonts.APPFONT_B,
+    includeFontPadding: false,
     fontSize: 26,
     letterSpacing: -0.78,
   },
@@ -280,19 +284,21 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.68)',
     fontFamily: Fonts.APPFONT_B,
     fontSize: 12,
+    includeFontPadding: false,
   },
   was: {
     marginTop: 6,
     color: 'rgba(255,255,255,0.55)',
     fontFamily: Fonts.APPFONT_B,
     fontSize: 12,
+    includeFontPadding: false,
   },
   strike: {
     textDecorationLine: 'line-through',
     color: 'rgba(255,255,255,0.45)',
+    includeFontPadding: false,
   },
   savePill: {
-    alignItems: 'flex-end',
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 12,
@@ -304,13 +310,14 @@ const styles = StyleSheet.create({
     color: 'rgba(186,255,245,0.95)',
     fontFamily: Fonts.APPFONT_B,
     fontSize: 12,
-    textAlign: 'right',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
-  bullets: { marginTop: 10, marginBottom: 14 },
+  bullets: { marginVertical: 10 },
   bulletRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 9,
+    marginBottom: 8,
   },
   tick: {
     width: 18,
@@ -321,7 +328,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
     backgroundColor: 'rgba(255,255,255,0.06)',
-    marginTop: 1,
     marginRight: 10,
     flexShrink: 0,
   },
@@ -329,12 +335,14 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.90)',
     fontSize: 12,
     fontFamily: Fonts.APPFONT_B,
+    includeFontPadding: false,
   },
   bulletText: {
     flex: 1,
     color: 'rgba(255,255,255,0.78)',
     fontSize: 13,
     fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
   },
   cardCta: {
     marginTop: 10,
@@ -347,6 +355,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.16)',
     backgroundColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
+    includeFontPadding: false,
   },
   cardCtaPro: {
     borderColor: 'rgba(167,139,250,0.45)',
@@ -356,5 +365,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_B,
     fontSize: 14,
     zIndex: 1,
+    includeFontPadding: false,
   },
 });

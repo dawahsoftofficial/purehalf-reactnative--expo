@@ -582,10 +582,7 @@ export default function PremiumPaywallScreen({
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
-      <StatusBar
-        barStyle={'light-content'}
-        backgroundColor={'rgba(167,139,250,0.22)'}
-      />
+      <StatusBar barStyle={'light-content'} backgroundColor={'#594B85'} />
       <ModalLoader
         visible={loaderModal.visible}
         message={loaderModal.message}
@@ -815,14 +812,14 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   h1: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: 22,
-    letterSpacing: -0.3,
+    fontSize: 18,
     color: 'rgba(255,255,255,0.95)',
+    includeFontPadding: false,
   },
   sub: {
-    marginTop: 6,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: 13,
+    includeFontPadding: false,
+    fontSize: 12,
     color: 'rgba(255,255,255,0.70)',
   },
 
@@ -837,6 +834,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.90)',
     fontFamily: Fonts.APPFONT_B,
     fontSize: 12,
+    includeFontPadding: false,
   },
 
   chips: {
@@ -856,5 +854,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: 14,
     marginTop: 12,
+    includeFontPadding: false,
   },
 });
