@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
@@ -250,7 +249,7 @@ function UserInput(props: UserInputProps) {
       const verificationId = await getData(
         storageKeys.FIREBASE_VERIFICATION_ID
       );
-      await AsyncStorage.setItem('isRecommended', 'false');
+      StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
       await ApiServices.logout().catch(() => {});
       await signOut(auth).catch(() => {});
       await deleteAll();

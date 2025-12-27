@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CommonActions } from '@react-navigation/native';
 import axios from 'axios';
 
@@ -40,7 +39,7 @@ Api.interceptors.request.use(
       dataSize: config.data ? JSON.stringify(config.data).length : 0,
     };
 
-    console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
+    // console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
 
     // Store request timestamp for response time calculation
     config.metadata = { startTime: Date.now() };
@@ -73,10 +72,10 @@ Api.interceptors.response.use(
       hasData: !!response.data,
     };
 
-    console.log(
-      '[API Response Success]',
-      JSON.stringify(responseInfo, null, 4)
-    );
+    // console.log(
+    //   '[API Response Success]',
+    //   JSON.stringify(responseInfo, null, 4)
+    // );
 
     return response;
   },
@@ -110,7 +109,7 @@ Api.interceptors.response.use(
       const verificationId = await getData(
         storageKeys.FIREBASE_VERIFICATION_ID
       );
-      await AsyncStorage.setItem('isRecommended', 'false');
+      StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
       // await ApiServices.logout();
       // auth().signOut().catch();
       await deleteAll()
@@ -125,9 +124,9 @@ Api.interceptors.response.use(
               routes: [{ name: 'AuthWelcome' }],
             })
           );
-          console.log(
-            '[API Response Error] User logged out and navigated to AuthWelcome'
-          );
+          // console.log(
+          //   '[API Response Error] User logged out and navigated to AuthWelcome'
+          // );
         })
         .catch((err) =>
           console.error(

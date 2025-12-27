@@ -44,6 +44,28 @@ const EndPoints = {
   getButtonsActiveStatus: '/settings',
   paymentInfo: '/auth/list/paymentinfo',
   snedMessageNotification: '/auth/send/message/notification',
+
+  // Message/Conversation endpoints
+  startConversation: '/auth/conversations/start',
+  getConversationsList: '/auth/conversations/list',
+  getConversationMessages: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/messages`,
+  sendConversationMessage: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/messages`,
+  clearConversation: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/clear`,
+  deleteConversation: (conversationId: number) =>
+    `/auth/conversations/${conversationId}`,
+  blockConversationParticipant: (
+    conversationId: number,
+    participantId: number
+  ) => `/auth/conversations/${conversationId}/block/${participantId}`,
+  reportMessage: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/report`,
+  markMessageAsRead: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/read`,
+  markAllMessagesAsRead: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/mark-all-read`,
 };
 
 export default EndPoints;

@@ -1,6 +1,7 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { CommonActions as CommonActionsNavigation } from '@react-navigation/native';
-import React, { useCallback, useRef, useState } from 'react';
+import _ from 'lodash';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -29,6 +30,7 @@ import {
   Text,
 } from '../../components';
 import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
+import BlurView from '../../components/BlurView';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
@@ -38,23 +40,13 @@ import {
   flashErrorMessage,
   flashSuccessMessage,
   formatDate,
+  stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../../services';
-import messageServices from '../../services/api/message-services';
-import type { Conversation } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
 
-const POLLING_INTERVAL = 10000; // 10 seconds
-
-type MessagesProps = {
-  navigation: {
-    navigate: (screen: string, params?: unknown) => void;
-    dispatch: (action: unknown) => void;
-  };
-};
-
-const Messages = (props: MessagesProps) => {
+const Messages = (props: any) => {
   const { t } = useTranslation();
   const { deleteAll } = StorageManager;
   const Rtl = CheckRtl();
@@ -67,46 +59,30 @@ const Messages = (props: MessagesProps) => {
     useState<boolean>(false);
   const [isChatCreditsLoading, setIsChatCreditsLoading] =
     useState<boolean>(false);
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { setData, storageKeys } = StorageManager;
-  const { currentUser, updateCurrentUser, language } = useGlobalContext();
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
-  );
+  const {
+    conversations,
+    coversationLoading,
+    currentUser,
+    updateCurrentUser,
+    language,
+  } = useGlobalContext();
 
-  const fetchConversations = useCallback(async () => {
-    try {
-      const data = await messageServices.getConversationsList();
-      setConversations(data);
-      setIsLoading(false);
-    } catch (error: unknown) {
-      console.error('[Messages.fetchConversations] Error:', error);
-      setIsLoading(false);
-      // Don't show error toast for polling failures, only log
-    }
-  }, []);
+  const onItemPress = (item: any, otherUserData: any) => {
+    props.navigation.navigate('SingleChat', {
+      conversationData: item,
+      otherUserData: otherUserData,
+      from: 'messages',
+    });
+  };
 
-  const startPolling = useCallback(() => {
-    // Fetch immediately
-    fetchConversations();
-
-    // Set up polling interval
-    pollingIntervalRef.current = setInterval(() => {
-      fetchConversations();
-    }, POLLING_INTERVAL);
-  }, [fetchConversations]);
-
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
-    }
-  }, []);
+  const handleNotificationDisplay = async (param: any) => {
+    await setData(storageKeys.OPENED_CONVERSATION_ID, param);
+  };
 
   useFocusEffect(
     React.useCallback(() => {
-      startPolling();
+      handleNotificationDisplay('hide');
       const quotes = [
         t('adviceOneText'),
         t('adviceTwoText'),
@@ -124,9 +100,9 @@ const Messages = (props: MessagesProps) => {
       ];
       setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
       return () => {
-        stopPolling();
+        handleNotificationDisplay(null);
       };
-    }, [startPolling, stopPolling, t])
+    }, [])
   );
 
   const hideModalLoader = () => {
@@ -148,12 +124,8 @@ const Messages = (props: MessagesProps) => {
       ) {
         flashErrorMessage(result.error || 'Failed to purchase chat credits');
       }
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to purchase chat credits';
-      flashErrorMessage(errorMessage);
+    } catch (error: any) {
+      flashErrorMessage(error.message || 'Failed to purchase chat credits');
     } finally {
       setIsChatCreditsLoading(false);
     }
@@ -170,12 +142,12 @@ const Messages = (props: MessagesProps) => {
       visible: true,
       message: LanguageKeys.loggingOut,
     });
-    stopPolling();
     await ApiServices.logoutGuardian().catch(hideModalLoader);
     await deleteAll()
       .then(async () => {
         updateCurrentUser(null);
         await setData(storageKeys.LANGUAGE, language);
+        await stopConversationsListener();
         hideModalLoader();
         props.navigation.dispatch(
           CommonActionsNavigation.reset({
@@ -187,58 +159,52 @@ const Messages = (props: MessagesProps) => {
       .catch(hideModalLoader);
   };
 
-  const onItemPress = (item: Conversation) => {
+  const renderConversations = ({ item }: any) => {
+    console.log('first item', JSON.stringify(item, null, 2));
+    const convDetails = item?.convDetails;
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
-    // Convert to string for comparison (API returns numbers, currentUserId might be string)
-    const currentUserIdStr =
-      currentUserId != null ? String(currentUserId) : null;
 
-    const otherParticipant = item.participants.find(
-      (p) => String(p.id) !== currentUserIdStr
-    );
+    const otherUserData = _.filter(
+      convDetails?.participantsData,
+      (element) => element?.id !== currentUserId
+    )[0];
 
-    props.navigation.navigate('SingleChat', {
-      conversationData: item,
-      otherUserData: otherParticipant,
-      from: 'messages',
-    });
-  };
+    const formattedDate = formatDate(convDetails?.latestMessageCreatedAt);
+    const unReadCount = convDetails?.unReadCount?.[currentUser?.id];
+    const isBlockedYou =
+      convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
+      true;
 
-  const renderConversations = ({ item }: { item: Conversation }) => {
-    const currentUserId =
-      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
-    // Convert to string for comparison (API returns numbers, currentUserId might be string)
-    const currentUserIdStr =
-      currentUserId != null ? String(currentUserId) : null;
-
-    const otherParticipant = item.participants.find(
-      (p) => String(p.id) !== currentUserIdStr
-    );
-
-    if (!otherParticipant) {
-      return null;
+    let hideLatestMessage = false;
+    if (item?.messages) {
+      hideLatestMessage =
+        Object.keys(item?.messages).length === 0 ? true : false;
     }
 
-    const formattedDate = formatDate(item.last_message_at);
-    const unReadCount = item.unread_count;
-    const isBlockedYou = otherParticipant.is_blocked;
-
-    const hasLastMessage =
-      !!item.last_message && item.last_message.trim() !== '';
-
     // Check if last message was sent by current user and seen by receiver
+    // Also get the actual latest message text from messages array
     let isLastMessageSeen = false;
-    if (
-      item.last_message_detail &&
-      String(item.last_message_detail.sender_id) === currentUserIdStr &&
-      Array.isArray(item.last_message_detail.statuses)
-    ) {
-      // Check if receiver has seen it (read_at is not null for receiver)
-      const receiverStatus = item.last_message_detail.statuses.find(
-        (status) => status.participant_id === otherParticipant.id
-      );
-      isLastMessageSeen = receiverStatus?.read_at !== null;
+    let latestMessageText = convDetails?.latestMessage || '';
+
+    if (!hideLatestMessage && item?.messages) {
+      const messagesArray = Object.values(item.messages);
+      if (messagesArray.length > 0) {
+        // Get the last message (most recent)
+        const lastMessage: any = messagesArray[0];
+
+        // Use the actual latest message text from messages array
+        if (lastMessage?.message) {
+          latestMessageText = lastMessage.message;
+        }
+
+        // Check if last message was sent by current user
+        if (lastMessage?.sender === currentUserId) {
+          // Check if receiver has seen it
+          const otherUserId = otherUserData?.id;
+          isLastMessageSeen = lastMessage?.readBy?.[otherUserId]?.seen === true;
+        }
+      }
     }
 
     return (
@@ -248,16 +214,18 @@ const Messages = (props: MessagesProps) => {
           Styles.itemHeight,
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
-        onPress={() => onItemPress(item)}
+        onPress={onItemPress.bind(null, item, otherUserData)}
       >
         <View style={Styles.profilePictureCon}>
-          {otherParticipant?.name && !isBlockedYou ? (
+          {otherUserData?.image &&
+          otherUserData?.image?.length !== 0 &&
+          !isBlockedYou ? (
             <>
-              {/* TODO: Add blur logic if needed */}
-              <FontAwesome5
-                name="user-alt"
-                size={wp(6.5)}
-                color={Colors.color7}
+              {otherUserData?.is_blur === 0 ? <BlurView /> : null}
+              <Image
+                source={{ uri: otherUserData.image }}
+                style={Styles.image}
+                resizeMode="cover"
               />
             </>
           ) : (
@@ -276,15 +244,15 @@ const Messages = (props: MessagesProps) => {
           ]}
         >
           <View style={Styles.nameMsgCon}>
-            <Text style={Styles.itemHeading}>{otherParticipant.name}</Text>
-            {hasLastMessage && (
+            <Text style={Styles.itemHeading}>{otherUserData?.name}</Text>
+            {!hideLatestMessage && (
               <Text style={Styles.itemMessage} numberOfLines={2}>
-                {item.last_message}
+                {latestMessageText}
               </Text>
             )}
           </View>
           <View style={Styles.timeCon}>
-            {hasLastMessage && (
+            {!hideLatestMessage && (
               <ReactText
                 style={[
                   Styles.itemMessage,
@@ -300,7 +268,7 @@ const Messages = (props: MessagesProps) => {
                 { flexDirection: Rtl ? 'row-reverse' : 'row' },
               ]}
             >
-              {unReadCount && unReadCount !== 0 && hasLastMessage ? (
+              {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
                 <View
                   style={[
                     Styles.unReadCountCon,
@@ -316,7 +284,10 @@ const Messages = (props: MessagesProps) => {
                   </ReactText>
                 </View>
               ) : null}
-              {isLastMessageSeen && otherParticipant?.name && !isBlockedYou ? (
+              {isLastMessageSeen &&
+              otherUserData?.image &&
+              otherUserData?.image?.length !== 0 &&
+              !isBlockedYou ? (
                 <View
                   style={[
                     Styles.seenProfileIconContainer,
@@ -326,10 +297,10 @@ const Messages = (props: MessagesProps) => {
                     },
                   ]}
                 >
-                  <FontAwesome5
-                    name="check"
-                    size={wp(3)}
-                    color={Colors.theme}
+                  <Image
+                    source={{ uri: otherUserData.image }}
+                    style={Styles.seenProfileIcon}
+                    resizeMode="cover"
                   />
                 </View>
               ) : null}
@@ -365,7 +336,9 @@ const Messages = (props: MessagesProps) => {
     );
   };
 
-  const keyExtractor = (item: Conversation) => item.id.toString();
+  const keyExtractor = (item: any) => item?.convDetails?.id;
+  const getItemCount = () => conversations?.length;
+  const getItem = (data: any, index: any) => data[index];
 
   const onChangePasswordPress = () => {
     props.navigation.navigate('GuardianChangePassword');
@@ -381,6 +354,13 @@ const Messages = (props: MessagesProps) => {
 
   return (
     <Container>
+      {/* {(currentUser?.membership_status === 0 ||
+        currentUser?.membership_status === null) && (
+        <PremiumButton
+          heading={LanguageKeys.goPremiumButtonHeadingOne}
+          description={LanguageKeys.goPremiumButtonHeadingTwo}
+        />
+      )} */}
       <Header
         title={LanguageKeys.messages}
         customConponent={() => (
@@ -446,19 +426,19 @@ const Messages = (props: MessagesProps) => {
         message="Your chat credits have been added successfully."
       />
       <View style={Styles.contentContainer}>
-        {isLoading ? (
+        {coversationLoading ? (
           <AnimatedLoader
             text={LanguageKeys.loading}
             visible={true}
             style={{ height: hp(60) }}
           />
-        ) : conversations.length ? (
+        ) : conversations?.length ? (
           <VirtualizedList
             initialNumToRender={10}
             windowSize={15}
             data={conversations}
-            getItemCount={(data) => data.length}
-            getItem={(data, index) => data[index]}
+            getItemCount={getItemCount}
+            getItem={getItem}
             renderItem={renderConversations}
             ListEmptyComponent={renderEmptyList}
             keyExtractor={keyExtractor}
@@ -635,8 +615,6 @@ const Styles = StyleSheet.create({
     borderColor: Colors.color2,
     overflow: 'hidden',
     backgroundColor: Colors.color18,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   seenProfileIcon: {
     width: wp(5),

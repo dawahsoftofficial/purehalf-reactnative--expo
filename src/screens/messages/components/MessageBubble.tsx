@@ -50,13 +50,26 @@ const MessageBubble = ({
   onMessagePress,
   Styles,
 }: Props) => {
-  const itemSender = item?.sender;
-  const itemReadBy = item?.readBy;
+  // Use sender_id from API response (new structure)
+  // Convert to string for comparison as currentUserId might be string
+  const itemSender = item?.sender_id != null ? String(item.sender_id) : null;
+  const currentUserIdStr = currentUserId != null ? String(currentUserId) : null;
 
-  const isCurrentUser = itemSender === currentUserId;
+  // Convert statuses array to readBy format for backward compatibility
+  const statuses = item?.statuses || [];
+  const otherUserStatus = statuses.find(
+    (status: any) => status.participant_id === otherUserId
+  );
+
+  const isCurrentUser = itemSender === currentUserIdStr;
   const isGuardian = itemSender === 'guardian' || itemSender === guardianUserId;
 
-  const otherUserReadBy = itemReadBy?.[otherUserId];
+  const otherUserReadBy = otherUserStatus
+    ? {
+        seen: otherUserStatus.read_at !== null,
+        seenAt: otherUserStatus.read_at,
+      }
+    : null;
 
   const lastSeenMessageIndex = getLastSeenMessageIndex(
     messages,
@@ -89,7 +102,7 @@ const MessageBubble = ({
         activeOpacity={0.9}
       >
         <Text style={[Styles.messageTxt, { color: textColour }]}>
-          {item?.message}
+          {item?.body}
         </Text>
 
         <View style={Styles.messageTimeAndStatusWrapper}>
@@ -102,7 +115,7 @@ const MessageBubble = ({
               },
             ]}
           >
-            {getMessageTime(item?.createdAt)}
+            {getMessageTime(item?.created_at)}
           </Text>
 
           {isCurrentUser && (
@@ -110,9 +123,7 @@ const MessageBubble = ({
               status={item?.status || 'sent'}
               isSeen={otherUserReadBy?.seen === true}
               isBlocked={isBlockedYou}
-              wasSentWhileBlocked={
-                item?.blockedParticipants?.[currentUserId] === true
-              }
+              wasSentWhileBlocked={false}
             />
           )}
         </View>
@@ -147,12 +158,12 @@ const MessageBubble = ({
       {messagePressedId && messagePressedId === item?.id ? (
         <View style={Styles.messageTimeCon}>
           <Text style={Styles.messageTime}>
-            Sent {getTimeAgo(item?.createdAt)}
+            Sent {getTimeAgo(item?.created_at)}
           </Text>
 
-          {otherUserReadBy?.seen ? (
+          {otherUserReadBy?.seen && otherUserReadBy?.seenAt ? (
             <Text style={Styles.messageTime}>
-              Seen {getTimeAgo(otherUserReadBy?.seenAt)}
+              Seen {getTimeAgo(otherUserReadBy.seenAt)}
             </Text>
           ) : null}
         </View>

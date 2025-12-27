@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions } from '@react-navigation/native';
@@ -34,7 +33,7 @@ const CommonActionsFun = (props: CommonActionProps) => {
   const { setData, deleteAll, storageKeys, getData } = StorageManager;
 
   const handleLogout = async () => {
-    await AsyncStorage.setItem('isRecommended', 'false');
+    StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
     await signOut(auth);
     await deleteAll();
     updateCurrentUser(null);

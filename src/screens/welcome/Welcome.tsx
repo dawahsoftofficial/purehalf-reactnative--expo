@@ -194,7 +194,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [optionTab, setOptionTab] = useState<string>('');
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userListPage, setUserListPage] = useState(1);
-  console.log('userListPage', userListPage);
+
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
   const [headerModal, setHeaderModal] = useState<boolean>(false);

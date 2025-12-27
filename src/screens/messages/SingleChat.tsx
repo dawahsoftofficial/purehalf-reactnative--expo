@@ -1,12 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import _ from 'lodash';
-import React, {
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -22,34 +15,28 @@ import {
 import Ripple from 'react-native-material-ripple';
 
 import { Container, PremiumButton } from '../../components';
-import { hp, wp } from '../../global';
+import { wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Images } from '../../res';
 import {
   ApiServices,
   flashInfoMessage,
-  getTimeStamp,
-  StorageManager,
   useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
+import type { Message } from '../../services/api/types/message-types';
 import MessageBubble from './components/MessageBubble';
-import { useConversationRealtime } from './hooks/useConversationRealtime';
-import { useMessagePagination } from './hooks/useMessagePagination';
-import { useReadReceipts } from './hooks/useReadReceipts';
 import { useSendMessage } from './hooks/useSendMessage';
 import Styles from './SingleChat.styles';
 import SingleChatHeader from './SingleChatHeader';
+
+const POLLING_INTERVAL = 30000; // 5 seconds for messages
 const SingleChat = (props: any) => {
   const Rtl = CheckRtl();
-  const { setData, storageKeys } = StorageManager;
   const flatListRef: any = useRef(null);
   const inputRef: any = useRef(null);
-  const [chatOpenTimeStamp, setChatOpenTimeStamp] = useState<number | null>(
-    null
-  );
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { t }: any = useTranslation();
-  const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
+  const { currentUser } = useGlobalContext();
   const fromNotification =
     props?.route?.params?.from === 'notification' ? true : false;
   const fromMessages = props?.route?.params?.from === 'messages' ? true : false;
@@ -57,91 +44,39 @@ const SingleChat = (props: any) => {
   const [otherUserData, setOtherUserData] = useState(
     props?.route?.params?.otherUserData
   );
-  const [isBlockedByYou, setIsBlockedByYou] = useState(false);
-  const [isBlockedYou, setIsBlockedYou] = useState<any>(false);
-  const [listReachedStart, setListReachedStart] = useState(true);
+  const [isBlockedByYou, _setIsBlockedByYou] = useState(false);
+  const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [loader, setLoader] = useState(true);
-  const [messagePressedId, setMessagePressedId] = useState(null);
+  const [messagePressedId, setMessagePressedId] = useState<number | null>(null);
   const [quote, setQuote] = useState('');
 
-  const [messages, setMessages] = useState<any>([]);
-  const [lastDeletedByFound, setLastDeletedByFound] = useState(false);
-  const [totalMessages, setTotalMessages] = useState([]);
-  const [conversationData, setConversationData] = useState<any>('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationData, setConversationData] = useState<any>({});
   const [conversationId, setConversationId] = useState('');
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
 
   const [inputMessage, setInputMessage] = useState('');
-  const messagesRef: any = useRef(messages);
-  const { handleReadBy } = useReadReceipts({
-    currentUserId: currentUser?.id,
-    otherUserId: otherUserData?.id,
-    setConversationData,
-  });
-  const onChangeInputMessage = (text: any) => {
+  const onChangeInputMessage = (text: string) => {
     setInputMessage(text);
   };
-
-  const handleLastDeletedBy = (
-    messages: any,
-    lastDeleted = lastDeletedByFound
-  ) => {
-    return new Promise(async (resolve) => {
-      messages = await _.reject(
-        messages,
-        (message) =>
-          _.get(message, `blockedParticipants.${otherUserData?.id}`) === true
-      );
-      const lastDeletedByIndex: any = _.findIndex(messages, (message: any) => {
-        return (
-          message.deletedBy &&
-          message.deletedBy[currentUser?.id] &&
-          message.deletedBy[currentUser?.id] === true
-        );
-      });
-      if (lastDeleted) {
-        resolve('ignore');
-      } else if (lastDeletedByIndex !== -1) {
-        setLastDeletedByFound(true);
-        messages = _.take(messages, lastDeletedByIndex);
-        resolve(messages);
-      } else {
-        resolve(messages);
-      }
-    });
-  };
-  const { footerLoading, handleEndReached, resetToFirstPage } =
-    useMessagePagination({
-      totalMessages,
-      messages,
-      setMessages,
-      handleLastDeletedBy,
-      listReachedStart,
-      setListReachedStart,
-      setLastDeletedByFound,
-    });
 
   const getOtherUserData = async () => {
     if (currentUser?.id === 'guardian') {
       const response = await ApiServices.getUserDetailGuardian(
         otherUserData?.id
       );
-      const fcmToken = response?.fcm_token || [];
-      setOtherUserData((otherUserData: any) => {
-        otherUserData.token = fcmToken
-          ?.map((item: any) => item?.fcm_token)
-          .filter((token: any) => token !== undefined && token !== null);
-        return otherUserData;
-      });
+      setOtherUserData((prev: any) => ({
+        ...prev,
+        ...response,
+      }));
     } else {
       ApiServices.getUserDetail(otherUserData?.id).then((res: any) => {
-        if (res?.fcm_token) {
-          setOtherUserData((otherUserData: any) => {
-            otherUserData.token = res?.fcm_token
-              ?.map((item: any) => item?.fcm_token)
-              .filter((token: any) => token !== undefined && token !== null);
-            return otherUserData;
-          });
-        }
+        setOtherUserData((prev: any) => ({
+          ...prev,
+          ...res,
+        }));
       });
     }
   };
@@ -151,180 +86,130 @@ const SingleChat = (props: any) => {
       getOtherUserData();
     } else if (fromNotification) {
       setLoader(false);
-      const conversationId = props?.route?.params?.conversationId;
-      const message = props?.route?.params?.message;
-
-      const conversationData = conversations.filter((element: any) => {
-        if (element?.convDetails?.id === conversationId) {
-          if (!element.messages[message?.id]) {
-            element.messages = {
-              [message?.id]: message,
-              ...element.messages,
-            };
-          }
-          return true;
-        }
-        return false;
-      });
-
-      if (conversationData && conversationData?.length !== 0) {
-        setConversationId(conversationId);
-        props.route.params.conversationData = conversationData[0];
-      } else {
-        setLoader(false);
-      }
-      getOtherUserData();
     }
-  }, []);
+  }, [fromMessages, fromNotification]);
 
   useEffect(() => {
-    const conversationData = props?.route?.params?.conversationData;
-    if (
-      conversationData &&
-      Object.keys(conversationData?.convDetails).length !== 0
-    ) {
-      const { convDetails, messages } = conversationData;
-      setConversationData(convDetails);
+    const routeConversationData = props?.route?.params?.conversationData;
+    if (routeConversationData) {
+      // New API structure (Conversation type)
+      if (routeConversationData.id) {
+        setConversationData(routeConversationData);
+        setConversationId(routeConversationData.id.toString());
 
-      const messagesArray: any = messages ? Object.values(messages) : [];
-      setTotalMessages(messagesArray);
+        // Check blocked status from participants
+        const currentUserId =
+          currentUser?.id === 'guardian'
+            ? currentUser?.user?.id
+            : currentUser?.id;
+        const otherParticipant = routeConversationData.participants.find(
+          (p: any) => p.id !== currentUserId
+        );
+        if (otherParticipant) {
+          setIsBlockedYou(otherParticipant.is_blocked);
+        }
 
-      if (messagesArray.length === 0) {
         setLoader(false);
-      } else {
-        const last15Messages = _.slice(messagesArray, 0, 15);
-        handleLastDeletedBy(last15Messages)
-          .then(async (res: any) => {
-            if (res !== 'ignore') {
-              setMessages(res);
-              await handleReadBy(convDetails, res);
-            }
-          })
-          .finally(() => setLoader(false));
       }
-
-      setConversationId(convDetails?.id);
-      setIsBlockedByYou(
-        convDetails?.participantsBlockFlag?.[otherUserData?.id]?.blockStatus ===
-          true
-      );
-      setIsBlockedYou(
-        convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
-          true
-      );
     } else if (!fromNotification) {
       setLoader(false);
     }
-  }, [props?.route?.params?.conversationData]);
-
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  const setOpenedConversation = async (conversationId: any) => {
-    await setData(storageKeys.OPENED_CONVERSATION_ID, conversationId);
-  };
-
-  // Initialize chatOpenTimeStamp
-  useEffect(() => {
-    const initializeTimestamp = async () => {
-      const timestamp = await getTimeStamp();
-      setChatOpenTimeStamp(timestamp);
-    };
-    initializeTimestamp();
-  }, []);
-
-  useConversationRealtime({
-    conversationId,
-    chatOpenTimeStamp,
-
-    currentUserId: currentUser?.id,
-    otherUserId: otherUserData?.id,
-
-    conversationData,
-
-    setMessages,
-    messagesRef,
-
-    setConversationData,
-    setIsBlockedYou,
-    setIsBlockedByYou,
-
-    setOpenedConversation: async (id) => {
-      await setOpenedConversation(id);
-    },
-    clearOpenedConversation: async () => {
-      await setData(storageKeys.OPENED_CONVERSATION_ID, null);
-    },
-
-    handleReadBy,
-    forceUpdate,
-  });
-  const { onSendPress } = useSendMessage({
+  }, [
+    props?.route?.params?.conversationData,
     currentUser,
     otherUserData,
+    fromNotification,
+  ]);
 
-    conversationData,
-    setConversationData,
+  const fetchMessages = useCallback(async () => {
+    if (!conversationId) return;
 
-    messages,
-    setMessages,
+    try {
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) return;
 
-    setConversationId,
+      const fetchedMessages = await messageServices.getConversationMessages(
+        conversationIdNum,
+        { per_page: 50 }
+      );
 
-    isBlockedYou,
-    isBlockedByYou,
+      // Sort messages by created_at (newest first) for inverted list
+      const sortedMessages = [...fetchedMessages].sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeB - timeA; // Descending order (newest first)
+      });
+      setMessages(sortedMessages);
+      setLoader(false);
+    } catch (error: unknown) {
+      console.error('[SingleChat.fetchMessages] Error:', error);
+      setLoader(false);
+      // Don't show error toast for polling failures, only log
+    }
+  }, [conversationId]);
 
-    setInputMessage,
+  const startPolling = useCallback(() => {
+    if (!conversationId) return;
 
-    updateCurrentUser,
-    setData,
-    storageKeys,
+    // Fetch immediately
+    fetchMessages();
 
-    navigation: props.navigation,
-    forceUpdate,
-  });
+    // Set up polling interval
+    pollingIntervalRef.current = setInterval(() => {
+      fetchMessages();
+    }, POLLING_INTERVAL);
+  }, [conversationId, fetchMessages]);
 
-  // Add focus effect to refresh messages when screen comes back into focus
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+  }, []);
+
+  // Poll messages when conversationId is available
+  useEffect(() => {
+    if (conversationId) {
+      startPolling();
+      return () => {
+        stopPolling();
+      };
+    }
+  }, [conversationId, startPolling, stopPolling]);
+
+  // Mark all messages as read and start polling when screen is focused
   useFocusEffect(
     useCallback(() => {
-      if (conversationId?.length !== 0) {
-        // Find the current conversation in the global context
-        const currentConversation = conversations.find(
-          (conv: any) => conv?.convDetails?.id === conversationId
-        );
+      if (conversationId) {
+        startPolling();
 
-        if (currentConversation) {
-          const { convDetails, messages: convMessages } = currentConversation;
-
-          // Update conversation data
-          setConversationData(convDetails);
-
-          // Process messages
-          const messagesArray = convMessages ? Object.values(convMessages) : [];
-
-          setTotalMessages(messagesArray as any);
-
-          if (messagesArray.length > 0) {
-            const last15Messages = _.slice(messagesArray, 0, 15);
-            handleLastDeletedBy(last15Messages).then(async (res: any) => {
-              if (res !== 'ignore') {
-                setMessages(res);
-                if (convDetails?.length !== 0) {
-                  await handleReadBy(convDetails, res);
-                }
-                forceUpdate();
-              }
+        // Mark all messages as read when conversation is opened
+        const conversationIdNum = parseInt(conversationId, 10);
+        if (!isNaN(conversationIdNum)) {
+          messageServices
+            .markAllMessagesAsRead(conversationIdNum)
+            .catch((error) => {
+              // Silently fail - don't show error to user for read receipts
+              console.error('[SingleChat.markAllMessagesAsRead] Error:', error);
             });
-          }
         }
       }
-
       return () => {
-        // Cleanup if needed
+        stopPolling();
       };
-    }, [conversationId, conversations])
+    }, [conversationId, startPolling, stopPolling])
   );
+  const { onSendPress } = useSendMessage({
+    otherUserData,
+    conversationData,
+    setConversationData,
+    messages,
+    setMessages,
+    conversationId,
+    setConversationId,
+    isBlockedByYou,
+    setInputMessage,
+  });
 
   useEffect(() => {
     const quotes = [
@@ -345,29 +230,18 @@ const SingleChat = (props: any) => {
     setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
   }, []);
 
-  const onMessagePress = (messageId: any) => {
+  const onMessagePress = (messageId: number) => {
     if (messageId === messagePressedId) {
       setMessagePressedId(null);
-      forceUpdate();
     } else {
       setMessagePressedId(messageId);
-      forceUpdate();
     }
   };
-
-  const FooterLoader = () =>
-    footerLoading ? (
-      <ActivityIndicator
-        color={Colors.theme}
-        style={{ marginVertical: hp(2) }}
-      />
-    ) : null;
 
   const onInputFocus = () => {
     if (flatListRef?.current) {
       flatListRef?.current?.scrollToOffset({ offset: 0, animated: true });
     }
-    resetToFirstPage().catch(() => {});
   };
 
   const onScrollBegin = () => {
@@ -399,9 +273,11 @@ const SingleChat = (props: any) => {
         otherUserData={otherUserData}
         messages={messages}
         conversationData={conversationData}
+        conversationId={conversationId}
         currentUserId={currentUser?.id}
         isBlockedByYou={isBlockedByYou}
         isBlockedYou={isBlockedYou}
+        setMessages={setMessages}
       />
       <ScrollView
         contentContainerStyle={Styles.innerContainer}
@@ -437,25 +313,30 @@ const SingleChat = (props: any) => {
               ref={flatListRef}
               data={messages}
               inverted
-              renderItem={({ item, index }) => (
-                <MessageBubble
-                  item={item}
-                  index={index}
-                  currentUserId={currentUser?.id}
-                  guardianUserId={currentUser?.user?.id}
-                  otherUserId={otherUserData?.id}
-                  otherUserImage={otherUserData?.image}
-                  isBlockedYou={isBlockedYou}
-                  messages={messages}
-                  messagePressedId={messagePressedId}
-                  onMessagePress={onMessagePress}
-                  Styles={Styles}
-                />
-              )}
+              renderItem={({ item, index }) => {
+                // Handle guardian case - same logic as Messages.tsx
+                const currentUserId =
+                  currentUser?.id === 'guardian'
+                    ? currentUser?.user?.id
+                    : currentUser?.id;
+
+                return (
+                  <MessageBubble
+                    item={item}
+                    index={index}
+                    currentUserId={currentUserId}
+                    guardianUserId={currentUser?.user?.id}
+                    otherUserId={otherUserData?.id}
+                    otherUserImage={otherUserData?.image}
+                    isBlockedYou={isBlockedYou}
+                    messages={messages}
+                    messagePressedId={messagePressedId}
+                    onMessagePress={onMessagePress}
+                    Styles={Styles}
+                  />
+                );
+              }}
               contentContainerStyle={Styles.messagesListContainer}
-              onEndReachedThreshold={0.1}
-              onEndReached={handleEndReached}
-              ListFooterComponent={FooterLoader}
               getItem={(data, index) => data[index]}
               getItemCount={(data) => data.length}
               keyExtractor={(item: any, index: any) => index}
@@ -489,18 +370,9 @@ const SingleChat = (props: any) => {
             placeholder={t('message')}
             placeholderTextColor={Colors.color15}
             multiline
-            value={
-              messages?.length === 1 && messages[0]?.sender === currentUser?.id
-                ? ''
-                : inputMessage
-            }
+            value={inputMessage}
             onChangeText={onChangeInputMessage}
             onFocus={onInputFocus}
-            editable={
-              messages?.length === 1 && messages[0]?.sender === currentUser?.id
-                ? false
-                : true
-            }
             maxLength={350}
           />
           <TouchableOpacity
@@ -536,13 +408,6 @@ const SingleChat = (props: any) => {
               />
             )}
           </TouchableOpacity>
-          {messages?.length === 1 &&
-            messages[0]?.sender === currentUser?.id && (
-              <TouchableOpacity
-                style={Styles.disabledInputCon}
-                onPress={onDisabledInputPress}
-              />
-            )}
         </View>
       </ScrollView>
     </Container>

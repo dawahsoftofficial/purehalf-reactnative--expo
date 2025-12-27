@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
@@ -8,6 +7,7 @@ import { Text } from '../../components';
 import { Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
+import { StorageManager } from '../../services';
 
 const RecommendationButton = ({
   onPress,
@@ -37,9 +37,14 @@ const RecommendationButton = ({
     if (currentTime >= startTime && currentTime <= endTime) {
       setIsShow(true);
       onPress(true);
-      const isRecommended = await AsyncStorage.getItem('isRecommended');
-      if (isRecommended == 'false') {
-        await AsyncStorage.setItem('isRecommended', 'true');
+      const isRecommended = StorageManager.getString(
+        StorageManager.storageKeys.IS_RECOMMENDED
+      );
+      if (isRecommended === 'false') {
+        StorageManager.setString(
+          StorageManager.storageKeys.IS_RECOMMENDED,
+          'true'
+        );
         onPress(true);
       }
     } else {
