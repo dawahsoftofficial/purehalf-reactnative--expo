@@ -1,6 +1,6 @@
 import moment from 'moment';
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Purchases from 'react-native-purchases';
 
 const checkEmpty = (value: any) => {
   if (typeof value === 'string') {
@@ -40,25 +40,25 @@ const formatDate = (date: any) => {
 const capitalize = (str: string) =>
   str?.charAt(0)?.toUpperCase() + str?.slice(1);
 
-const setRevenueCat = async (userID = null) => {
+const setRevenueCat = (userID = null) => {
   try {
-    const userIDString = (await JSON.stringify(userID)) || null;
+    const userIDString = JSON.stringify(userID) || null;
     if (userIDString) {
-      Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+      Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
       if (Platform.OS === 'ios') {
-        await Purchases.configure({
+        Purchases.configure({
           apiKey: 'appl_QVhBMyOFJKhfsiWaYPwcpMFLXQW',
           appUserID: userIDString,
         });
       } else if (Platform.OS === 'android') {
-        await Purchases.configure({
+        Purchases.configure({
           apiKey: 'goog_bNKRQVnCPRZBhpImNqqFhIubskO',
           appUserID: userIDString,
         });
       }
     }
-  } catch (error) {
-    console.error('Error in setRevenueCat:', error);
+  } catch {
+    // Silently handle errors
   }
 };
 

@@ -5,6 +5,8 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 
+import PremiumPaywallScreen from '@/screens/proFeaturesPromotion/PremiumPaywallScreen';
+
 import { CustomModal, ImageViewer } from '../components';
 import { CheckRtl } from '../languages';
 import DisplayForegroundNotificaton from '../notifications/DisplayForegroundNotificaton';
@@ -37,7 +39,6 @@ import {
   PhotosAndVideos,
   PrivacySettings,
   PrivatePhotoRequest,
-  ProFeaturesPromotion,
   Profile,
   ProfilePicture,
   PurposeOfLeaving,
@@ -147,10 +148,12 @@ function App() {
           <Stack.Screen name="Location" component={Location} />
           <Stack.Screen
             name="ProFeaturesPromotion"
-            component={ProFeaturesPromotion}
-            options={{
-              presentation: 'fullScreenModal',
-            }}
+            component={PremiumPaywallScreen}
+            options={
+              {
+                // presentation: 'fullScreenModal',
+              }
+            }
           />
           <Stack.Screen
             name="DiscountProFeaturesPromotion"

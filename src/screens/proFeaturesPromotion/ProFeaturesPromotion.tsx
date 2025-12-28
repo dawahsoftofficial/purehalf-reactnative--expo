@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  FlatList,
   Image,
   ImageBackground,
   Linking,
@@ -11,7 +10,7 @@ import {
 } from 'react-native';
 import { StyleSheet } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Purchases from 'react-native-purchases';
+import Purchases, { type PurchasesPackage } from 'react-native-purchases';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
@@ -40,11 +39,10 @@ const ProFeaturesPromotion = (props: any) => {
     visible: false,
     message: '',
   });
-  const [packagesList, setPackagesList] = useState([]);
+  const [packagesList, setPackagesList] = useState<PurchasesPackage[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<any>('');
   const [showSubscribeButton, setShowSubscribeButton] = useState(false);
 
-  const hideLoading = () => setLoading(false);
   const hideLoaderModal = () =>
     setLoaderModal({
       visible: false,
@@ -95,9 +93,6 @@ const ProFeaturesPromotion = (props: any) => {
       message: LanguageKeys.loading,
     });
     try {
-      // const userID = JSON.stringify(currentUser?.id)
-      // await Purchases.logIn(userID)
-
       let customerInfo: any = null;
       if (fromRestore) {
         customerInfo = await Purchases.restorePurchases();
@@ -122,7 +117,6 @@ const ProFeaturesPromotion = (props: any) => {
         hideLoaderModal();
         flashSuccessMessage(LanguageKeys.upgradedSuccessfully);
         const navigateTo = props?.route?.params?.navigateTo;
-        console.log('navigateTo', navigateTo);
         if (navigateTo && navigateTo === 'goBack') {
           props.navigation.goBack();
         } else {
@@ -145,9 +139,8 @@ const ProFeaturesPromotion = (props: any) => {
         }
         hideLoaderModal();
       }
-    } catch (e: any) {
+    } catch {
       hideLoaderModal();
-      console.log('error while purchasing package =>', e);
     }
   };
 
@@ -162,41 +155,71 @@ const ProFeaturesPromotion = (props: any) => {
     }
   };
   const onBuyNowPress = async () => {
-    if (selectedPackage?.title === 'free') onClosePress();
-    else setPaymentMethodListVisible(true);
+    setPaymentMethodListVisible(true);
   };
 
-  const getPackages = async () => {
+  const getPackages = useCallback(async () => {
     Purchases.getOfferings()
       .then((res) => {
-        console.warn('getPackages', res);
         if (res) {
-          const availablePackages: any = res?.current?.availablePackages;
-          setPackagesList(availablePackages);
+          const availablePackages: PurchasesPackage[] =
+            res?.current?.availablePackages || [];
+          console.log('availablePackages', availablePackages);
+
+          // Package features mapping
+          const packageFeatures: Record<string, string[]> = {
+            'Plus (Starter)': [
+              '10 chats instantly on purchase',
+              '3 chats/day',
+              'See Who Liked You',
+              'Who Visited You: last 7 days',
+              'Priority in Search: Low',
+            ],
+            'Pro (Recommended)': [
+              '15 chats instantly on purchase',
+              '6 chats/day',
+              'See Who Liked You',
+              'Who Visited You: last 30 days',
+              'Premium Chat Filters',
+            ],
+            'Elite (Highest Visbility)': [
+              '30 chats instantly on purchase',
+              '12 chats/day',
+              'See Who Liked You',
+              'Who Visited You: last 90 days',
+              'Premium Chat Filters',
+              'Priority in Search: High',
+            ],
+          };
+
+          // Add features to each package
+          const packagesWithFeatures = availablePackages.map((pkg) => {
+            const features = packageFeatures[pkg.identifier] || [];
+            return {
+              ...pkg,
+              features,
+            };
+          });
+
+          setPackagesList(packagesWithFeatures as unknown as any[]);
           setSelectedPackage(availablePackages[1]);
           setLoading(false);
         } else {
           setLoading(false);
         }
       })
-      .catch((error) => {
-        console.log('error while getting packages =>', error);
-        hideLoading();
+      .catch(() => {
+        setLoading(false);
       });
-  };
+  }, []);
 
   useEffect(() => {
     getPackages();
-  }, []);
+  }, [getPackages]);
 
   const onPackageSelection = async (item: any) => {
     setSelectedPackage(item);
     setShowSubscribeButton(false);
-
-    // Skip RevenueCat for free package
-    if (item?.title === 'free') {
-      return;
-    }
 
     // Try RevenueCat purchase first
     try {
@@ -244,9 +267,8 @@ const ProFeaturesPromotion = (props: any) => {
         hideLoaderModal();
         setShowSubscribeButton(true);
       }
-    } catch (e: any) {
+    } catch {
       hideLoaderModal();
-      console.log('error while purchasing package =>', e);
       // If user cancels or RevenueCat fails, show subscribe button
       setShowSubscribeButton(true);
     }
@@ -273,27 +295,25 @@ const ProFeaturesPromotion = (props: any) => {
               Styles.headerContainer,
               {
                 paddingTop: top,
-                alignItems: Rtl ? 'flex-start' : 'flex-end',
               },
             ]}
           >
+            <Image
+              source={Images.logoWithoutText}
+              resizeMode="contain"
+              style={Styles.logo}
+            />
             <Ripple onPress={onClosePress}>
-              <AntDesign name="close" size={wp(10)} color={Colors.color2} />
+              <AntDesign name="close" size={wp(8)} color={Colors.color2} />
             </Ripple>
           </View>
           <View>
             <Text style={Styles.heading}>{LanguageKeys.goProWithPureHalf}</Text>
-            <FlatList
-              data={proFeatures}
-              renderItem={renderProFeatures}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
           </View>
           {loading ? (
             <ActivityIndicator
-              color={Colors.color2}
               size={wp(5)}
+              color={Colors.color2}
               style={{ marginTop: hp(10) }}
             />
           ) : (
@@ -303,22 +323,14 @@ const ProFeaturesPromotion = (props: any) => {
                 onPackageSelection={onPackageSelection}
                 navigation={props.navigation}
               />
-              {showSubscribeButton && selectedPackage?.title !== 'free' && (
+              {showSubscribeButton && (
                 <Ripple style={Styles.subscribeNowBtn} onPress={onBuyNowPress}>
                   <Text style={Styles.subscribeBtnTxt}>
                     {LanguageKeys.moreWaysToSubscribe}
                   </Text>
                 </Ripple>
               )}
-              {selectedPackage?.title === 'free' && (
-                <Ripple style={Styles.subscribeNowBtn} onPress={onBuyNowPress}>
-                  <Text style={Styles.subscribeBtnTxt}>
-                    {props?.route?.params?.from === 'SignUp'
-                      ? 'continue'
-                      : 'goBack'}
-                  </Text>
-                </Ripple>
-              )}
+
               <View
                 style={{
                   ...Styles.termsCon,
@@ -399,14 +411,17 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
   },
   headerContainer: {
-    paddingBottom: hp(2),
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: hp(1),
   },
   heading: {
     fontSize: Typography.large3,
     fontFamily: Fonts.APPFONT_B,
     includeFontPadding: false,
     color: Colors.color2,
-    marginBottom: hp(1.5),
+    // marginBottom: hp(1.5),
   },
   listItemCon: {
     marginTop: hp(1),
@@ -476,5 +491,9 @@ const Styles = StyleSheet.create({
     marginVertical: 5,
     paddingVertical: 5,
     alignSelf: 'center',
+  },
+  logo: {
+    width: wp(20),
+    height: hp(8),
   },
 });

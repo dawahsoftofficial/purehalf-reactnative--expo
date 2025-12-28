@@ -126,6 +126,8 @@ const Styles = StyleSheet.create({
   input: {
     height: hp(6.3),
     fontSize: Typography.small3,
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
     width: wp(80),
     color: Colors.color1,
   },

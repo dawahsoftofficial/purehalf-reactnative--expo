@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { View } from 'react-native-animatable';
 import DeviceInfo from 'react-native-device-info';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import Feather from 'react-native-vector-icons/Feather';
 
 import { Button, Container, Text } from '../../components';
@@ -9,12 +10,19 @@ import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { isIOS } from '../../services';
+import { usePremiumStore } from '../../stores';
 import RefineSearch from './RefineSearch';
 import SavedSearches from './SavedSearches';
 
 const hasNotch = DeviceInfo.hasNotch();
 const SearchProfiles = () => {
-  const refineSearchRef = useRef<any>(null);
+  const refineSearchRef = useRef<{
+    onSaveAndSearchPress: () => void;
+    onSearchPress: () => void;
+    hasFiltersSelected: () => boolean;
+  }>(null);
+  const { isPremium } = usePremiumStore();
+  const premium = isPremium();
 
   const [hasFilters, setHasFilters] = useState(false);
 
@@ -56,16 +64,22 @@ const SearchProfiles = () => {
           </View>
           <Text style={Styles.heading}>{LanguageKeys.savedSearches}</Text>
           <SavedSearches />
-          <RefineSearch ref={refineSearchRef} />
+          <RefineSearch ref={refineSearchRef} premium={premium} />
         </ScrollView>
       </RNView>
       <RNView style={[Styles.buttonsContainer]}>
         <Button
           text={LanguageKeys.saveAndSearch}
-          icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
+          icon={
+            !premium ? (
+              <AntDesign name="lock" color={Colors.color2} size={wp(5)} />
+            ) : (
+              <Feather name="search" color={Colors.color2} size={wp(5)} />
+            )
+          }
           buttonStyle={Styles.saveSearchBtn}
           onPress={handleSaveAndSearch}
-          disabled={!hasFilters}
+          disabled={!hasFilters || !premium}
         />
         <Button
           text={LanguageKeys.search}

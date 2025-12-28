@@ -27,6 +27,7 @@ import {
   CheckMembershipStatus,
   LinearGradient,
   ModalLoader,
+  ProfileBadges,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -523,7 +524,7 @@ const Header = ({
       time: lastOnline.format('(hh:mm a)'),
     };
   }, [userData?.last_online_at]);
-  console.log('userData?.media?.primary_image', userData?.media?.primary_image);
+
   return (
     <View style={Styles.container}>
       {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
@@ -543,7 +544,19 @@ const Header = ({
           onLoadStart={onProfileImageLoadStart}
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
-        />
+        >
+          {profileImageLoader && !profileImageError && (
+            <ActivityIndicator
+              style={{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              color={Colors.theme}
+              size={wp(8)}
+            />
+          )}
+        </ImageBackground>
       ) : (
         <View
           style={{
@@ -557,33 +570,32 @@ const Header = ({
         </View>
       )}
       {/* {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null} */}
-      {profileImageLoader && !profileImageError && (
-        <ActivityIndicator
-          style={{ position: 'absolute' }}
-          color={Colors.theme}
-          size={wp(8)}
-        />
-      )}
+
       <LinearGradient
         colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
         style={{ ...StyleSheet.absoluteFill }}
       />
-      {isSelf ? (
-        <Ripple
-          style={[
-            Styles.infoChip,
-            {
-              left: Rtl ? wp(2) : undefined,
-              right: Rtl ? undefined : wp(2),
-            },
-          ]}
-          onPress={() => setToolTipVisible(true)}
-          hitSlop={20}
-          rippleColor={Colors.theme}
-        >
-          <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
-        </Ripple>
-      ) : null}
+      <View
+        style={[
+          Styles.badgesContainer,
+          {
+            left: Rtl ? wp(2) : undefined,
+            right: Rtl ? undefined : wp(2),
+          },
+        ]}
+      >
+        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
+        {isSelf ? (
+          <Ripple
+            style={Styles.infoChip}
+            onPress={() => setToolTipVisible(true)}
+            hitSlop={20}
+            rippleColor={Colors.theme}
+          >
+            <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
+          </Ripple>
+        ) : null}
+      </View>
       {fromUserProfile && (
         <Ripple
           style={[
@@ -783,10 +795,15 @@ const Styles = StyleSheet.create({
     width: '100%',
     marginBottom: hp(0.5),
   },
-  infoChip: {
+  badgesContainer: {
     position: 'absolute',
     top: wp(2),
     zIndex: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.5),
+  },
+  infoChip: {
     padding: wp(2),
     borderRadius: 12,
     backgroundColor: Colors.color3,

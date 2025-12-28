@@ -45,7 +45,7 @@ class GFirebase {
         })
         .catch((error: Error) => {
           console.log({ error });
-          flashErrorMessage(error?.message || 'An error occurred', 4);
+          flashErrorMessage(error?.message || 'An error occurred');
           reject(error);
         });
     });
@@ -60,21 +60,17 @@ class GFirebase {
         .catch((error: any) => {
           console.log('Error while sending verification code =>', error);
           if (error?.code === 'missing-phone-number') {
-            flashErrorMessage('Missing Phone Number', 4);
+            flashErrorMessage('Missing Phone Number');
           } else if (error?.code === 'auth/invalid-phone-number') {
-            flashErrorMessage('Invalid Phone Number', 4);
+            flashErrorMessage('Invalid Phone Number');
           } else if (error?.code === 'auth/quota-exceeded') {
-            flashErrorMessage('SMS quota exceeded.Please try again later', 4);
+            flashErrorMessage('SMS quota exceeded.Please try again later');
           } else if (error?.code === 'auth/user-disabled') {
-            flashErrorMessage(
-              'Phone Number disabled. Please contact support',
-              4
-            );
+            flashErrorMessage('Phone Number disabled. Please contact support');
           } else {
             console.log('Unexpected Error.' + error?.code);
             flashErrorMessage(
-              'Unexpected Error Occured. Please contact support',
-              4
+              'Unexpected Error Occured. Please contact support'
             );
           }
           reject('');

@@ -89,7 +89,7 @@ const PurposeOfLeaving = (props: any) => {
           }}
           from={'AccountDeletion'}
           type={type}
-          purposeOfLeaving={selectedRadio?.item}
+          purposeOfLeaving={selectedRadio.item!}
           navigation={props?.navigation}
         />
       </ScrollView>

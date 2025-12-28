@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
-import { BackHandler, Image, StatusBar, StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Image, StyleSheet, Text as RNText, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -52,35 +53,15 @@ const WelcomeUser = (props: any) => {
     }
   };
 
-  useEffect(() => {
-    const backAction = () => {
-      onGetStartedPress();
-      return true;
-    };
-    const backHandler = BackHandler.addEventListener(
-      'hardwareBackPress',
-      backAction
-    );
-    return () => backHandler.remove();
-  }, []);
-
   return (
-    <View style={Styles.container}>
-      <StatusBar
-        translucent
-        backgroundColor={'transparent'}
-        barStyle={'light-content'}
-      />
+    <SafeAreaView style={Styles.container}>
       <View style={Styles.contentContainer}>
+        <Image
+          resizeMode="contain"
+          source={Images.bismillah}
+          style={Styles.bismillahImage}
+        />
         <View>
-          {/* <Text style={Styles.bismillahText}>
-            k
-          </Text> */}
-          <Image
-            source={Images.bismillah}
-            resizeMode="contain"
-            style={Styles.bismillahImage}
-          />
           <Text style={Styles.welcomeHeading}>
             {LanguageKeys.welcome} {currentUser?.first_name}!
           </Text>
@@ -90,14 +71,15 @@ const WelcomeUser = (props: any) => {
               .split('<br/>')
               .join('\n')}
           </Text>
-          <Text style={Styles.descriptionBold}>
-            I commit to honor these teachings {"insha'Allah"}.
-          </Text>
-          <View style={Styles.finalTextContainer}>
-            <Text style={Styles.finalText}>
+          <RNText style={Styles.descriptionBold}>
+            I,{' '}
+            <RNText
+              style={{ textDecorationLine: 'underline', color: Colors.theme }}
+            >
               {currentUser?.first_name} {currentUser?.last_name}
-            </Text>
-          </View>
+            </RNText>
+            , commit to honor these teachings {"insha'Allah"}.
+          </RNText>
         </View>
         <View>
           <Button
@@ -106,7 +88,7 @@ const WelcomeUser = (props: any) => {
           />
         </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -115,13 +97,13 @@ export default WelcomeUser;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.color2,
   },
   contentContainer: {
     flex: 1,
     backgroundColor: Colors.color2,
-    paddingHorizontal: wp(5),
-    paddingVertical: hp(3),
-    paddingTop: hp(10),
+    paddingHorizontal: 16,
+
     justifyContent: 'space-between',
   },
   bismillahText: {

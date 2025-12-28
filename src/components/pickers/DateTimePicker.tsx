@@ -39,12 +39,28 @@ const DateTimePickerFun = React.memo((props: any) => {
     return true;
   }, [date]);
 
-  // Get formatted date string
+  // Get formatted date string - ensure today's date is always formatted correctly
   const formattedDate = useMemo(() => {
-    if (!hasValidDate) return null;
+    if (!hasValidDate || !date) return null;
     try {
-      return moment(date).format('Do MMM, YYYY');
-    } catch {
+      let dateToFormat: Date;
+      if (date instanceof Date) {
+        dateToFormat = date;
+      } else if (typeof date === 'string') {
+        dateToFormat = new Date(date);
+      } else {
+        return null;
+      }
+
+      // Check if date is valid (including today's date)
+      if (isNaN(dateToFormat.getTime())) return null;
+
+      // Format the date - this will work for any valid date including today
+      // No special handling needed - today's date should format normally
+      const formatted = moment(dateToFormat).format('Do MMM, YYYY');
+      return formatted || null;
+    } catch (error) {
+      console.error('Error formatting date:', error, date);
       return null;
     }
   }, [date, hasValidDate]);
@@ -124,13 +140,18 @@ const DateTimePickerFun = React.memo((props: any) => {
   const onChangeIosDate = useCallback((data: any) => {
     const { nativeEvent } = data;
     const { timestamp } = nativeEvent;
-    setDate(new Date(timestamp));
+    const selectedDate = new Date(timestamp);
+    setDate(selectedDate);
   }, []);
 
   const onConfirmIos = useCallback(() => {
     setVisible(false);
-    props.selectedDate?.(date);
-  }, [date, props]);
+    // Use pickerDateValue to ensure we get the current picker value
+    // even if onChange wasn't called (user confirmed without changing)
+    const dateToConfirm = pickerDateValue;
+    setDate(dateToConfirm);
+    props.selectedDate?.(dateToConfirm);
+  }, [pickerDateValue, props]);
 
   // Memoized icon element
   const iconElement = useMemo(() => {

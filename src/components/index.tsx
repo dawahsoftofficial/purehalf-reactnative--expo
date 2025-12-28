@@ -9,6 +9,8 @@ export * from './inputs';
 export { default as LinearGradient } from './LinearGradient';
 export * from './loaders';
 export * from './pickers';
+export { ProfileBadges } from './profile-badges';
+export { PurchaseSuccessModal } from './purchase-success-modal';
 export * from './settings-button';
 export * from './settings-header';
 export { default as SlideShowContainer } from './SlideShowContainer';

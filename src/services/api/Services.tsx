@@ -149,7 +149,7 @@ class GApiServices {
                 errorData?.results?.[0]?.message ||
                 error?.message ||
                 'Authentication failed';
-              flashErrorMessage(errorMessage, 4);
+              flashErrorMessage(errorMessage);
               reject(error);
             });
         })
@@ -183,8 +183,7 @@ class GApiServices {
           );
           error.name = 'AppleSignInNotSupported';
           flashErrorMessage(
-            'Apple Sign In is not available on this device. Please use another login method.',
-            4
+            'Apple Sign In is not available on this device. Please use another login method.'
           );
           reject(error);
           return;
@@ -350,7 +349,7 @@ class GApiServices {
                   errorData?.results?.[0]?.message ||
                   error?.message ||
                   'Authentication failed';
-                flashErrorMessage(errorMessage, 4);
+                flashErrorMessage(errorMessage);
                 reject(error);
               });
           })
@@ -422,8 +421,7 @@ class GApiServices {
           );
           configError.name = 'AppleSignInConfigurationError';
           flashErrorMessage(
-            'Apple Sign In is not properly configured. Please use another login method or contact support.',
-            4
+            'Apple Sign In is not properly configured. Please use another login method or contact support.'
           );
           reject(configError);
         } else {
@@ -438,8 +436,7 @@ class GApiServices {
           );
           authError.name = 'AppleSignInError';
           flashErrorMessage(
-            'Apple sign in failed. Please try again or use another method.',
-            4
+            'Apple sign in failed. Please try again or use another method.'
           );
           reject(authError);
         }
@@ -543,8 +540,13 @@ class GApiServices {
     return new Promise((resolve, reject) => {
       Api.get(EndPoints.getButtonsActiveStatus)
         .then((data: any) => {
-          const results = data?.data?.results || [];
-          resolve({ results });
+          const response = {
+            message: data?.data?.message || '',
+            error: data?.data?.error || false,
+            code: data?.data?.code || 200,
+            results: data?.data?.results || [],
+          };
+          resolve(response);
         })
         .catch((error) => {
           console.log('error while getting Button Status =>', error);
@@ -1016,8 +1018,7 @@ class GApiServices {
             resolve(null);
           }
         })
-        .catch((error: any) => {
-          console.log('error while getting membership info =>', error);
+        .catch(() => {
           reject('');
         });
     });
@@ -1186,14 +1187,27 @@ class GApiServices {
 
   addProfilePicture = (params: any, onProgress: (progress: number) => void) => {
     return new Promise(async (resolve, reject) => {
-      const { uri, type, name } = params;
+      const { uri, name } = params;
       const formData = new FormData();
+
+      // Determine file type from URI or default to jpeg
+      let fileType = 'image/jpeg';
+      if (uri) {
+        const extension = uri.split('.').pop()?.toLowerCase();
+        if (extension === 'png') {
+          fileType = 'image/png';
+        } else if (extension === 'jpg' || extension === 'jpeg') {
+          fileType = 'image/jpeg';
+        }
+      }
+
       formData.append('file', {
         uri: uri,
-        type: type ? type : 'image/jpeg',
-        name: name,
-      });
+        type: fileType,
+        name: name || 'profile_picture.jpg',
+      } as any);
       formData.append('key', 'primary_image');
+
       const xhr = new XMLHttpRequest();
       xhr.withCredentials = true;
       xhr.open('POST', `${BaseUrl}/auth/media/upload`);
@@ -1201,16 +1215,40 @@ class GApiServices {
         StorageManager.storageKeys.USER_TOKEN
       );
       xhr.setRequestHeader('Authorization', `Bearer ${userToken}`);
+
+      // Initialize progress
+      onProgress(0);
       xhr.upload.onprogress = (event) => {
-        const progressPercentage = Math.round(
-          (event.loaded / event.total) * 100
-        );
-        onProgress(progressPercentage);
+        if (event.lengthComputable && event.total > 0) {
+          const progressPercentage = Math.round(
+            (event.loaded / event.total) * 100
+          );
+          const clampedProgress = Math.min(
+            Math.max(progressPercentage, 0),
+            100
+          );
+          onProgress(clampedProgress);
+        } else if (event.loaded > 0) {
+          // Fallback: estimate progress if total is unknown
+          const estimatedProgress = Math.min(
+            Math.max(Math.round((event.loaded / 1000000) * 50), 0),
+            99
+          );
+          onProgress(estimatedProgress);
+        }
       };
       xhr.onload = () => {
+        // Ensure progress reaches 100% on completion
+        onProgress(100);
+
         if (xhr.status === 200) {
-          const responseData = JSON.parse(xhr.response);
-          resolve(responseData);
+          try {
+            const responseData = JSON.parse(xhr.response);
+            resolve(responseData);
+          } catch (parseError) {
+            console.error('[Upload] Error parsing response:', parseError);
+            reject('');
+          }
         } else {
           if (
             xhr.response &&

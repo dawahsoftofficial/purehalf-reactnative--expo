@@ -2,13 +2,17 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Container, Header, Text } from '../../components';
+import BoostBadge from '../../components/badges/boost-badge';
 import { hp, Typography, wp } from '../../global';
+import { CheckRtl } from '../../languages';
 import { LanguageKeys } from '../../languages';
-import { Colors } from '../../res';
-import { ApiServices } from '../../services';
+import { Colors, Fonts } from '../../res';
+import { ApiServices, flashErrorMessage } from '../../services';
+import { presentBoostProfilePaywall } from '../../services/paywall-service';
 import UsersList from '../welcome/UsersList';
 
 const SearchResults = (props: any) => {
+  const Rtl = CheckRtl();
   const [searchResults, setSearchResults] = useState(
     props?.route?.params?.searchResults?.results
   );
@@ -18,8 +22,23 @@ const SearchResults = (props: any) => {
   const urlParams = props?.route?.params?.urlParams;
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
   const [searchResultsPageNo, setsearchResultsPageNo] = useState(2);
+  const [isBoostLoading, setIsBoostLoading] = useState(false);
 
   const hideLoadMoreLoader = () => setLoadMoreLoader(false);
+
+  const onBoostPress = useCallback(async () => {
+    setIsBoostLoading(true);
+    try {
+      const result = await presentBoostProfilePaywall();
+      if (result.error && result.error !== 'Purchase cancelled by user') {
+        flashErrorMessage(result.error || 'Failed to open boost paywall');
+      }
+    } catch (error: any) {
+      flashErrorMessage(error.message || 'Failed to open boost paywall');
+    } finally {
+      setIsBoostLoading(false);
+    }
+  }, []);
 
   const onLoadMoreData = useCallback(() => {
     setLoadMoreLoader(true);
@@ -52,6 +71,16 @@ const SearchResults = (props: any) => {
       <Header
         title={LanguageKeys.searchResults}
         navigation={props.navigation}
+        customConponent={() => (
+          <View
+            style={[
+              Styles.headerRightContainer,
+              { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
+          >
+            <BoostBadge onPress={onBoostPress} disabled={isBoostLoading} />
+          </View>
+        )}
       />
       <View style={Styles.headerDesCon}>
         <Text style={Styles.headerDes}>
@@ -94,10 +123,17 @@ const Styles = StyleSheet.create({
   },
   headerDes: {
     color: Colors.color1,
-    fontSize: Typography.small3,
+    fontSize: Typography.small,
+    fontFamily: Fonts.APPFONT_R,
     lineHeight: wp(5),
     textAlign: 'left',
     alignSelf: 'flex-start',
     marginRight: wp(1),
+  },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'flex-end',
   },
 });

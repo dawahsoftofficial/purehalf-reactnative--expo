@@ -22,12 +22,14 @@ import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
 import {
   AnimatedLoader,
+  Button,
   Container,
   Header,
   ModalLoader,
-  PremiumButton,
+  PurchaseSuccessModal,
   Text,
 } from '../../components';
+import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
 import BlurView from '../../components/BlurView';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -35,11 +37,14 @@ import { CommonActions } from '../../navigation';
 import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
+  flashSuccessMessage,
   formatDate,
   stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import { presentChatCreditsPaywall } from '../../services/paywall-service';
 
 const Messages = (props: any) => {
   const { t } = useTranslation();
@@ -50,6 +55,10 @@ const Messages = (props: any) => {
     message: '',
   });
   const [quote, setQuote] = useState('');
+  const [chatCreditsSuccessModalVisible, setChatCreditsSuccessModalVisible] =
+    useState<boolean>(false);
+  const [isChatCreditsLoading, setIsChatCreditsLoading] =
+    useState<boolean>(false);
   const { setData, storageKeys } = StorageManager;
   const {
     conversations,
@@ -101,6 +110,31 @@ const Messages = (props: any) => {
       visible: false,
       message: '',
     });
+  };
+
+  const onChatCreditsPress = async () => {
+    setIsChatCreditsLoading(true);
+    try {
+      const result = await presentChatCreditsPaywall();
+      if (result.success) {
+        setChatCreditsSuccessModalVisible(true);
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(result.error || 'Failed to purchase chat credits');
+      }
+    } catch (error: any) {
+      flashErrorMessage(error.message || 'Failed to purchase chat credits');
+    } finally {
+      setIsChatCreditsLoading(false);
+    }
+  };
+
+  const onChatCreditsSuccessCollect = () => {
+    setChatCreditsSuccessModalVisible(false);
+    // TODO: Backend integration - collect chat credits
+    flashSuccessMessage('Chat credits added successfully!');
   };
 
   const onLogoutPress = async () => {
@@ -280,16 +314,23 @@ const Messages = (props: any) => {
   const renderEmptyList = () => {
     return (
       <View style={Styles.textContainer}>
-        <Image
-          source={Images.quotesIcon}
-          resizeMode="contain"
-          style={Styles.logo}
-        />
-        <View>
+        <View style={Styles.logoContainer}>
+          <Image
+            source={Images.quotesIcon}
+            resizeMode="contain"
+            style={Styles.logo}
+          />
           <Text style={Styles.subText}>{quote?.split('|')[0]}</Text>
-          <Text style={[Styles.subText, { fontWeight: 'bold' }]}>
+          <Text style={[Styles.subText, { fontFamily: Fonts.APPFONT_B }]}>
             {quote?.split('|')[1]}
           </Text>
+        </View>
+        <View style={Styles.findMatchButtonContainer}>
+          <Button
+            text="Find Match"
+            onPress={onFindMatchPress}
+            buttonStyle={Styles.findMatchButton}
+          />
         </View>
       </View>
     );
@@ -307,15 +348,19 @@ const Messages = (props: any) => {
     props.navigation.navigate('AddWali', { fromSettings: true });
   };
 
+  const onFindMatchPress = () => {
+    props.navigation.navigate('SearchProfiles');
+  };
+
   return (
     <Container>
-      {(currentUser?.membership_status === 0 ||
+      {/* {(currentUser?.membership_status === 0 ||
         currentUser?.membership_status === null) && (
         <PremiumButton
           heading={LanguageKeys.goPremiumButtonHeadingOne}
           description={LanguageKeys.goPremiumButtonHeadingTwo}
         />
-      )}
+      )} */}
       <Header
         title={LanguageKeys.messages}
         customConponent={() => (
@@ -325,25 +370,11 @@ const Messages = (props: any) => {
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            {currentUser?.chat_credits !== undefined &&
-              currentUser?.chat_credits !== null && (
-                <View
-                  style={[
-                    Styles.chatCreditsContainer,
-                    {
-                      marginRight: Rtl ? 0 : wp(2),
-                      marginLeft: Rtl ? wp(2) : 0,
-                    },
-                  ]}
-                >
-                  <Text style={Styles.chatCreditsLabel}>
-                    {LanguageKeys.chatCredits}:
-                  </Text>
-                  <Text style={Styles.chatCreditsValue}>
-                    {currentUser?.chat_credits}
-                  </Text>
-                </View>
-              )}
+            <ChatCreditsBadge
+              credits={currentUser?.chat_credits || 0}
+              onPress={onChatCreditsPress}
+              disabled={isChatCreditsLoading}
+            />
             {currentUser?.role === 'guardian' && (
               <View style={[Styles.gaurdianHeader]}>
                 <Menu>
@@ -388,6 +419,12 @@ const Messages = (props: any) => {
           userId={currentUser?.user?.id}
         />
       )}
+      <PurchaseSuccessModal
+        visible={chatCreditsSuccessModalVisible}
+        onCollect={onChatCreditsSuccessCollect}
+        title="Chat Credits Purchased!"
+        message="Your chat credits have been added successfully."
+      />
       <View style={Styles.contentContainer}>
         {coversationLoading ? (
           <AnimatedLoader
@@ -407,19 +444,7 @@ const Messages = (props: any) => {
             keyExtractor={keyExtractor}
           />
         ) : (
-          <View style={Styles.textContainer}>
-            <Image
-              source={Images.quotesIcon}
-              resizeMode="contain"
-              style={Styles.logo}
-            />
-            <View>
-              <Text style={Styles.subText}>{quote?.split('|')[0]}</Text>
-              <Text style={[Styles.subText, { fontWeight: 'bold' }]}>
-                {quote?.split('|')[1]}
-              </Text>
-            </View>
-          </View>
+          renderEmptyList()
         )}
       </View>
       <ModalLoader
@@ -552,27 +577,6 @@ const Styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'flex-end',
   },
-  chatCreditsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.theme,
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.8),
-    borderRadius: wp(4),
-  },
-  chatCreditsLabel: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small,
-    includeFontPadding: false,
-    marginRight: wp(1),
-  },
-  chatCreditsValue: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small1,
-    includeFontPadding: false,
-  },
   gaurdianHeader: {
     paddingHorizontal: wp(1),
   },
@@ -616,5 +620,19 @@ const Styles = StyleSheet.create({
     width: wp(5),
     height: wp(5),
     borderRadius: wp(2.5),
+  },
+  findMatchButtonContainer: {
+    marginTop: hp(4),
+    paddingHorizontal: wp(10),
+    width: '100%',
+  },
+  findMatchButton: {
+    width: '100%',
+    opacity: 1,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    opacity: 0.5,
   },
 });
