@@ -204,6 +204,16 @@ export type MessageDeliveredEventData = {
 };
 
 /**
+ * ConversationUpdated event data (from Pusher)
+ * Sent on user channel when conversation is updated (message sent, read, etc.)
+ */
+export type ConversationUpdatedEventData = {
+  event: 'ConversationUpdated';
+  update_type: 'sent' | 'read' | 'delivered' | string;
+  conversation: Conversation;
+};
+
+/**
  * ParticipantBlocked event data (from Pusher)
  */
 export type ParticipantBlockedEventData = {

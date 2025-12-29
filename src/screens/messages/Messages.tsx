@@ -44,7 +44,10 @@ import {
   useGlobalContext,
 } from '../../services';
 import messageServices from '../../services/api/message-services';
-import type { Conversation } from '../../services/api/types/message-types';
+import type {
+  Conversation,
+  ConversationUpdatedEventData,
+} from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
 
 type MessagesProps = {
@@ -84,6 +87,48 @@ const Messages = (props: MessagesProps) => {
     }
   }, []);
 
+  // Handle conversation updated event
+  const handleConversationUpdated = useCallback(
+    (data: ConversationUpdatedEventData) => {
+      const conversationData = data.conversation;
+
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+
+        if (exists) {
+          // Update existing conversation
+          console.log(
+            '[Messages] Updating existing conversation:',
+            conversationData.id,
+            'update_type:',
+            data.update_type
+          );
+          return prevConversations
+            .map((c) => (c.id === conversationData.id ? conversationData : c))
+            .sort((a, b) => {
+              // Sort by last message time (most recent first)
+              const timeA = new Date(a.last_message_at).getTime();
+              const timeB = new Date(b.last_message_at).getTime();
+              return timeB - timeA;
+            });
+        }
+
+        // Add new conversation at the top
+        console.log('[Messages] Adding new conversation:', conversationData.id);
+        return [conversationData, ...prevConversations].sort((a, b) => {
+          // Sort by last message time (most recent first)
+          const timeA = new Date(a.last_message_at).getTime();
+          const timeB = new Date(b.last_message_at).getTime();
+          return timeB - timeA;
+        });
+      });
+    },
+    []
+  );
+
   // Setup Pusher real-time updates for user channel
   const setupPusherListeners = useCallback(async () => {
     if (!pusherService.isReady()) {
@@ -102,8 +147,8 @@ const Messages = (props: MessagesProps) => {
     try {
       console.log('[Messages] Setting up Pusher for user:', userId);
 
-      // Subscribe to user channel: start.conversation.user.{userId}
-      const channelName = `private-start.conversation.user.${userId}`;
+      // Subscribe to user channel: private-user.inbox.{userId}
+      const channelName = `private-user.inbox.${userId}`;
 
       const unsubscribe = await pusherService.subscribeToChannel(
         channelName,
@@ -130,24 +175,17 @@ const Messages = (props: MessagesProps) => {
 
             console.log('[Messages] Normalized event type:', eventType);
 
-            switch (eventType) {
-              case 'NewConversationCreated': {
-                const conversationData = rawData.conversation || rawData;
-                console.log(
-                  '[Messages] New conversation created:',
-                  conversationData
-                );
-                handleNewConversation(conversationData as Conversation);
-                break;
-              }
-
-              // Other events (MessageSent, MessageRead, MessageDelivered, ParticipantBlocked)
-              // are handled in conversation-specific channels (private-conversation.{conversationId})
-              default:
-                console.log(
-                  '[Messages] Ignoring event on user channel (handled elsewhere):',
-                  eventType
-                );
+            // Only handle ConversationUpdated events
+            if (eventType === 'ConversationUpdated') {
+              console.log('[Messages] Conversation updated:', rawData);
+              handleConversationUpdated(
+                rawData as ConversationUpdatedEventData
+              );
+            } else {
+              console.log(
+                '[Messages] Ignoring event on user channel:',
+                eventType
+              );
             }
           } catch (error) {
             console.error('[Messages] Error handling Pusher event:', error);
@@ -160,30 +198,7 @@ const Messages = (props: MessagesProps) => {
     } catch (error) {
       console.error('[Messages] Error setting up Pusher:', error);
     }
-  }, [currentUser]);
-
-  // Handle new conversation created
-  const handleNewConversation = useCallback(
-    (conversationData: Conversation) => {
-      setConversations((prevConversations) => {
-        // Check if conversation already exists
-        const exists = prevConversations.some(
-          (c) => c.id === conversationData.id
-        );
-        if (exists) {
-          console.log('[Messages] Conversation already exists, updating');
-          return prevConversations.map((c) =>
-            c.id === conversationData.id ? conversationData : c
-          );
-        }
-
-        // Add new conversation at the top
-        console.log('[Messages] Adding new conversation');
-        return [conversationData, ...prevConversations];
-      });
-    },
-    []
-  );
+  }, [currentUser, handleConversationUpdated]);
 
   // Setup Pusher when component mounts and screen is focused
   useEffect(() => {
@@ -297,6 +312,36 @@ const Messages = (props: MessagesProps) => {
     const otherParticipant = item?.participants?.find(
       (p) => String(p.id) !== currentUserIdStr
     );
+
+    // Get current user's participant to check unread_count
+    const currentUserParticipant = item?.participants?.find(
+      (p) => String(p.id) === currentUserIdStr
+    );
+    const unReadCount = currentUserParticipant?.unread_count || 0;
+
+    // Mark all messages as read if there are unread messages
+    if (unReadCount > 0) {
+      console.log(
+        '[Messages] Marking all messages as read for conversation:',
+        item.id,
+        'unread_count:',
+        unReadCount
+      );
+      messageServices
+        .markAllMessagesAsRead(item.id)
+        .then(() => {
+          console.log(
+            '[Messages] ✅ All messages marked as read for conversation:',
+            item.id
+          );
+        })
+        .catch((error) => {
+          console.error(
+            '[Messages] Error marking all messages as read:',
+            error
+          );
+        });
+    }
 
     props.navigation.navigate('SingleChat', {
       conversationData: item,
