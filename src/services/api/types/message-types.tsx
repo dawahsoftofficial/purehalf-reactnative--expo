@@ -10,9 +10,10 @@ export type Participant = {
   id: number;
   type: string;
   name: string;
-  is_blocked: boolean;
-  last_seen_at: string;
-  last_read_message_id: number;
+  image: string;
+  is_blocked: number | boolean; // Backend sends 0/1, but can be boolean
+  last_seen_at: string | null;
+  last_read_message_id: number | null;
   unread_count: number;
 };
 
@@ -204,6 +205,15 @@ export type MessageDeliveredEventData = {
 };
 
 /**
+ * NewConversationCreated event data (from Pusher)
+ * Sent on user channel when a new conversation is created
+ */
+export type NewConversationCreatedEventData = {
+  event: 'NewConversationCreated';
+  conversation: Conversation;
+};
+
+/**
  * ConversationUpdated event data (from Pusher)
  * Sent on user channel when conversation is updated (message sent, read, etc.)
  */
@@ -211,6 +221,19 @@ export type ConversationUpdatedEventData = {
   event: 'ConversationUpdated';
   update_type: 'sent' | 'read' | 'delivered' | string;
   conversation: Conversation;
+};
+
+/**
+ * UnreadConversationCounter event data (from Pusher)
+ * Sent on user channel to update unread conversation and message counts
+ */
+export type UnreadConversationCounterEventData = {
+  event: 'UnreadConversationCounter';
+  participant: {
+    id: number;
+    unread_conversations_count: number;
+    unread_messages_count: string | number;
+  };
 };
 
 /**

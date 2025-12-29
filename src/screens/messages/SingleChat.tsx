@@ -16,7 +16,7 @@ import Ripple from 'react-native-material-ripple';
 
 import pusherService from '@/services/pusher';
 
-import { Container, PremiumButton } from '../../components';
+import { Container } from '../../components';
 import { wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Images } from '../../res';
@@ -307,10 +307,48 @@ const SingleChat = (props: any) => {
 
       unsubscribeConversationRef.current = unsubscribe;
       console.log('[SingleChat] ✅ Subscribed to conversation channel');
+
+      // Mark all messages as read after subscription if there are unread messages
+      const currentUserId =
+        currentUser?.id === 'guardian'
+          ? currentUser?.user?.id
+          : currentUser?.id;
+      const currentUserIdStr =
+        currentUserId != null ? String(currentUserId) : null;
+
+      if (currentUserIdStr && conversationData?.participants) {
+        const currentUserParticipant = conversationData.participants.find(
+          (p: any) => String(p.id) === currentUserIdStr
+        );
+        const unReadCount = currentUserParticipant?.unread_count || 0;
+
+        if (unReadCount > 0) {
+          console.log(
+            '[SingleChat] Marking all messages as read for conversation:',
+            conversationId,
+            'unread_count:',
+            unReadCount
+          );
+          messageServices
+            .markAllMessagesAsRead(parseInt(conversationId, 10))
+            .then(() => {
+              console.log(
+                '[SingleChat] ✅ All messages marked as read for conversation:',
+                conversationId
+              );
+            })
+            .catch((error) => {
+              console.error(
+                '[SingleChat] Error marking all messages as read:',
+                error
+              );
+            });
+        }
+      }
     } catch (error) {
       console.error('[SingleChat] Error setting up Pusher:', error);
     }
-  }, [conversationId]);
+  }, [conversationId, conversationData, currentUser]);
 
   // Handle new message from Pusher
   // Note: messageData is the nested message object from MessageSentEventData
@@ -691,13 +729,13 @@ const SingleChat = (props: any) => {
 
   return (
     <Container>
-      {(currentUser?.membership_status === 0 ||
+      {/* {(currentUser?.membership_status === 0 ||
         currentUser?.membership_status === null) && (
         <PremiumButton
           heading={LanguageKeys.goPremiumButtonHeadingOne}
           description={LanguageKeys.goPremiumButtonHeadingTwo}
         />
-      )}
+      )} */}
 
       <SingleChatHeader
         navigation={props?.navigation}

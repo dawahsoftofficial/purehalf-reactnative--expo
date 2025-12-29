@@ -47,8 +47,11 @@ import messageServices from '../../services/api/message-services';
 import type {
   Conversation,
   ConversationUpdatedEventData,
+  NewConversationCreatedEventData,
+  UnreadConversationCounterEventData,
 } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
+import { useConversationStore } from '../../stores';
 
 type MessagesProps = {
   navigation: {
@@ -86,6 +89,68 @@ const Messages = (props: MessagesProps) => {
       setIsLoading(false);
     }
   }, []);
+
+  // Get store actions
+  const setUnreadCounts = useConversationStore(
+    (state) => state.setUnreadCounts
+  );
+  const resetConversationStore = useConversationStore((state) => state.reset);
+
+  // Handle new conversation created event
+  const handleNewConversationCreated = useCallback(
+    (data: NewConversationCreatedEventData) => {
+      const conversationData = data.conversation;
+
+      console.log('[Messages] New conversation created:', conversationData.id);
+
+      // Check if conversation has participants, if not, fetch full list
+      if (
+        !conversationData.participants ||
+        conversationData.participants.length === 0
+      ) {
+        console.log(
+          '[Messages] New conversation missing participants, fetching conversations'
+        );
+        fetchConversations();
+        return;
+      }
+
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+
+        if (exists) {
+          console.log(
+            '[Messages] Conversation already exists, updating:',
+            conversationData.id
+          );
+          return prevConversations
+            .map((c) => (c.id === conversationData.id ? conversationData : c))
+            .sort((a, b) => {
+              // Sort by last message time (most recent first)
+              const timeA = new Date(a.last_message_at).getTime();
+              const timeB = new Date(b.last_message_at).getTime();
+              return timeB - timeA;
+            });
+        }
+
+        // Add new conversation at the top
+        console.log(
+          '[Messages] Adding new conversation to list:',
+          conversationData.id
+        );
+        return [conversationData, ...prevConversations].sort((a, b) => {
+          // Sort by last message time (most recent first)
+          const timeA = new Date(a.last_message_at).getTime();
+          const timeB = new Date(b.last_message_at).getTime();
+          return timeB - timeA;
+        });
+      });
+    },
+    [fetchConversations]
+  );
 
   // Handle conversation updated event
   const handleConversationUpdated = useCallback(
@@ -127,6 +192,30 @@ const Messages = (props: MessagesProps) => {
       });
     },
     []
+  );
+
+  // Handle unread conversation counter event
+  const handleUnreadConversationCounter = useCallback(
+    (data: UnreadConversationCounterEventData) => {
+      const { participant } = data;
+      const unreadConversationsCount =
+        participant.unread_conversations_count || 0;
+      const unreadMessagesCount =
+        typeof participant.unread_messages_count === 'string'
+          ? parseInt(participant.unread_messages_count, 10) || 0
+          : participant.unread_messages_count || 0;
+
+      console.log(
+        '[Messages] Unread conversation counter updated:',
+        unreadConversationsCount,
+        'conversations,',
+        unreadMessagesCount,
+        'messages'
+      );
+
+      setUnreadCounts(unreadConversationsCount, unreadMessagesCount);
+    },
+    [setUnreadCounts]
   );
 
   // Setup Pusher real-time updates for user channel
@@ -175,11 +264,21 @@ const Messages = (props: MessagesProps) => {
 
             console.log('[Messages] Normalized event type:', eventType);
 
-            // Only handle ConversationUpdated events
-            if (eventType === 'ConversationUpdated') {
+            // Handle different event types
+            if (eventType === 'NewConversationCreated') {
+              console.log('[Messages] New conversation created:', rawData);
+              handleNewConversationCreated(
+                rawData as NewConversationCreatedEventData
+              );
+            } else if (eventType === 'ConversationUpdated') {
               console.log('[Messages] Conversation updated:', rawData);
               handleConversationUpdated(
                 rawData as ConversationUpdatedEventData
+              );
+            } else if (eventType === 'UnreadConversationCounter') {
+              console.log('[Messages] Unread conversation counter:', rawData);
+              handleUnreadConversationCounter(
+                rawData as UnreadConversationCounterEventData
               );
             } else {
               console.log(
@@ -198,7 +297,12 @@ const Messages = (props: MessagesProps) => {
     } catch (error) {
       console.error('[Messages] Error setting up Pusher:', error);
     }
-  }, [currentUser, handleConversationUpdated]);
+  }, [
+    currentUser,
+    handleNewConversationCreated,
+    handleConversationUpdated,
+    handleUnreadConversationCounter,
+  ]);
 
   // Setup Pusher when component mounts and screen is focused
   useEffect(() => {
@@ -291,6 +395,7 @@ const Messages = (props: MessagesProps) => {
     await deleteAll()
       .then(async () => {
         updateCurrentUser(null);
+        resetConversationStore(); // Reset unread counts on logout
         await setData(storageKeys.LANGUAGE, language);
         hideModalLoader();
         props.navigation.dispatch(
@@ -312,36 +417,6 @@ const Messages = (props: MessagesProps) => {
     const otherParticipant = item?.participants?.find(
       (p) => String(p.id) !== currentUserIdStr
     );
-
-    // Get current user's participant to check unread_count
-    const currentUserParticipant = item?.participants?.find(
-      (p) => String(p.id) === currentUserIdStr
-    );
-    const unReadCount = currentUserParticipant?.unread_count || 0;
-
-    // Mark all messages as read if there are unread messages
-    if (unReadCount > 0) {
-      console.log(
-        '[Messages] Marking all messages as read for conversation:',
-        item.id,
-        'unread_count:',
-        unReadCount
-      );
-      messageServices
-        .markAllMessagesAsRead(item.id)
-        .then(() => {
-          console.log(
-            '[Messages] ✅ All messages marked as read for conversation:',
-            item.id
-          );
-        })
-        .catch((error) => {
-          console.error(
-            '[Messages] Error marking all messages as read:',
-            error
-          );
-        });
-    }
 
     props.navigation.navigate('SingleChat', {
       conversationData: item,
@@ -380,12 +455,12 @@ const Messages = (props: MessagesProps) => {
     if (
       item.last_message_detail &&
       String(item.last_message_detail.sender_id) === currentUserIdStr &&
-      Array.isArray(item.last_message_detail.statuses)
+      otherParticipant?.last_read_message_id !== null
     ) {
-      const receiverStatus = item?.last_message_detail.statuses?.find(
-        (status) => status.participant_id === otherParticipant.id
-      );
-      isLastMessageSeen = receiverStatus?.read_at !== null;
+      // Check if receiver's last_read_message_id is >= last message id
+      // This means the receiver has read up to or past the last message
+      isLastMessageSeen =
+        otherParticipant.last_read_message_id >= item.last_message_detail.id;
     }
 
     return (
@@ -399,18 +474,16 @@ const Messages = (props: MessagesProps) => {
       >
         <View style={Styles.profilePictureCon}>
           {otherParticipant?.name && !isBlockedYou ? (
-            <>
-              <FontAwesome5
-                name="user-alt"
-                size={wp(6.5)}
-                color={Colors.color7}
-              />
-            </>
+            <Image
+              source={{ uri: otherParticipant.image }}
+              resizeMode="cover"
+              style={Styles.image}
+            />
           ) : (
             <FontAwesome5
               name="user-alt"
               size={wp(6.5)}
-              color={Colors.color7}
+              color={Colors.color1}
             />
           )}
         </View>
@@ -442,10 +515,10 @@ const Messages = (props: MessagesProps) => {
                 </ReactText>
                 {isLastMessageSeen && (
                   <View style={Styles.seenProfileIconContainer}>
-                    <FontAwesome5
-                      name="user-alt"
-                      size={wp(2.5)}
-                      color={Colors.color2}
+                    <Image
+                      source={{ uri: otherParticipant.image }}
+                      resizeMode="cover"
+                      style={Styles.seenProfileIcon}
                     />
                   </View>
                 )}
@@ -498,12 +571,12 @@ const Messages = (props: MessagesProps) => {
   };
 
   const onFindMatchPress = () => {
-    // props.navigation.navigate('SearchProfiles');
-    props.navigation.navigate('SingleChat', {
-      conversationData: null,
-      otherUserData: { id: 3640 },
-      from: 'messages',
-    });
+    props.navigation.navigate('SearchProfiles');
+    // props.navigation.navigate('SingleChat', {
+    //   conversationData: null,
+    //   otherUserData: { id: 3640 },
+    //   from: 'messages',
+    // });
   };
 
   return (
