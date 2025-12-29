@@ -150,17 +150,29 @@ export type StandardResponse = {
 
 /**
  * MessageSent event data (from Pusher)
+ * Nested structure with message and conversation objects
  */
 export type MessageSentEventData = {
-  id: number;
-  conversation_id: number;
-  body: string;
-  type: string;
-  sender_type: string;
-  sender_id: number;
-  created_at: string;
-  statuses?: MessageStatus[];
-  message?: string; // Alternative field name
+  event: 'MessageSent';
+  message: {
+    id: number;
+    conversation_id: number;
+    body: string;
+    type: string;
+    sender_type: string;
+    sender_id: number;
+    created_at: string;
+    statuses?: MessageStatus[];
+  };
+  conversation: {
+    id: number;
+    last_message: string;
+    last_message_at: string;
+    participants: Array<{
+      id: number;
+      unread_count: number;
+    }>;
+  };
 };
 
 /**

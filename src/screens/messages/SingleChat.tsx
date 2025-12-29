@@ -249,9 +249,18 @@ const SingleChat = (props: any) => {
             switch (eventType) {
               case 'MessageSent': {
                 // Handle nested structure: {event: 'MessageSent', message: {...}, conversation: {...}}
-                const messageData = rawData.message || rawData;
+                const messageData = rawData.message;
+                if (!messageData) {
+                  console.error(
+                    '[SingleChat] MessageSent event missing message data:',
+                    rawData
+                  );
+                  break;
+                }
                 console.log('[SingleChat] New message received:', messageData);
-                handleNewMessage(messageData as MessageSentEventData);
+                handleNewMessage(
+                  messageData as MessageSentEventData['message']
+                );
                 break;
               }
 
@@ -304,8 +313,9 @@ const SingleChat = (props: any) => {
   }, [conversationId]);
 
   // Handle new message from Pusher
+  // Note: messageData is the nested message object from MessageSentEventData
   const handleNewMessage = useCallback(
-    (messageData: MessageSentEventData) => {
+    (messageData: MessageSentEventData['message']) => {
       const currentUserId =
         currentUser?.id === 'guardian'
           ? currentUser?.user?.id
@@ -321,7 +331,7 @@ const SingleChat = (props: any) => {
       const message: Message = {
         id: messageData.id,
         conversation_id: messageData.conversation_id,
-        body: messageData.body || messageData.message || '',
+        body: messageData.body,
         type: messageData.type || 'text',
         sender_type: messageData.sender_type || 'user',
         sender_id: messageData.sender_id,
