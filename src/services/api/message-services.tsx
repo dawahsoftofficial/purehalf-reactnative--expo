@@ -454,6 +454,94 @@ class MessageServices {
         });
     });
   };
+
+  /**
+   * Sends typing indicator to other participant
+   * @param conversationId - Conversation ID
+   * @param isTyping - Whether user is typing or stopped typing
+   * @returns Promise resolving to void on success
+   */
+  sendTypingIndicator = (conversationId: number, isTyping: boolean) => {
+    return new Promise<void>((resolve, reject) => {
+      Api.post(EndPoints.sendTypingIndicator(conversationId), {
+        is_typing: isTyping,
+      })
+        .then((response) => {
+          const data = response.data as StandardResponse;
+
+          // Validate response structure
+          if (data?.error === true) {
+            console.error(
+              '[MessageServices.sendTypingIndicator] API returned error:',
+              data?.message || 'Unknown error'
+            );
+            reject(data?.message || 'Failed to send typing indicator');
+            return;
+          }
+
+          // Resolve on success
+          resolve();
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to send typing indicator';
+          console.error('[MessageServices.sendTypingIndicator] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          // Don't reject for typing indicator failures, just log
+          resolve();
+        });
+    });
+  };
+
+  /**
+   * Marks a message as delivered
+   * @param messageId - Message ID to mark as delivered
+   * @returns Promise resolving to void on success
+   */
+  markMessageDelivered = (messageId: number) => {
+    return new Promise<void>((resolve, reject) => {
+      Api.post(
+        EndPoints.markMessageDelivered(messageId),
+        {},
+        {
+          params: { messageid: messageId },
+        }
+      )
+        .then((response) => {
+          const data = response.data as StandardResponse;
+
+          // Validate response structure
+          if (data?.error === true) {
+            console.error(
+              '[MessageServices.markMessageDelivered] API returned error:',
+              data?.message || 'Unknown error'
+            );
+            reject(data?.message || 'Failed to mark message as delivered');
+            return;
+          }
+
+          // Resolve on success
+          resolve();
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to mark message as delivered';
+          console.error('[MessageServices.markMessageDelivered] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          reject(errorMessage);
+        });
+    });
+  };
 }
 
 const messageServices = new MessageServices();

@@ -55,7 +55,7 @@ const MessageBubble = ({
   const itemSender = item?.sender_id != null ? String(item.sender_id) : null;
   const currentUserIdStr = currentUserId != null ? String(currentUserId) : null;
 
-  // Convert statuses array to readBy format for backward compatibility
+  // Get status for the other user (recipient) from statuses array
   const statuses = item?.statuses || [];
   const otherUserStatus = statuses.find(
     (status: any) => status.participant_id === otherUserId
@@ -64,9 +64,37 @@ const MessageBubble = ({
   const isCurrentUser = itemSender === currentUserIdStr;
   const isGuardian = itemSender === 'guardian' || itemSender === guardianUserId;
 
+  // Determine message status based on delivered_at and read_at
+  // Priority: read_at > delivered_at > sending
+  // Note: MessageStatusIcon uses isSeen prop for read status (blue double tick)
+  const getMessageStatus = (): 'sending' | 'sent' => {
+    // For messages from current user, check the other user's status
+    if (isCurrentUser && otherUserStatus) {
+      // If delivered or read, show as 'sent' (MessageStatusIcon will show appropriate icon based on isSeen)
+      if (
+        otherUserStatus.delivered_at !== null ||
+        otherUserStatus.read_at !== null
+      ) {
+        return 'sent';
+      }
+      // If status exists but both delivered_at and read_at are null, show as 'sending' (single tick)
+      return 'sending';
+    }
+    // For messages being sent or if status is not available
+    return item?.status === 'sending' ? 'sending' : 'sent';
+  };
+
+  const messageStatus = getMessageStatus();
+  // isRead should only be true if read_at is explicitly not null
+  const isRead =
+    otherUserStatus !== undefined &&
+    otherUserStatus !== null &&
+    otherUserStatus.read_at !== null &&
+    otherUserStatus.read_at !== undefined;
+
   const otherUserReadBy = otherUserStatus
     ? {
-        seen: otherUserStatus.read_at !== null,
+        seen: isRead,
         seenAt: otherUserStatus.read_at,
       }
     : null;
@@ -120,8 +148,8 @@ const MessageBubble = ({
 
           {isCurrentUser && (
             <MessageStatusIcon
-              status={item?.status || 'sent'}
-              isSeen={otherUserReadBy?.seen === true}
+              status={messageStatus}
+              isSeen={isRead}
               isBlocked={isBlockedYou}
               wasSentWhileBlocked={false}
             />

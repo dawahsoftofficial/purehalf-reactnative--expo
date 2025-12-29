@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { CommonActions as CommonActionsNavigation } from '@react-navigation/native';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -18,6 +18,8 @@ import {
   MenuTrigger,
 } from 'react-native-popup-menu';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+
+import pusherService from '@/services/pusher';
 
 import {
   AnimatedLoader,
@@ -42,10 +44,11 @@ import {
   useGlobalContext,
 } from '../../services';
 import messageServices from '../../services/api/message-services';
-import type { Conversation } from '../../services/api/types/message-types';
+import type {
+  Conversation,
+  MessageSentEventData,
+} from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
-
-const POLLING_INTERVAL = 10000; // 10 seconds
 
 type MessagesProps = {
   navigation: {
@@ -71,8 +74,10 @@ const Messages = (props: MessagesProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { setData, storageKeys } = StorageManager;
   const { currentUser, updateCurrentUser, language } = useGlobalContext();
-  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
-    null
+  const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
+  // Store unsubscribe functions for all conversation channels
+  const conversationSubscriptionsRef = useRef<Map<number, () => void>>(
+    new Map()
   );
 
   const fetchConversations = useCallback(async () => {
@@ -83,30 +88,267 @@ const Messages = (props: MessagesProps) => {
     } catch (error: unknown) {
       console.error('[Messages.fetchConversations] Error:', error);
       setIsLoading(false);
-      // Don't show error toast for polling failures, only log
     }
   }, []);
 
-  const startPolling = useCallback(() => {
-    // Fetch immediately
-    fetchConversations();
-
-    // Set up polling interval
-    pollingIntervalRef.current = setInterval(() => {
-      fetchConversations();
-    }, POLLING_INTERVAL);
-  }, [fetchConversations]);
-
-  const stopPolling = useCallback(() => {
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-      pollingIntervalRef.current = null;
+  // Setup Pusher real-time updates for user channel
+  const setupPusherListeners = useCallback(async () => {
+    if (!pusherService.isReady()) {
+      console.log('[Messages] Pusher not ready');
+      return;
     }
-  }, []);
+
+    const userId =
+      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+
+    if (!userId) {
+      console.log('[Messages] No user ID available');
+      return;
+    }
+
+    try {
+      console.log('[Messages] Setting up Pusher for user:', userId);
+
+      // Subscribe to user channel: start.conversation.user.{userId}
+      const channelName = `private-start.conversation.user.${userId}`;
+
+      const unsubscribe = await pusherService.subscribeToChannel(
+        channelName,
+        (event) => {
+          console.log('[Messages] Pusher event received:', event.eventName);
+
+          try {
+            const rawData =
+              typeof event.data === 'string'
+                ? JSON.parse(event.data)
+                : event.data;
+
+            // Extract event type from Laravel event class name or from data.event
+            let eventType = event.eventName;
+            if (eventType.includes('\\')) {
+              // Laravel event class name format: App\Events\Conversation\MessageSent
+              eventType = eventType.split('\\').pop() || eventType;
+            }
+
+            // If data has an 'event' field, use that as the event type
+            if (rawData?.event) {
+              eventType = rawData.event;
+            }
+
+            console.log('[Messages] Normalized event type:', eventType);
+
+            switch (eventType) {
+              case 'NewConversationCreated': {
+                const conversationData = rawData.conversation || rawData;
+                console.log(
+                  '[Messages] New conversation created:',
+                  conversationData
+                );
+                handleNewConversation(conversationData as Conversation);
+                break;
+              }
+
+              // Other events (MessageSent, MessageRead, MessageDelivered, ParticipantBlocked)
+              // are handled in conversation-specific channels (private-conversation.{conversationId})
+              default:
+                console.log(
+                  '[Messages] Ignoring event on user channel (handled elsewhere):',
+                  eventType
+                );
+            }
+          } catch (error) {
+            console.error('[Messages] Error handling Pusher event:', error);
+          }
+        }
+      );
+
+      unsubscribeUserChannelRef.current = unsubscribe;
+      console.log('[Messages] ✅ Subscribed to user channel');
+    } catch (error) {
+      console.error('[Messages] Error setting up Pusher:', error);
+    }
+  }, [currentUser]);
+
+  // Handle new conversation created
+  const handleNewConversation = useCallback(
+    (conversationData: Conversation) => {
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+        if (exists) {
+          console.log('[Messages] Conversation already exists, updating');
+          return prevConversations.map((c) =>
+            c.id === conversationData.id ? conversationData : c
+          );
+        }
+
+        // Add new conversation at the top
+        console.log('[Messages] Adding new conversation');
+        return [conversationData, ...prevConversations];
+      });
+    },
+    []
+  );
+
+  // Handle message sent event - update last message and sort conversations
+  const handleMessageSentInConversation = useCallback(
+    (data: MessageSentEventData) => {
+      setConversations((prevConversations) => {
+        return prevConversations
+          .map((conversation) => {
+            if (conversation.id === data.conversation_id) {
+              // Update last message and timestamp
+              return {
+                ...conversation,
+                last_message: data.body || data.message || '',
+                last_message_at: data.created_at,
+                last_message_detail: {
+                  id: data.id,
+                  conversation_id: data.conversation_id,
+                  body: data.body || data.message || '',
+                  type: data.type || 'text',
+                  sender_type: data.sender_type || 'user',
+                  sender_id: data.sender_id,
+                  created_at: data.created_at,
+                  statuses: data.statuses || [],
+                },
+              };
+            }
+            return conversation;
+          })
+          .sort((a, b) => {
+            // Sort by last message time (most recent first)
+            const timeA = new Date(a.last_message_at).getTime();
+            const timeB = new Date(b.last_message_at).getTime();
+            return timeB - timeA;
+          });
+      });
+    },
+    []
+  );
+
+  // Subscribe to all conversation channels
+  const setupConversationChannels = useCallback(async () => {
+    if (!pusherService.isReady()) {
+      console.log('[Messages] Pusher not ready for conversation channels');
+      return;
+    }
+
+    // Clean up existing subscriptions first
+    conversationSubscriptionsRef.current.forEach(
+      (unsubscribe, conversationId) => {
+        unsubscribe();
+        console.log(
+          '[Messages] Unsubscribed from conversation:',
+          conversationId
+        );
+      }
+    );
+    conversationSubscriptionsRef.current.clear();
+
+    // Subscribe to each conversation channel
+    conversations.forEach(async (conversation) => {
+      const channelName = `private-conversation.${conversation.id}`;
+
+      // Skip if already subscribed
+      if (conversationSubscriptionsRef.current.has(conversation.id)) {
+        return;
+      }
+
+      try {
+        const unsubscribe = await pusherService.subscribeToChannel(
+          channelName,
+          (event) => {
+            try {
+              const rawData =
+                typeof event.data === 'string'
+                  ? JSON.parse(event.data)
+                  : event.data;
+
+              // Extract event type
+              let eventType = event.eventName;
+              if (eventType.includes('\\')) {
+                eventType = eventType.split('\\').pop() || eventType;
+              }
+              if (rawData?.event) {
+                eventType = rawData.event;
+              }
+
+              // Only handle MessageSent events to update last message
+              if (eventType === 'MessageSent') {
+                const messageData = rawData.message || rawData;
+                console.log(
+                  '[Messages] MessageSent in conversation:',
+                  conversation.id,
+                  messageData
+                );
+                handleMessageSentInConversation(
+                  messageData as MessageSentEventData
+                );
+              }
+            } catch (error) {
+              console.error(
+                '[Messages] Error handling conversation channel event:',
+                error
+              );
+            }
+          }
+        );
+
+        conversationSubscriptionsRef.current.set(conversation.id, unsubscribe);
+        console.log(
+          '[Messages] ✅ Subscribed to conversation channel:',
+          channelName
+        );
+      } catch (error) {
+        console.error(
+          '[Messages] Error subscribing to conversation channel:',
+          channelName,
+          error
+        );
+      }
+    });
+  }, [conversations, handleMessageSentInConversation]);
+
+  // Setup Pusher when component mounts and screen is focused
+  useEffect(() => {
+    if (currentUser) {
+      setupPusherListeners();
+
+      return () => {
+        // Cleanup Pusher subscription
+        if (unsubscribeUserChannelRef.current) {
+          unsubscribeUserChannelRef.current();
+          unsubscribeUserChannelRef.current = null;
+        }
+      };
+    }
+  }, [currentUser, setupPusherListeners]);
+
+  // Setup conversation channels when conversations change
+  useEffect(() => {
+    if (conversations.length > 0 && pusherService.isReady()) {
+      setupConversationChannels();
+
+      return () => {
+        // Cleanup all conversation channel subscriptions
+        // Copy ref value to avoid stale closure
+        const subscriptions = conversationSubscriptionsRef.current;
+        subscriptions.forEach((unsubscribe) => {
+          unsubscribe();
+        });
+        subscriptions.clear();
+      };
+    }
+  }, [conversations, setupConversationChannels]);
 
   useFocusEffect(
     React.useCallback(() => {
-      startPolling();
+      // Fetch conversations on focus
+      fetchConversations();
+
       const quotes = [
         t('adviceOneText'),
         t('adviceTwoText'),
@@ -123,10 +365,7 @@ const Messages = (props: MessagesProps) => {
         t('adviceThirteenText'),
       ];
       setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
-      return () => {
-        stopPolling();
-      };
-    }, [startPolling, stopPolling, t])
+    }, [fetchConversations, t])
   );
 
   const hideModalLoader = () => {
@@ -170,7 +409,19 @@ const Messages = (props: MessagesProps) => {
       visible: true,
       message: LanguageKeys.loggingOut,
     });
-    stopPolling();
+
+    // Cleanup Pusher
+    if (unsubscribeUserChannelRef.current) {
+      unsubscribeUserChannelRef.current();
+      unsubscribeUserChannelRef.current = null;
+    }
+
+    // Cleanup all conversation channel subscriptions
+    conversationSubscriptionsRef.current.forEach((unsubscribe) => {
+      unsubscribe();
+    });
+    conversationSubscriptionsRef.current.clear();
+
     await ApiServices.logoutGuardian().catch(hideModalLoader);
     await deleteAll()
       .then(async () => {
@@ -190,11 +441,10 @@ const Messages = (props: MessagesProps) => {
   const onItemPress = (item: Conversation) => {
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
-    // Convert to string for comparison (API returns numbers, currentUserId might be string)
     const currentUserIdStr =
       currentUserId != null ? String(currentUserId) : null;
 
-    const otherParticipant = item.participants.find(
+    const otherParticipant = item?.participants?.find(
       (p) => String(p.id) !== currentUserIdStr
     );
 
@@ -208,11 +458,10 @@ const Messages = (props: MessagesProps) => {
   const renderConversations = ({ item }: { item: Conversation }) => {
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
-    // Convert to string for comparison (API returns numbers, currentUserId might be string)
     const currentUserIdStr =
       currentUserId != null ? String(currentUserId) : null;
 
-    const otherParticipant = item.participants.find(
+    const otherParticipant = item?.participants?.find(
       (p) => String(p.id) !== currentUserIdStr
     );
 
@@ -221,7 +470,11 @@ const Messages = (props: MessagesProps) => {
     }
 
     const formattedDate = formatDate(item.last_message_at);
-    const unReadCount = item.unread_count;
+    // Get unread count from current user's participant object
+    const currentUserParticipant = item?.participants?.find(
+      (p) => String(p.id) === currentUserIdStr
+    );
+    const unReadCount = currentUserParticipant?.unread_count || 0;
     const isBlockedYou = otherParticipant.is_blocked;
 
     const hasLastMessage =
@@ -234,8 +487,7 @@ const Messages = (props: MessagesProps) => {
       String(item.last_message_detail.sender_id) === currentUserIdStr &&
       Array.isArray(item.last_message_detail.statuses)
     ) {
-      // Check if receiver has seen it (read_at is not null for receiver)
-      const receiverStatus = item.last_message_detail.statuses.find(
+      const receiverStatus = item?.last_message_detail.statuses?.find(
         (status) => status.participant_id === otherParticipant.id
       );
       isLastMessageSeen = receiverStatus?.read_at !== null;
@@ -253,7 +505,6 @@ const Messages = (props: MessagesProps) => {
         <View style={Styles.profilePictureCon}>
           {otherParticipant?.name && !isBlockedYou ? (
             <>
-              {/* TODO: Add blur logic if needed */}
               <FontAwesome5
                 name="user-alt"
                 size={wp(6.5)}
@@ -285,55 +536,31 @@ const Messages = (props: MessagesProps) => {
           </View>
           <View style={Styles.timeCon}>
             {hasLastMessage && (
-              <ReactText
-                style={[
-                  Styles.itemMessage,
-                  { alignSelf: Rtl ? 'flex-start' : 'flex-end' },
-                ]}
-              >
-                {formattedDate}
-              </ReactText>
+              <View style={Styles.timeAndSeenCon}>
+                <ReactText
+                  style={[
+                    Styles.itemMessage,
+                    { fontSize: Typography.tiny2, marginBottom: hp(0.2) },
+                  ]}
+                >
+                  {formattedDate}
+                </ReactText>
+                {isLastMessageSeen && (
+                  <View style={Styles.seenProfileIconContainer}>
+                    <FontAwesome5
+                      name="user-alt"
+                      size={wp(2.5)}
+                      color={Colors.color2}
+                    />
+                  </View>
+                )}
+              </View>
             )}
-            <View
-              style={[
-                Styles.timeAndSeenCon,
-                { flexDirection: Rtl ? 'row-reverse' : 'row' },
-              ]}
-            >
-              {unReadCount && unReadCount !== 0 && hasLastMessage ? (
-                <View
-                  style={[
-                    Styles.unReadCountCon,
-                    {
-                      alignSelf: Rtl ? 'flex-start' : 'flex-end',
-                      marginRight: Rtl ? 0 : wp(1.5),
-                      marginLeft: Rtl ? wp(1.5) : 0,
-                    },
-                  ]}
-                >
-                  <ReactText numberOfLines={1} style={Styles.unReadCount}>
-                    {unReadCount}
-                  </ReactText>
-                </View>
-              ) : null}
-              {isLastMessageSeen && otherParticipant?.name && !isBlockedYou ? (
-                <View
-                  style={[
-                    Styles.seenProfileIconContainer,
-                    {
-                      marginRight: Rtl ? 0 : wp(1),
-                      marginLeft: Rtl ? wp(1) : 0,
-                    },
-                  ]}
-                >
-                  <FontAwesome5
-                    name="check"
-                    size={wp(3)}
-                    color={Colors.theme}
-                  />
-                </View>
-              ) : null}
-            </View>
+            {unReadCount > 0 && (
+              <View style={Styles.unReadCountCon}>
+                <ReactText style={Styles.unReadCount}>{unReadCount}</ReactText>
+              </View>
+            )}
           </View>
         </View>
       </Ripple>
@@ -376,7 +603,12 @@ const Messages = (props: MessagesProps) => {
   };
 
   const onFindMatchPress = () => {
-    props.navigation.navigate('SearchProfiles');
+    // props.navigation.navigate('SearchProfiles');
+    props.navigation.navigate('SingleChat', {
+      conversationData: null,
+      otherUserData: { id: 3640 },
+      from: 'messages',
+    });
   };
 
   return (

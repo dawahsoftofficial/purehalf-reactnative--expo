@@ -152,7 +152,7 @@ class PusherService {
               '[PusherService] Custom authorizer - Auth response:',
               response.data
             );
-
+            console.log('response.data', response.data);
             // Return the auth signature from backend
             // Note: channel_data is only needed for presence channels
             // For private channels, omit it if not provided (empty string is invalid JSON)

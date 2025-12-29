@@ -13,6 +13,7 @@ export type Participant = {
   is_blocked: boolean;
   last_seen_at: string;
   last_read_message_id: number;
+  unread_count: number;
 };
 
 /**
@@ -54,7 +55,6 @@ export type Conversation = {
   last_message_at: string;
   participants: Participant[];
   last_message_detail: LastMessageDetail | null;
-  unread_count: number;
 };
 
 /**
@@ -141,4 +141,70 @@ export type StandardResponse = {
   error: boolean;
   code: number;
   results?: unknown;
+};
+
+/**
+ * Pusher Event Data Types
+ * These types represent the data structure sent from backend via Pusher events
+ */
+
+/**
+ * MessageSent event data (from Pusher)
+ */
+export type MessageSentEventData = {
+  id: number;
+  conversation_id: number;
+  body: string;
+  type: string;
+  sender_type: string;
+  sender_id: number;
+  created_at: string;
+  statuses?: MessageStatus[];
+  message?: string; // Alternative field name
+};
+
+/**
+ * MessageRead event data (from Pusher)
+ */
+export type MessageReadEventData = {
+  event?: string;
+  message_id: number;
+  conversation_id?: number; // May not be in event, will be extracted from message
+  read_by: {
+    id: number;
+    type: string;
+  };
+  read_at?: string; // May not be in event, will use current timestamp if missing
+};
+
+/**
+ * MessageDelivered event data (from Pusher)
+ */
+export type MessageDeliveredEventData = {
+  event?: string;
+  message_id: number;
+  conversation_id?: number; // May not be in event, will be extracted from message
+  delivered_by: {
+    id: number;
+    type: string;
+  };
+  delivered_at?: string; // May not be in event, will use current timestamp if missing
+};
+
+/**
+ * ParticipantBlocked event data (from Pusher)
+ */
+export type ParticipantBlockedEventData = {
+  conversation_id: number;
+  blocked_user_id: number;
+  blocked_by_id: number;
+};
+
+/**
+ * Typing event data (from Pusher client events)
+ */
+export type TypingEventData = {
+  user_id: number;
+  is_typing: boolean;
+  conversation_id?: number;
 };
