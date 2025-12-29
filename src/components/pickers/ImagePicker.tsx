@@ -59,7 +59,7 @@ const ImagePicker = (props: any) => {
         mediaType: 'photo',
         quality: 0.5,
         selectionLimit:
-          from === 'cover_image' || from === 'primary_image' ? 1 : 10,
+          from === 'cover_image' || from === 'primary_image_to_show' ? 1 : 10,
         presentationStyle: 'pageSheet',
       };
     }

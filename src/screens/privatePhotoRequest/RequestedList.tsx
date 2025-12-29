@@ -173,10 +173,10 @@ const RequestedList = (props: any) => {
         activeOpacity={Constants.btnActiveOpacity}
         onPress={onItemPress.bind(null, item)}
       >
-        {item?.media?.primary_image ? (
+        {item?.media?.primary_image_to_show ? (
           <View style={Styles.itemImage}>
             <Image
-              source={{ uri: item.media.primary_image }}
+              source={{ uri: item.media.primary_image_to_show }}
               resizeMode="cover"
               style={Styles.itemImage}
               onLoadStart={onImageLoadStart}

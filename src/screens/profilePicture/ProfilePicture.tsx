@@ -51,14 +51,14 @@ type User = {
   email?: string;
   phone_number?: string;
   media?: {
-    primary_image?: string[];
+    primary_image_to_show?: string[];
   };
   [key: string]: unknown;
 };
 
 type ProfilePictureResponse = {
   results?: {
-    primary_image?: string[];
+    primary_image_to_show?: string[];
   };
   [key: string]: unknown;
 };
@@ -168,7 +168,7 @@ function ProfilePicture(props: ProfilePictureProps) {
               const user: User = {
                 ...(currentUser as User),
                 media: {
-                  primary_image: result?.primary_image,
+                  primary_image_to_show: result?.primary_image_to_show,
                 },
               };
               updateCurrentUser(user);
@@ -263,7 +263,7 @@ function ProfilePicture(props: ProfilePictureProps) {
           />
         </View>
         <ImagePicker
-          from="primary_image"
+          from="primary_image_to_show"
           onClose={hideImagePicker}
           visible={imagePickerVisible}
           onImageSelection={handleImagePickerSelection}

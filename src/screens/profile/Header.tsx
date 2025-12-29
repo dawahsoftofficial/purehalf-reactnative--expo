@@ -48,7 +48,7 @@ const { width, height } = Dimensions.get('window');
 type FcmToken = { fcm_token?: string | null };
 
 type UserMedia = {
-  primary_image?: string;
+  primary_image_to_show?: string;
   cover_image?: string;
   public_gallery?: string[];
   private_photo_count?: number;
@@ -321,7 +321,7 @@ const Header = ({
     () => ({
       id: userData?.id,
       name: userData?.full_name,
-      image: userData?.media?.primary_image,
+      image: userData?.media?.primary_image_to_show,
       token:
         userData?.fcm_token
           ?.map((item) => item?.fcm_token)
@@ -531,15 +531,15 @@ const Header = ({
       {fromUserProfile && <CheckMembershipStatus />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
 
-      {userData?.media?.primary_image &&
-      userData?.media?.primary_image?.length !== 0 &&
+      {userData?.media?.primary_image_to_show &&
+      userData?.media?.primary_image_to_show?.length !== 0 &&
       !profileImageError ? (
         <ImageBackground
           style={{
             ...StyleSheet.absoluteFill,
             backgroundColor: Colors.color1,
           }}
-          source={{ uri: userData?.media?.primary_image }}
+          source={{ uri: userData?.media?.primary_image_to_show }}
           resizeMode="contain"
           onLoadStart={onProfileImageLoadStart}
           onLoadEnd={onProfileImageLoadEnd}

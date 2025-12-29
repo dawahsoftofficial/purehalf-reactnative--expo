@@ -385,7 +385,7 @@ const DisplayForegroundNotification = () => {
           }
         });
       case 'profile_picture_update_required':
-        currentUser.media.primary_image = null;
+        currentUser.media.primary_image_to_show = null;
         updateCurrentUser(currentUser);
         await setData(storageKeys.USER, currentUser);
         navigation.navigate('ProfilePicture');

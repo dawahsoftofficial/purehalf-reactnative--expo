@@ -1202,7 +1202,7 @@ class GApiServices {
         type: fileType,
         name: name || 'profile_picture.jpg',
       } as any);
-      formData.append('key', 'primary_image');
+      formData.append('key', 'primary_image_to_show');
 
       const xhr = new XMLHttpRequest();
       xhr.withCredentials = true;

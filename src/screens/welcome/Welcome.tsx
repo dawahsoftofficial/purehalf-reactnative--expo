@@ -108,7 +108,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     () => [
       {
         label: LanguageKeys.profileImage,
-        id: 'primary_image',
+        id: 'primary_image_to_show',
         navigation: 'PhotosAndVideos',
         completed: false,
       },
@@ -391,7 +391,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const handleProfileCompleteData = useCallback(async () => {
     const baseState: Record<string, boolean> = {
-      primary_image: Boolean(currentUser?.media?.primary_image),
+      primary_image_to_show: Boolean(currentUser?.media?.primary_image_to_show),
       // Currently not entertaining cover photo
       // cover_image: Boolean(currentUser?.media?.cover_image),
       tagline: Boolean(currentUser?.detail?.tagline),
@@ -596,10 +596,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               ]}
               onPress={() => setHeaderModal(!headerModal)}
             >
-              {currentUser?.media?.primary_image &&
-              currentUser?.media?.primary_image?.length ? (
+              {currentUser?.media?.primary_image_to_show &&
+              currentUser?.media?.primary_image_to_show?.length ? (
                 <Image
-                  source={{ uri: currentUser.media.primary_image }}
+                  source={{ uri: currentUser.media.primary_image_to_show }}
                   style={[
                     Styles.headerIcon,
                     { width: 45, height: 45, borderRadius: 25 },

@@ -95,8 +95,8 @@ function App() {
                 setInitialRouteName('UserInput');
               } else if (
                 (!res?.media ||
-                  !res?.media?.primary_image ||
-                  res?.media?.primary_image?.length === 0) &&
+                  !res?.media?.primary_image_to_show ||
+                  res?.media?.primary_image_to_show?.length === 0) &&
                 res?.gender === 'male'
               ) {
                 setInitialRouteName('ProfilePicture');

@@ -42,8 +42,8 @@ const UsersList = (props: any) => {
             {/* {item?.is_blur === 1 ? <BlurView /> : null} */}
             <Image
               source={
-                item?.media?.primary_image
-                  ? { uri: item?.media?.primary_image }
+                item?.media?.primary_image_to_show
+                  ? { uri: item?.media?.primary_image_to_show }
                   : Images.userTwo
               }
               resizeMode="cover"
