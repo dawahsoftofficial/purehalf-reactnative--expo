@@ -95,8 +95,11 @@ const SwiperComponent = ({
   return (
     <Modal visible={true} transparent={true}>
       <SafeAreaView style={Styles.container}>
-        <Ripple style={Styles.closeWrapper} onPress={() => onPress()}>
-          <AntDesign name="close" size={wp(8)} color={Colors.color2} />
+        <Ripple
+          style={[Styles.closeWrapper, { top: top + hp(2) }]}
+          onPress={() => onPress()}
+        >
+          <AntDesign name="close" size={wp(6)} color={Colors.color1} />
         </Ripple>
         {users?.length ? (
           <Carousel
@@ -134,12 +137,19 @@ const Styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.color1,
   },
   closeWrapper: {
     position: 'absolute',
     right: hp(2),
-    top: hp(2),
     zIndex: 10,
+    backgroundColor: Colors.color2,
+    borderRadius: 100,
+    padding: wp(2),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.color27,
   },
   slider: {
     // marginTop: 50,

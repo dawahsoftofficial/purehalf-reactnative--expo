@@ -16,7 +16,7 @@ import {
   Header,
   Loader,
 } from '../../components';
-import { hp } from '../../global';
+import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
 import { Colors, Images } from '../../res';
@@ -79,6 +79,7 @@ type UserInputProps = {
 
 function UserInput(props: UserInputProps) {
   const fromSettings = props?.route?.params?.fromSettings ?? false;
+
   const { updateCurrentUser, currentUser, language } = useGlobalContext();
   const { getData, deleteAll, storageKeys } = StorageManager;
   const [languageId, setLanguageId] = useState<number | null>(null);
@@ -283,7 +284,10 @@ function UserInput(props: UserInputProps) {
     props.navigation.navigate('AccountDeletion');
   }, [props.navigation]);
 
-  const scrollViewContentStyle = useMemo(() => [Styles.container], []);
+  const scrollViewContentStyle = useMemo(
+    () => [Styles.container, { paddingHorizontal: 0 }],
+    []
+  );
 
   const labelColor = useMemo(
     () => (fromSettings ? Colors.color1 : Colors.color1),
@@ -367,6 +371,7 @@ function UserInput(props: UserInputProps) {
         <Header
           title={LanguageKeys.basicSettings}
           navigation={props.navigation}
+          containerStyle={{ paddingHorizontal: 0 }}
         />
         <CommonActions
           navigation={props.navigation}
@@ -417,7 +422,7 @@ export default UserInput;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: wp(4),
     justifyContent: 'center',
     backgroundColor: Colors.color2,
   },
@@ -425,6 +430,6 @@ const Styles = StyleSheet.create({
     marginBottom: hp(3),
   },
   continueBtnCon: {
-    paddingHorizontal: 16,
+    paddingHorizontal: wp(4),
   },
 });

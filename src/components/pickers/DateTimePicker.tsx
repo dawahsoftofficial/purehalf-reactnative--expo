@@ -248,9 +248,9 @@ const Styles = StyleSheet.create({
   container: {},
   inputLabel: {
     fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
     marginBottom: Constants.fontFamilyMarginBottom,
     color: Colors.color1,
+    fontFamily: Fonts.APPFONT_M,
   },
   btnOuterContainer: {
     borderBottomWidth: 1,

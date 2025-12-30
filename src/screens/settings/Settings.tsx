@@ -1,5 +1,6 @@
+import { PermissionsAndroid } from 'react-native';
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet } from 'react-native';
 import Rate from 'react-native-rate';
 
 import { usePremiumStore } from '@/stores';
@@ -36,14 +37,67 @@ function Settings(props: SettingsProps) {
     navigate('UserInput', { fromSettings: true });
   }, [navigate]);
 
-  const onLocationPress = useCallback(() => {
-    setShowLocationConsentModal(true);
+  const checkLocationPermission = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'ios') {
+      // iOS permissions are handled automatically by the system
+      return true;
+    }
+    try {
+      const granted = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      return granted;
+    } catch {
+      return false;
+    }
   }, []);
 
-  const handleLocationConsentContinue = useCallback(() => {
+  const requestLocationPermission = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'ios') {
+      // iOS will show native permission dialog automatically
+      return true;
+    }
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const onLocationPress = useCallback(async () => {
+    // Check if permission is already granted
+    const hasPermission = await checkLocationPermission();
+    
+    if (hasPermission) {
+      // Permission already granted, navigate directly
+      navigate('UserLocation');
+    } else {
+      // Show custom consent modal first
+      setShowLocationConsentModal(true);
+    }
+  }, [checkLocationPermission, navigate]);
+
+  const handleLocationConsentContinue = useCallback(async () => {
     setShowLocationConsentModal(false);
-    navigate('UserLocation');
-  }, [navigate]);
+    
+    // Request native location permission
+    const granted = await requestLocationPermission();
+    
+    if (granted) {
+      // Permission granted, navigate to map screen
+      navigate('UserLocation');
+    } else {
+      // Permission denied, open native location settings
+      if (Platform.OS === 'android') {
+        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+      } else {
+        Linking.openSettings();
+      }
+    }
+  }, [navigate, requestLocationPermission]);
 
   const handleLocationConsentClose = useCallback(() => {
     setShowLocationConsentModal(false);

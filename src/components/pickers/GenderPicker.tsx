@@ -237,7 +237,7 @@ const Styles = StyleSheet.create({
   },
   label: {
     fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_M,
     marginBottom: Constants.fontFamilyMarginBottom,
     color: Colors.color1,
   },

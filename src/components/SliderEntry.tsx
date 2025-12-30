@@ -223,7 +223,7 @@ const SliderEntry = ({
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
           style={Styles.image}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       ) : (
         <Image
