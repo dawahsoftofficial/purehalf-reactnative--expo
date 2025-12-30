@@ -1,3 +1,5 @@
+import type React from 'react';
+
 import { flashErrorMessage } from '../../../services';
 import messageServices from '../../../services/api/message-services';
 import type {
@@ -16,7 +18,7 @@ type UseSendMessageParams = {
   conversationData: Conversation | null | undefined;
   setConversationData: (conversation: Conversation) => void;
   messages: Message[];
-  setMessages: (messages: Message[]) => void;
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   conversationId: string;
   setConversationId: (id: string) => void;
   isBlockedByYou: boolean;
@@ -104,13 +106,25 @@ export function useSendMessage({
         });
 
       // Add the new message and sort by created_at (newest first)
-      const allMessages = [sentMessage, ...messages];
-      const sortedMessages = allMessages.sort((a, b) => {
-        const timeA = new Date(a.created_at).getTime();
-        const timeB = new Date(b.created_at).getTime();
-        return timeB - timeA; // Descending order (newest first)
+      // Use functional update to avoid race conditions
+      setMessages((prevMessages: Message[]) => {
+        // Check if message already exists (might have come via Pusher)
+        const exists = prevMessages.some(
+          (msg: Message) => msg.id === sentMessage.id
+        );
+        if (exists) {
+          console.log('[useSendMessage] Message already exists, skipping');
+          return prevMessages;
+        }
+
+        const allMessages = [sentMessage, ...prevMessages];
+        const sortedMessages = allMessages.sort((a, b) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          return timeB - timeA; // Descending order (newest first)
+        });
+        return sortedMessages;
       });
-      setMessages(sortedMessages);
     } catch (error: unknown) {
       flashErrorMessage(error as string);
     }
