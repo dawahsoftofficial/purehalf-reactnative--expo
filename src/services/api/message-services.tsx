@@ -53,9 +53,8 @@ class MessageServices {
         })
         .catch((error) => {
           const errorMessage =
-            error?.response?.data?.message ||
-            error?.message ||
-            'Failed to start conversation';
+            error?.response?.data?.results || 'Failed to start conversation';
+
           console.error('[MessageServices.startConversation] Error:', {
             message: errorMessage,
             status: error?.response?.status,

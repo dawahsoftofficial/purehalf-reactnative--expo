@@ -4,6 +4,7 @@ import type {
   Conversation,
   Message,
 } from '../../../services/api/types/message-types';
+import { presentChatCreditsPaywall } from '../../../services/paywall-service';
 
 type OtherUserData = {
   id: number;
@@ -68,11 +69,18 @@ export function useSendMessage({
           setMessages(sortedMessages);
         }
       } catch (error: unknown) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : 'Failed to start conversation';
-        flashErrorMessage(errorMessage);
+        const errorMessage = error as string;
+        // Check if error is about chat credits
+        if (
+          typeof errorMessage === 'string' &&
+          errorMessage.toLowerCase().includes('you have no chat credits left')
+        ) {
+          flashErrorMessage(errorMessage);
+          // Show chat credits paywall
+          presentChatCreditsPaywall();
+        } else {
+          flashErrorMessage(errorMessage);
+        }
       }
       return;
     }
