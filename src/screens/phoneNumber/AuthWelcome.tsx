@@ -12,7 +12,7 @@ import { Colors, Fonts } from '../../res';
 import { Firebase, setRevenueCat } from '../../services';
 import { StorageManager, useGlobalContext } from '../../services';
 import { ApiServices } from '../../services/api';
-import { type SettingsResponse, useSettingsStore } from '../../stores';
+import { useSettingsStore } from '../../stores';
 import Data from '../profile/Data';
 import AuthButtons from './components/auth-buttons';
 import LogoSection from './components/logo-section';
@@ -50,21 +50,8 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
   const { getData, setData, storageKeys } = StorageManager;
   const { updateCurrentUser, updateDirection } = useGlobalContext();
   const [loading, setLoading] = useState(false);
-  const { setSettings, getAuthenticationMethod } = useSettingsStore();
+  const { getAuthenticationMethod } = useSettingsStore();
   const buttonStatus = getAuthenticationMethod();
-
-  const getButtonStatus = useCallback(() => {
-    ApiServices.getButtonsActiveStatus()
-      .then((data: unknown) => {
-        const response = data as SettingsResponse;
-        if (response) {
-          setSettings(response);
-        }
-      })
-      .catch(() => {
-        // Error handled silently, store will keep previous state
-      });
-  }, [setSettings]);
 
   const saveDataLocal = useCallback(async () => {
     try {
@@ -93,7 +80,6 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
   }, [getData, setData, storageKeys.FCM_TOKEN]);
 
   useEffect(() => {
-    getButtonStatus();
     saveDataLocal();
     getToken();
     if (Rtl) {
@@ -101,7 +87,7 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
         updateDirection('ltr', 'en');
       });
     }
-  }, [Rtl, getButtonStatus, saveDataLocal, getToken, updateDirection]);
+  }, [Rtl, saveDataLocal, getToken, updateDirection]);
 
   const hideLoading = useCallback(() => setLoading(false), []);
 

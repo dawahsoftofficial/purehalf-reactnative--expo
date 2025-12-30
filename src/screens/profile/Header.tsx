@@ -358,9 +358,9 @@ const Header = ({
   );
 
   const getUserConversation = useCallback(() => {
-    const conversationData = conversations.filter((element: Conversation) => {
-      const deleteFlag = element.convDetails.participantsDeleteFlag;
-      return deleteFlag.hasOwnProperty(JSON.stringify(userData?.id));
+    const conversationData = conversations?.filter((element: Conversation) => {
+      const deleteFlag = element?.convDetails?.participantsDeleteFlag;
+      return deleteFlag?.hasOwnProperty(JSON.stringify(userData?.id));
     });
     if (conversationData && conversationData.length !== 0) {
       setUserConversation(conversationData[0]);

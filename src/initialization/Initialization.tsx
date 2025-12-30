@@ -9,6 +9,8 @@ import { hp, wp } from '../global';
 import { RootNavigation } from '../navigation';
 import { Colors, Fonts } from '../res';
 import { ApiServices, StorageManager, useGlobalContext } from '../services';
+import type { SettingsResponse } from '../stores/settings-store';
+import { useSettingsStore } from '../stores/settings-store';
 
 const GOOGLE_WEB_CLIENT_ID =
   '760499091535-7b8jggl5lmapn9oi1ovnh4o84a11iv9f.apps.googleusercontent.com';
@@ -20,14 +22,22 @@ const Initialization = (): JSX.Element => {
     storageKeys: { LANGUAGE, OPENED_CONVERSATION_ID },
   } = StorageManager;
   const { updateDirection } = useGlobalContext();
+  const { setSettings } = useSettingsStore();
 
   const [isLoading, setIsLoading] = useState(true);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   const checkForMandatoryUpdate = useCallback(async () => {
     try {
-      const response: any = await ApiServices.getButtonsActiveStatus();
-      const results = response?.results || [];
+      const response: any = await ApiServices.getAppSettings();
+      const settingsResponse = response as SettingsResponse;
+
+      // Set settings in store for app-wide access
+      if (settingsResponse) {
+        setSettings(settingsResponse);
+      }
+
+      const results = settingsResponse?.results || [];
       const forceUpdateSetting = results.find(
         (item: any) => item?.key === 'forceUpdate'
       );
@@ -37,7 +47,7 @@ const Initialization = (): JSX.Element => {
     } catch (_error) {
       console.error('Failed to fetch the app update information.', _error);
     }
-  }, []);
+  }, [setSettings]);
 
   const configureLanguage = useCallback(async () => {
     try {

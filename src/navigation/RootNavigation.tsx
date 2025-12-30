@@ -149,11 +149,9 @@ function App() {
           <Stack.Screen
             name="ProFeaturesPromotion"
             component={PremiumPaywallScreen}
-            options={
-              {
-                // presentation: 'fullScreenModal',
-              }
-            }
+            options={{
+              animation: 'fade',
+            }}
           />
           <Stack.Screen
             name="DiscountProFeaturesPromotion"
