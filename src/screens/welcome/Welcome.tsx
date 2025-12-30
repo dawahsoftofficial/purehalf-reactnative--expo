@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
-import { usePremiumStore } from '@/stores';
+import { usePremiumStore, useSettingsStore } from '@/stores';
 
 import {
   CheckMembershipStatus,
@@ -205,7 +205,34 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   >(() => profileProgressTemplate.map((item) => ({ ...item })));
   const [showRecommendationModal, setShowRecommendationModal] =
     useState<boolean>(false);
+  const dailyRecommendations = useSettingsStore().getDailyRecommendations();
 
+  // Check if recommendation modal should be shown based on daily recommendations settings
+  useEffect(() => {
+    if (!dailyRecommendations) return;
+
+    const { status, start, end } = dailyRecommendations;
+
+    // Check if status is enabled ('1')
+    if (status !== '1') return;
+
+    // Get current hour in 24-hour format (0-23)
+    const currentHour = new Date().getHours();
+    const startHour = parseInt(start, 10);
+    const endHour = parseInt(end, 10);
+
+    // Check if current time is between start and end hours
+    // If end is 24, it means until 23:59 (end of day), so check >= startHour
+    const shouldShow =
+      endHour === 24
+        ? currentHour >= startHour
+        : currentHour >= startHour && currentHour < endHour;
+
+    if (shouldShow) {
+      setShowRecommendationModal(true);
+      setRecommendationModal(true);
+    }
+  }, [dailyRecommendations]);
   const applyOptionSelection = useCallback((item: OptionButton) => {
     setOptionTab(item.name);
     setActiveOptionButton(item);
@@ -527,18 +554,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     }, [])
   );
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (showRecommendationModal && route?.params?.openRecommendationModal) {
-        onRecommendationPress(true);
-      }
-    }, [
-      onRecommendationPress,
-      route?.params?.openRecommendationModal,
-      showRecommendationModal,
-    ])
-  );
-
   const onInfoItemPress = useCallback(
     (item: ProfileProgressItem) => {
       setHeaderModal(false);
@@ -567,9 +582,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               activeOpacity={0.6}
               onPress={() => {
                 flashSuccessMessage('You are already a premium member');
-                // navigation.navigate('ProFeaturesPromotion', {
-                //   navigateTo: 'BottomTab',
-                // });
+                navigation.navigate('ProFeaturesPromotion', {
+                  navigateTo: 'BottomTab',
+                });
               }}
               style={Styles.headerIconWrapper}
             >

@@ -1,5 +1,4 @@
-import React, { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
@@ -7,73 +6,16 @@ import { Text } from '../../components';
 import { Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
-import { StorageManager } from '../../services';
 
 const RecommendationButton = ({
   onPress,
 }: {
   onPress: (value?: boolean) => void;
 }) => {
-  const { t }: any = useTranslation();
-  const [isShow, setIsShow] = useState<boolean>(false);
-  const [date, setDate] = useState<string>('');
   const Rtl = CheckRtl();
 
-  useEffect(() => {
-    checkRecommended();
-  }, []);
-
-  const checkRecommended = async () => {
-    const currentTime = new Date();
-    // currentTime.setHours(19, 30, 0);
-
-    const startTime = new Date();
-    startTime.setHours(18, 0, 0); // 6 pm
-
-    const endTime = new Date();
-    endTime.setHours(23, 59, 59); // 12 pm
-
-    // Check if the current time is between 6 pm and 12 pm
-    if (currentTime >= startTime && currentTime <= endTime) {
-      setIsShow(true);
-      onPress(true);
-      const isRecommended = StorageManager.getString(
-        StorageManager.storageKeys.IS_RECOMMENDED
-      );
-      if (isRecommended === 'false') {
-        StorageManager.setString(
-          StorageManager.storageKeys.IS_RECOMMENDED,
-          'true'
-        );
-        onPress(true);
-      }
-    } else {
-      setIsShow(false);
-      if (currentTime < startTime) {
-        // If before 7 pm, use today's date
-        const day = currentTime.getDate().toString().padStart(2, '0');
-        const month = (currentTime.getMonth() + 1).toString().padStart(2, '0');
-        setDate(`${day}/${month}`);
-      } else {
-        // If after 7 pm, get the next day's date
-        const nextDay = new Date(currentTime);
-        nextDay.setDate(currentTime.getDate() + 1);
-        const day = nextDay.getDate().toString().padStart(2, '0');
-        const month = (nextDay.getMonth() + 1).toString().padStart(2, '0');
-        setDate(`${day}/${month}`);
-      }
-    }
-  };
-
-  if (!isShow || isShow) {
-    return null;
-  }
-
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={isShow ? () => onPress() : () => {}}
-    >
+    <TouchableOpacity activeOpacity={0.7} onPress={() => onPress()}>
       <View
         style={[
           Styles.container,
@@ -87,11 +29,7 @@ const RecommendationButton = ({
           }}
         >
           <View>
-            <Text style={Styles.heading}>
-              {isShow
-                ? t('recommendationAvailable')
-                : t('newRecommendation') + ' ' + date}
-            </Text>
+            <Text style={Styles.heading}>Top recommendations available</Text>
           </View>
         </View>
         <AntDesign
@@ -118,6 +56,7 @@ const Styles = StyleSheet.create({
     borderColor: Colors.color47,
     borderWidth: 1,
     backgroundColor: Colors.color57,
+    marginHorizontal: wp(3),
   },
   heading: {
     color: Colors.color22,

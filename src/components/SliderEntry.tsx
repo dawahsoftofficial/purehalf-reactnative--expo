@@ -93,11 +93,11 @@ const SliderEntry = ({
   );
 
   const getUserConversation = () => {
-    const conversationData = conversations.filter((element: any) => {
-      const deleteFlag = element.convDetails.participantsDeleteFlag;
-      return deleteFlag.hasOwnProperty(JSON.stringify(data?.id));
+    const conversationData = conversations?.filter((element: any) => {
+      const deleteFlag = element?.convDetails?.participantsDeleteFlag;
+      return deleteFlag?.hasOwnProperty(JSON.stringify(data?.id));
     });
-    if (conversationData && conversationData.length !== 0) {
+    if (conversationData && conversationData?.length !== 0) {
       setUserConversation(conversationData[0]);
     } else {
       Firebase.getSingleConversation(currentUser?.id, data?.id).then(

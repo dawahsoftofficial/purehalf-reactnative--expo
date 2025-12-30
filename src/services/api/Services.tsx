@@ -536,9 +536,9 @@ class GApiServices {
     });
   };
 
-  getButtonsActiveStatus = () => {
+  getAppSettings = () => {
     return new Promise((resolve, reject) => {
-      Api.get(EndPoints.getButtonsActiveStatus)
+      Api.get(EndPoints.getAppSettings)
         .then((data: any) => {
           const response = {
             message: data?.data?.message || '',
@@ -554,6 +554,7 @@ class GApiServices {
         });
     });
   };
+
   getLanguages = () => {
     return new Promise((resolve, reject) => {
       Api.get(EndPoints.getLanguageList)

@@ -85,12 +85,19 @@ type BadgesAndPayments = {
   };
 };
 
+type DailyRecommendations = {
+  status: string; //"1" or "0" for enabled or disabled
+  start: string;
+  end: string;
+};
+
 type SettingValue =
   | AuthenticationMethod
   | ChatCredits
   | boolean
   | MaxChatsPerDay
-  | BadgesAndPayments;
+  | BadgesAndPayments
+  | DailyRecommendations;
 
 type SettingItem = {
   title: string;
@@ -116,6 +123,7 @@ type SettingsState = {
   getForceUpdate: () => boolean;
   getMaxChatsPerDay: () => MaxChatsPerDay | null;
   getBadgesAndPayments: () => BadgesAndPayments | null;
+  getDailyRecommendations: () => DailyRecommendations | null;
   getSettingByKey: <T extends SettingValue>(key: string) => T | null;
 };
 
@@ -156,6 +164,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return state.getSettingByKey<BadgesAndPayments>('badges_and_payments');
   },
 
+  getDailyRecommendations: () => {
+    const state = get();
+    return state.getSettingByKey<DailyRecommendations>('daily_recommendations');
+  },
+
   getSettingByKey: <T extends SettingValue>(key: string) => {
     const state = get();
     if (!state.settings) return null;
@@ -173,6 +186,7 @@ export type {
   BadgeConfig,
   BadgesAndPayments,
   ChatCredits,
+  DailyRecommendations,
   MaxChatsPerDay,
   PaymentWallConfig,
   SettingItem,
