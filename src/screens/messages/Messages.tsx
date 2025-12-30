@@ -20,6 +20,7 @@ import {
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
+import ChatCreditsBadge from '@/components/badges/chat-credits-badge';
 import pusherService from '@/services/pusher';
 
 import {
@@ -589,11 +590,11 @@ const Messages = (props: MessagesProps) => {
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            {/* <ChatCreditsBadge
-              credits={currentUser?.chat_credits || 0}
+            <ChatCreditsBadge
               onPress={onChatCreditsPress}
               disabled={isChatCreditsLoading}
-            /> */}
+              credits={currentUser?.chat_credits || 0}
+            />
             {currentUser?.role === 'guardian' && (
               <View style={[Styles.gaurdianHeader]}>
                 <Menu>

@@ -91,15 +91,15 @@ const PhotosAndVideos = (props: any) => {
       const {
         cover_image,
         youtube_url,
-        primary_image_to_show,
         public_gallery,
         private_gallery,
+        un_blur_primary_image,
       } = media;
       if (cover_image) {
         setCoverImage(cover_image);
       }
-      if (primary_image_to_show) {
-        setProfileImage(primary_image_to_show);
+      if (un_blur_primary_image) {
+        setProfileImage(un_blur_primary_image);
       }
       if (youtube_url) {
         setYoutubeURL(youtube_url);
@@ -176,7 +176,7 @@ const PhotosAndVideos = (props: any) => {
       const params = {
         from: 'public_gallery',
         file_path: uri,
-        to: 'primary_image_to_show',
+        to: 'primary_image',
       };
       ApiServices.moveMedia(params)
         .then((res: any) => {
@@ -246,9 +246,9 @@ const PhotosAndVideos = (props: any) => {
           hideLoader();
         })
         .catch(hideLoader);
-    } else if (from === 'primary_image_to_show') {
+    } else if (from === 'primary_image') {
       const params = {
-        from: 'primary_image_to_show',
+        from: 'primary_image',
         file_path: uri,
         to: 'public_gallery',
       };
@@ -414,10 +414,8 @@ const PhotosAndVideos = (props: any) => {
     ApiServices.imageUpload(imageObj, imagePicker.from, youtubeURL)
       .then(async (res: any) => {
         if (res) {
-          const { cover_image, primary_image_to_show } = res;
-          if (cover_image) {
-            setCoverImage(cover_image);
-          }
+          const { primary_image_to_show } = res;
+
           if (primary_image_to_show) {
             setProfileImage(primary_image_to_show);
           }
@@ -493,7 +491,7 @@ const PhotosAndVideos = (props: any) => {
               <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
             </Ripple>
           </View>
-          {publicPhotos?.length < 10 ? (
+          {/* {publicPhotos?.length < 10 ? (
             <View
               style={{
                 ...Styles.downBtnConProfile,
@@ -505,7 +503,7 @@ const PhotosAndVideos = (props: any) => {
                 onPress={onArrowDownPress.bind(
                   null,
                   { uri: profileImage },
-                  'primary_image_to_show'
+                  'primary_image'
                 )}
               >
                 <AntDesign
@@ -515,7 +513,7 @@ const PhotosAndVideos = (props: any) => {
                 />
               </Ripple>
             </View>
-          ) : null}
+          ) : null} */}
           {profileImageLoader && (
             <ActivityIndicator
               color={Colors.theme}
@@ -599,12 +597,12 @@ const PhotosAndVideos = (props: any) => {
       message: 'Deleting profile image...',
     });
     const params = {
-      key: 'primary_image_to_show',
+      key: 'primary_image',
       file_path: profileImage,
     };
     ApiServices.deleteImage(params)
       .then(() => {
-        currentUser.media.primary_image_to_show = null;
+        currentUser.primary_image_to_show = null;
         setProfileImage('');
         hideLoader();
         setData(storageKeys.USER, currentUser);

@@ -51,11 +51,11 @@ type FcmToken = { fcm_token?: string | null };
 
 type UserMedia = {
   primary_image?: string;
-  primary_image_to_show?: string;
   cover_image?: string;
   public_gallery?: string[];
   private_photo_count?: number;
   youtube_url?: string;
+  un_blur_primary_image?: string;
 };
 
 type User = {
@@ -70,6 +70,7 @@ type User = {
   liked?: boolean;
   membership_expiry?: string | null;
   media?: UserMedia;
+  primary_image_to_show?: string;
   fcm_token?: FcmToken[];
   gender?: string;
   is_blur?: boolean;
@@ -325,7 +326,7 @@ const Header = ({
     () => ({
       id: userData?.id,
       name: userData?.full_name,
-      image: userData?.media?.primary_image_to_show,
+      image: userData?.primary_image_to_show,
       token:
         userData?.fcm_token
           ?.map((item) => item?.fcm_token)
@@ -570,7 +571,7 @@ const Header = ({
   useEffect(() => {
     setProfileImageLoader(false);
     setProfileImageError(false);
-  }, [userData?.media?.primary_image_to_show]);
+  }, [userData?.primary_image_to_show]);
 
   const formattedLastOnlineDate = useMemo(() => {
     if (!userData?.last_online_at) {
@@ -591,15 +592,15 @@ const Header = ({
       {fromUserProfile && <CheckMembershipStatus />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
 
-      {userData?.media?.primary_image_to_show &&
-      userData?.media?.primary_image_to_show?.length !== 0 &&
+      {userData?.primary_image_to_show &&
+      userData?.primary_image_to_show?.length !== 0 &&
       !profileImageError ? (
         <ImageBackground
           style={{
             ...StyleSheet.absoluteFill,
             backgroundColor: Colors.color1,
           }}
-          source={{ uri: userData?.media?.primary_image_to_show }}
+          source={{ uri: userData?.primary_image_to_show }}
           resizeMode="contain"
           onLoadStart={onProfileImageLoadStart}
           onLoadEnd={onProfileImageLoadEnd}
@@ -812,7 +813,7 @@ const Header = ({
                 <View style={Styles.blurImageWrapper}>
                   <Image
                     source={{
-                      uri: userData?.media?.primary_image_to_show,
+                      uri: userData?.media?.un_blur_primary_image,
                     }}
                     style={Styles.blurComparisonImage}
                     resizeMode="cover"
@@ -834,7 +835,7 @@ const Header = ({
                 <View style={Styles.blurImageWrapper}>
                   <Image
                     source={{
-                      uri: userData?.media?.primary_image,
+                      uri: userData?.primary_image_to_show,
                     }}
                     style={Styles.blurComparisonImage}
                     resizeMode="cover"

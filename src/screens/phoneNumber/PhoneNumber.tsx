@@ -38,15 +38,11 @@ type User = {
   first_name?: string;
   latitude?: number;
   longitude?: number;
-  media?: {
-    primary_image_to_show?: string[];
-  };
+  primary_image_to_show?: string;
   membership_status?: number | null;
   results?: {
     first_name?: string;
-    media?: {
-      primary_image_to_show?: string[];
-    };
+    primary_image_to_show?: string;
     membership_status?: number | null;
   };
 };
@@ -116,8 +112,8 @@ function PhoneNumber({ navigation }: PhoneNumberProps) {
       }
 
       const hasPrimaryImage =
-        user?.results?.media?.primary_image_to_show &&
-        user.results.media.primary_image_to_show.length > 0;
+        user?.results?.primary_image_to_show &&
+        user.results.primary_image_to_show.length > 0;
 
       if (!hasPrimaryImage) {
         navigateTo('ProfilePicture');

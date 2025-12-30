@@ -44,8 +44,9 @@ type User = {
   membership_status?: number | null;
   membership_expiry?: string | null;
   first_name?: string;
+  primary_image_to_show?: string;
   media?: {
-    primary_image_to_show?: string;
+    cover_image?: string;
   };
   detail?: {
     tagline?: string;
@@ -173,9 +174,9 @@ export function AccountModal({
           <View style={Styles.modalHeaderContent}>
             <View style={Styles.profileSection}>
               <View style={Styles.profileImageContainer}>
-                {currentUser?.media?.primary_image_to_show ? (
+                {currentUser?.primary_image_to_show ? (
                   <Image
-                    source={{ uri: currentUser.media.primary_image_to_show }}
+                    source={{ uri: currentUser.primary_image_to_show }}
                     style={Styles.profileImage}
                   />
                 ) : (

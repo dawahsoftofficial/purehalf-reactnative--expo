@@ -1,8 +1,8 @@
 type UserData = {
   media?: {
-    primary_image_to_show?: string;
     cover_image?: string;
   };
+  primary_image_to_show?: string;
   detail?: {
     tagline?: string;
     family_plan_id?: number;
@@ -30,7 +30,7 @@ export function checkProfileCompleted(
   if (!userData) return false;
 
   const keysData: Record<string, boolean> = {
-    primary_image_to_show: Boolean(userData.media?.primary_image_to_show),
+    primary_image_to_show: Boolean(userData?.primary_image_to_show),
     tagline: Boolean(userData.detail?.tagline),
     'appearance-0': true,
     'familybg-0': true,
