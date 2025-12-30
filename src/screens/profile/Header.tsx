@@ -530,7 +530,7 @@ const Header = ({
     const newBlurValue = !userData?.is_blur;
     setIsUpdatingBlur(true);
     try {
-      const res = await ApiServices.updateDetails({
+      const res = await ApiServices.updateUserInfo({
         is_blur: newBlurValue ? 1 : 0,
       });
       const { setData, storageKeys } = StorageManager;
@@ -547,7 +547,7 @@ const Header = ({
       );
       setBlurModalVisible(false);
     } catch {
-      // Error is already handled by updateDetails API
+      // Error is already handled by updateUserInfo API
     } finally {
       setIsUpdatingBlur(false);
     }
@@ -783,7 +783,7 @@ const Header = ({
                     }}
                   >
                     <Text style={Styles.allPhotosTxt}>
-                      {userData?.is_blur ? 'Blur My Photos' : 'Blur is ON'}
+                      {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
                     </Text>
                   </View>
                 </Ripple>
