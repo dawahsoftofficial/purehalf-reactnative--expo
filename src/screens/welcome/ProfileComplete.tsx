@@ -119,9 +119,7 @@ const ProfileComplete = () => {
 
   const handleProfileCompleteData = async () => {
     const keysData: any = {
-      primary_image_to_show: currentUser?.media?.primary_image_to_show
-        ? true
-        : false,
+      primary_image_to_show: currentUser?.primary_image_to_show ? true : false,
       cover_image: currentUser?.media?.cover_image ? true : false,
       tagline: currentUser?.detail?.tagline ? true : false,
       'appearance-0': true,

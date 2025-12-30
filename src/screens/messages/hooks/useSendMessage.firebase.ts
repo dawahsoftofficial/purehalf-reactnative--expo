@@ -80,7 +80,7 @@ export function useSendMessage({
           pressAction: 'openChat',
           data: {
             user: {
-              image: currentUser?.media?.primary_image_to_show,
+              image: currentUser?.primary_image_to_show,
               name: currentUser?.full_name,
               id: currentUser?.id,
             },
@@ -187,7 +187,7 @@ export function useSendMessage({
         },
         participantsData: [
           {
-            image: currentUser?.media?.primary_image_to_show,
+            image: currentUser?.primary_image_to_show,
             name: currentUser?.full_name,
             id: currentUser?.id,
           },
@@ -227,7 +227,7 @@ export function useSendMessage({
           ...(currentUser?.id !== 'guardian' && currentUser?.id
             ? [
                 {
-                  image: currentUser?.media?.primary_image_to_show,
+                  image: currentUser?.primary_image_to_show,
                   name: currentUser?.full_name,
                   id: currentUser?.id,
                 },

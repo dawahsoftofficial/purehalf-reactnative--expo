@@ -42,8 +42,8 @@ const UsersList = (props: any) => {
             {/* {item?.is_blur === 1 ? <BlurView /> : null} */}
             <Image
               source={
-                item?.media?.primary_image_to_show
-                  ? { uri: item?.media?.primary_image_to_show }
+                item?.primary_image_to_show
+                  ? { uri: item?.primary_image_to_show }
                   : Images.userTwo
               }
               resizeMode="cover"
@@ -102,14 +102,15 @@ const UsersList = (props: any) => {
   return (
     <FlatList
       data={data}
-      renderItem={RenderUsers}
       numColumns={2}
-      showsVerticalScrollIndicator={false}
-      keyExtractor={(item, index) => index.toString()}
-      contentContainerStyle={Styles.container}
-      onEndReached={onLoadMorePress}
+      extraData={data}
+      renderItem={RenderUsers}
       onEndReachedThreshold={0.5}
+      onEndReached={onLoadMorePress}
       ListEmptyComponent={renderEmptyList}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={Styles.container}
+      keyExtractor={(item, index) => `${item?.id}-${index}`}
     />
   );
 };

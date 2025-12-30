@@ -69,6 +69,9 @@ const SingleChat = (props: any) => {
   const lastTypingEventRef = useRef<number>(0);
   // Track which messages have been marked as read to avoid duplicate API calls
   const markedAsReadRef = useRef<Set<number>>(new Set());
+  // Track messages to avoid race conditions between fetchMessages and Pusher events
+  const messagesRef = useRef<Message[]>([]);
+  const isFetchingMessagesRef = useRef<boolean>(false);
 
   const [inputMessage, setInputMessage] = useState('');
   const onChangeInputMessage = (text: string) => {
@@ -141,11 +144,13 @@ const SingleChat = (props: any) => {
 
     // Set loader to true when starting to fetch messages
     setLoader(true);
+    isFetchingMessagesRef.current = true;
 
     try {
       const conversationIdNum = parseInt(conversationId, 10);
       if (isNaN(conversationIdNum)) {
         setLoader(false);
+        isFetchingMessagesRef.current = false;
         return;
       }
 
@@ -154,14 +159,48 @@ const SingleChat = (props: any) => {
         { per_page: 50 }
       );
 
-      // Sort messages by created_at (newest first) for inverted list
-      const sortedMessages = [...fetchedMessages].sort((a, b) => {
+      // Merge fetched messages with existing messages to avoid losing Pusher messages
+      // Get current messages from ref to avoid stale closure
+      const currentMessages = messagesRef.current;
+
+      // Create a map of existing messages by ID for quick lookup
+      const existingMessagesMap = new Map(
+        currentMessages.map((msg) => [msg.id, msg])
+      );
+
+      // Add fetched messages, keeping existing ones if they're newer or have updates
+      fetchedMessages.forEach((fetchedMsg) => {
+        const existingMsg = existingMessagesMap.get(fetchedMsg.id);
+        if (!existingMsg) {
+          // New message from API, add it
+          existingMessagesMap.set(fetchedMsg.id, fetchedMsg);
+        } else {
+          // Message exists, keep the one with more complete data (prefer existing if it has statuses)
+          if (existingMsg.statuses && existingMsg.statuses.length > 0) {
+            // Keep existing message but update other fields if needed
+            existingMessagesMap.set(fetchedMsg.id, {
+              ...fetchedMsg,
+              statuses: existingMsg.statuses,
+            });
+          } else {
+            // Use fetched message if it has better data
+            existingMessagesMap.set(fetchedMsg.id, fetchedMsg);
+          }
+        }
+      });
+
+      // Convert map back to array and sort by created_at (newest first)
+      const mergedMessages = Array.from(existingMessagesMap.values());
+      const sortedMessages = mergedMessages.sort((a, b) => {
         const timeA = new Date(a.created_at).getTime();
         const timeB = new Date(b.created_at).getTime();
         return timeB - timeA; // Descending order (newest first)
       });
+
       setMessages(sortedMessages);
+      messagesRef.current = sortedMessages;
       setLoader(false);
+      isFetchingMessagesRef.current = false;
 
       // Reset the marked as read tracking when messages are fetched
       // This ensures we can mark messages as read when screen is focused
@@ -169,8 +208,23 @@ const SingleChat = (props: any) => {
     } catch (error: unknown) {
       console.error('[SingleChat.fetchMessages] Error:', error);
       setLoader(false);
+      isFetchingMessagesRef.current = false;
     }
   }, [conversationId]);
+
+  // Store handler refs (will be initialized after handlers are defined)
+  const handleNewMessageRef = useRef<
+    ((data: MessageSentEventData['message']) => void) | null
+  >(null);
+  const handleMessageReadRef = useRef<
+    ((data: MessageReadEventData) => void) | null
+  >(null);
+  const handleMessageDeliveredRef = useRef<
+    ((data: MessageDeliveredEventData) => void) | null
+  >(null);
+  const handleParticipantBlockedRef = useRef<
+    ((data: ParticipantBlockedEventData) => void) | null
+  >(null);
 
   // Setup Pusher real-time listeners for this conversation
   const setupPusherListeners = useCallback(async () => {
@@ -225,9 +279,12 @@ const SingleChat = (props: any) => {
                   break;
                 }
                 console.log('[SingleChat] New message received:', messageData);
-                handleNewMessage(
-                  messageData as MessageSentEventData['message']
-                );
+                // Use handler from closure - will be updated via dependency array
+                if (handleNewMessageRef.current) {
+                  handleNewMessageRef.current(
+                    messageData as MessageSentEventData['message']
+                  );
+                }
                 break;
               }
 
@@ -235,7 +292,11 @@ const SingleChat = (props: any) => {
                 // Backend sends: {event: 'MessageRead', message_id: 50, read_by: {id: 3642, type: 'User'}}
                 const readData = rawData;
                 console.log('[SingleChat] Message read:', readData);
-                handleMessageRead(readData as MessageReadEventData);
+                if (handleMessageReadRef.current) {
+                  handleMessageReadRef.current(
+                    readData as MessageReadEventData
+                  );
+                }
                 break;
               }
 
@@ -243,17 +304,21 @@ const SingleChat = (props: any) => {
                 // Backend sends: {event: 'MessageDelivered', message_id: 50, delivered_by: {id: 3642, type: 'User'}}
                 const deliveredData = rawData;
                 console.log('[SingleChat] Message delivered:', deliveredData);
-                handleMessageDelivered(
-                  deliveredData as MessageDeliveredEventData
-                );
+                if (handleMessageDeliveredRef.current) {
+                  handleMessageDeliveredRef.current(
+                    deliveredData as MessageDeliveredEventData
+                  );
+                }
                 break;
               }
 
               case 'ParticipantBlocked': {
                 console.log('[SingleChat] Participant blocked:', rawData);
-                handleParticipantBlocked(
-                  rawData as ParticipantBlockedEventData
-                );
+                if (handleParticipantBlockedRef.current) {
+                  handleParticipantBlockedRef.current(
+                    rawData as ParticipantBlockedEventData
+                  );
+                }
                 break;
               }
 
@@ -347,12 +412,18 @@ const SingleChat = (props: any) => {
           return prevMessages;
         }
 
+        // Always add the message, even if we're fetching
+        // The fetchMessages function will merge and deduplicate
         const newMessages = [message, ...prevMessages];
-        return newMessages.sort((a, b) => {
+        const sortedMessages = newMessages.sort((a, b) => {
           const timeA = new Date(a.created_at).getTime();
           const timeB = new Date(b.created_at).getTime();
           return timeB - timeA;
         });
+
+        // Update ref to keep it in sync
+        messagesRef.current = sortedMessages;
+        return sortedMessages;
       });
 
       // Mark this specific message as read immediately since user is viewing the chat
@@ -526,9 +597,29 @@ const SingleChat = (props: any) => {
     [currentUser]
   );
 
+  // Update handler refs when handlers are defined
+  useEffect(() => {
+    handleNewMessageRef.current = handleNewMessage;
+    handleMessageReadRef.current = handleMessageRead;
+    handleMessageDeliveredRef.current = handleMessageDelivered;
+    handleParticipantBlockedRef.current = handleParticipantBlocked;
+  }, [
+    handleNewMessage,
+    handleMessageRead,
+    handleMessageDelivered,
+    handleParticipantBlocked,
+  ]);
+
+  // Keep messagesRef in sync with messages state
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // Initial fetch and setup Pusher
   useEffect(() => {
     if (conversationId) {
+      // Reset messages ref when conversation changes
+      messagesRef.current = [];
       fetchMessages();
       setupPusherListeners();
 
@@ -542,6 +633,8 @@ const SingleChat = (props: any) => {
         if (typingTimeoutRef.current) {
           clearTimeout(typingTimeoutRef.current);
         }
+        // Reset fetching flag
+        isFetchingMessagesRef.current = false;
       };
     }
   }, [conversationId, fetchMessages, setupPusherListeners]);

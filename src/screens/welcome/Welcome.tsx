@@ -40,7 +40,6 @@ import { AccountModal } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
-import RecommendationButton from './RecommendationButton';
 import UsersList from './UsersList';
 
 type OptionButton = {
@@ -417,7 +416,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const handleProfileCompleteData = useCallback(async () => {
     const baseState: Record<string, boolean> = {
-      primary_image_to_show: Boolean(currentUser?.media?.primary_image_to_show),
+      primary_image_to_show: Boolean(currentUser?.primary_image_to_show),
       // Currently not entertaining cover photo
       // cover_image: Boolean(currentUser?.media?.cover_image),
       tagline: Boolean(currentUser?.detail?.tagline),
@@ -610,10 +609,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               ]}
               onPress={() => setHeaderModal(!headerModal)}
             >
-              {currentUser?.media?.primary_image_to_show &&
-              currentUser?.media?.primary_image_to_show?.length ? (
+              {currentUser?.primary_image_to_show &&
+              currentUser?.primary_image_to_show?.length ? (
                 <Image
-                  source={{ uri: currentUser.media.primary_image_to_show }}
+                  source={{ uri: currentUser.primary_image_to_show }}
                   style={[
                     Styles.headerIcon,
                     { width: 45, height: 45, borderRadius: 25 },
@@ -643,7 +642,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         onInfoItemPress={onInfoItemPress}
         currentUser={currentUser}
       />
-      <RecommendationButton onPress={onRecommendationPress} />
+      {/* <RecommendationButton onPress={onRecommendationPress} /> */}
       {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
       {userStats?.photo_requested_you_counter &&
       userStats?.photo_requested_you_counter >= 1 ? (

@@ -2,19 +2,14 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { t } from 'i18next';
 import moment from 'moment';
 import React, { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
+import { useSettingsStore } from '@/stores';
 
 import { hp, Typography } from '../global';
 import { CheckRtl, LanguageKeys } from '../languages';
@@ -47,6 +42,41 @@ const SliderEntry = ({
   onPassPress,
   onPress,
 }: any) => {
+  const dailyRecommendations = useSettingsStore().getDailyRecommendations();
+
+  // Format 24-hour time to 12-hour am/pm format
+  const formatTimeToAmPm = (hour24: string): string => {
+    const hour = parseInt(hour24, 10);
+    if (isNaN(hour)) return hour24;
+
+    // Handle 24 as 12 AM (midnight)
+    if (hour === 24 || hour === 0) {
+      return '12 AM';
+    }
+
+    if (hour === 12) {
+      return '12 PM';
+    }
+
+    if (hour > 12) {
+      return `${hour - 12} PM`;
+    }
+
+    return `${hour} AM`;
+  };
+
+  // Get formatted time range for the message
+  const getTimeRangeText = (): string => {
+    if (!dailyRecommendations?.start || !dailyRecommendations?.end) {
+      return '6 PM and 12 AM'; // Fallback
+    }
+
+    const startTime = formatTimeToAmPm(dailyRecommendations.start);
+    const endTime = formatTimeToAmPm(dailyRecommendations.end);
+
+    return `${startTime} and ${endTime}`;
+  };
+
   const Rtl = CheckRtl();
   const { currentUser, conversations } = useGlobalContext();
   const navigation: any = useNavigation();
@@ -66,7 +96,7 @@ const SliderEntry = ({
     age: data?.age,
     city: data?.city,
     country: data?.country,
-    image: data?.media?.primary_image_to_show,
+    image: data?.primary_image_to_show,
     token: data?.fcm_token
       ?.map((item: any) => item?.fcm_token)
       .filter((token: any) => token !== undefined && token !== null),
@@ -212,11 +242,11 @@ const SliderEntry = ({
         bottom: 0,
       }}
     >
-      {!profileImageError && data?.media?.primary_image_to_show ? (
+      {!profileImageError && data?.primary_image_to_show ? (
         <Image
           source={
-            data?.media?.primary_image_to_show
-              ? { uri: data?.media?.primary_image_to_show }
+            data?.primary_image_to_show
+              ? { uri: data?.primary_image_to_show }
               : Images.userPlaceholderVertical
           }
           onLoadStart={onProfileImageLoadStart}
@@ -228,17 +258,17 @@ const SliderEntry = ({
       ) : (
         <Image
           source={Images.userPlaceholderVertical}
-          style={{ ...Styles.image, height: '100%' }}
-          resizeMode="contain"
+          style={{ ...Styles.image, height: '100%', width: '100%' }}
+          resizeMode="cover"
         />
       )}
-      {profileImageLoader && (
+      {/* {profileImageLoader && (
         <ActivityIndicator
           style={{ position: 'absolute' }}
           color={Colors.theme}
           size={wp(8)}
         />
-      )}
+      )} */}
     </View>
   );
 
@@ -248,7 +278,9 @@ const SliderEntry = ({
         <View style={Styles.nullUserInfoContainer}>
           <Image source={Images.recommendationIcon2} style={Styles.nullIcon} />
           <Text style={Styles.userNullTxtName}>
-            {t('noRcommendedUserAvailable')}
+            {t('noRcommendedUserAvailable', {
+              timeRange: getTimeRangeText(),
+            })}
           </Text>
         </View>
         <View style={Styles.closeTextContainer}>

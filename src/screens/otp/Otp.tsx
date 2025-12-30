@@ -40,15 +40,11 @@ type User = {
   longitude?: number;
   membership_status?: number | null;
   membership_expiry?: string | null;
-  media?: {
-    primary_image_to_show?: string[];
-  };
+  primary_image_to_show?: string;
   results?: {
     id?: string | number;
     first_name?: string;
-    media?: {
-      primary_image_to_show?: string[];
-    };
+    primary_image_to_show?: string;
     membership_status?: number | null;
   };
 };
@@ -117,8 +113,8 @@ const Otp = (props: OtpProps) => {
       }
 
       const hasPrimaryImage =
-        userData?.media?.primary_image_to_show &&
-        userData.media.primary_image_to_show.length > 0;
+        userData?.primary_image_to_show &&
+        userData.primary_image_to_show.length > 0;
 
       if (!hasPrimaryImage) {
         navigateTo('ProfilePicture');

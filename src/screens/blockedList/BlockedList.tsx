@@ -153,10 +153,10 @@ const BlockedList = (props: any) => {
     const { full_name, city, country } = item;
     return (
       <View style={Styles.itemCon}>
-        {item?.media?.primary_image_to_show ? (
+        {item?.primary_image_to_show ? (
           <View style={Styles.itemImage}>
             <Image
-              source={{ uri: item.media.primary_image_to_show }}
+              source={{ uri: item?.primary_image_to_show }}
               resizeMode="cover"
               style={Styles.itemImage}
               onLoadStart={onImageLoadStart}

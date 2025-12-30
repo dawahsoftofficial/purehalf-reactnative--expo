@@ -167,9 +167,7 @@ function ProfilePicture(props: ProfilePictureProps) {
               const result = response?.results;
               const user: User = {
                 ...(currentUser as User),
-                media: {
-                  primary_image_to_show: result?.primary_image_to_show,
-                },
+                primary_image_to_show: result?.primary_image_to_show,
               };
               updateCurrentUser(user);
               await setData(storageKeys.USER, user);
