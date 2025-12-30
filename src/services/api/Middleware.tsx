@@ -30,7 +30,7 @@ Api.interceptors.request.use(
       headers: {
         ...config.headers,
         Authorization: config.headers.Authorization
-          ? `Bearer ${config.headers.Authorization.split(' ')[1]?.substring(0, 20)}...`
+          ? `Bearer ${token}`
           : 'No token',
       },
       data: config.data,
@@ -39,7 +39,7 @@ Api.interceptors.request.use(
       dataSize: config.data ? JSON.stringify(config.data).length : 0,
     };
 
-    // console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
+    console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
 
     // Store request timestamp for response time calculation
     config.metadata = { startTime: Date.now() };

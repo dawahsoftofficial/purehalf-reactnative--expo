@@ -222,7 +222,6 @@ const SavedSearches = () => {
         onClose={hideDeleteAlert}
         onDeletePress={onDeleteAlertDeletePress}
         onCancelPress={hideDeleteAlert}
-        useCustomModal={true}
       />
     </ScrollView>
   );

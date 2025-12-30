@@ -244,12 +244,3 @@ export type ParticipantBlockedEventData = {
   blocked_user_id: number;
   blocked_by_id: number;
 };
-
-/**
- * Typing event data (from Pusher client events)
- */
-export type TypingEventData = {
-  user_id: number;
-  is_typing: boolean;
-  conversation_id?: number;
-};

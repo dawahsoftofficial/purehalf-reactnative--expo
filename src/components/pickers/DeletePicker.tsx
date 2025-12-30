@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import { LanguageKeys } from '../../languages';
 import { Colors } from '../../res';
@@ -11,6 +11,8 @@ const DeletePicker = (props: any) => {
     onClose = () => null,
     useCustomModal = false,
     actionButtonLabel = LanguageKeys.delete,
+    onDeletePress,
+    onCancelPress,
   } = props;
 
   const deletePickerData = [
@@ -26,13 +28,20 @@ const DeletePicker = (props: any) => {
     },
   ];
 
-  const onPickerButtonPress = (item: any) => {
-    if (item?.value === 'delete') {
-      if (props?.onDeletePress) props.onDeletePress();
-    } else {
-      if (props?.onCancelPress) props.onCancelPress();
-    }
-  };
+  const handleButtonPress = useCallback(
+    (item: any) => {
+      if (item?.value === 'delete') {
+        if (onDeletePress) {
+          onDeletePress();
+        }
+      } else {
+        if (onCancelPress) {
+          onCancelPress();
+        }
+      }
+    },
+    [onDeletePress, onCancelPress]
+  );
 
   return (
     <ButtonPicker
@@ -40,7 +49,7 @@ const DeletePicker = (props: any) => {
       data={deletePickerData}
       onClose={onClose}
       headerTitle={headerTitle}
-      onButtonPress={onPickerButtonPress}
+      onButtonPress={handleButtonPress}
       useCustomModal={useCustomModal}
     />
   );

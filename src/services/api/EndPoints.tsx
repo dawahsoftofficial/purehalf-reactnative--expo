@@ -68,22 +68,6 @@ const EndPoints = {
     `/auth/conversations/${conversationId}/mark-all-read`,
   markMessageDelivered: (messageId: number) =>
     `/auth/conversations/messages/${messageId}/delivered`,
-
-  /**
-   * Endpoint for sending typing indicator
-   * @param conversationId - Conversation ID
-   * @returns Endpoint path
-   */
-  sendTypingIndicator: (conversationId: number) =>
-    `/conversations/${conversationId}/typing`,
-
-  /**
-   * Alternative endpoint structure (if backend uses this pattern)
-   * @param conversationId - Conversation ID
-   * @returns Endpoint path
-   */
-  // sendTypingIndicator: (conversationId: number) =>
-  //   `/conversations/${conversationId}/typing`,
 };
 
 export default EndPoints;

@@ -1,13 +1,12 @@
 import {
   Pusher,
   type PusherChannel,
-  PusherEvent,
+  type PusherEvent,
 } from '@pusher/pusher-websocket-react-native';
 import axios from 'axios';
 import { useEffect, useRef, useState } from 'react';
 
 import BaseUrl from '../api/BaseUrl';
-import type { Conversation, Message } from '../api/types/message-types';
 import { StorageManager } from '../storageManager';
 
 type PusherConfig = {
@@ -15,15 +14,6 @@ type PusherConfig = {
   cluster: string;
   authEndpoint?: string;
   useTLS?: boolean;
-};
-
-type PusherEventCallbacks = {
-  onConversationUpdated?: (conversation: Conversation) => void;
-  onNewConversation?: (conversation: Conversation) => void;
-  onMessageReceived?: (message: Message, conversationId: number) => void;
-  onMessageUpdated?: (message: Message, conversationId: number) => void;
-  onTypingStart?: (userId: number, conversationId: number) => void;
-  onTypingStop?: (userId: number, conversationId: number) => void;
 };
 
 /**
@@ -204,160 +194,6 @@ class PusherService {
   };
 
   /**
-   * Subscribe to user's private channel for conversation updates
-   * @param userId - Current user ID
-   * @param callbacks - Event callbacks
-   */
-  subscribeToUserChannel = async (
-    userId: number | string,
-    callbacks: PusherEventCallbacks
-  ) => {
-    if (!this.pusher || !this.initialized) {
-      console.error('[PusherService] Pusher not initialized');
-      return () => {};
-    }
-
-    const channelName = `private-user.${userId}`;
-
-    try {
-      const channel = await this.pusher.subscribe({
-        channelName,
-        onSubscriptionSucceeded: () => {
-          console.log(
-            '[PusherService] Subscribed to user channel:',
-            channelName
-          );
-        },
-        onSubscriptionError: (channelName: string, message: string) => {
-          console.error('[PusherService] Subscription error:', {
-            channelName,
-            message,
-          });
-        },
-        onEvent: (event: PusherEvent) => {
-          try {
-            const data =
-              typeof event.data === 'string'
-                ? JSON.parse(event.data)
-                : event.data;
-
-            switch (event.eventName) {
-              case 'conversation.updated':
-                console.log('[PusherService] Conversation updated:', data);
-                callbacks.onConversationUpdated?.(data as Conversation);
-                break;
-              case 'conversation.created':
-                console.log('[PusherService] New conversation:', data);
-                callbacks.onNewConversation?.(data as Conversation);
-                break;
-              default:
-                console.log(
-                  '[PusherService] Unhandled event:',
-                  event.eventName
-                );
-            }
-          } catch (error) {
-            console.error('[PusherService] Error parsing event data:', error);
-          }
-        },
-      });
-
-      this.channels.set(channelName, channel);
-
-      return () => {
-        this.unsubscribeFromChannel(channelName);
-      };
-    } catch (error) {
-      console.error('[PusherService.subscribeToUserChannel] Error:', error);
-      return () => {};
-    }
-  };
-
-  /**
-   * Subscribe to a conversation channel for real-time messages
-   * @param conversationId - Conversation ID
-   * @param callbacks - Event callbacks
-   */
-  subscribeToConversation = async (
-    conversationId: number | string,
-    callbacks: PusherEventCallbacks
-  ) => {
-    if (!this.pusher || !this.initialized) {
-      console.error('[PusherService] Pusher not initialized');
-      return () => {};
-    }
-
-    const channelName = `private-conversation.${conversationId}`;
-
-    try {
-      const channel = await this.pusher.subscribe({
-        channelName,
-        onSubscriptionSucceeded: () => {
-          console.log(
-            '[PusherService] Subscribed to conversation:',
-            channelName
-          );
-        },
-        onSubscriptionError: (channelName: string, message: string) => {
-          console.error('[PusherService] Subscription error:', {
-            channelName,
-            message,
-          });
-        },
-        onEvent: (event: PusherEvent) => {
-          try {
-            const data =
-              typeof event.data === 'string'
-                ? JSON.parse(event.data)
-                : event.data;
-
-            switch (event.eventName) {
-              case 'message.created':
-                console.log('[PusherService] New message:', data);
-                callbacks.onMessageReceived?.(
-                  data as Message,
-                  Number(conversationId)
-                );
-                break;
-              case 'message.updated':
-                console.log('[PusherService] Message updated:', data);
-                callbacks.onMessageUpdated?.(
-                  data as Message,
-                  Number(conversationId)
-                );
-                break;
-              case 'typing.start':
-                console.log('[PusherService] User typing started:', data);
-                callbacks.onTypingStart?.(data.user_id, Number(conversationId));
-                break;
-              case 'typing.stop':
-                console.log('[PusherService] User typing stopped:', data);
-                callbacks.onTypingStop?.(data.user_id, Number(conversationId));
-                break;
-              default:
-                console.log(
-                  '[PusherService] Unhandled event:',
-                  event.eventName
-                );
-            }
-          } catch (error) {
-            console.error('[PusherService] Error parsing event data:', error);
-          }
-        },
-      });
-
-      this.channels.set(channelName, channel);
-
-      return () => {
-        this.unsubscribeFromChannel(channelName);
-      };
-    } catch (error) {
-      console.error('[PusherService.subscribeToConversation] Error:', error);
-      return () => {};
-    }
-  };
-
-  /**
    * Unsubscribe from a channel
    * @param channelName - Channel name to unsubscribe from
    */
@@ -412,7 +248,7 @@ class PusherService {
   };
 
   /**
-   * Subscribe to any channel (public or private) - for testing purposes
+   * Subscribe to any channel (public or private)
    * @param channelName - Channel name to subscribe to
    * @param onEvent - Callback for any event received on this channel
    */
@@ -533,32 +369,6 @@ class PusherService {
     } catch (error) {
       console.error('[PusherService.subscribeToChannel] Error:', error);
       return () => {};
-    }
-  };
-
-  /**
-   * Trigger a client event on a channel (e.g., typing indicator)
-   * @param channelName - Channel name
-   * @param eventName - Event name
-   * @param data - Event data
-   */
-  triggerClientEvent = async (
-    channelName: string,
-    eventName: string,
-    data: unknown
-  ) => {
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      try {
-        const event = new PusherEvent({
-          channelName,
-          eventName: `client-${eventName}`,
-          data: typeof data === 'string' ? data : JSON.stringify(data),
-        });
-        await channel.trigger(event);
-      } catch (error) {
-        console.error('[PusherService.triggerClientEvent] Error:', error);
-      }
     }
   };
 }

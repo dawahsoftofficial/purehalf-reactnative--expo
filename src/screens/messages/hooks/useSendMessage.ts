@@ -104,9 +104,7 @@ export function useSendMessage({
       });
       setMessages(sortedMessages);
     } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to send message';
-      flashErrorMessage(errorMessage);
+      flashErrorMessage(error as string);
     }
   };
 

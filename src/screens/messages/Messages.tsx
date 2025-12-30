@@ -17,20 +17,19 @@ import {
   MenuOptions,
   MenuTrigger,
 } from 'react-native-popup-menu';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
 import pusherService from '@/services/pusher';
 
 import {
   AnimatedLoader,
-  Button,
   Container,
   Header,
   ModalLoader,
   PurchaseSuccessModal,
   Text,
 } from '../../components';
-import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
@@ -549,13 +548,13 @@ const Messages = (props: MessagesProps) => {
             {quote?.split('|')[1]}
           </Text>
         </View>
-        <View style={Styles.findMatchButtonContainer}>
+        {/* <View style={Styles.findMatchButtonContainer}>
           <Button
             text="Find Match"
             onPress={onFindMatchPress}
             buttonStyle={Styles.findMatchButton}
           />
-        </View>
+        </View> */}
       </View>
     );
   };
@@ -590,11 +589,11 @@ const Messages = (props: MessagesProps) => {
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            <ChatCreditsBadge
+            {/* <ChatCreditsBadge
               credits={currentUser?.chat_credits || 0}
               onPress={onChatCreditsPress}
               disabled={isChatCreditsLoading}
-            />
+            /> */}
             {currentUser?.role === 'guardian' && (
               <View style={[Styles.gaurdianHeader]}>
                 <Menu>
@@ -667,6 +666,9 @@ const Messages = (props: MessagesProps) => {
           renderEmptyList()
         )}
       </View>
+      <Ripple style={Styles.btnPlus} onPress={onFindMatchPress}>
+        <AntDesign name="plus" size={wp(8)} color={Colors.color2} />
+      </Ripple>
       <ModalLoader
         visible={modalLoader.visible}
         message={modalLoader.message}
@@ -735,10 +737,10 @@ const Styles = StyleSheet.create({
     borderRadius: (width * 1 * 0.13) / 2,
   },
   itemInnerCon: {
-    paddingTop: hp(1),
     width: wp(81),
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   nameMsgCon: {
     width: wp(47),
@@ -856,5 +858,21 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.5,
+  },
+  btnPlus: {
+    position: 'absolute',
+    bottom: 0,
+    right: wp(8),
+    backgroundColor: Colors.theme,
+    borderRadius: wp(10),
+    padding: wp(4),
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.color1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
   },
 });

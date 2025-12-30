@@ -5,7 +5,7 @@ import {
 } from '@react-navigation/native';
 import moment from 'moment';
 import type { ReactElement } from 'react';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
@@ -39,7 +39,9 @@ import {
   capitalize,
   Firebase,
   flashErrorMessage,
+  flashSuccessMessage,
   isIOS,
+  StorageManager,
   useGlobalContext,
 } from '../../services';
 
@@ -48,6 +50,7 @@ const { width, height } = Dimensions.get('window');
 type FcmToken = { fcm_token?: string | null };
 
 type UserMedia = {
+  primary_image?: string;
   primary_image_to_show?: string;
   cover_image?: string;
   public_gallery?: string[];
@@ -315,7 +318,8 @@ const Header = ({
   const [isPremiumMember, setIsPremiumMember] = useState<boolean>(false);
   const [modalLoader, setModalLoader] = useState(false);
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
-  const [toolTipVisible, setToolTipVisible] = useState<boolean>(false);
+  const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
+  const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
 
   const chatUserData = useMemo(
     () => ({
@@ -338,8 +342,18 @@ const Header = ({
           ? false
           : true
       );
-      setUserData(initialUserData);
+      const updatedUserData = {
+        ...initialUserData,
+        is_blur:
+          currentUser?.id === initialUserData?.id
+            ? currentUser?.is_blur
+            : initialUserData?.is_blur,
+      };
+      setUserData(updatedUserData);
       setLiked(Boolean(initialUserData?.liked));
+      // Reset image loader states when user data changes
+      setProfileImageLoader(false);
+      setProfileImageError(false);
     }, [initialUserData, currentUser])
   );
 
@@ -502,6 +516,43 @@ const Header = ({
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
+  const onBlurButtonPress = useCallback(() => {
+    setBlurModalVisible(true);
+  }, []);
+
+  const closeBlurModal = useCallback(() => {
+    setBlurModalVisible(false);
+  }, []);
+
+  const onToggleBlur = useCallback(async () => {
+    if (isUpdatingBlur) return;
+
+    const newBlurValue = !userData?.is_blur;
+    setIsUpdatingBlur(true);
+    try {
+      const res = await ApiServices.updateDetails({
+        is_blur: newBlurValue ? 1 : 0,
+      });
+      const { setData, storageKeys } = StorageManager;
+      const updatedUser = {
+        ...currentUser,
+        ...(res as User),
+        is_blur: newBlurValue,
+      };
+      await setData(storageKeys.USER, updatedUser);
+      updateCurrentUser(updatedUser);
+      setUserData((prev) => ({ ...prev, is_blur: newBlurValue }));
+      flashSuccessMessage(
+        newBlurValue ? LanguageKeys.turnOnBlur : LanguageKeys.turnOffBlur
+      );
+      setBlurModalVisible(false);
+    } catch {
+      // Error is already handled by updateDetails API
+    } finally {
+      setIsUpdatingBlur(false);
+    }
+  }, [currentUser, isUpdatingBlur, updateCurrentUser, userData?.is_blur]);
+
   const onProfileImageLoadStart = useCallback(
     () => setProfileImageLoader(true),
     []
@@ -510,7 +561,16 @@ const Header = ({
     () => setProfileImageLoader(false),
     []
   );
-  const onProfileImageError = useCallback(() => setProfileImageError(true), []);
+  const onProfileImageError = useCallback(() => {
+    setProfileImageError(true);
+    setProfileImageLoader(false);
+  }, []);
+
+  // Reset loader when image URI changes
+  useEffect(() => {
+    setProfileImageLoader(false);
+    setProfileImageError(false);
+  }, [userData?.media?.primary_image_to_show]);
 
   const formattedLastOnlineDate = useMemo(() => {
     if (!userData?.last_online_at) {
@@ -585,7 +645,7 @@ const Header = ({
         ]}
       >
         <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
-        {isSelf ? (
+        {/* {isSelf ? (
           <Ripple
             style={Styles.infoChip}
             onPress={() => setToolTipVisible(true)}
@@ -594,7 +654,7 @@ const Header = ({
           >
             <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
           </Ripple>
-        ) : null}
+        ) : null} */}
       </View>
       {fromUserProfile && (
         <Ripple
@@ -698,53 +758,152 @@ const Header = ({
                   onEditPress={onEditPress}
                 />
               )}
+
+              {isSelf && (
+                <Ripple
+                  style={{
+                    ...Styles.myPhotosBtn,
+                    flexDirection: Rtl ? 'row-reverse' : 'row',
+                  }}
+                  onPress={onBlurButtonPress}
+                >
+                  <Entypo
+                    style={{
+                      marginRight: Rtl ? 0 : wp(1.6),
+                      marginLeft: Rtl ? wp(1.6) : 0,
+                    }}
+                    name={userData?.is_blur ? 'eye' : 'eye-with-line'}
+                    size={wp(5.5)}
+                    color={Colors.color2}
+                  />
+                  <View
+                    style={{
+                      ...Styles.allPhotosBtnInner,
+                      flexDirection: Rtl ? 'row-reverse' : 'row',
+                    }}
+                  >
+                    <Text style={Styles.allPhotosTxt}>
+                      {userData?.is_blur ? 'Blur My Photos' : 'Blur is ON'}
+                    </Text>
+                  </View>
+                </Ripple>
+              )}
             </View>
           </View>
         </View>
       </View>
 
-      <Modal transparent={true} visible={toolTipVisible}>
-        <View style={Styles.modalWrapper}>
-          <Ripple
-            style={Styles.closeWrapper}
-            onPress={() => setToolTipVisible(false)}
-          >
-            <AntDesign name="close" size={wp(6)} color={Colors.color1} />
-          </Ripple>
-          <View style={Styles.tootltipTextWrapper}>
-            <Image source={Images.quotesIcon} style={Styles.quotesIcon} />
-            <ReactText style={Styles.tootltipTitle}>
-              Honoring Islamic Values
-            </ReactText>
-            <ReactText style={Styles.description}>
-              We request you to uphold modesty, inviting blessings and mercy
-              from Allah. Female profile pictures are blurred by default. They
-              can decide who gets to see their images.
-            </ReactText>
-            <ReactText style={Styles.tootltipTitle}>Quranic Verse:</ReactText>
-            <ReactText style={Styles.tootltipText}>
-              {
-                '"And tell the believing women to lower their gaze and guard their private parts and not expose their adornment except that which (necessarily)..."'
-              }{' '}
-              <ReactText>(Surah An-Nur, 24:31)</ReactText>
-            </ReactText>
-            <ReactText style={[Styles.tootltipTitle, { marginTop: 30 }]}>
-              Hadith:
-            </ReactText>
-            <ReactText style={Styles.tootltipText}>
-              {
-                '"Modesty is part of faith and faith is in Paradise, but obscenity is a part of hardness of the heart and hardness of the heart is in Hell."'
-              }{' '}
-              <ReactText>(Sahih Muslim)</ReactText>
-            </ReactText>
-          </View>
+      <Modal transparent={true} visible={blurModalVisible}>
+        <View style={Styles.blurModalWrapper}>
+          <View style={Styles.blurModalContent}>
+            <Ripple
+              style={Styles.blurModalCloseWrapper}
+              onPress={closeBlurModal}
+            >
+              <AntDesign name="close" size={wp(6)} color={Colors.color1} />
+            </Ripple>
 
-          <Button
-            onPress={() => setToolTipVisible(false)}
-            buttonStyle={Styles.closeBtn}
-            text={'Close'}
-            textStyle={Styles.closeBtnText}
-          />
+            <Text style={Styles.blurModalTitle}>
+              {LanguageKeys.blurYourPhotoForPrivacy}
+            </Text>
+
+            <View style={Styles.blurImageComparison}>
+              <View style={Styles.blurImageContainer}>
+                <View style={Styles.blurImageWrapper}>
+                  <Image
+                    source={{
+                      uri: userData?.media?.primary_image_to_show,
+                    }}
+                    style={Styles.blurComparisonImage}
+                    resizeMode="cover"
+                  />
+                </View>
+                <Text style={Styles.blurImageLabel}>
+                  {LanguageKeys.visibleToOthersUnblurred}
+                </Text>
+              </View>
+
+              <AntDesign
+                name="arrowright"
+                size={wp(6)}
+                color={Colors.color1}
+                style={Styles.blurArrow}
+              />
+
+              <View style={Styles.blurImageContainer}>
+                <View style={Styles.blurImageWrapper}>
+                  <Image
+                    source={{
+                      uri: userData?.media?.primary_image,
+                    }}
+                    style={Styles.blurComparisonImage}
+                    resizeMode="cover"
+                  />
+                  {/* <BlurView style={StyleSheet.absoluteFill} blurAmount={10} /> */}
+                </View>
+                <Text style={Styles.blurImageLabel}>
+                  {LanguageKeys.visibleToOthersBlurred}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={Styles.blurDescription}>
+              {LanguageKeys.youWillStillSeeOriginal}
+            </Text>
+
+            <View style={Styles.blurBenefitsList}>
+              <View style={Styles.blurBenefitItem}>
+                <AntDesign name="check" size={wp(4)} color={Colors.theme} />
+                <Text style={Styles.blurBenefitText}>
+                  {LanguageKeys.helpsKeepIdentityPrivate}
+                </Text>
+              </View>
+              <View style={Styles.blurBenefitItem}>
+                <AntDesign name="check" size={wp(4)} color={Colors.theme} />
+                <Text style={Styles.blurBenefitText}>
+                  {LanguageKeys.recommendedForIslamicModesty}
+                </Text>
+              </View>
+              <View style={Styles.blurBenefitItem}>
+                <AntDesign name="check" size={wp(4)} color={Colors.theme} />
+                <Text style={Styles.blurBenefitText}>
+                  {LanguageKeys.youStayInControl}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={Styles.blurSecurityNote}>
+              {LanguageKeys.originalPhotoStoredSecurely}
+            </Text>
+
+            <View style={Styles.blurModalButtons}>
+              <Button
+                onPress={closeBlurModal}
+                buttonStyle={[
+                  Styles.blurModalButton,
+                  Styles.blurModalButtonSecondary,
+                ]}
+                text={LanguageKeys.gotIt}
+                textStyle={Styles.blurModalButtonTextSecondary}
+              />
+              <Button
+                onPress={onToggleBlur}
+                buttonStyle={[
+                  Styles.blurModalButton,
+                  Styles.blurModalButtonPrimary,
+                ]}
+                text={
+                  userData?.is_blur
+                    ? LanguageKeys.blurIsOn
+                    : LanguageKeys.blurForOthers
+                }
+                textStyle={Styles.blurModalButtonTextPrimary}
+                disabled={isUpdatingBlur}
+                loading={isUpdatingBlur}
+                loadingMessage={LanguageKeys.updating}
+              />
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -1084,5 +1243,116 @@ const Styles = StyleSheet.create({
   premiumBadgeIcon: {
     width: 14,
     height: 14,
+  },
+  blurModalWrapper: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  blurModalContent: {
+    backgroundColor: Colors.color2,
+    borderRadius: wp(4),
+    padding: wp(5),
+    width: '95%',
+    maxHeight: hp(90),
+  },
+  blurModalCloseWrapper: {
+    alignSelf: 'flex-end',
+    padding: wp(2),
+    marginTop: -wp(2),
+    marginRight: -wp(2),
+  },
+  blurModalTitle: {
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium1,
+    color: Colors.color1,
+    marginBottom: hp(2),
+    alignSelf: 'center',
+  },
+  blurImageComparison: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp(2),
+  },
+  blurImageContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  blurImageWrapper: {
+    width: wp(35),
+    height: wp(35),
+    borderRadius: wp(2),
+    overflow: 'hidden',
+    marginBottom: hp(1),
+  },
+  blurComparisonImage: {
+    width: '100%',
+    height: '100%',
+  },
+  blurImageLabel: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    color: Colors.color1,
+    textAlign: 'center',
+    marginTop: hp(0.5),
+  },
+  blurArrow: {
+    marginHorizontal: wp(2),
+  },
+  blurDescription: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    color: Colors.color1,
+    marginBottom: hp(2),
+  },
+  blurBenefitsList: {
+    marginBottom: hp(2),
+  },
+  blurBenefitItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: hp(1),
+  },
+  blurBenefitText: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    color: Colors.color1,
+    marginLeft: wp(2),
+    flex: 1,
+    includeFontPadding: false,
+  },
+  blurSecurityNote: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    color: Colors.color1,
+    marginBottom: hp(2),
+  },
+  blurModalButtons: {
+    flexDirection: 'row',
+    gap: wp(2),
+  },
+  blurModalButton: {
+    flex: 1,
+    paddingVertical: hp(1.5),
+  },
+  blurModalButtonPrimary: {
+    backgroundColor: Colors.theme,
+  },
+  blurModalButtonSecondary: {
+    backgroundColor: Colors.color2,
+    borderWidth: 1,
+    borderColor: Colors.color8,
+  },
+  blurModalButtonTextPrimary: {
+    color: Colors.color2,
+    // fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small2,
+  },
+  blurModalButtonTextSecondary: {
+    color: Colors.color1,
+    // fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small2,
   },
 });

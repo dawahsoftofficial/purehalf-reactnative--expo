@@ -71,10 +71,10 @@ const SearchProfiles = () => {
         <Button
           text={LanguageKeys.saveAndSearch}
           icon={
-            !premium ? (
-              <AntDesign name="lock" color={Colors.color2} size={wp(5)} />
+            premium ? (
+              <AntDesign name="unlock" color={Colors.color2} size={wp(5)} />
             ) : (
-              <Feather name="search" color={Colors.color2} size={wp(5)} />
+              <AntDesign name="lock" color={Colors.color2} size={wp(5)} />
             )
           }
           buttonStyle={Styles.saveSearchBtn}
@@ -84,7 +84,7 @@ const SearchProfiles = () => {
         <Button
           text={LanguageKeys.search}
           icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
-          buttonStyle={Styles.searchBtn}
+          buttonStyle={[Styles.searchBtn, { marginBottom: 0 }]}
           onPress={handleSearch}
         />
       </RNView>
@@ -133,6 +133,7 @@ const Styles = StyleSheet.create({
   saveSearchBtn: {
     marginHorizontal: wp(4),
     marginBottom: hp(2),
+    backgroundColor: Colors.color37,
   },
   searchBtn: {
     backgroundColor: Colors.color1,

@@ -22,4 +22,3 @@ export const useConversationStore = create<ConversationState>((set) => ({
     set({ unreadConversationsCount: 0, unreadMessagesCount: 0 });
   },
 }));
-

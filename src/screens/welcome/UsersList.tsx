@@ -169,8 +169,8 @@ const Styles = StyleSheet.create({
   },
   badgesContainer: {
     position: 'absolute',
-    top: hp(0.5),
-    right: wp(1),
+    top: hp(1),
+    right: wp(2),
     zIndex: 1,
   },
   name: {

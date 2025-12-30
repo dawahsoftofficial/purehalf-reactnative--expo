@@ -32,7 +32,6 @@ import type {
   MessageReadEventData,
   MessageSentEventData,
   ParticipantBlockedEventData,
-  TypingEventData,
 } from '../../services/api/types/message-types';
 import MessageBubble from './components/MessageBubble';
 import TypingIndicator from './components/TypingIndicator';
@@ -40,7 +39,6 @@ import { useSendMessage } from './hooks/useSendMessage';
 import Styles from './SingleChat.styles';
 import SingleChatHeader from './SingleChatHeader';
 
-const TYPING_INDICATOR_TIMEOUT = 3000;
 const SingleChat = (props: any) => {
   const Rtl = CheckRtl();
   const flatListRef: any = useRef(null);
@@ -75,39 +73,8 @@ const SingleChat = (props: any) => {
   const [inputMessage, setInputMessage] = useState('');
   const onChangeInputMessage = (text: string) => {
     setInputMessage(text);
-    // Send typing indicator when user types
-    handleTypingIndicator(text);
+    // TODO: Send typing indicator when user types
   };
-
-  // Handle typing indicator
-  const handleTypingIndicator = useCallback(
-    (text: string) => {
-      if (!conversationId) return;
-
-      const now = Date.now();
-      // Throttle typing events - only send every 1 second
-      if (now - lastTypingEventRef.current < 1000) return;
-
-      lastTypingEventRef.current = now;
-
-      // if (text.length > 0) {
-      //   // User is typing - trigger typing indicator via API
-      //   messageServices
-      //     .sendTypingIndicator(parseInt(conversationId, 10), true)
-      //     .catch((err) =>
-      //       console.error('[SingleChat] Error sending typing indicator:', err)
-      //     );
-      // } else {
-      //   // User stopped typing
-      //   messageServices
-      //     .sendTypingIndicator(parseInt(conversationId, 10), false)
-      //     .catch((err) =>
-      //       console.error('[SingleChat] Error sending stop typing:', err)
-      //     );
-      // }
-    },
-    [conversationId]
-  );
 
   const getOtherUserData = async () => {
     if (currentUser?.id === 'guardian') {
@@ -287,12 +254,6 @@ const SingleChat = (props: any) => {
                 handleParticipantBlocked(
                   rawData as ParticipantBlockedEventData
                 );
-                break;
-              }
-
-              case 'client-typing': {
-                console.log('[SingleChat] User typing:', rawData);
-                handleTypingEvent(rawData as TypingEventData);
                 break;
               }
 
@@ -565,36 +526,6 @@ const SingleChat = (props: any) => {
     [currentUser]
   );
 
-  // Handle typing indicator event
-  const handleTypingEvent = useCallback(
-    (data: TypingEventData) => {
-      const currentUserId =
-        currentUser?.id === 'guardian'
-          ? currentUser?.user?.id
-          : currentUser?.id;
-
-      // Only show typing indicator if it's from other user
-      if (data.user_id !== currentUserId) {
-        setIsOtherUserTyping(data.is_typing);
-
-        // Auto-hide typing indicator after timeout
-        if (data.is_typing) {
-          if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-          }
-          typingTimeoutRef.current = setTimeout(() => {
-            setIsOtherUserTyping(false);
-          }, TYPING_INDICATOR_TIMEOUT);
-        } else {
-          if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-          }
-        }
-      }
-    },
-    [currentUser]
-  );
-
   // Initial fetch and setup Pusher
   useEffect(() => {
     if (conversationId) {
@@ -727,6 +658,18 @@ const SingleChat = (props: any) => {
     props.navigation.navigate('AddWali', { fromSettings: true });
   };
 
+  const handleSubmitEditing = async () => {
+    if (inputMessage.trim().length > 0) {
+      const res = await onSendPress(inputMessage);
+
+      if (res?.type === 'blockedByYou') {
+        Alert.alert(
+          `You have blocked ${otherUserData?.name} please unblock first to send message`
+        );
+      }
+    }
+  };
+
   return (
     <Container>
       {/* {(currentUser?.membership_status === 0 ||
@@ -843,11 +786,13 @@ const SingleChat = (props: any) => {
             }}
             placeholder={t('message')}
             placeholderTextColor={Colors.color15}
-            multiline
             value={inputMessage}
             onChangeText={onChangeInputMessage}
             onFocus={onInputFocus}
+            onSubmitEditing={handleSubmitEditing}
             maxLength={350}
+            submitBehavior="blurAndSubmit"
+            returnKeyType="send"
           />
           <TouchableOpacity
             style={{

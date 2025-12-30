@@ -177,7 +177,7 @@ const Styles = StyleSheet.create({
   clearButtonText: {
     fontFamily: Fonts.APPFONT_L,
     fontSize: Typography.tiny2,
-    color: Colors.theme,
+    color: Colors.color4,
     includeFontPadding: false,
   },
 });

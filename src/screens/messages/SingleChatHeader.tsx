@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -61,6 +61,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   }, [propsIsBlockedByYou, propsIsBlockedYou]);
 
   const [isBlurred, setIsBlurred] = useState(true);
+  const menuRef = useRef<any>(null);
 
   const [deleteAlert, setDeleteAlert] = useState({
     visible: false,
@@ -97,10 +98,12 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   }, []);
 
   const onViewProfilePress = () => {
+    menuRef.current?.close();
     navigation.navigate('UserProfile', { userData: otherUserData });
   };
 
   const onBlockUnBlockUserPress = async () => {
+    menuRef.current?.close();
     if (!conversationId || !conversationData?.id) {
       flashErrorMessage('Conversation ID is missing');
       return;
@@ -145,6 +148,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const onBlockUnBlockAndReportUserPress = async () => {
+    menuRef.current?.close();
     if (!conversationId || !conversationData?.id) {
       flashErrorMessage('Conversation ID is missing');
       return;
@@ -240,7 +244,14 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const onDeleteAlertDeletePress = () => {
-    if (deleteAlert?.from === 'chat') {
+    // Capture the alert type before closing modal
+    const alertType = deleteAlert?.from;
+
+    // Close modal immediately
+    hideDeleteAlert();
+
+    // Execute action after modal closes
+    if (alertType === 'chat') {
       onDeleteChatPress();
     } else {
       onClearChatPress();
@@ -279,6 +290,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const showClearChatAlert = () => {
+    menuRef.current?.close();
     Keyboard.dismiss();
     setDeleteAlert({
       visible: true,
@@ -287,6 +299,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const showDeleteChatAlert = () => {
+    menuRef.current?.close();
     Keyboard.dismiss();
     setDeleteAlert({
       visible: true,
@@ -295,6 +308,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const onChangeBlur = () => {
+    menuRef.current?.close();
     const newParams = {
       type: '9',
       action_user_id: otherUserData?.id,
@@ -324,18 +338,18 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         'View profile',
-        'Unblock user',
+        // 'Unblock user',
         'Clear chat',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     } else {
       optionsArray = [
         'View profile',
-        'Block user',
-        'Report and block user',
+        // 'Block user',
+        // 'Report and block user',
         'Clear chat',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     }
@@ -343,20 +357,20 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         'View profile',
-        'Unblock user',
+        // 'Unblock user',
         'Clear chat',
         'Delete conversation',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     } else {
       optionsArray = [
         'View profile',
-        'Block user',
-        'Report and block user',
+        // 'Block user',
+        // 'Report and block user',
         'Clear chat',
         'Delete conversation',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     }
@@ -367,30 +381,30 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       actionsArray = [
         onViewProfilePress,
-        onBlockUnBlockUserPress,
+        // onBlockUnBlockUserPress,
         showClearChatAlert,
-        onChangeBlur,
+        // onChangeBlur,
       ];
     } else {
-      actionsArray = [onViewProfilePress, showClearChatAlert, onChangeBlur];
+      actionsArray = [onViewProfilePress, showClearChatAlert];
     }
   } else {
     if (isBlockedByYou) {
       actionsArray = [
         onViewProfilePress,
-        onBlockUnBlockUserPress,
+        // onBlockUnBlockUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
-        onChangeBlur,
+        // onChangeBlur,
       ];
     } else {
       actionsArray = [
         onViewProfilePress,
-        onBlockUnBlockUserPress,
-        onBlockUnBlockAndReportUserPress,
+        // onBlockUnBlockUserPress,
+        // onBlockUnBlockAndReportUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
-        onChangeBlur,
+        // onChangeBlur,
       ];
     }
   }
@@ -436,7 +450,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         </Ripple>
       </View>
       {currentUserId !== 'guardian' && (
-        <Menu>
+        <Menu ref={menuRef}>
           <MenuTrigger>
             <Image
               source={Images.verticalDots}
@@ -463,6 +477,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
                 <MenuOption
                   key={`${option}-${index}`}
                   onSelect={() => {
+                    menuRef.current?.close();
                     if (action) {
                       action();
                     }
@@ -490,7 +505,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         onClose={hideDeleteAlert}
         onDeletePress={onDeleteAlertDeletePress}
         onCancelPress={hideDeleteAlert}
-        useCustomModal={true}
+        useCustomModal={false}
       />
     </View>
   );
