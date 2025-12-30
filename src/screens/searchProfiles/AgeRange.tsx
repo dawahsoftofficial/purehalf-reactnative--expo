@@ -128,6 +128,8 @@ const Styles = StyleSheet.create({
   container: {
     paddingHorizontal: wp(4),
     paddingVertical: hp(2),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.color27,
   },
   fieldHeading: {
     color: Colors.color1,

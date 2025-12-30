@@ -582,7 +582,11 @@ export default function PremiumPaywallScreen({
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
-      <StatusBar barStyle={'light-content'} backgroundColor={'#594B85'} />
+      <StatusBar
+        translucent={true}
+        barStyle={'light-content'}
+        backgroundColor={'transparent'}
+      />
       <ModalLoader
         visible={loaderModal.visible}
         message={loaderModal.message}

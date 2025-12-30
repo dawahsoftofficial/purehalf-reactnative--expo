@@ -145,7 +145,9 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
         <View
           style={{
             ...Styles.fieldItemCon,
-            backgroundColor: index % 2 === 0 ? Colors.color31 : Colors.color2,
+            // backgroundColor: index % 2 === 0 ? Colors.color31 : Colors.color2,
+            borderBottomWidth: 1,
+            borderBottomColor: Colors.color27,
             // opacity: isLocked ? 0.6 : 1,
             borderLeftWidth: isLocked ? 3 : 0,
             borderLeftColor: isLocked ? Colors.theme : 'transparent',
@@ -174,6 +176,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
             style={{
               ...Styles.radioButtonOutercon,
               flexDirection: Rtl ? 'row-reverse' : 'row',
+              opacity: isLocked ? 0.5 : 1,
             }}
           >
             {data &&
@@ -194,7 +197,6 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
                     key={index}
                     hitSlop={20}
                     rippleColor={Colors.theme}
-                    disabled={isLocked}
                   >
                     <View
                       style={{
@@ -364,11 +366,9 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
             backgroundColor:
               isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
                 ? Colors.color39 + '20'
-                : index % 2 === 0
-                  ? Colors.color2
-                  : item?.id === 'distance'
-                    ? Colors.color2
-                    : Colors.color31,
+                : Colors.color2,
+            borderBottomWidth: 1,
+            borderBottomColor: Colors.color27,
             borderTopWidth:
               isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
                 ? 3
@@ -385,36 +385,36 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
             style={{
               flexDirection: Rtl ? 'row-reverse' : 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               marginBottom: hp(0.5),
             }}
           >
             <Text style={Styles.fieldHeading}>{title}</Text>
             {isLocked && (
-              <View
-                style={{
-                  marginLeft: Rtl ? 0 : wp(2),
-                  marginRight: Rtl ? wp(2) : 0,
-                  backgroundColor: Colors.color37,
-                  paddingHorizontal: wp(2),
-                  paddingVertical: hp(0.4),
-                }}
+              <Ripple
+                style={Styles.upgradeToPremiumButton}
+                onPress={handleLockedFilterPress}
+                hitSlop={10}
+                rippleColor={Colors.theme}
               >
                 <Text style={Styles.upgradeToPremiumText}>
                   Upgrade to Premium
                 </Text>
-              </View>
+              </Ripple>
             )}
           </View>
           <Ripple
             style={{
               ...Styles.dropDownBtn,
               alignSelf: Rtl ? 'flex-end' : 'flex-start',
+              opacity: isLocked ? 0.5 : 1,
             }}
-            onPress={openPicker.bind(null, item)}
+            onPress={
+              isLocked ? handleLockedFilterPress : openPicker.bind(null, item)
+            }
             hitSlop={20}
             rippleColor={Colors.theme}
             disabled={
-              isLocked ||
               (peopleSearch === 'location' && item?.id === 'country') ||
               (peopleSearch === 'country' && item?.id === 'distance')
             }
@@ -782,6 +782,13 @@ const Styles = StyleSheet.create({
   clearAllButton: {
     position: 'absolute',
     top: hp(0.2),
+  },
+  upgradeToPremiumButton: {
+    backgroundColor: Colors.color37,
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(0.5),
+    borderRadius: 2,
+    alignSelf: 'flex-end',
   },
   upgradeToPremiumText: {
     color: Colors.color2,
