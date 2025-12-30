@@ -2,6 +2,8 @@ import moment from 'moment';
 import { Platform } from 'react-native';
 import Purchases from 'react-native-purchases';
 
+import { usePremiumStore } from '../stores';
+
 const checkEmpty = (value: any) => {
   if (typeof value === 'string') {
     return value.replace(/\s/g, '').length === 0 ? true : false;
@@ -56,9 +58,13 @@ const setRevenueCat = (userID = null) => {
           appUserID: userIDString,
         });
       }
+      // Mark RevenueCat as configured and trigger refresh
+      usePremiumStore.getState().setRevenueCatConfigured(true);
+      // Trigger initial refresh after configuration
+      usePremiumStore.getState().refresh();
     }
-  } catch {
-    // Silently handle errors
+  } catch (error) {
+    console.warn('RevenueCat configuration failed:', error);
   }
 };
 

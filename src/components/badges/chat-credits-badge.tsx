@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
 import ChatCoinIcon from '../../assets/svgs/coins/chat-coin.svg';
-import { hp, wp } from '../../global';
+import { wp } from '../../global';
 import { Colors, Fonts } from '../../res';
 import Text from '../Text';
 
@@ -56,9 +56,9 @@ const Styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.theme,
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.8),
+    // backgroundColor: Colors.theme,
+    // paddingHorizontal: wp(3),
+    // paddingVertical: hp(0.8),
     borderRadius: wp(4),
   },
   iconContainer: {
@@ -67,7 +67,7 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   creditsText: {
-    color: Colors.color2,
+    color: Colors.color1,
     fontFamily: Fonts.APPFONT_B,
     fontSize: wp(4),
     includeFontPadding: false,

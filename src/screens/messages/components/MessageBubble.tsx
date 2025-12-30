@@ -50,13 +50,54 @@ const MessageBubble = ({
   onMessagePress,
   Styles,
 }: Props) => {
-  const itemSender = item?.sender;
-  const itemReadBy = item?.readBy;
+  // Use sender_id from API response (new structure)
+  // Convert to string for comparison as currentUserId might be string
+  const itemSender = item?.sender_id != null ? String(item.sender_id) : null;
+  const currentUserIdStr = currentUserId != null ? String(currentUserId) : null;
 
-  const isCurrentUser = itemSender === currentUserId;
+  // Get status for the other user (recipient) from statuses array
+  const statuses = item?.statuses || [];
+  const otherUserStatus = statuses.find(
+    (status: any) => status.participant_id === otherUserId
+  );
+
+  const isCurrentUser = itemSender === currentUserIdStr;
   const isGuardian = itemSender === 'guardian' || itemSender === guardianUserId;
 
-  const otherUserReadBy = itemReadBy?.[otherUserId];
+  // Determine message status based on delivered_at and read_at
+  // Priority: read_at > delivered_at > sending
+  // Note: MessageStatusIcon uses isSeen prop for read status (blue double tick)
+  const getMessageStatus = (): 'sending' | 'sent' => {
+    // For messages from current user, check the other user's status
+    if (isCurrentUser && otherUserStatus) {
+      // If delivered or read, show as 'sent' (MessageStatusIcon will show appropriate icon based on isSeen)
+      if (
+        otherUserStatus.delivered_at !== null ||
+        otherUserStatus.read_at !== null
+      ) {
+        return 'sent';
+      }
+      // If status exists but both delivered_at and read_at are null, show as 'sending' (single tick)
+      return 'sending';
+    }
+    // For messages being sent or if status is not available
+    return item?.status === 'sending' ? 'sending' : 'sent';
+  };
+
+  const messageStatus = getMessageStatus();
+  // isRead should only be true if read_at is explicitly not null
+  const isRead =
+    otherUserStatus !== undefined &&
+    otherUserStatus !== null &&
+    otherUserStatus.read_at !== null &&
+    otherUserStatus.read_at !== undefined;
+
+  const otherUserReadBy = otherUserStatus
+    ? {
+        seen: isRead,
+        seenAt: otherUserStatus.read_at,
+      }
+    : null;
 
   const lastSeenMessageIndex = getLastSeenMessageIndex(
     messages,
@@ -89,7 +130,7 @@ const MessageBubble = ({
         activeOpacity={0.9}
       >
         <Text style={[Styles.messageTxt, { color: textColour }]}>
-          {item?.message}
+          {item?.body}
         </Text>
 
         <View style={Styles.messageTimeAndStatusWrapper}>
@@ -102,17 +143,15 @@ const MessageBubble = ({
               },
             ]}
           >
-            {getMessageTime(item?.createdAt)}
+            {getMessageTime(item?.created_at)}
           </Text>
 
           {isCurrentUser && (
             <MessageStatusIcon
-              status={item?.status || 'sent'}
-              isSeen={otherUserReadBy?.seen === true}
+              status={messageStatus}
+              isSeen={isRead}
               isBlocked={isBlockedYou}
-              wasSentWhileBlocked={
-                item?.blockedParticipants?.[currentUserId] === true
-              }
+              wasSentWhileBlocked={false}
             />
           )}
         </View>
@@ -147,12 +186,12 @@ const MessageBubble = ({
       {messagePressedId && messagePressedId === item?.id ? (
         <View style={Styles.messageTimeCon}>
           <Text style={Styles.messageTime}>
-            Sent {getTimeAgo(item?.createdAt)}
+            Sent {getTimeAgo(item?.created_at)}
           </Text>
 
-          {otherUserReadBy?.seen ? (
+          {otherUserReadBy?.seen && otherUserReadBy?.seenAt ? (
             <Text style={Styles.messageTime}>
-              Seen {getTimeAgo(otherUserReadBy?.seenAt)}
+              Seen {getTimeAgo(otherUserReadBy.seenAt)}
             </Text>
           ) : null}
         </View>

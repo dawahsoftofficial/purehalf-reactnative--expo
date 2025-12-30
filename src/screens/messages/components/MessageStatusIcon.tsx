@@ -35,7 +35,7 @@ const MessageStatusIcon = ({
     return (
       <Ionicons
         name="checkmark"
-        color={Colors.color34}
+        color={Colors.color2}
         size={wp(4)}
         style={{ marginLeft: wp(0.5) }}
       />
@@ -47,7 +47,7 @@ const MessageStatusIcon = ({
     return (
       <Ionicons
         name="checkmark"
-        color={Colors.color34}
+        color={Colors.color2}
         size={wp(4)}
         style={{ marginLeft: wp(0.5) }}
       />
@@ -59,7 +59,7 @@ const MessageStatusIcon = ({
     return (
       <Ionicons
         name="checkmark-done"
-        color={Colors.color34}
+        color={Colors.color2}
         size={wp(4)}
         style={{ marginLeft: wp(0.5) }}
       />
@@ -71,7 +71,7 @@ const MessageStatusIcon = ({
     return (
       <Ionicons
         name="checkmark"
-        color={Colors.color34}
+        color={Colors.color2}
         size={wp(4)}
         style={{ marginLeft: wp(0.5) }}
       />
@@ -82,7 +82,7 @@ const MessageStatusIcon = ({
   return (
     <Ionicons
       name="checkmark"
-      color={Colors.color34}
+      color={Colors.color2}
       size={wp(4)}
       style={{ marginLeft: wp(0.5) }}
     />

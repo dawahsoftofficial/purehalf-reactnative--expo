@@ -12,14 +12,13 @@ import {
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Modal from 'react-native-modal';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import PopularBadgeIcon from '../../../assets/svgs/badges/popular-badge.svg';
 import ProfileCompleteBadgeIcon from '../../../assets/svgs/badges/profile-complete-badge.svg';
 import VipBadgeIcon from '../../../assets/svgs/badges/vip-badge.svg';
-import BoostCoinIcon from '../../../assets/svgs/coins/boost-coin.svg';
 import ChaCoinIcon from '../../../assets/svgs/coins/chat-coin.svg';
 import { hp, Typography, wp } from '../../../global';
 import { CheckRtl, LanguageKeys } from '../../../languages';
@@ -46,7 +45,7 @@ type User = {
   membership_expiry?: string | null;
   first_name?: string;
   media?: {
-    primary_image?: string;
+    primary_image_to_show?: string;
   };
   detail?: {
     tagline?: string;
@@ -131,6 +130,7 @@ export function AccountModal({
   onInfoItemPress,
   currentUser,
 }: AccountModalProps) {
+  const { bottom } = useSafeAreaInsets();
   const { t } = useTranslation();
   const Rtl = CheckRtl();
   const isPremium = usePremiumStore((state) => state.isPremium);
@@ -168,14 +168,14 @@ export function AccountModal({
 
   return (
     <Modal isVisible={visible} style={Styles.modal} onBackdropPress={onClose}>
-      <View style={Styles.modalContent}>
+      <View style={[Styles.modalContent, { paddingBottom: bottom }]}>
         <View style={Styles.modalHeader}>
           <View style={Styles.modalHeaderContent}>
             <View style={Styles.profileSection}>
               <View style={Styles.profileImageContainer}>
-                {currentUser?.media?.primary_image ? (
+                {currentUser?.media?.primary_image_to_show ? (
                   <Image
-                    source={{ uri: currentUser.media.primary_image }}
+                    source={{ uri: currentUser.media.primary_image_to_show }}
                     style={Styles.profileImage}
                   />
                 ) : (
@@ -187,24 +187,24 @@ export function AccountModal({
                   </View>
                 )}
               </View>
-              {(isVIP || true) && (
-                <View style={Styles.vipBadgeBelow}>
-                  <VipBadgeIcon width={wp(6)} height={wp(6)} />
-                  <Text style={Styles.badgeLabel}>VIP</Text>
-                </View>
-              )}
             </View>
             <View style={Styles.rightBadgesContainer}>
-              {(isBoosted || true) && (
+              {isVIP && (
+                <View style={Styles.vipBadgeBelow}>
+                  <VipBadgeIcon width={wp(8)} height={wp(8)} />
+                  {/* <Text style={Styles.badgeLabel}>VIP</Text> */}
+                </View>
+              )}
+              {/* {(isBoosted || true) && (
                 <View style={Styles.badge}>
                   <PopularBadgeIcon width={wp(6)} height={wp(6)} />
                   <Text style={Styles.badgeLabel}>Boosted</Text>
                 </View>
-              )}
-              {(isProfileCompleted || true) && (
+              )} */}
+              {isProfileCompleted && (
                 <View style={Styles.badge}>
-                  <ProfileCompleteBadgeIcon width={wp(6)} height={wp(6)} />
-                  <Text style={Styles.badgeLabel}>Completed</Text>
+                  <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />
+                  {/* <Text style={Styles.badgeLabel}>Completed</Text> */}
                 </View>
               )}
             </View>
@@ -214,14 +214,14 @@ export function AccountModal({
           </TouchableOpacity>
         </View>
         <View style={Styles.creditsContainer}>
-          <View style={Styles.creditBadge}>
+          {/* <View style={Styles.creditBadge}>
             <BoostCoinIcon width={wp(6)} height={wp(6)} />
             <Text style={Styles.creditText}>
               {currentUser?.boost_credits || 0}
             </Text>
-          </View>
+          </View> */}
           <View style={Styles.creditBadge}>
-            <ChaCoinIcon width={wp(6)} height={wp(6)} />
+            <ChaCoinIcon width={wp(8)} height={wp(8)} />
             <Text style={Styles.creditText}>
               {currentUser?.chat_credits || 0}
             </Text>
@@ -243,6 +243,7 @@ export function AccountModal({
                 width: wp(7),
                 height: wp(7),
               }}
+              accordionContainerStyle={{ marginBottom: 0 }}
             >
               <View style={Styles.completeProfileWrapper}>
                 {profileCompleteProgress?.map((item, ind) => (
@@ -356,12 +357,12 @@ const Styles = StyleSheet.create({
     gap: hp(1),
   },
   profileImageContainer: {
-    width: wp(20),
-    height: wp(20),
-    borderRadius: wp(10),
+    width: wp(30),
+    height: wp(30),
+    borderRadius: wp(20),
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: Colors.theme,
+    borderColor: Colors.color8,
   },
   profileImage: {
     width: '100%',
@@ -383,13 +384,13 @@ const Styles = StyleSheet.create({
   vipBadgeBelow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color47,
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(0.6),
+    // backgroundColor: Colors.color47,
+    // paddingHorizontal: wp(2),
+    // paddingVertical: hp(0.6),
     borderRadius: wp(3),
     gap: wp(1),
-    borderWidth: 1,
-    borderColor: Colors.color47,
+    // borderWidth: 1,
+    // borderColor: Colors.color47,
   },
   rightBadgesContainer: {
     flexDirection: 'column',
@@ -415,7 +416,7 @@ const Styles = StyleSheet.create({
     includeFontPadding: false,
   },
   creditsContainer: {
-    alignSelf: 'flex-end',
+    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -426,7 +427,7 @@ const Styles = StyleSheet.create({
   creditBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.theme,
+    // backgroundColor: Colors.theme,
     paddingHorizontal: wp(2.5),
     paddingVertical: hp(0.6),
     borderRadius: wp(3),
@@ -435,7 +436,7 @@ const Styles = StyleSheet.create({
   creditText: {
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.small1,
-    color: Colors.color2,
+    color: Colors.color1,
     includeFontPadding: false,
   },
   modalBody: {

@@ -66,7 +66,7 @@ const SliderEntry = ({
     age: data?.age,
     city: data?.city,
     country: data?.country,
-    image: data?.media?.primary_image,
+    image: data?.media?.primary_image_to_show,
     token: data?.fcm_token
       ?.map((item: any) => item?.fcm_token)
       .filter((token: any) => token !== undefined && token !== null),
@@ -212,11 +212,11 @@ const SliderEntry = ({
         bottom: 0,
       }}
     >
-      {!profileImageError && data?.media?.primary_image ? (
+      {!profileImageError && data?.media?.primary_image_to_show ? (
         <Image
           source={
-            data?.media?.primary_image
-              ? { uri: data?.media?.primary_image }
+            data?.media?.primary_image_to_show
+              ? { uri: data?.media?.primary_image_to_show }
               : Images.userPlaceholderVertical
           }
           onLoadStart={onProfileImageLoadStart}

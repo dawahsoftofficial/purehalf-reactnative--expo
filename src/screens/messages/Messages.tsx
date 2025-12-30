@@ -1,7 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { CommonActions as CommonActionsNavigation } from '@react-navigation/native';
-import _ from 'lodash';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -18,19 +17,19 @@ import {
   MenuOptions,
   MenuTrigger,
 } from 'react-native-popup-menu';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+
+import pusherService from '@/services/pusher';
 
 import {
   AnimatedLoader,
-  Button,
   Container,
   Header,
   ModalLoader,
   PurchaseSuccessModal,
   Text,
 } from '../../components';
-import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
-import BlurView from '../../components/BlurView';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
@@ -40,13 +39,27 @@ import {
   flashErrorMessage,
   flashSuccessMessage,
   formatDate,
-  stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
+import type {
+  Conversation,
+  ConversationUpdatedEventData,
+  NewConversationCreatedEventData,
+  UnreadConversationCounterEventData,
+} from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
+import { useConversationStore } from '../../stores';
 
-const Messages = (props: any) => {
+type MessagesProps = {
+  navigation: {
+    navigate: (screen: string, params?: unknown) => void;
+    dispatch: (action: unknown) => void;
+  };
+};
+
+const Messages = (props: MessagesProps) => {
   const { t } = useTranslation();
   const { deleteAll } = StorageManager;
   const Rtl = CheckRtl();
@@ -59,30 +72,257 @@ const Messages = (props: any) => {
     useState<boolean>(false);
   const [isChatCreditsLoading, setIsChatCreditsLoading] =
     useState<boolean>(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { setData, storageKeys } = StorageManager;
-  const {
-    conversations,
-    coversationLoading,
+  const { currentUser, updateCurrentUser, language } = useGlobalContext();
+  const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
+
+  const fetchConversations = useCallback(async () => {
+    try {
+      const data = await messageServices.getConversationsList();
+      setConversations(data);
+      setIsLoading(false);
+    } catch (error: unknown) {
+      console.error('[Messages.fetchConversations] Error:', error);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Get store actions
+  const setUnreadCounts = useConversationStore(
+    (state) => state.setUnreadCounts
+  );
+  const resetConversationStore = useConversationStore((state) => state.reset);
+
+  // Handle new conversation created event
+  const handleNewConversationCreated = useCallback(
+    (data: NewConversationCreatedEventData) => {
+      const conversationData = data.conversation;
+
+      console.log('[Messages] New conversation created:', conversationData.id);
+
+      // Check if conversation has participants, if not, fetch full list
+      if (
+        !conversationData.participants ||
+        conversationData.participants.length === 0
+      ) {
+        console.log(
+          '[Messages] New conversation missing participants, fetching conversations'
+        );
+        fetchConversations();
+        return;
+      }
+
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+
+        if (exists) {
+          console.log(
+            '[Messages] Conversation already exists, updating:',
+            conversationData.id
+          );
+          return prevConversations
+            .map((c) => (c.id === conversationData.id ? conversationData : c))
+            .sort((a, b) => {
+              // Sort by last message time (most recent first)
+              const timeA = new Date(a.last_message_at).getTime();
+              const timeB = new Date(b.last_message_at).getTime();
+              return timeB - timeA;
+            });
+        }
+
+        // Add new conversation at the top
+        console.log(
+          '[Messages] Adding new conversation to list:',
+          conversationData.id
+        );
+        return [conversationData, ...prevConversations].sort((a, b) => {
+          // Sort by last message time (most recent first)
+          const timeA = new Date(a.last_message_at).getTime();
+          const timeB = new Date(b.last_message_at).getTime();
+          return timeB - timeA;
+        });
+      });
+    },
+    [fetchConversations]
+  );
+
+  // Handle conversation updated event
+  const handleConversationUpdated = useCallback(
+    (data: ConversationUpdatedEventData) => {
+      const conversationData = data.conversation;
+
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+
+        if (exists) {
+          // Update existing conversation
+          console.log(
+            '[Messages] Updating existing conversation:',
+            conversationData.id,
+            'update_type:',
+            data.update_type
+          );
+          return prevConversations
+            .map((c) => (c.id === conversationData.id ? conversationData : c))
+            .sort((a, b) => {
+              // Sort by last message time (most recent first)
+              const timeA = new Date(a.last_message_at).getTime();
+              const timeB = new Date(b.last_message_at).getTime();
+              return timeB - timeA;
+            });
+        }
+
+        // Add new conversation at the top
+        console.log('[Messages] Adding new conversation:', conversationData.id);
+        return [conversationData, ...prevConversations].sort((a, b) => {
+          // Sort by last message time (most recent first)
+          const timeA = new Date(a.last_message_at).getTime();
+          const timeB = new Date(b.last_message_at).getTime();
+          return timeB - timeA;
+        });
+      });
+    },
+    []
+  );
+
+  // Handle unread conversation counter event
+  const handleUnreadConversationCounter = useCallback(
+    (data: UnreadConversationCounterEventData) => {
+      const { participant } = data;
+      const unreadConversationsCount =
+        participant.unread_conversations_count || 0;
+      const unreadMessagesCount =
+        typeof participant.unread_messages_count === 'string'
+          ? parseInt(participant.unread_messages_count, 10) || 0
+          : participant.unread_messages_count || 0;
+
+      console.log(
+        '[Messages] Unread conversation counter updated:',
+        unreadConversationsCount,
+        'conversations,',
+        unreadMessagesCount,
+        'messages'
+      );
+
+      setUnreadCounts(unreadConversationsCount, unreadMessagesCount);
+    },
+    [setUnreadCounts]
+  );
+
+  // Setup Pusher real-time updates for user channel
+  const setupPusherListeners = useCallback(async () => {
+    if (!pusherService.isReady()) {
+      console.log('[Messages] Pusher not ready');
+      return;
+    }
+
+    const userId =
+      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+
+    if (!userId) {
+      console.log('[Messages] No user ID available');
+      return;
+    }
+
+    try {
+      console.log('[Messages] Setting up Pusher for user:', userId);
+
+      // Subscribe to user channel: private-user.inbox.{userId}
+      const channelName = `private-user.inbox.${userId}`;
+
+      const unsubscribe = await pusherService.subscribeToChannel(
+        channelName,
+        (event) => {
+          console.log('[Messages] Pusher event received:', event.eventName);
+
+          try {
+            const rawData =
+              typeof event.data === 'string'
+                ? JSON.parse(event.data)
+                : event.data;
+
+            // Extract event type from Laravel event class name or from data.event
+            let eventType = event.eventName;
+            if (eventType.includes('\\')) {
+              // Laravel event class name format: App\Events\Conversation\MessageSent
+              eventType = eventType.split('\\').pop() || eventType;
+            }
+
+            // If data has an 'event' field, use that as the event type
+            if (rawData?.event) {
+              eventType = rawData.event;
+            }
+
+            console.log('[Messages] Normalized event type:', eventType);
+
+            // Handle different event types
+            if (eventType === 'NewConversationCreated') {
+              console.log('[Messages] New conversation created:', rawData);
+              handleNewConversationCreated(
+                rawData as NewConversationCreatedEventData
+              );
+            } else if (eventType === 'ConversationUpdated') {
+              console.log('[Messages] Conversation updated:', rawData);
+              handleConversationUpdated(
+                rawData as ConversationUpdatedEventData
+              );
+            } else if (eventType === 'UnreadConversationCounter') {
+              console.log('[Messages] Unread conversation counter:', rawData);
+              handleUnreadConversationCounter(
+                rawData as UnreadConversationCounterEventData
+              );
+            } else {
+              console.log(
+                '[Messages] Ignoring event on user channel:',
+                eventType
+              );
+            }
+          } catch (error) {
+            console.error('[Messages] Error handling Pusher event:', error);
+          }
+        }
+      );
+
+      unsubscribeUserChannelRef.current = unsubscribe;
+      console.log('[Messages] ✅ Subscribed to user channel');
+    } catch (error) {
+      console.error('[Messages] Error setting up Pusher:', error);
+    }
+  }, [
     currentUser,
-    updateCurrentUser,
-    language,
-  } = useGlobalContext();
+    handleNewConversationCreated,
+    handleConversationUpdated,
+    handleUnreadConversationCounter,
+  ]);
 
-  const onItemPress = (item: any, otherUserData: any) => {
-    props.navigation.navigate('SingleChat', {
-      conversationData: item,
-      otherUserData: otherUserData,
-      from: 'messages',
-    });
-  };
+  // Setup Pusher when component mounts and screen is focused
+  useEffect(() => {
+    if (currentUser) {
+      setupPusherListeners();
 
-  const handleNotificationDisplay = async (param: any) => {
-    await setData(storageKeys.OPENED_CONVERSATION_ID, param);
-  };
+      return () => {
+        // Cleanup Pusher subscription
+        if (unsubscribeUserChannelRef.current) {
+          unsubscribeUserChannelRef.current();
+          unsubscribeUserChannelRef.current = null;
+        }
+      };
+    }
+  }, [currentUser, setupPusherListeners]);
 
   useFocusEffect(
     React.useCallback(() => {
-      handleNotificationDisplay('hide');
+      // Fetch conversations on focus
+      fetchConversations();
+
       const quotes = [
         t('adviceOneText'),
         t('adviceTwoText'),
@@ -99,10 +339,7 @@ const Messages = (props: any) => {
         t('adviceThirteenText'),
       ];
       setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
-      return () => {
-        handleNotificationDisplay(null);
-      };
-    }, [])
+    }, [fetchConversations, t])
   );
 
   const hideModalLoader = () => {
@@ -124,8 +361,12 @@ const Messages = (props: any) => {
       ) {
         flashErrorMessage(result.error || 'Failed to purchase chat credits');
       }
-    } catch (error: any) {
-      flashErrorMessage(error.message || 'Failed to purchase chat credits');
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to purchase chat credits';
+      flashErrorMessage(errorMessage);
     } finally {
       setIsChatCreditsLoading(false);
     }
@@ -142,12 +383,19 @@ const Messages = (props: any) => {
       visible: true,
       message: LanguageKeys.loggingOut,
     });
+
+    // Cleanup Pusher
+    if (unsubscribeUserChannelRef.current) {
+      unsubscribeUserChannelRef.current();
+      unsubscribeUserChannelRef.current = null;
+    }
+
     await ApiServices.logoutGuardian().catch(hideModalLoader);
     await deleteAll()
       .then(async () => {
         updateCurrentUser(null);
+        resetConversationStore(); // Reset unread counts on logout
         await setData(storageKeys.LANGUAGE, language);
-        await stopConversationsListener();
         hideModalLoader();
         props.navigation.dispatch(
           CommonActionsNavigation.reset({
@@ -159,52 +407,59 @@ const Messages = (props: any) => {
       .catch(hideModalLoader);
   };
 
-  const renderConversations = ({ item }: any) => {
-    console.log('first item', JSON.stringify(item, null, 2));
-    const convDetails = item?.convDetails;
+  const onItemPress = (item: Conversation) => {
     const currentUserId =
       currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+    const currentUserIdStr =
+      currentUserId != null ? String(currentUserId) : null;
 
-    const otherUserData = _.filter(
-      convDetails?.participantsData,
-      (element) => element?.id !== currentUserId
-    )[0];
+    const otherParticipant = item?.participants?.find(
+      (p) => String(p.id) !== currentUserIdStr
+    );
 
-    const formattedDate = formatDate(convDetails?.latestMessageCreatedAt);
-    const unReadCount = convDetails?.unReadCount?.[currentUser?.id];
-    const isBlockedYou =
-      convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
-      true;
+    props.navigation.navigate('SingleChat', {
+      conversationData: item,
+      otherUserData: otherParticipant,
+      from: 'messages',
+    });
+  };
 
-    let hideLatestMessage = false;
-    if (item?.messages) {
-      hideLatestMessage =
-        Object.keys(item?.messages).length === 0 ? true : false;
+  const renderConversations = ({ item }: { item: Conversation }) => {
+    const currentUserId =
+      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+    const currentUserIdStr =
+      currentUserId != null ? String(currentUserId) : null;
+
+    const otherParticipant = item?.participants?.find(
+      (p) => String(p.id) !== currentUserIdStr
+    );
+
+    if (!otherParticipant) {
+      return null;
     }
 
+    const formattedDate = formatDate(item.last_message_at);
+    // Get unread count from current user's participant object
+    const currentUserParticipant = item?.participants?.find(
+      (p) => String(p.id) === currentUserIdStr
+    );
+    const unReadCount = currentUserParticipant?.unread_count || 0;
+    const isBlockedYou = otherParticipant.is_blocked;
+
+    const hasLastMessage =
+      !!item.last_message && item.last_message.trim() !== '';
+
     // Check if last message was sent by current user and seen by receiver
-    // Also get the actual latest message text from messages array
     let isLastMessageSeen = false;
-    let latestMessageText = convDetails?.latestMessage || '';
-
-    if (!hideLatestMessage && item?.messages) {
-      const messagesArray = Object.values(item.messages);
-      if (messagesArray.length > 0) {
-        // Get the last message (most recent)
-        const lastMessage: any = messagesArray[0];
-
-        // Use the actual latest message text from messages array
-        if (lastMessage?.message) {
-          latestMessageText = lastMessage.message;
-        }
-
-        // Check if last message was sent by current user
-        if (lastMessage?.sender === currentUserId) {
-          // Check if receiver has seen it
-          const otherUserId = otherUserData?.id;
-          isLastMessageSeen = lastMessage?.readBy?.[otherUserId]?.seen === true;
-        }
-      }
+    if (
+      item.last_message_detail &&
+      String(item.last_message_detail.sender_id) === currentUserIdStr &&
+      otherParticipant?.last_read_message_id !== null
+    ) {
+      // Check if receiver's last_read_message_id is >= last message id
+      // This means the receiver has read up to or past the last message
+      isLastMessageSeen =
+        otherParticipant.last_read_message_id >= item.last_message_detail.id;
     }
 
     return (
@@ -214,25 +469,20 @@ const Messages = (props: any) => {
           Styles.itemHeight,
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
-        onPress={onItemPress.bind(null, item, otherUserData)}
+        onPress={() => onItemPress(item)}
       >
         <View style={Styles.profilePictureCon}>
-          {otherUserData?.image &&
-          otherUserData?.image?.length !== 0 &&
-          !isBlockedYou ? (
-            <>
-              {otherUserData?.is_blur === 0 ? <BlurView /> : null}
-              <Image
-                source={{ uri: otherUserData.image }}
-                style={Styles.image}
-                resizeMode="cover"
-              />
-            </>
+          {otherParticipant?.name && !isBlockedYou ? (
+            <Image
+              source={{ uri: otherParticipant.image }}
+              resizeMode="cover"
+              style={Styles.image}
+            />
           ) : (
             <FontAwesome5
               name="user-alt"
               size={wp(6.5)}
-              color={Colors.color7}
+              color={Colors.color1}
             />
           )}
         </View>
@@ -244,67 +494,40 @@ const Messages = (props: any) => {
           ]}
         >
           <View style={Styles.nameMsgCon}>
-            <Text style={Styles.itemHeading}>{otherUserData?.name}</Text>
-            {!hideLatestMessage && (
+            <Text style={Styles.itemHeading}>{otherParticipant.name}</Text>
+            {hasLastMessage && (
               <Text style={Styles.itemMessage} numberOfLines={2}>
-                {latestMessageText}
+                {item.last_message}
               </Text>
             )}
           </View>
           <View style={Styles.timeCon}>
-            {!hideLatestMessage && (
-              <ReactText
-                style={[
-                  Styles.itemMessage,
-                  { alignSelf: Rtl ? 'flex-start' : 'flex-end' },
-                ]}
-              >
-                {formattedDate}
-              </ReactText>
+            {hasLastMessage && (
+              <View style={Styles.timeAndSeenCon}>
+                <ReactText
+                  style={[
+                    Styles.itemMessage,
+                    { fontSize: Typography.tiny2, marginBottom: hp(0.2) },
+                  ]}
+                >
+                  {formattedDate}
+                </ReactText>
+                {isLastMessageSeen && (
+                  <View style={Styles.seenProfileIconContainer}>
+                    <Image
+                      source={{ uri: otherParticipant.image }}
+                      resizeMode="cover"
+                      style={Styles.seenProfileIcon}
+                    />
+                  </View>
+                )}
+              </View>
             )}
-            <View
-              style={[
-                Styles.timeAndSeenCon,
-                { flexDirection: Rtl ? 'row-reverse' : 'row' },
-              ]}
-            >
-              {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
-                <View
-                  style={[
-                    Styles.unReadCountCon,
-                    {
-                      alignSelf: Rtl ? 'flex-start' : 'flex-end',
-                      marginRight: Rtl ? 0 : wp(1.5),
-                      marginLeft: Rtl ? wp(1.5) : 0,
-                    },
-                  ]}
-                >
-                  <ReactText numberOfLines={1} style={Styles.unReadCount}>
-                    {unReadCount}
-                  </ReactText>
-                </View>
-              ) : null}
-              {isLastMessageSeen &&
-              otherUserData?.image &&
-              otherUserData?.image?.length !== 0 &&
-              !isBlockedYou ? (
-                <View
-                  style={[
-                    Styles.seenProfileIconContainer,
-                    {
-                      marginRight: Rtl ? 0 : wp(1),
-                      marginLeft: Rtl ? wp(1) : 0,
-                    },
-                  ]}
-                >
-                  <Image
-                    source={{ uri: otherUserData.image }}
-                    style={Styles.seenProfileIcon}
-                    resizeMode="cover"
-                  />
-                </View>
-              ) : null}
-            </View>
+            {unReadCount > 0 && (
+              <View style={Styles.unReadCountCon}>
+                <ReactText style={Styles.unReadCount}>{unReadCount}</ReactText>
+              </View>
+            )}
           </View>
         </View>
       </Ripple>
@@ -325,20 +548,18 @@ const Messages = (props: any) => {
             {quote?.split('|')[1]}
           </Text>
         </View>
-        <View style={Styles.findMatchButtonContainer}>
+        {/* <View style={Styles.findMatchButtonContainer}>
           <Button
             text="Find Match"
             onPress={onFindMatchPress}
             buttonStyle={Styles.findMatchButton}
           />
-        </View>
+        </View> */}
       </View>
     );
   };
 
-  const keyExtractor = (item: any) => item?.convDetails?.id;
-  const getItemCount = () => conversations?.length;
-  const getItem = (data: any, index: any) => data[index];
+  const keyExtractor = (item: Conversation) => item.id.toString();
 
   const onChangePasswordPress = () => {
     props.navigation.navigate('GuardianChangePassword');
@@ -350,17 +571,15 @@ const Messages = (props: any) => {
 
   const onFindMatchPress = () => {
     props.navigation.navigate('SearchProfiles');
+    // props.navigation.navigate('SingleChat', {
+    //   conversationData: null,
+    //   otherUserData: { id: 3640 },
+    //   from: 'messages',
+    // });
   };
 
   return (
     <Container>
-      {/* {(currentUser?.membership_status === 0 ||
-        currentUser?.membership_status === null) && (
-        <PremiumButton
-          heading={LanguageKeys.goPremiumButtonHeadingOne}
-          description={LanguageKeys.goPremiumButtonHeadingTwo}
-        />
-      )} */}
       <Header
         title={LanguageKeys.messages}
         customConponent={() => (
@@ -370,11 +589,11 @@ const Messages = (props: any) => {
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            <ChatCreditsBadge
+            {/* <ChatCreditsBadge
               credits={currentUser?.chat_credits || 0}
               onPress={onChatCreditsPress}
               disabled={isChatCreditsLoading}
-            />
+            /> */}
             {currentUser?.role === 'guardian' && (
               <View style={[Styles.gaurdianHeader]}>
                 <Menu>
@@ -426,19 +645,19 @@ const Messages = (props: any) => {
         message="Your chat credits have been added successfully."
       />
       <View style={Styles.contentContainer}>
-        {coversationLoading ? (
+        {isLoading ? (
           <AnimatedLoader
             text={LanguageKeys.loading}
             visible={true}
             style={{ height: hp(60) }}
           />
-        ) : conversations?.length ? (
+        ) : conversations.length ? (
           <VirtualizedList
             initialNumToRender={10}
             windowSize={15}
             data={conversations}
-            getItemCount={getItemCount}
-            getItem={getItem}
+            getItemCount={(data) => data.length}
+            getItem={(data, index) => data[index]}
             renderItem={renderConversations}
             ListEmptyComponent={renderEmptyList}
             keyExtractor={keyExtractor}
@@ -447,6 +666,9 @@ const Messages = (props: any) => {
           renderEmptyList()
         )}
       </View>
+      <Ripple style={Styles.btnPlus} onPress={onFindMatchPress}>
+        <AntDesign name="plus" size={wp(8)} color={Colors.color2} />
+      </Ripple>
       <ModalLoader
         visible={modalLoader.visible}
         message={modalLoader.message}
@@ -515,10 +737,10 @@ const Styles = StyleSheet.create({
     borderRadius: (width * 1 * 0.13) / 2,
   },
   itemInnerCon: {
-    paddingTop: hp(1),
     width: wp(81),
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   nameMsgCon: {
     width: wp(47),
@@ -615,6 +837,8 @@ const Styles = StyleSheet.create({
     borderColor: Colors.color2,
     overflow: 'hidden',
     backgroundColor: Colors.color18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   seenProfileIcon: {
     width: wp(5),
@@ -634,5 +858,21 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     opacity: 0.5,
+  },
+  btnPlus: {
+    position: 'absolute',
+    bottom: 0,
+    right: wp(8),
+    backgroundColor: Colors.theme,
+    borderRadius: wp(10),
+    padding: wp(4),
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.color1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+    zIndex: 1000,
   },
 });

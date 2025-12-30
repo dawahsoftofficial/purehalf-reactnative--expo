@@ -7,7 +7,11 @@ import { Colors } from '../res';
 import { useGlobalContext } from '../services';
 
 const CustomModal = () => {
-  const { customModal } = useGlobalContext();
+  const { customModal, updateCustomModal } = useGlobalContext();
+
+  const handleClose = () => {
+    updateCustomModal(false, null);
+  };
 
   if (!customModal?.visible) {
     return null;
@@ -18,7 +22,7 @@ const CustomModal = () => {
       visible={customModal.visible}
       transparent={true}
       animationType="fade"
-      onRequestClose={() => {}}
+      onRequestClose={handleClose}
     >
       <StatusBar
         backgroundColor={Colors.blackRGBA50}

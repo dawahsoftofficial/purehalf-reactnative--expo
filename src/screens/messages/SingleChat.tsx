@@ -1,12 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import _ from 'lodash';
-import React, {
-  useCallback,
-  useEffect,
-  useReducer,
-  useRef,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -21,35 +14,37 @@ import {
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
-import { Container, PremiumButton } from '../../components';
-import { hp, wp } from '../../global';
+import pusherService from '@/services/pusher';
+
+import { Container } from '../../components';
+import { wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Images } from '../../res';
 import {
   ApiServices,
   flashInfoMessage,
-  getTimeStamp,
-  StorageManager,
   useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
+import type {
+  Message,
+  MessageDeliveredEventData,
+  MessageReadEventData,
+  MessageSentEventData,
+  ParticipantBlockedEventData,
+} from '../../services/api/types/message-types';
 import MessageBubble from './components/MessageBubble';
-import { useConversationRealtime } from './hooks/useConversationRealtime';
-import { useMessagePagination } from './hooks/useMessagePagination';
-import { useReadReceipts } from './hooks/useReadReceipts';
+import TypingIndicator from './components/TypingIndicator';
 import { useSendMessage } from './hooks/useSendMessage';
 import Styles from './SingleChat.styles';
 import SingleChatHeader from './SingleChatHeader';
+
 const SingleChat = (props: any) => {
   const Rtl = CheckRtl();
-  const { setData, storageKeys } = StorageManager;
   const flatListRef: any = useRef(null);
   const inputRef: any = useRef(null);
-  const [chatOpenTimeStamp, setChatOpenTimeStamp] = useState<number | null>(
-    null
-  );
-  const [, forceUpdate] = useReducer((x) => x + 1, 0);
   const { t }: any = useTranslation();
-  const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
+  const { currentUser } = useGlobalContext();
   const fromNotification =
     props?.route?.params?.from === 'notification' ? true : false;
   const fromMessages = props?.route?.params?.from === 'messages' ? true : false;
@@ -57,91 +52,45 @@ const SingleChat = (props: any) => {
   const [otherUserData, setOtherUserData] = useState(
     props?.route?.params?.otherUserData
   );
-  const [isBlockedByYou, setIsBlockedByYou] = useState(false);
-  const [isBlockedYou, setIsBlockedYou] = useState<any>(false);
-  const [listReachedStart, setListReachedStart] = useState(true);
+  const [isBlockedByYou, _setIsBlockedByYou] = useState(false);
+  const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [loader, setLoader] = useState(true);
-  const [messagePressedId, setMessagePressedId] = useState(null);
+  const [messagePressedId, setMessagePressedId] = useState<number | null>(null);
   const [quote, setQuote] = useState('');
 
-  const [messages, setMessages] = useState<any>([]);
-  const [lastDeletedByFound, setLastDeletedByFound] = useState(false);
-  const [totalMessages, setTotalMessages] = useState([]);
-  const [conversationData, setConversationData] = useState<any>('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversationData, setConversationData] = useState<any>({});
   const [conversationId, setConversationId] = useState('');
 
-  const [inputMessage, setInputMessage] = useState('');
-  const messagesRef: any = useRef(messages);
-  const { handleReadBy } = useReadReceipts({
-    currentUserId: currentUser?.id,
-    otherUserId: otherUserData?.id,
-    setConversationData,
-  });
-  const onChangeInputMessage = (text: any) => {
-    setInputMessage(text);
-  };
+  // Pusher real-time features
+  const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const unsubscribeConversationRef = useRef<(() => void) | null>(null);
+  const lastTypingEventRef = useRef<number>(0);
+  // Track which messages have been marked as read to avoid duplicate API calls
+  const markedAsReadRef = useRef<Set<number>>(new Set());
 
-  const handleLastDeletedBy = (
-    messages: any,
-    lastDeleted = lastDeletedByFound
-  ) => {
-    return new Promise(async (resolve) => {
-      messages = await _.reject(
-        messages,
-        (message) =>
-          _.get(message, `blockedParticipants.${otherUserData?.id}`) === true
-      );
-      const lastDeletedByIndex: any = _.findIndex(messages, (message: any) => {
-        return (
-          message.deletedBy &&
-          message.deletedBy[currentUser?.id] &&
-          message.deletedBy[currentUser?.id] === true
-        );
-      });
-      if (lastDeleted) {
-        resolve('ignore');
-      } else if (lastDeletedByIndex !== -1) {
-        setLastDeletedByFound(true);
-        messages = _.take(messages, lastDeletedByIndex);
-        resolve(messages);
-      } else {
-        resolve(messages);
-      }
-    });
+  const [inputMessage, setInputMessage] = useState('');
+  const onChangeInputMessage = (text: string) => {
+    setInputMessage(text);
+    // TODO: Send typing indicator when user types
   };
-  const { footerLoading, handleEndReached, resetToFirstPage } =
-    useMessagePagination({
-      totalMessages,
-      messages,
-      setMessages,
-      handleLastDeletedBy,
-      listReachedStart,
-      setListReachedStart,
-      setLastDeletedByFound,
-    });
 
   const getOtherUserData = async () => {
     if (currentUser?.id === 'guardian') {
       const response = await ApiServices.getUserDetailGuardian(
         otherUserData?.id
       );
-      const fcmToken = response?.fcm_token || [];
-      setOtherUserData((otherUserData: any) => {
-        otherUserData.token = fcmToken
-          ?.map((item: any) => item?.fcm_token)
-          .filter((token: any) => token !== undefined && token !== null);
-        return otherUserData;
-      });
+      setOtherUserData((prev: any) => ({
+        ...prev,
+        ...response,
+      }));
     } else {
       ApiServices.getUserDetail(otherUserData?.id).then((res: any) => {
-        if (res?.fcm_token) {
-          setOtherUserData((otherUserData: any) => {
-            otherUserData.token = res?.fcm_token
-              ?.map((item: any) => item?.fcm_token)
-              .filter((token: any) => token !== undefined && token !== null);
-            return otherUserData;
-          });
-        }
+        setOtherUserData((prev: any) => ({
+          ...prev,
+          ...res,
+        }));
       });
     }
   };
@@ -151,180 +100,516 @@ const SingleChat = (props: any) => {
       getOtherUserData();
     } else if (fromNotification) {
       setLoader(false);
-      const conversationId = props?.route?.params?.conversationId;
-      const message = props?.route?.params?.message;
-
-      const conversationData = conversations.filter((element: any) => {
-        if (element?.convDetails?.id === conversationId) {
-          if (!element.messages[message?.id]) {
-            element.messages = {
-              [message?.id]: message,
-              ...element.messages,
-            };
-          }
-          return true;
-        }
-        return false;
-      });
-
-      if (conversationData && conversationData?.length !== 0) {
-        setConversationId(conversationId);
-        props.route.params.conversationData = conversationData[0];
-      } else {
-        setLoader(false);
-      }
-      getOtherUserData();
     }
-  }, []);
+  }, [fromMessages, fromNotification]);
 
   useEffect(() => {
-    const conversationData = props?.route?.params?.conversationData;
-    if (
-      conversationData &&
-      Object.keys(conversationData?.convDetails).length !== 0
-    ) {
-      const { convDetails, messages } = conversationData;
-      setConversationData(convDetails);
+    const routeConversationData = props?.route?.params?.conversationData;
+    if (routeConversationData) {
+      // New API structure (Conversation type)
+      if (routeConversationData.id) {
+        setConversationData(routeConversationData);
+        setConversationId(routeConversationData.id.toString());
 
-      const messagesArray: any = messages ? Object.values(messages) : [];
-      setTotalMessages(messagesArray);
+        // Check blocked status from participants
+        const currentUserId =
+          currentUser?.id === 'guardian'
+            ? currentUser?.user?.id
+            : currentUser?.id;
+        const otherParticipant = routeConversationData.participants.find(
+          (p: any) => p.id !== currentUserId
+        );
+        if (otherParticipant) {
+          setIsBlockedYou(otherParticipant.is_blocked);
+        }
 
-      if (messagesArray.length === 0) {
-        setLoader(false);
-      } else {
-        const last15Messages = _.slice(messagesArray, 0, 15);
-        handleLastDeletedBy(last15Messages)
-          .then(async (res: any) => {
-            if (res !== 'ignore') {
-              setMessages(res);
-              await handleReadBy(convDetails, res);
-            }
-          })
-          .finally(() => setLoader(false));
+        // Keep loader true - it will be set to false after messages are fetched
+        // Don't set loader to false here, wait for fetchMessages to complete
       }
-
-      setConversationId(convDetails?.id);
-      setIsBlockedByYou(
-        convDetails?.participantsBlockFlag?.[otherUserData?.id]?.blockStatus ===
-          true
-      );
-      setIsBlockedYou(
-        convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
-          true
-      );
     } else if (!fromNotification) {
       setLoader(false);
     }
-  }, [props?.route?.params?.conversationData]);
-
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  const setOpenedConversation = async (conversationId: any) => {
-    await setData(storageKeys.OPENED_CONVERSATION_ID, conversationId);
-  };
-
-  // Initialize chatOpenTimeStamp
-  useEffect(() => {
-    const initializeTimestamp = async () => {
-      const timestamp = await getTimeStamp();
-      setChatOpenTimeStamp(timestamp);
-    };
-    initializeTimestamp();
-  }, []);
-
-  useConversationRealtime({
-    conversationId,
-    chatOpenTimeStamp,
-
-    currentUserId: currentUser?.id,
-    otherUserId: otherUserData?.id,
-
-    conversationData,
-
-    setMessages,
-    messagesRef,
-
-    setConversationData,
-    setIsBlockedYou,
-    setIsBlockedByYou,
-
-    setOpenedConversation: async (id) => {
-      await setOpenedConversation(id);
-    },
-    clearOpenedConversation: async () => {
-      await setData(storageKeys.OPENED_CONVERSATION_ID, null);
-    },
-
-    handleReadBy,
-    forceUpdate,
-  });
-  const { onSendPress } = useSendMessage({
+  }, [
+    props?.route?.params?.conversationData,
     currentUser,
     otherUserData,
+    fromNotification,
+  ]);
 
-    conversationData,
-    setConversationData,
+  const fetchMessages = useCallback(async () => {
+    if (!conversationId) return;
 
-    messages,
-    setMessages,
+    // Set loader to true when starting to fetch messages
+    setLoader(true);
 
-    setConversationId,
-
-    isBlockedYou,
-    isBlockedByYou,
-
-    setInputMessage,
-
-    updateCurrentUser,
-    setData,
-    storageKeys,
-
-    navigation: props.navigation,
-    forceUpdate,
-  });
-
-  // Add focus effect to refresh messages when screen comes back into focus
-  useFocusEffect(
-    useCallback(() => {
-      if (conversationId?.length !== 0) {
-        // Find the current conversation in the global context
-        const currentConversation = conversations.find(
-          (conv: any) => conv?.convDetails?.id === conversationId
-        );
-
-        if (currentConversation) {
-          const { convDetails, messages: convMessages } = currentConversation;
-
-          // Update conversation data
-          setConversationData(convDetails);
-
-          // Process messages
-          const messagesArray = convMessages ? Object.values(convMessages) : [];
-
-          setTotalMessages(messagesArray as any);
-
-          if (messagesArray.length > 0) {
-            const last15Messages = _.slice(messagesArray, 0, 15);
-            handleLastDeletedBy(last15Messages).then(async (res: any) => {
-              if (res !== 'ignore') {
-                setMessages(res);
-                if (convDetails?.length !== 0) {
-                  await handleReadBy(convDetails, res);
-                }
-                forceUpdate();
-              }
-            });
-          }
-        }
+    try {
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) {
+        setLoader(false);
+        return;
       }
 
-      return () => {
-        // Cleanup if needed
+      const fetchedMessages = await messageServices.getConversationMessages(
+        conversationIdNum,
+        { per_page: 50 }
+      );
+
+      // Sort messages by created_at (newest first) for inverted list
+      const sortedMessages = [...fetchedMessages].sort((a, b) => {
+        const timeA = new Date(a.created_at).getTime();
+        const timeB = new Date(b.created_at).getTime();
+        return timeB - timeA; // Descending order (newest first)
+      });
+      setMessages(sortedMessages);
+      setLoader(false);
+
+      // Reset the marked as read tracking when messages are fetched
+      // This ensures we can mark messages as read when screen is focused
+      markedAsReadRef.current.clear();
+    } catch (error: unknown) {
+      console.error('[SingleChat.fetchMessages] Error:', error);
+      setLoader(false);
+    }
+  }, [conversationId]);
+
+  // Setup Pusher real-time listeners for this conversation
+  const setupPusherListeners = useCallback(async () => {
+    if (!conversationId || !pusherService.isReady()) {
+      console.log('[SingleChat] Pusher not ready or no conversation ID');
+      return;
+    }
+
+    try {
+      console.log(
+        '[SingleChat] Setting up Pusher for conversation:',
+        conversationId
+      );
+
+      // Subscribe to conversation channel: conversation.{conversation-id}
+      const channelName = `private-conversation.${conversationId}`;
+
+      const unsubscribe = await pusherService.subscribeToChannel(
+        channelName,
+        (event) => {
+          console.log('[SingleChat] Pusher event received:', event.eventName);
+
+          try {
+            const rawData =
+              typeof event.data === 'string'
+                ? JSON.parse(event.data)
+                : event.data;
+
+            // Extract event type from Laravel event class name or from data.event
+            let eventType = event.eventName;
+            if (eventType.includes('\\')) {
+              // Laravel event class name format: App\Events\Conversation\MessageSent
+              eventType = eventType.split('\\').pop() || eventType;
+            }
+
+            // If data has an 'event' field, use that as the event type
+            if (rawData?.event) {
+              eventType = rawData.event;
+            }
+
+            console.log('[SingleChat] Normalized event type:', eventType);
+
+            switch (eventType) {
+              case 'MessageSent': {
+                // Handle nested structure: {event: 'MessageSent', message: {...}, conversation: {...}}
+                const messageData = rawData.message;
+                if (!messageData) {
+                  console.error(
+                    '[SingleChat] MessageSent event missing message data:',
+                    rawData
+                  );
+                  break;
+                }
+                console.log('[SingleChat] New message received:', messageData);
+                handleNewMessage(
+                  messageData as MessageSentEventData['message']
+                );
+                break;
+              }
+
+              case 'MessageRead': {
+                // Backend sends: {event: 'MessageRead', message_id: 50, read_by: {id: 3642, type: 'User'}}
+                const readData = rawData;
+                console.log('[SingleChat] Message read:', readData);
+                handleMessageRead(readData as MessageReadEventData);
+                break;
+              }
+
+              case 'MessageDelivered': {
+                // Backend sends: {event: 'MessageDelivered', message_id: 50, delivered_by: {id: 3642, type: 'User'}}
+                const deliveredData = rawData;
+                console.log('[SingleChat] Message delivered:', deliveredData);
+                handleMessageDelivered(
+                  deliveredData as MessageDeliveredEventData
+                );
+                break;
+              }
+
+              case 'ParticipantBlocked': {
+                console.log('[SingleChat] Participant blocked:', rawData);
+                handleParticipantBlocked(
+                  rawData as ParticipantBlockedEventData
+                );
+                break;
+              }
+
+              default:
+                console.log('[SingleChat] Unhandled event:', eventType);
+            }
+          } catch (error) {
+            console.error('[SingleChat] Error handling Pusher event:', error);
+          }
+        }
+      );
+
+      unsubscribeConversationRef.current = unsubscribe;
+      console.log('[SingleChat] ✅ Subscribed to conversation channel');
+
+      // Mark all messages as read after subscription if there are unread messages
+      const currentUserId =
+        currentUser?.id === 'guardian'
+          ? currentUser?.user?.id
+          : currentUser?.id;
+      const currentUserIdStr =
+        currentUserId != null ? String(currentUserId) : null;
+
+      if (currentUserIdStr && conversationData?.participants) {
+        const currentUserParticipant = conversationData.participants.find(
+          (p: any) => String(p.id) === currentUserIdStr
+        );
+        const unReadCount = currentUserParticipant?.unread_count || 0;
+
+        if (unReadCount > 0) {
+          console.log(
+            '[SingleChat] Marking all messages as read for conversation:',
+            conversationId,
+            'unread_count:',
+            unReadCount
+          );
+          messageServices
+            .markAllMessagesAsRead(parseInt(conversationId, 10))
+            .then(() => {
+              console.log(
+                '[SingleChat] ✅ All messages marked as read for conversation:',
+                conversationId
+              );
+            })
+            .catch((error) => {
+              console.error(
+                '[SingleChat] Error marking all messages as read:',
+                error
+              );
+            });
+        }
+      }
+    } catch (error) {
+      console.error('[SingleChat] Error setting up Pusher:', error);
+    }
+  }, [conversationId, conversationData, currentUser]);
+
+  // Handle new message from Pusher
+  // Note: messageData is the nested message object from MessageSentEventData
+  const handleNewMessage = useCallback(
+    (messageData: MessageSentEventData['message']) => {
+      const currentUserId =
+        currentUser?.id === 'guardian'
+          ? currentUser?.user?.id
+          : currentUser?.id;
+
+      // Don't add message if it's from current user (already added optimistically)
+      if (messageData.sender_id === currentUserId) {
+        console.log('[SingleChat] Message from current user, skipping');
+        return;
+      }
+
+      // Transform event data to Message type
+      const message: Message = {
+        id: messageData.id,
+        conversation_id: messageData.conversation_id,
+        body: messageData.body,
+        type: messageData.type || 'text',
+        sender_type: messageData.sender_type || 'user',
+        sender_id: messageData.sender_id,
+        created_at: messageData.created_at,
+        statuses: messageData.statuses || [],
       };
-    }, [conversationId, conversations])
+
+      // Add new message to list
+      setMessages((prevMessages) => {
+        // Check if message already exists
+        const exists = prevMessages.some((msg) => msg.id === message.id);
+        if (exists) {
+          console.log('[SingleChat] Message already exists, skipping');
+          return prevMessages;
+        }
+
+        const newMessages = [message, ...prevMessages];
+        return newMessages.sort((a, b) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          return timeB - timeA;
+        });
+      });
+
+      // Mark this specific message as read immediately since user is viewing the chat
+      // When User B receives a message from User A while viewing the chat, mark it as read instantly
+      if (message.id && !markedAsReadRef.current.has(message.id)) {
+        // Add to tracking set immediately to prevent duplicate calls
+        markedAsReadRef.current.add(message.id);
+
+        // Call API to mark message as read
+        messageServices
+          .markMessageAsRead(message.id)
+          .then(() => {
+            console.log(
+              '[SingleChat] ✅ Message marked as read (received while viewing):',
+              message.id
+            );
+          })
+          .catch((error) => {
+            console.error(
+              '[SingleChat] ❌ Error marking message as read:',
+              error
+            );
+            // Remove from set on error so we can retry if needed
+            markedAsReadRef.current.delete(message.id);
+          });
+      }
+
+      // Mark message as delivered
+      if (message.id) {
+        messageServices.markMessageDelivered(message.id).catch((error) => {
+          console.error(
+            '[SingleChat] Error marking message as delivered:',
+            error
+          );
+        });
+      }
+
+      // Clear typing indicator when message is received
+      setIsOtherUserTyping(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    },
+    [currentUser, conversationId]
   );
+
+  // Handle message read status update
+  const handleMessageRead = useCallback((data: MessageReadEventData) => {
+    console.log('[SingleChat] Updating message read status:', data);
+
+    const readerId = data.read_by?.id;
+    const readAt = data.read_at || new Date().toISOString();
+
+    if (!readerId) {
+      console.error('[SingleChat] MessageRead event missing read_by.id');
+      return;
+    }
+
+    setMessages((prevMessages) =>
+      prevMessages.map((msg) => {
+        if (msg.id === data.message_id) {
+          // Find existing status for this reader or create new one
+          const existingStatusIndex = msg.statuses?.findIndex(
+            (status) => status.participant_id === readerId
+          );
+
+          const updatedStatuses =
+            existingStatusIndex !== undefined && existingStatusIndex >= 0
+              ? // Update existing status
+                msg.statuses?.map((status, index) =>
+                  index === existingStatusIndex
+                    ? { ...status, read_at: readAt }
+                    : status
+                ) || []
+              : // Create new status entry for this reader
+                [
+                  ...(msg.statuses || []),
+                  {
+                    participant_type: data.read_by?.type || 'User',
+                    participant_id: readerId,
+                    delivered_at: null,
+                    read_at: readAt,
+                  },
+                ];
+
+          return {
+            ...msg,
+            statuses: updatedStatuses,
+          };
+        }
+        return msg;
+      })
+    );
+  }, []);
+
+  // Handle message delivered status update
+  const handleMessageDelivered = useCallback(
+    (data: MessageDeliveredEventData) => {
+      console.log('[SingleChat] Updating message delivered status:', data);
+
+      const deliveredById = data.delivered_by?.id;
+      const deliveredAt = data.delivered_at || new Date().toISOString();
+
+      if (!deliveredById) {
+        console.error(
+          '[SingleChat] MessageDelivered event missing delivered_by.id'
+        );
+        return;
+      }
+
+      setMessages((prevMessages) =>
+        prevMessages.map((msg) => {
+          if (msg.id === data.message_id) {
+            // Find existing status for this recipient or create new one
+            const existingStatusIndex = msg.statuses?.findIndex(
+              (status) => status.participant_id === deliveredById
+            );
+
+            const updatedStatuses =
+              existingStatusIndex !== undefined && existingStatusIndex >= 0
+                ? // Update existing status
+                  msg.statuses?.map((status, index) =>
+                    index === existingStatusIndex
+                      ? { ...status, delivered_at: deliveredAt }
+                      : status
+                  ) || []
+                : // Create new status entry for this recipient
+                  [
+                    ...(msg.statuses || []),
+                    {
+                      participant_type: data.delivered_by?.type || 'User',
+                      participant_id: deliveredById,
+                      delivered_at: deliveredAt,
+                      read_at: null,
+                    },
+                  ];
+
+            return {
+              ...msg,
+              statuses: updatedStatuses,
+            };
+          }
+          return msg;
+        })
+      );
+    },
+    []
+  );
+
+  // Handle participant blocked event
+  const handleParticipantBlocked = useCallback(
+    (data: ParticipantBlockedEventData) => {
+      console.log('[SingleChat] Participant blocked event:', data);
+
+      const currentUserId =
+        currentUser?.id === 'guardian'
+          ? currentUser?.user?.id
+          : currentUser?.id;
+
+      // Check if current user was blocked
+      if (data.blocked_user_id === currentUserId) {
+        setIsBlockedYou(true);
+        Alert.alert('Blocked', 'You have been blocked by this user.', [
+          { text: 'OK' },
+        ]);
+      } else if (data.blocked_by_id === currentUserId) {
+        // Current user blocked someone
+        _setIsBlockedByYou(true);
+      }
+    },
+    [currentUser]
+  );
+
+  // Initial fetch and setup Pusher
+  useEffect(() => {
+    if (conversationId) {
+      fetchMessages();
+      setupPusherListeners();
+
+      return () => {
+        // Cleanup Pusher subscription
+        if (unsubscribeConversationRef.current) {
+          unsubscribeConversationRef.current();
+          unsubscribeConversationRef.current = null;
+        }
+        // Clear typing timeout
+        if (typingTimeoutRef.current) {
+          clearTimeout(typingTimeoutRef.current);
+        }
+      };
+    }
+  }, [conversationId, fetchMessages, setupPusherListeners]);
+
+  // Mark all unread messages as read individually when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      if (!conversationId || messages.length === 0) return;
+
+      const currentUserId =
+        currentUser?.id === 'guardian'
+          ? currentUser?.user?.id
+          : currentUser?.id;
+
+      if (!currentUserId) return;
+
+      // Mark each unread message from other users as read individually
+      messages.forEach((message) => {
+        // Only mark messages from other users that haven't been marked yet
+        if (
+          message.sender_id !== currentUserId &&
+          message.id &&
+          !markedAsReadRef.current.has(message.id)
+        ) {
+          // Check if message is already read by checking statuses
+          const isAlreadyRead = message.statuses?.some(
+            (status) =>
+              status.participant_id === currentUserId && status.read_at !== null
+          );
+
+          if (!isAlreadyRead) {
+            markedAsReadRef.current.add(message.id);
+            messageServices
+              .markMessageAsRead(message.id)
+              .then(() => {
+                console.log(
+                  '[SingleChat] ✅ Marked message as read on focus:',
+                  message.id
+                );
+              })
+              .catch((error) => {
+                console.error(
+                  '[SingleChat] Error marking message as read on focus:',
+                  error
+                );
+                // Remove from set on error so we can retry
+                markedAsReadRef.current.delete(message.id);
+              });
+          } else {
+            // Mark as processed even if already read to avoid duplicate checks
+            markedAsReadRef.current.add(message.id);
+          }
+        }
+      });
+    }, [conversationId, messages, currentUser])
+  );
+
+  const { onSendPress } = useSendMessage({
+    otherUserData,
+    conversationData,
+    setConversationData,
+    messages,
+    setMessages,
+    conversationId,
+    setConversationId,
+    isBlockedByYou,
+    setInputMessage,
+  });
 
   useEffect(() => {
     const quotes = [
@@ -345,29 +630,18 @@ const SingleChat = (props: any) => {
     setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
   }, []);
 
-  const onMessagePress = (messageId: any) => {
+  const onMessagePress = (messageId: number) => {
     if (messageId === messagePressedId) {
       setMessagePressedId(null);
-      forceUpdate();
     } else {
       setMessagePressedId(messageId);
-      forceUpdate();
     }
   };
-
-  const FooterLoader = () =>
-    footerLoading ? (
-      <ActivityIndicator
-        color={Colors.theme}
-        style={{ marginVertical: hp(2) }}
-      />
-    ) : null;
 
   const onInputFocus = () => {
     if (flatListRef?.current) {
       flatListRef?.current?.scrollToOffset({ offset: 0, animated: true });
     }
-    resetToFirstPage().catch(() => {});
   };
 
   const onScrollBegin = () => {
@@ -384,24 +658,38 @@ const SingleChat = (props: any) => {
     props.navigation.navigate('AddWali', { fromSettings: true });
   };
 
+  const handleSubmitEditing = async () => {
+    if (inputMessage.trim().length > 0) {
+      const res = await onSendPress(inputMessage);
+
+      if (res?.type === 'blockedByYou') {
+        Alert.alert(
+          `You have blocked ${otherUserData?.name} please unblock first to send message`
+        );
+      }
+    }
+  };
+
   return (
     <Container>
-      {(currentUser?.membership_status === 0 ||
+      {/* {(currentUser?.membership_status === 0 ||
         currentUser?.membership_status === null) && (
         <PremiumButton
           heading={LanguageKeys.goPremiumButtonHeadingOne}
           description={LanguageKeys.goPremiumButtonHeadingTwo}
         />
-      )}
+      )} */}
 
       <SingleChatHeader
         navigation={props?.navigation}
         otherUserData={otherUserData}
         messages={messages}
         conversationData={conversationData}
+        conversationId={conversationId}
         currentUserId={currentUser?.id}
         isBlockedByYou={isBlockedByYou}
         isBlockedYou={isBlockedYou}
+        setMessages={setMessages}
       />
       <ScrollView
         contentContainerStyle={Styles.innerContainer}
@@ -418,6 +706,12 @@ const SingleChat = (props: any) => {
             <Text style={Styles.guardianText}>{t('addAWali')}</Text>
           </Ripple>
         ) : null}
+
+        {/* Typing Indicator */}
+        {isOtherUserTyping && (
+          <TypingIndicator userName={otherUserData?.name} />
+        )}
+
         <ScrollView
           horizontal
           scrollEnabled={false}
@@ -437,25 +731,29 @@ const SingleChat = (props: any) => {
               ref={flatListRef}
               data={messages}
               inverted
-              renderItem={({ item, index }) => (
-                <MessageBubble
-                  item={item}
-                  index={index}
-                  currentUserId={currentUser?.id}
-                  guardianUserId={currentUser?.user?.id}
-                  otherUserId={otherUserData?.id}
-                  otherUserImage={otherUserData?.image}
-                  isBlockedYou={isBlockedYou}
-                  messages={messages}
-                  messagePressedId={messagePressedId}
-                  onMessagePress={onMessagePress}
-                  Styles={Styles}
-                />
-              )}
+              renderItem={({ item, index }) => {
+                const currentUserId =
+                  currentUser?.id === 'guardian'
+                    ? currentUser?.user?.id
+                    : currentUser?.id;
+
+                return (
+                  <MessageBubble
+                    item={item}
+                    index={index}
+                    currentUserId={currentUserId}
+                    guardianUserId={currentUser?.user?.id}
+                    otherUserId={otherUserData?.id}
+                    otherUserImage={otherUserData?.image}
+                    isBlockedYou={isBlockedYou}
+                    messages={messages}
+                    messagePressedId={messagePressedId}
+                    onMessagePress={onMessagePress}
+                    Styles={Styles}
+                  />
+                );
+              }}
               contentContainerStyle={Styles.messagesListContainer}
-              onEndReachedThreshold={0.1}
-              onEndReached={handleEndReached}
-              ListFooterComponent={FooterLoader}
               getItem={(data, index) => data[index]}
               getItemCount={(data) => data.length}
               keyExtractor={(item: any, index: any) => index}
@@ -488,20 +786,13 @@ const SingleChat = (props: any) => {
             }}
             placeholder={t('message')}
             placeholderTextColor={Colors.color15}
-            multiline
-            value={
-              messages?.length === 1 && messages[0]?.sender === currentUser?.id
-                ? ''
-                : inputMessage
-            }
+            value={inputMessage}
             onChangeText={onChangeInputMessage}
             onFocus={onInputFocus}
-            editable={
-              messages?.length === 1 && messages[0]?.sender === currentUser?.id
-                ? false
-                : true
-            }
+            onSubmitEditing={handleSubmitEditing}
             maxLength={350}
+            submitBehavior="blurAndSubmit"
+            returnKeyType="send"
           />
           <TouchableOpacity
             style={{
@@ -536,13 +827,6 @@ const SingleChat = (props: any) => {
               />
             )}
           </TouchableOpacity>
-          {messages?.length === 1 &&
-            messages[0]?.sender === currentUser?.id && (
-              <TouchableOpacity
-                style={Styles.disabledInputCon}
-                onPress={onDisabledInputPress}
-              />
-            )}
         </View>
       </ScrollView>
     </Container>

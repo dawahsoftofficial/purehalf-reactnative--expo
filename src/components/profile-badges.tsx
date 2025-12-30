@@ -15,7 +15,7 @@ type ProfileBadgesProps = {
   userData?: {
     id?: number;
     media?: {
-      primary_image?: string;
+      primary_image_to_show?: string;
       cover_image?: string;
     };
     detail?: {
@@ -95,23 +95,23 @@ export function ProfileBadges({
       label: string;
     }> = [];
 
-    if (isVIP || true) {
+    if (isVIP) {
       badgeList.push({
-        icon: <VipBadgeIcon width={wp(6)} height={wp(6)} />,
+        icon: <VipBadgeIcon width={wp(8)} height={wp(8)} />,
         label: 'VIP',
       });
     }
 
-    if (isBoosted || true) {
+    if (isBoosted || false) {
       badgeList.push({
-        icon: <PopularBadgeIcon width={wp(6)} height={wp(6)} />,
+        icon: <PopularBadgeIcon width={wp(8)} height={wp(8)} />,
         label: 'Boosted',
       });
     }
 
-    if (isProfileCompleted || true) {
+    if (isProfileCompleted) {
       badgeList.push({
-        icon: <ProfileCompleteBadgeIcon width={wp(6)} height={wp(6)} />,
+        icon: <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />,
         label: 'Complete',
       });
     }
@@ -165,7 +165,7 @@ const Styles = StyleSheet.create({
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: wp(2.5),
+    paddingHorizontal: wp(1),
     paddingVertical: hp(0.8),
     borderRadius: wp(3),
     gap: wp(1.5),

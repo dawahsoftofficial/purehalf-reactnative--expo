@@ -27,7 +27,7 @@ type User = {
   gender?: string;
   date_of_birth?: string;
   media?: {
-    primary_image?: string[];
+    primary_image_to_show?: string[];
   };
   membership_status?: number | null;
   membership_expiry?: string | null;
@@ -124,7 +124,8 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
       }
 
       const hasPrimaryImage =
-        user?.media?.primary_image && user.media.primary_image.length > 0;
+        user?.media?.primary_image_to_show &&
+        user.media.primary_image_to_show.length > 0;
 
       if (!hasPrimaryImage) {
         navigation.navigate('ProfilePicture');

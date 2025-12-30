@@ -41,13 +41,13 @@ type User = {
   membership_status?: number | null;
   membership_expiry?: string | null;
   media?: {
-    primary_image?: string[];
+    primary_image_to_show?: string[];
   };
   results?: {
     id?: string | number;
     first_name?: string;
     media?: {
-      primary_image?: string[];
+      primary_image_to_show?: string[];
     };
     membership_status?: number | null;
   };
@@ -117,8 +117,8 @@ const Otp = (props: OtpProps) => {
       }
 
       const hasPrimaryImage =
-        userData?.media?.primary_image &&
-        userData.media.primary_image.length > 0;
+        userData?.media?.primary_image_to_show &&
+        userData.media.primary_image_to_show.length > 0;
 
       if (!hasPrimaryImage) {
         navigateTo('ProfilePicture');

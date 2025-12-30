@@ -1,55 +1,82 @@
-import React, { useEffect } from 'react';
-import {
-  FlatList,
-  Modal,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import React, { useCallback } from 'react';
+import { FlatList, StyleSheet, View } from 'react-native';
+import Modal from 'react-native-modal';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import { Animation } from '../../animations';
 import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { Colors, Fonts } from '../../res';
-import { useGlobalContext } from '../../services';
 import { Button } from '../buttons';
 
 const ButtonPicker = (props: any) => {
-  const { updateCustomModal } = useGlobalContext();
   const {
     visible,
     onClose = () => null,
     headerTitle = 'Select option',
-    data = [{ lable: 'Cancel', value: 'cancel' }],
+    data = [{ label: 'Cancel', value: 'cancel' }],
     onButtonPress = () => null,
     useCustomModal = false,
   } = props;
 
-  const renderList = ({ item }: any) => {
-    const { label, value } = item;
-    return (
-      <Button
-        buttonStyle={{
-          ...Styles.button,
-          backgroundColor: value === 'cancel' ? Colors.color8 : Colors.theme,
-        }}
-        text={label}
-        onPress={onButtonPress.bind(null, item)}
-        textStyle={{
-          color: value === 'cancel' ? Colors.color1 : Colors.color2,
-        }}
-      />
-    );
-  };
+  const handleButtonPress = useCallback(
+    (item: any) => {
+      onButtonPress(item);
+      // Close modal immediately after button press
+      onClose();
+    },
+    [onButtonPress, onClose]
+  );
 
-  const Content = () => (
-    <View style={{ flex: 1 }}>
-      <TouchableOpacity
-        style={Styles.container}
-        activeOpacity={1}
-        onPress={onClose}
-      >
+  const renderList = useCallback(
+    ({ item }: any) => {
+      const { label, value } = item;
+      return (
+        <Button
+          buttonStyle={{
+            ...Styles.button,
+            backgroundColor: value === 'cancel' ? Colors.color8 : Colors.theme,
+          }}
+          text={label}
+          onPress={() => handleButtonPress(item)}
+          textStyle={{
+            color: value === 'cancel' ? Colors.color1 : Colors.color2,
+          }}
+        />
+      );
+    },
+    [handleButtonPress]
+  );
+
+  const handleBackdropPress = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const handleSwipeComplete = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  // If using custom modal, return null (handled by CustomModal component)
+  if (useCustomModal) {
+    return null;
+  }
+
+  return (
+    <Modal
+      isVisible={visible}
+      onBackdropPress={handleBackdropPress}
+      onSwipeComplete={handleSwipeComplete}
+      swipeDirection={['down']}
+      backdropOpacity={0.5}
+      animationIn="slideInUp"
+      animationOut="slideOutDown"
+      style={Styles.modal}
+      avoidKeyboard={true}
+      useNativeDriverForBackdrop={true}
+      hideModalContentWhileAnimating={true}
+      onModalHide={handleBackdropPress}
+    >
+      <View style={Styles.container}>
         <View
           style={Styles.innerContainer}
           onStartShouldSetResponder={() => true}
@@ -65,45 +92,19 @@ const ButtonPicker = (props: any) => {
                 color={Colors.color1}
                 size={wp(5)}
                 style={Styles.closeBtn}
-                onPress={onClose}
+                onPress={handleBackdropPress}
               />
             </View>
             <FlatList
               data={data}
               renderItem={renderList}
               scrollEnabled={false}
-              contentContainerStyle={{ paddingVertical: hp(3) }}
+              contentContainerStyle={Styles.listContainer}
+              keyExtractor={(item, index) => `button-${index}-${item.value}`}
             />
           </Animation>
         </View>
-      </TouchableOpacity>
-    </View>
-  );
-
-  useEffect(() => {
-    if (useCustomModal && visible) {
-      updateCustomModal(true, Content);
-    } else if (useCustomModal && !visible) {
-      updateCustomModal(false, null);
-    }
-  }, [useCustomModal, visible, updateCustomModal]);
-
-  if (useCustomModal) {
-    return null;
-  }
-
-  if (!visible) {
-    return null;
-  }
-
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      {Content()}
+      </View>
     </Modal>
   );
 };
@@ -111,10 +112,12 @@ const ButtonPicker = (props: any) => {
 export default ButtonPicker;
 
 const Styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.blackRGBA50,
+  modal: {
     justifyContent: 'flex-end',
-    flex: 1,
+    margin: 0,
+  },
+  container: {
+    justifyContent: 'flex-end',
     paddingTop: hp(12),
   },
   innerContainer: {
@@ -149,6 +152,9 @@ const Styles = StyleSheet.create({
     marginBottom: hp(1),
     position: 'absolute',
     paddingHorizontal: wp(3),
+  },
+  listContainer: {
+    paddingVertical: hp(3),
   },
   button: {
     marginTop: hp(2),

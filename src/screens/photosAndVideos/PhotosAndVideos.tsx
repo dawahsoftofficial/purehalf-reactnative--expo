@@ -91,15 +91,15 @@ const PhotosAndVideos = (props: any) => {
       const {
         cover_image,
         youtube_url,
-        primary_image,
+        primary_image_to_show,
         public_gallery,
         private_gallery,
       } = media;
       if (cover_image) {
         setCoverImage(cover_image);
       }
-      if (primary_image) {
-        setProfileImage(primary_image);
+      if (primary_image_to_show) {
+        setProfileImage(primary_image_to_show);
       }
       if (youtube_url) {
         setYoutubeURL(youtube_url);
@@ -176,7 +176,7 @@ const PhotosAndVideos = (props: any) => {
       const params = {
         from: 'public_gallery',
         file_path: uri,
-        to: 'primary_image',
+        to: 'primary_image_to_show',
       };
       ApiServices.moveMedia(params)
         .then((res: any) => {
@@ -246,9 +246,9 @@ const PhotosAndVideos = (props: any) => {
           hideLoader();
         })
         .catch(hideLoader);
-    } else if (from === 'primary_image') {
+    } else if (from === 'primary_image_to_show') {
       const params = {
-        from: 'primary_image',
+        from: 'primary_image_to_show',
         file_path: uri,
         to: 'public_gallery',
       };
@@ -414,12 +414,12 @@ const PhotosAndVideos = (props: any) => {
     ApiServices.imageUpload(imageObj, imagePicker.from, youtubeURL)
       .then(async (res: any) => {
         if (res) {
-          const { cover_image, primary_image } = res;
+          const { cover_image, primary_image_to_show } = res;
           if (cover_image) {
             setCoverImage(cover_image);
           }
-          if (primary_image) {
-            setProfileImage(primary_image);
+          if (primary_image_to_show) {
+            setProfileImage(primary_image_to_show);
           }
           currentUser.media = res;
           await setData(storageKeys.USER, currentUser);
@@ -432,7 +432,7 @@ const PhotosAndVideos = (props: any) => {
   const onAddPofilePress = () => {
     setImagePicker({
       visible: true,
-      from: 'primary_image',
+      from: 'primary_image_to_show',
     });
   };
 
@@ -505,7 +505,7 @@ const PhotosAndVideos = (props: any) => {
                 onPress={onArrowDownPress.bind(
                   null,
                   { uri: profileImage },
-                  'primary_image'
+                  'primary_image_to_show'
                 )}
               >
                 <AntDesign
@@ -599,12 +599,12 @@ const PhotosAndVideos = (props: any) => {
       message: 'Deleting profile image...',
     });
     const params = {
-      key: 'primary_image',
+      key: 'primary_image_to_show',
       file_path: profileImage,
     };
     ApiServices.deleteImage(params)
       .then(() => {
-        currentUser.media.primary_image = null;
+        currentUser.media.primary_image_to_show = null;
         setProfileImage('');
         hideLoader();
         setData(storageKeys.USER, currentUser);
@@ -626,7 +626,7 @@ const PhotosAndVideos = (props: any) => {
   const onProfileDeletePress = () => {
     setButtonPickerVisible({
       visible: true,
-      from: 'primary_image',
+      from: 'primary_image_to_show',
       item: profileImage,
       pickerData: deletePickerData,
       pickerHeaderTitle: LanguageKeys.sureDeleteDes,
@@ -653,7 +653,7 @@ const PhotosAndVideos = (props: any) => {
   const showUploadingLoader = () => {
     if (imagePicker.from === 'cover_image') {
       setUploadingCoverLoader(true);
-    } else if (imagePicker.from === 'primary_image') {
+    } else if (imagePicker.from === 'primary_image_to_show') {
       setUploadingProfileLoader(true);
     }
   };
@@ -661,7 +661,7 @@ const PhotosAndVideos = (props: any) => {
   const hideUploadingLoader = () => {
     if (imagePicker.from === 'cover_image') {
       setUploadingCoverLoader(false);
-    } else if (imagePicker.from === 'primary_image') {
+    } else if (imagePicker.from === 'primary_image_to_show') {
       setUploadingProfileLoader(false);
     }
   };
@@ -812,7 +812,7 @@ const PhotosAndVideos = (props: any) => {
       deleteCoverImage();
     } else if (
       value === 'delete' &&
-      buttonPickerVisible.from === 'primary_image'
+      buttonPickerVisible.from === 'primary_image_to_show'
     ) {
       deleteProfileImage();
     }

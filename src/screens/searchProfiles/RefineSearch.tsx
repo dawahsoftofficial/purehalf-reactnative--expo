@@ -146,7 +146,9 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
           style={{
             ...Styles.fieldItemCon,
             backgroundColor: index % 2 === 0 ? Colors.color31 : Colors.color2,
-            opacity: isLocked ? 0.6 : 1,
+            // opacity: isLocked ? 0.6 : 1,
+            borderLeftWidth: isLocked ? 3 : 0,
+            borderLeftColor: isLocked ? Colors.theme : 'transparent',
           }}
         >
           <View
@@ -360,12 +362,21 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
           style={{
             ...Styles.fieldItemCon,
             backgroundColor:
-              index % 2 === 0
-                ? Colors.color2
-                : item?.id === 'distance'
+              isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
+                ? Colors.color39 + '20'
+                : index % 2 === 0
                   ? Colors.color2
-                  : Colors.color31,
-            opacity: isLocked ? 0.6 : 1,
+                  : item?.id === 'distance'
+                    ? Colors.color2
+                    : Colors.color31,
+            borderTopWidth:
+              isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
+                ? 3
+                : 0,
+            borderTopColor:
+              isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
+                ? Colors.color37
+                : 'transparent',
           }}
           animation="fadeIn"
           duration={1000}
@@ -383,9 +394,14 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
                 style={{
                   marginLeft: Rtl ? 0 : wp(2),
                   marginRight: Rtl ? wp(2) : 0,
+                  backgroundColor: Colors.color37,
+                  paddingHorizontal: wp(2),
+                  paddingVertical: hp(0.4),
                 }}
               >
-                <AntDesign name="lock" color={Colors.theme} size={wp(4)} />
+                <Text style={Styles.upgradeToPremiumText}>
+                  Upgrade to Premium
+                </Text>
               </View>
             )}
           </View>
@@ -585,11 +601,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       const isFemale = currentUser?.gender === 'female';
 
       // Hide filters for females
-      const hideForFemale =
-        isFemale &&
-        (item?.id === 'bdy-0' || // Body Type
-          item?.id === 'eye-0' || // Eye Color
-          item?.id === 'hijab-0'); // Hijab Level
+      const hideForFemale = isFemale && item?.id === 'hijab-0'; // Hijab Level
 
       // Hide filters for males
       const hideForMale =
@@ -600,7 +612,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       // Hide hijab for males (existing logic)
       const hideHijabForMale = item?.id === 'hijab-0' && isMale;
 
-      const hideItem = hideForFemale || hideForMale || hideHijabForMale;
+      const hideItem = hideForFemale || hideForMale;
       return hideItem
         ? null
         : item?.type === 'dropDown'
@@ -732,7 +744,7 @@ const Styles = StyleSheet.create({
   clearButtonText: {
     fontFamily: Fonts.APPFONT_L,
     fontSize: Typography.tiny2,
-    color: Colors.theme,
+    color: Colors.color4,
     includeFontPadding: false,
   },
   dropDownBtn: {
@@ -770,5 +782,11 @@ const Styles = StyleSheet.create({
   clearAllButton: {
     position: 'absolute',
     top: hp(0.2),
+  },
+  upgradeToPremiumText: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_L,
+    fontSize: Typography.tiny,
+    includeFontPadding: false,
   },
 });

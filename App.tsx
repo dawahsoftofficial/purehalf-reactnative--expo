@@ -1,3 +1,4 @@
+/// <reference path="./src/types/env.d.ts" />
 import React, { useEffect, type JSX } from 'react';
 import FlashMessage from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -11,22 +12,31 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
+import { usePusher } from './src/services/pusher';
+import { PUSHER_API_KEY, PUSHER_CLUSTER, PUSHER_AUTH_ENDPOINT } from '@env';
 
 const AppContent = (): JSX.Element => {
   const { top } = useSafeAreaInsets();
-  const refresh = usePremiumStore((s) => s.refresh);
+  const { refresh, revenueCatConfigured } = usePremiumStore();
+
+  // Initialize Pusher
+  // Note: AuthEndpoint is required for private channels
+  const pusherConfig =
+    PUSHER_API_KEY && PUSHER_CLUSTER
+      ? {
+          apiKey: PUSHER_API_KEY,
+          cluster: PUSHER_CLUSTER,
+          authEndpoint: PUSHER_AUTH_ENDPOINT || undefined, // Required for private channels
+        }
+      : null;
+
+  usePusher(pusherConfig);
 
   useEffect(() => {
-    // Wait a bit to ensure RevenueCat is configured before using it
-    // RevenueCat is configured in RootNavigation after user data is loaded
-    const timer = setTimeout(() => {
-      try {
-        // Initial fetch - only if Purchases is configured
-        refresh();
-      } catch {
-        // Purchases not configured yet, will retry later
-      }
-    }, 1000);
+    // Only set up RevenueCat listeners after it's configured
+    if (!revenueCatConfigured) {
+      return;
+    }
 
     // Real-time listener
     const listener = (ci: CustomerInfo) => {
@@ -39,15 +49,23 @@ const AppContent = (): JSX.Element => {
       });
     };
 
-    Purchases.addCustomerInfoUpdateListener(listener);
+    try {
+      Purchases.addCustomerInfoUpdateListener(listener);
+    } catch (error) {
+      console.warn('Failed to add RevenueCat listener:', error);
+    }
+
+    // Initial fetch after configuration
+    refresh();
 
     // App foreground handling
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') refresh();
+      if (state === 'active' && revenueCatConfigured) {
+        refresh();
+      }
     });
 
     return () => {
-      clearTimeout(timer);
       try {
         Purchases.removeCustomerInfoUpdateListener(listener);
       } catch {
@@ -55,7 +73,7 @@ const AppContent = (): JSX.Element => {
       }
       sub.remove();
     };
-  }, [refresh]);
+  }, [refresh, revenueCatConfigured]);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

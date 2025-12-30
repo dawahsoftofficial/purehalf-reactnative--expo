@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions } from '@react-navigation/native';
@@ -34,8 +33,17 @@ const CommonActionsFun = (props: CommonActionProps) => {
   const { setData, deleteAll, storageKeys, getData } = StorageManager;
 
   const handleLogout = async () => {
-    await AsyncStorage.setItem('isRecommended', 'false');
-    await signOut(auth);
+    StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
+    // Check if there's a current user before signing out
+    try {
+      const currentFirebaseUser = auth.currentUser;
+      if (currentFirebaseUser) {
+        await signOut(auth);
+      }
+    } catch (error) {
+      // Ignore signOut errors if no user is signed in
+      console.log('[CommonActions] No user to sign out:', error);
+    }
     await deleteAll();
     updateCurrentUser(null);
     await setData(storageKeys.LANGUAGE, language);
@@ -52,10 +60,9 @@ const CommonActionsFun = (props: CommonActionProps) => {
     Api.interceptors.response.use(
       (response) => response,
       async (error) => {
-        if (
-          error?.response?.status === 401 ||
-          error?.response?.status === 403
-        ) {
+        // Only treat 401 as authentication error
+        // 403 can be rate limiting or business logic errors (e.g., "Wait for reply")
+        if (error?.response?.status === 401) {
           handleLogout();
         }
         return Promise.reject(error);

@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
 import { getAuth, signOut } from '@react-native-firebase/auth';
 import { getMessaging, onMessage } from '@react-native-firebase/messaging';
@@ -96,7 +95,7 @@ const DisplayForegroundNotification = () => {
 
   const onLogoutPress = async () => {
     const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
-    await AsyncStorage.setItem('isRecommended', 'false');
+    StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
     await ApiServices.logout().catch();
     await signOut(auth).catch();
     await deleteAll()
@@ -345,8 +344,8 @@ const DisplayForegroundNotification = () => {
           setRemoteMessage(null);
           setRemoteMessageData(null);
         });
-        await AsyncStorage.setItem(
-          'membership_discount',
+        StorageManager.setString(
+          storageKeys.MEMBERSHIP_DISCOUNT,
           new Date().getTime().toString()
         );
         navigation.navigate('DiscountProFeaturesPromotion');
@@ -386,7 +385,7 @@ const DisplayForegroundNotification = () => {
           }
         });
       case 'profile_picture_update_required':
-        currentUser.media.primary_image = null;
+        currentUser.media.primary_image_to_show = null;
         updateCurrentUser(currentUser);
         await setData(storageKeys.USER, currentUser);
         navigation.navigate('ProfilePicture');

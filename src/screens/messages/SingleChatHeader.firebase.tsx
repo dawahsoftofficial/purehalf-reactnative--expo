@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import _ from 'lodash';
+import React, { useEffect, useState } from 'react';
 import {
   Dimensions,
   Image,
@@ -22,46 +23,31 @@ import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
-  flashErrorMessage,
+  Firebase,
   flashSuccessMessage,
+  StorageManager,
+  useGlobalContext,
 } from '../../services';
-import messageServices from '../../services/api/message-services';
-import type { Message } from '../../services/api/types/message-types';
 
-type SingleChatHeaderProps = {
-  navigation: any;
-  otherUserData: any;
-  messages: Message[];
-  conversationData: any;
-  conversationId: string;
-  currentUserId: string | number;
-  isBlockedByYou: boolean;
-  isBlockedYou: boolean;
-  setMessages: (messages: Message[]) => void;
-};
+const SingleChatHeader = (props: any) => {
+  const { setData, storageKeys } = StorageManager;
+  const { currentUser, conversations, updateConversations } =
+    useGlobalContext();
 
-const SingleChatHeader = (props: SingleChatHeaderProps) => {
-  const {
-    navigation,
-    conversationData,
-    conversationId,
-    otherUserData,
-    currentUserId,
-    isBlockedByYou: propsIsBlockedByYou,
-    isBlockedYou: propsIsBlockedYou,
-    setMessages,
-  } = props;
+  const [isBlockedByYou, setIsBlockedByYou] = useState(props?.isBlockedByYou);
+  const [isBlockedYou, setIsBlockedYou] = useState(props?.isBlockedYou);
 
-  const [isBlockedByYou, setIsBlockedByYou] = useState(propsIsBlockedByYou);
-  const [isBlockedYou, setIsBlockedYou] = useState(propsIsBlockedYou);
-
+  const setBlockedStatus = () => {
+    setIsBlockedByYou(props?.isBlockedByYou);
+    setIsBlockedYou(props?.isBlockedYou);
+  };
   useEffect(() => {
-    setIsBlockedByYou(propsIsBlockedByYou);
-    setIsBlockedYou(propsIsBlockedYou);
-  }, [propsIsBlockedByYou, propsIsBlockedYou]);
+    setTimeout(() => {
+      setBlockedStatus();
+    }, 0);
+  }, []); // run once only
 
   const [isBlurred, setIsBlurred] = useState(true);
-  const menuRef = useRef<any>(null);
 
   const [deleteAlert, setDeleteAlert] = useState({
     visible: false,
@@ -71,6 +57,14 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     visible: false,
     message: 'Loading...',
   });
+
+  const {
+    navigation = {},
+    messages = [],
+    conversationData = {},
+    otherUserData = {},
+    currentUserId = '',
+  } = props;
 
   const onBackPress = () => navigation.goBack();
 
@@ -98,17 +92,10 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   }, []);
 
   const onViewProfilePress = () => {
-    menuRef.current?.close();
     navigation.navigate('UserProfile', { userData: otherUserData });
   };
 
-  const onBlockUnBlockUserPress = async () => {
-    menuRef.current?.close();
-    if (!conversationId || !conversationData?.id) {
-      flashErrorMessage('Conversation ID is missing');
-      return;
-    }
-
+  const onBlockUnBlockUserPress = () => {
     setModalLoader({
       visible: true,
       message: !isBlockedByYou
@@ -116,44 +103,32 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         : LanguageKeys.unBlockingUser,
     });
 
-    try {
-      const params = {
-        type: 7,
-        action_user_id: otherUserData?.id,
-        allow_photo_request: 0,
-      };
-      await ApiServices.interactionAction(params);
-
-      const conversationIdNum = parseInt(conversationId, 10);
-      if (isNaN(conversationIdNum)) {
-        throw new Error('Invalid conversation ID');
-      }
-
-      await messageServices.blockConversationParticipant(
-        conversationIdNum,
-        otherUserData?.id
-      );
-
-      flashSuccessMessage(
-        !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-      );
-      setIsBlockedByYou(!isBlockedByYou);
-      hideModalLoader();
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to block/unblock user';
-      flashErrorMessage(errorMessage);
-      hideModalLoader();
-    }
+    const params = {
+      type: 7,
+      action_user_id: otherUserData?.id,
+      allow_photo_request: 0,
+    };
+    ApiServices.interactionAction(params)
+      .then(() => {
+        Firebase.blockUnBlockConv(
+          conversationData?.id,
+          otherUserData?.id,
+          !isBlockedByYou
+        )
+          .then(() => {
+            flashSuccessMessage(
+              !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
+            );
+            hideModalLoader();
+          })
+          .catch(hideModalLoader);
+        setIsBlockedByYou(!isBlockedByYou);
+        hideModalLoader();
+      })
+      .catch(hideModalLoader);
   };
 
-  const onBlockUnBlockAndReportUserPress = async () => {
-    menuRef.current?.close();
-    if (!conversationId || !conversationData?.id) {
-      flashErrorMessage('Conversation ID is missing');
-      return;
-    }
-
+  const onBlockUnBlockAndReportUserPress = () => {
     setModalLoader({
       visible: true,
       message: !isBlockedByYou
@@ -161,37 +136,30 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         : LanguageKeys.unBlockingUser,
     });
 
-    try {
-      const params = {
-        type: 8,
-        action_user_id: otherUserData?.id,
-        allow_photo_request: 0,
-      };
-      await ApiServices.interactionAction(params);
+    const params = {
+      type: 8,
+      action_user_id: otherUserData?.id,
+      allow_photo_request: 0,
+    };
 
-      const conversationIdNum = parseInt(conversationId, 10);
-      if (isNaN(conversationIdNum)) {
-        throw new Error('Invalid conversation ID');
-      }
-
-      await messageServices.blockConversationParticipant(
-        conversationIdNum,
-        otherUserData?.id
-      );
-
-      flashSuccessMessage(
-        !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-      );
-      setIsBlockedByYou(!isBlockedByYou);
-      hideModalLoader();
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to block and report user';
-      flashErrorMessage(errorMessage);
-      hideModalLoader();
-    }
+    ApiServices.interactionAction(params)
+      .then(() => {
+        Firebase.blockUnBlockConv(
+          conversationData?.id,
+          otherUserData?.id,
+          !isBlockedByYou
+        )
+          .then(() => {
+            flashSuccessMessage(
+              !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
+            );
+            hideModalLoader();
+          })
+          .catch(hideModalLoader);
+        setIsBlockedByYou(!isBlockedByYou);
+        hideModalLoader();
+      })
+      .catch(hideModalLoader);
   };
 
   const conversationDeleteSuccess = () => {
@@ -203,36 +171,35 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   const conversationClearSuccess = () => {
     hideModalLoader();
     flashSuccessMessage(LanguageKeys.chatCleared);
-    // Clear messages in the parent component
-    setMessages([]);
+    navigation.goBack();
   };
 
-  const onClearChatPress = async () => {
+  const onClearChatPress = () => {
     hideDeleteAlert();
-
-    if (!conversationId || !conversationData?.id) {
-      flashErrorMessage('Conversation ID is missing');
-      return;
-    }
-
     setModalLoader({
       visible: true,
       message: LanguageKeys.clearingChat,
     });
-
-    try {
-      const conversationIdNum = parseInt(conversationId, 10);
-      if (isNaN(conversationIdNum)) {
-        throw new Error('Invalid conversation ID');
+    if (messages?.length !== 0) {
+      const lastMessage: any = _.first(messages);
+      if (lastMessage) {
+        Firebase.clearChat(conversationData?.id, lastMessage?.id, currentUserId)
+          .then(async () => {
+            const updatedConv = _.map(conversations, (conversation) => {
+              if (conversation?.convDetails?.id === conversationData?.id) {
+                return { ...conversation, messages: {} };
+              } else {
+                return conversation;
+              }
+            });
+            updateConversations(updatedConv);
+            await setData(storageKeys.CONVERSATIONS, updatedConv);
+            conversationClearSuccess();
+          })
+          .catch(hideModalLoader);
       }
-
-      await messageServices.clearConversation(conversationIdNum);
+    } else {
       conversationClearSuccess();
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : 'Failed to clear conversation';
-      flashErrorMessage(errorMessage);
-      hideModalLoader();
     }
   };
 
@@ -244,14 +211,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const onDeleteAlertDeletePress = () => {
-    // Capture the alert type before closing modal
-    const alertType = deleteAlert?.from;
-
-    // Close modal immediately
-    hideDeleteAlert();
-
-    // Execute action after modal closes
-    if (alertType === 'chat') {
+    if (deleteAlert?.from === 'chat') {
       onDeleteChatPress();
     } else {
       onClearChatPress();
@@ -260,37 +220,35 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
 
   const onDeleteChatPress = async () => {
     hideDeleteAlert();
-
-    if (!conversationId || !conversationData?.id) {
-      flashErrorMessage('Conversation ID is missing');
-      return;
-    }
-
     setModalLoader({
       visible: true,
       message: LanguageKeys.deleting,
     });
 
-    try {
-      const conversationIdNum = parseInt(conversationId, 10);
-      if (isNaN(conversationIdNum)) {
-        throw new Error('Invalid conversation ID');
-      }
+    const updatedConversations = await _.filter(
+      conversations,
+      (conversation) => conversation?.convDetails?.id !== conversationData?.id
+    );
+    updateConversations(updatedConversations);
+    await setData(storageKeys.CONVERSATIONS, updatedConversations);
 
-      await messageServices.deleteConversation(conversationIdNum);
+    if (messages?.length !== 0) {
+      const lastMessage: any = _.first(messages);
+      if (lastMessage) {
+        Firebase.updateMessageDeletedBy(
+          conversationData?.id,
+          lastMessage?.id,
+          currentUserId
+        )
+          .then(conversationDeleteSuccess)
+          .catch(hideModalLoader);
+      }
+    } else {
       conversationDeleteSuccess();
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to delete conversation';
-      flashErrorMessage(errorMessage);
-      hideModalLoader();
     }
   };
 
   const showClearChatAlert = () => {
-    menuRef.current?.close();
     Keyboard.dismiss();
     setDeleteAlert({
       visible: true,
@@ -299,7 +257,6 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const showDeleteChatAlert = () => {
-    menuRef.current?.close();
     Keyboard.dismiss();
     setDeleteAlert({
       visible: true,
@@ -308,14 +265,13 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   };
 
   const onChangeBlur = () => {
-    menuRef.current?.close();
     const newParams = {
       type: '9',
       action_user_id: otherUserData?.id,
     };
 
     ApiServices.interactionAction(newParams)
-      .then(async () => {
+      .then(async (res) => {
         setModalLoader({
           visible: false,
           message: LanguageKeys.updating,
@@ -338,18 +294,18 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         'View profile',
-        // 'Unblock user',
+        'Unblock user',
         'Clear chat',
-        // blurText,
+        blurText,
         'Cancel',
       ];
     } else {
       optionsArray = [
         'View profile',
-        // 'Block user',
-        // 'Report and block user',
+        'Block user',
+        'Report and block user',
         'Clear chat',
-        // blurText,
+        blurText,
         'Cancel',
       ];
     }
@@ -357,20 +313,20 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         'View profile',
-        // 'Unblock user',
+        'Unblock user',
         'Clear chat',
         'Delete conversation',
-        // blurText,
+        blurText,
         'Cancel',
       ];
     } else {
       optionsArray = [
         'View profile',
-        // 'Block user',
-        // 'Report and block user',
+        'Block user',
+        'Report and block user',
         'Clear chat',
         'Delete conversation',
-        // blurText,
+        blurText,
         'Cancel',
       ];
     }
@@ -381,30 +337,30 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       actionsArray = [
         onViewProfilePress,
-        // onBlockUnBlockUserPress,
+        onBlockUnBlockUserPress,
         showClearChatAlert,
-        // onChangeBlur,
+        onChangeBlur,
       ];
     } else {
-      actionsArray = [onViewProfilePress, showClearChatAlert];
+      actionsArray = [onViewProfilePress, showClearChatAlert, onChangeBlur];
     }
   } else {
     if (isBlockedByYou) {
       actionsArray = [
         onViewProfilePress,
-        // onBlockUnBlockUserPress,
+        onBlockUnBlockUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
-        // onChangeBlur,
+        onChangeBlur,
       ];
     } else {
       actionsArray = [
         onViewProfilePress,
-        // onBlockUnBlockUserPress,
-        // onBlockUnBlockAndReportUserPress,
+        onBlockUnBlockUserPress,
+        onBlockUnBlockAndReportUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
-        // onChangeBlur,
+        onChangeBlur,
       ];
     }
   }
@@ -450,7 +406,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         </Ripple>
       </View>
       {currentUserId !== 'guardian' && (
-        <Menu ref={menuRef}>
+        <Menu>
           <MenuTrigger>
             <Image
               source={Images.verticalDots}
@@ -477,7 +433,6 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
                 <MenuOption
                   key={`${option}-${index}`}
                   onSelect={() => {
-                    menuRef.current?.close();
                     if (action) {
                       action();
                     }
@@ -505,7 +460,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         onClose={hideDeleteAlert}
         onDeletePress={onDeleteAlertDeletePress}
         onCancelPress={hideDeleteAlert}
-        useCustomModal={false}
+        useCustomModal={true}
       />
     </View>
   );

@@ -64,6 +64,7 @@ type User = {
   blocked?: number;
   blocked_you?: number;
   match_percentage?: number;
+  is_blur?: boolean;
 };
 
 type Conversation = {
@@ -234,12 +235,19 @@ const Profile = ({
       setUserData((prevUserData) => ({
         ...prevUserData,
         detail: currentUser.detail,
+        is_blur: currentUser.is_blur,
       }));
       if (currentUser?.detail?.tagline) {
         setTagLineInput(currentUser.detail.tagline);
       }
     }
-  }, [currentUser?.detail, currentUser?.id, fromUserProfile, userData?.id]);
+  }, [
+    currentUser?.detail,
+    currentUser?.id,
+    currentUser?.is_blur,
+    fromUserProfile,
+    userData?.id,
+  ]);
 
   const hideButtonPicker = useCallback(() => {
     setButtonPickerVisible({

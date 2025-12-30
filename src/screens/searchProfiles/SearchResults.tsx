@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import { Container, Header, Text } from '../../components';
-import BoostBadge from '../../components/badges/boost-badge';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { LanguageKeys } from '../../languages';
@@ -71,16 +70,16 @@ const SearchResults = (props: any) => {
       <Header
         title={LanguageKeys.searchResults}
         navigation={props.navigation}
-        customConponent={() => (
-          <View
-            style={[
-              Styles.headerRightContainer,
-              { flexDirection: Rtl ? 'row-reverse' : 'row' },
-            ]}
-          >
-            <BoostBadge onPress={onBoostPress} disabled={isBoostLoading} />
-          </View>
-        )}
+        // customConponent={() => (
+        //   <View
+        //     style={[
+        //       Styles.headerRightContainer,
+        //       { flexDirection: Rtl ? 'row-reverse' : 'row' },
+        //     ]}
+        //   >
+        //     <BoostBadge onPress={onBoostPress} disabled={isBoostLoading} />
+        //   </View>
+        // )}
       />
       <View style={Styles.headerDesCon}>
         <Text style={Styles.headerDes}>

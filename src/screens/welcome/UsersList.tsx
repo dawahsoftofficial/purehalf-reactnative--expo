@@ -42,8 +42,8 @@ const UsersList = (props: any) => {
             {/* {item?.is_blur === 1 ? <BlurView /> : null} */}
             <Image
               source={
-                item?.media?.primary_image
-                  ? { uri: item?.media?.primary_image }
+                item?.media?.primary_image_to_show
+                  ? { uri: item?.media?.primary_image_to_show }
                   : Images.userTwo
               }
               resizeMode="cover"
@@ -169,8 +169,8 @@ const Styles = StyleSheet.create({
   },
   badgesContainer: {
     position: 'absolute',
-    top: hp(0.5),
-    right: wp(1),
+    top: hp(1),
+    right: wp(2),
     zIndex: 1,
   },
   name: {

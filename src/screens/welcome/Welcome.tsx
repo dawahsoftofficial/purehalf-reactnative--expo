@@ -15,7 +15,6 @@ import Ripple from 'react-native-material-ripple';
 
 import { usePremiumStore } from '@/stores';
 
-import PopularBadgeIcon from '../../assets/svgs/badges/popular-badge.svg';
 import {
   CheckMembershipStatus,
   Container,
@@ -108,7 +107,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     () => [
       {
         label: LanguageKeys.profileImage,
-        id: 'primary_image',
+        id: 'primary_image_to_show',
         navigation: 'PhotosAndVideos',
         completed: false,
       },
@@ -194,7 +193,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [optionTab, setOptionTab] = useState<string>('');
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userListPage, setUserListPage] = useState(1);
-  console.log('userListPage', userListPage);
+
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
   const [headerModal, setHeaderModal] = useState<boolean>(false);
@@ -391,7 +390,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const handleProfileCompleteData = useCallback(async () => {
     const baseState: Record<string, boolean> = {
-      primary_image: Boolean(currentUser?.media?.primary_image),
+      primary_image_to_show: Boolean(currentUser?.media?.primary_image_to_show),
       // Currently not entertaining cover photo
       // cover_image: Boolean(currentUser?.media?.cover_image),
       tagline: Boolean(currentUser?.detail?.tagline),
@@ -568,9 +567,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               activeOpacity={0.6}
               onPress={() => {
                 flashSuccessMessage('You are already a premium member');
-                navigation.navigate('ProFeaturesPromotion', {
-                  navigateTo: 'BottomTab',
-                });
+                // navigation.navigate('ProFeaturesPromotion', {
+                //   navigateTo: 'BottomTab',
+                // });
               }}
               style={Styles.headerIconWrapper}
             >
@@ -596,10 +595,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               ]}
               onPress={() => setHeaderModal(!headerModal)}
             >
-              {currentUser?.media?.primary_image &&
-              currentUser?.media?.primary_image?.length ? (
+              {currentUser?.media?.primary_image_to_show &&
+              currentUser?.media?.primary_image_to_show?.length ? (
                 <Image
-                  source={{ uri: currentUser.media.primary_image }}
+                  source={{ uri: currentUser.media.primary_image_to_show }}
                   style={[
                     Styles.headerIcon,
                     { width: 45, height: 45, borderRadius: 25 },
@@ -663,18 +662,32 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       {loadMoreLoader && (
         <ActivityIndicator color={Colors.theme} size="small" />
       )}
-      {(activeOptionButton?.value === '-1' ||
+      {/* {(activeOptionButton?.value === '-1' ||
         activeOptionButton?.value === '1' ||
         activeOptionButton?.value === '3') && (
         <Ripple
-          style={Styles.fabContainer}
           onPress={onBoostProfilePress}
           disabled={isBoostLoading}
+          style={Styles.fabContainer}
         >
-          <PopularBadgeIcon width={wp(6)} height={wp(6)} />
-          <Text style={Styles.txtBoost}>Boost</Text>
+          <LinearGradient
+            style={{ borderRadius: 100 }}
+            colors={[Colors.color47, Colors.color48]}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: wp(2),
+                padding: hp(2),
+              }}
+            >
+              <PopularBadgeIcon width={wp(6)} height={wp(6)} />
+              <Text style={Styles.txtBoost}>Boost</Text>
+            </View>
+          </LinearGradient>
         </Ripple>
-      )}
+      )} */}
     </Container>
   );
 };
@@ -725,6 +738,7 @@ const Styles = StyleSheet.create({
   premiumBadgeIcon: {
     width: 10,
     height: 10,
+    tintColor: Colors.color2,
   },
   headerCounterWrapper: {
     width: width * 0.04,
@@ -746,12 +760,7 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     bottom: hp(2),
     right: wp(4),
-    borderRadius: 100,
-    paddingVertical: hp(2),
-    paddingHorizontal: wp(4),
-    backgroundColor: Colors.theme,
-    flexDirection: 'row',
-    gap: wp(4),
+
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 8,
@@ -765,7 +774,7 @@ const Styles = StyleSheet.create({
   },
   txtBoost: {
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small,
+    fontSize: Typography.small2,
     color: Colors.color2,
   },
 });

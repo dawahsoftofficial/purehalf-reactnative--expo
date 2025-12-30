@@ -585,11 +585,7 @@ class GApiServices {
   ) => {
     return new Promise((resolve, reject) => {
       const { page, type } = params;
-      console.log('[getUsers] API call initiated:', {
-        page,
-        type,
-        stack: new Error().stack,
-      });
+
       Api.get(`${EndPoints.getUsers}?page=${page}&type=${type}`)
         .then((data) => {
           if (Array.isArray(data?.data?.results)) {
@@ -1206,7 +1202,7 @@ class GApiServices {
         type: fileType,
         name: name || 'profile_picture.jpg',
       } as any);
-      formData.append('key', 'primary_image');
+      formData.append('key', 'primary_image_to_show');
 
       const xhr = new XMLHttpRequest();
       xhr.withCredentials = true;

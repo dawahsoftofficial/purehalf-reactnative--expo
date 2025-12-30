@@ -2,7 +2,6 @@ import { Dimensions, StyleSheet } from 'react-native';
 
 import { hp, Typography, wp } from '../../global';
 import { Colors, Fonts } from '../../res';
-import { isIOS } from '../../services';
 
 const { width } = Dimensions.get('window');
 
@@ -76,10 +75,11 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     color: Colors.color1,
     paddingHorizontal: wp(4),
-    textAlignVertical: 'top',
-    paddingTop: !isIOS ? hp(1.9) : hp(0.8),
+    textAlignVertical: 'center',
+    // paddingTop: !isIOS ? hp(1.9) : hp(0.8),
     maxHeight: hp(20),
     minHeight: hp(4.5),
+    includeFontPadding: false,
   },
   sendBtn: {
     width: width * 0.12,

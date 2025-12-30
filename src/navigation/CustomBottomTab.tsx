@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { hasNotch } from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
@@ -6,9 +6,12 @@ import Ripple from 'react-native-material-ripple';
 import { hp, wp } from '../global';
 import { Colors, Fonts, Images } from '../res';
 import { isIOS, useGlobalContext } from '../services';
+import { useConversationStore } from '../stores';
 
 const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
-  const [totalUnReadMessages, setTotalUnReadMessages] = useState(0);
+  const unreadConversationsCount = useConversationStore(
+    (state) => state.unreadConversationsCount
+  );
   const { conversations, updateConversations, currentUser } =
     useGlobalContext();
   const focusedOptions = descriptors[state.routes[state.index].key].options;
@@ -133,22 +136,22 @@ const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
             >
               {icon}
               <Text style={Styles.iconText}>{iconText}</Text>
-              {route.name === 'Messages' && totalUnReadMessages !== 0 && (
+              {route.name === 'Messages' && unreadConversationsCount > 0 && (
                 <View
                   style={{
                     ...Styles.unReadCon,
                     width:
-                      totalUnReadMessages.toString().length >= 4
+                      unreadConversationsCount.toString().length >= 4
                         ? wp(10)
-                        : totalUnReadMessages.toString().length == 3
+                        : unreadConversationsCount.toString().length == 3
                           ? wp(8)
-                          : totalUnReadMessages.toString().length == 2
+                          : unreadConversationsCount.toString().length == 2
                             ? wp(6)
                             : wp(5),
                   }}
                 >
                   <Text style={Styles.unReadCount} numberOfLines={1}>
-                    {JSON.stringify(totalUnReadMessages)}
+                    {unreadConversationsCount}
                   </Text>
                 </View>
               )}
