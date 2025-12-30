@@ -582,9 +582,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               activeOpacity={0.6}
               onPress={() => {
                 flashSuccessMessage('You are already a premium member');
-                navigation.navigate('ProFeaturesPromotion', {
-                  navigateTo: 'BottomTab',
-                });
+                // navigation.navigate('ProFeaturesPromotion', {
+                //   navigateTo: 'BottomTab',
+                // });
               }}
               style={Styles.headerIconWrapper}
             >

@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { hp } from '@/global';
+
 import { IconInput } from '../../../components';
 import { LanguageKeys } from '../../../languages';
 import { Colors, Images } from '../../../res';
@@ -44,6 +46,6 @@ export default memo(UserInfoDisplay);
 
 const Styles = StyleSheet.create({
   container: {
-    marginBottom: 0,
+    marginBottom: hp(3),
   },
 });

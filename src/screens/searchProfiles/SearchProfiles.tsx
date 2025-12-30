@@ -1,21 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View as RNView } from 'react-native';
 import { View } from 'react-native-animatable';
-import DeviceInfo from 'react-native-device-info';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from 'react-native-vector-icons/Feather';
+
+import { isIOS } from '@/services';
 
 import { Button, Container, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
-import { isIOS } from '../../services';
 import { usePremiumStore } from '../../stores';
 import RefineSearch from './RefineSearch';
 import SavedSearches from './SavedSearches';
 
-const hasNotch = DeviceInfo.hasNotch();
 const SearchProfiles = () => {
+  const { bottom } = useSafeAreaInsets();
   const refineSearchRef = useRef<{
     onSaveAndSearchPress: () => void;
     onSearchPress: () => void;
@@ -67,24 +67,20 @@ const SearchProfiles = () => {
           <RefineSearch ref={refineSearchRef} premium={premium} />
         </ScrollView>
       </RNView>
-      <RNView style={[Styles.buttonsContainer]}>
+      <RNView
+        style={[Styles.buttonsContainer, isIOS && { marginBottom: -bottom }]}
+      >
         <Button
           text={LanguageKeys.saveAndSearch}
-          icon={
-            premium ? (
-              <AntDesign name="unlock" color={Colors.color2} size={wp(5)} />
-            ) : (
-              <AntDesign name="lock" color={Colors.color2} size={wp(5)} />
-            )
-          }
+          icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
           buttonStyle={Styles.saveSearchBtn}
           onPress={handleSaveAndSearch}
-          disabled={!hasFilters || !premium}
+          disabled={!hasFilters}
         />
         <Button
           text={LanguageKeys.search}
           icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
-          buttonStyle={[Styles.searchBtn, { marginBottom: 0 }]}
+          buttonStyle={[Styles.searchBtn]}
           onPress={handleSearch}
         />
       </RNView>
@@ -117,7 +113,7 @@ const Styles = StyleSheet.create({
     right: 0,
     width: '100%',
     backgroundColor: Colors.color7,
-    paddingTop: hp(2),
+    paddingTop: hp(1.5),
     borderTopWidth: 1,
     borderTopColor: Colors.color27,
     zIndex: 10,
@@ -132,13 +128,13 @@ const Styles = StyleSheet.create({
   },
   saveSearchBtn: {
     marginHorizontal: wp(4),
-    marginBottom: hp(2),
+    marginBottom: hp(1.5),
     backgroundColor: Colors.color37,
   },
   searchBtn: {
     backgroundColor: Colors.color1,
     marginHorizontal: wp(4),
-    marginBottom: hp(2),
+    marginBottom: hp(1.5),
   },
   heading: {
     color: Colors.color1,
@@ -148,8 +144,6 @@ const Styles = StyleSheet.create({
     marginTop: hp(4),
   },
   headerCon: {
-    paddingTop:
-      isIOS && hasNotch ? hp(3) : isIOS && !hasNotch ? hp(2.5) : hp(1.5),
     paddingBottom: hp(0.5),
     paddingHorizontal: wp(4),
     width: wp(100),

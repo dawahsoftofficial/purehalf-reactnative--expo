@@ -114,7 +114,6 @@ const Styles = StyleSheet.create({
     fontSize: Typography.medium,
     fontFamily: Fonts.APPFONT_M,
     color: Colors.color1,
-    lineHeight: wp(5),
   },
   inputOuterContainer: {
     borderBottomWidth: 1,

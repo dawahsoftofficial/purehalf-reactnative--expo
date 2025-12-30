@@ -1,6 +1,6 @@
 import Geolocation from '@react-native-community/geolocation';
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, PermissionsAndroid } from 'react-native';
+import { Dimensions, Linking, Platform } from 'react-native';
 import type MapView from 'react-native-maps';
 
 import MapWithMarker from '../../components/MapWithMarker';
@@ -38,31 +38,7 @@ const Location = (props: any) => {
         longitudeDelta: LATITUDE_DELTA * (width / height),
       });
     }
-    // alert(JSON.stringify(currentUser, null, 4));
-    requestLocationPermission();
   }, []);
-
-  const requestLocationPermission = async () => {
-    if (isIOS) {
-      // iOS handles permissions automatically when Geolocation.getCurrentPosition is called
-      return;
-    } else {
-      try {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          // Permission granted, location will be requested when getCurrentLocation is called
-        } else {
-          flashErrorMessage(
-            'Please enable location permission to update your location'
-          );
-        }
-      } catch (err) {
-        console.warn('Error requesting location permission:', err);
-      }
-    }
-  };
 
   const getCountryAndCity = async (lat: number, long: number) => {
     try {
@@ -120,7 +96,12 @@ const Location = (props: any) => {
       },
       (error: any) => {
         console.log({ error });
-
+        // Open native location settings when GPS icon is clicked and permission not granted
+        if (Platform.OS === 'android') {
+          Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+        } else {
+          Linking.openSettings();
+        }
         flashErrorMessage('Please enable location from settings');
       },
       {
