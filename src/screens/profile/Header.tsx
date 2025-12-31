@@ -44,6 +44,8 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
+import type { Conversation as ApiConversation } from '../../services/api/types/message-types';
 
 const { width, height } = Dimensions.get('window');
 
@@ -308,7 +310,7 @@ const Header = ({
   userData: initialUserData,
   onLikeUnlikePress,
 }: HeaderProps) => {
-  const { currentUser, conversations, updateCurrentUser } = useGlobalContext();
+  const { currentUser, updateCurrentUser } = useGlobalContext();
   const [userConversation, setUserConversation] = useState<Conversation | null>(
     null
   );
@@ -359,25 +361,43 @@ const Header = ({
   );
 
   const getUserConversation = useCallback(() => {
-    const conversationData = conversations?.filter((element: Conversation) => {
-      const deleteFlag = element?.convDetails?.participantsDeleteFlag;
-      return deleteFlag?.hasOwnProperty(JSON.stringify(userData?.id));
-    });
-    if (conversationData && conversationData.length !== 0) {
-      setUserConversation(conversationData[0]);
+    const currentUserId =
+      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+    const otherUserId = userData?.id;
+
+    if (!currentUserId || !otherUserId) {
       setMessageButtonLoader(false);
       return;
     }
-    Firebase.getSingleConversation(currentUser?.id, userData?.id)
-      .then((data) => {
-        const conversationList = data as Conversation[];
-        if (conversationList && conversationList.length !== 0) {
-          setUserConversation(conversationList[0]);
+
+    // Always fetch from API to get the latest conversation data
+    messageServices
+      .getConversationsList()
+      .then((apiConversations: ApiConversation[]) => {
+        // Filter conversations where the other user is a participant
+        const foundConversation = apiConversations.find((conv) => {
+          return conv.participants?.some(
+            (participant) => participant.id === otherUserId
+          );
+        });
+
+        if (foundConversation) {
+          // Convert API Conversation to the expected format
+          setUserConversation(foundConversation as unknown as Conversation);
+        } else {
+          // No conversation found - will be null, allowing new conversation creation
+          setUserConversation(null);
         }
         setMessageButtonLoader(false);
       })
-      .catch(() => setMessageButtonLoader(false));
-  }, [conversations, currentUser?.id, userData?.id]);
+      .catch((error) => {
+        console.error(
+          '[Header.getUserConversation] Error fetching conversations:',
+          error
+        );
+        setMessageButtonLoader(false);
+      });
+  }, [currentUser?.id, currentUser?.user?.id, userData?.id]);
 
   useFocusEffect(
     React.useCallback(() => {
