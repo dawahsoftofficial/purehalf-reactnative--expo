@@ -69,6 +69,8 @@ const SingleChat = (props: any) => {
   const lastTypingEventRef = useRef<number>(0);
   // Track which messages have been marked as read to avoid duplicate API calls
   const markedAsReadRef = useRef<Set<number>>(new Set());
+  // Track which messages have been marked as delivered to avoid duplicate API calls
+  const markedAsDeliveredRef = useRef<Set<number>>(new Set());
   // Track messages to avoid race conditions between fetchMessages and Pusher events
   const messagesRef = useRef<Message[]>([]);
   const isFetchingMessagesRef = useRef<boolean>(false);
@@ -202,9 +204,10 @@ const SingleChat = (props: any) => {
       setLoader(false);
       isFetchingMessagesRef.current = false;
 
-      // Reset the marked as read tracking when messages are fetched
-      // This ensures we can mark messages as read when screen is focused
+      // Reset the marked as read/delivered tracking when messages are fetched
+      // This ensures we can mark messages as read/delivered when screen is focused
       markedAsReadRef.current.clear();
+      markedAsDeliveredRef.current.clear();
     } catch (error: unknown) {
       console.error('[SingleChat.fetchMessages] Error:', error);
       setLoader(false);
@@ -452,13 +455,26 @@ const SingleChat = (props: any) => {
       }
 
       // Mark message as delivered
-      if (message.id) {
-        messageServices.markMessageDelivered(message.id).catch((error) => {
-          console.error(
-            '[SingleChat] Error marking message as delivered:',
-            error
-          );
-        });
+      if (message.id && !markedAsDeliveredRef.current.has(message.id)) {
+        // Add to tracking set immediately to prevent duplicate calls
+        markedAsDeliveredRef.current.add(message.id);
+
+        messageServices
+          .markMessageDelivered(message.id)
+          .then(() => {
+            console.log(
+              '[SingleChat] ✅ Message marked as delivered (received while viewing):',
+              message.id
+            );
+          })
+          .catch((error) => {
+            console.error(
+              '[SingleChat] ❌ Error marking message as delivered:',
+              error
+            );
+            // Remove from set on error so we can retry if needed
+            markedAsDeliveredRef.current.delete(message.id);
+          });
       }
 
       // Clear typing indicator when message is received
@@ -651,41 +667,74 @@ const SingleChat = (props: any) => {
 
       if (!currentUserId) return;
 
-      // Mark each unread message from other users as read individually
+      // Mark each unread message from other users as read and delivered individually
       messages.forEach((message) => {
-        // Only mark messages from other users that haven't been marked yet
-        if (
-          message.sender_id !== currentUserId &&
-          message.id &&
-          !markedAsReadRef.current.has(message.id)
-        ) {
-          // Check if message is already read by checking statuses
-          const isAlreadyRead = message.statuses?.some(
-            (status) =>
-              status.participant_id === currentUserId && status.read_at !== null
-          );
+        // Only mark messages from other users
+        if (message.sender_id !== currentUserId && message.id) {
+          // Mark as read if not already read
+          if (!markedAsReadRef.current.has(message.id)) {
+            // Check if message is already read by checking statuses
+            const isAlreadyRead = message.statuses?.some(
+              (status) =>
+                status.participant_id === currentUserId &&
+                status.read_at !== null
+            );
 
-          if (!isAlreadyRead) {
-            markedAsReadRef.current.add(message.id);
-            messageServices
-              .markMessageAsRead(message.id)
-              .then(() => {
-                console.log(
-                  '[SingleChat] ✅ Marked message as read on focus:',
-                  message.id
-                );
-              })
-              .catch((error) => {
-                console.error(
-                  '[SingleChat] Error marking message as read on focus:',
-                  error
-                );
-                // Remove from set on error so we can retry
-                markedAsReadRef.current.delete(message.id);
-              });
-          } else {
-            // Mark as processed even if already read to avoid duplicate checks
-            markedAsReadRef.current.add(message.id);
+            if (!isAlreadyRead) {
+              markedAsReadRef.current.add(message.id);
+              messageServices
+                .markMessageAsRead(message.id)
+                .then(() => {
+                  console.log(
+                    '[SingleChat] ✅ Marked message as read on focus:',
+                    message.id
+                  );
+                })
+                .catch((error) => {
+                  console.error(
+                    '[SingleChat] Error marking message as read on focus:',
+                    error
+                  );
+                  // Remove from set on error so we can retry
+                  markedAsReadRef.current.delete(message.id);
+                });
+            } else {
+              // Mark as processed even if already read to avoid duplicate checks
+              markedAsReadRef.current.add(message.id);
+            }
+          }
+
+          // Mark as delivered if not already delivered
+          if (!markedAsDeliveredRef.current.has(message.id)) {
+            // Check if message is already delivered by checking statuses
+            const isAlreadyDelivered = message.statuses?.some(
+              (status) =>
+                status.participant_id === currentUserId &&
+                status.delivered_at !== null
+            );
+
+            if (!isAlreadyDelivered) {
+              markedAsDeliveredRef.current.add(message.id);
+              messageServices
+                .markMessageDelivered(message.id)
+                .then(() => {
+                  console.log(
+                    '[SingleChat] ✅ Marked message as delivered on focus:',
+                    message.id
+                  );
+                })
+                .catch((error) => {
+                  console.error(
+                    '[SingleChat] Error marking message as delivered on focus:',
+                    error
+                  );
+                  // Remove from set on error so we can retry
+                  markedAsDeliveredRef.current.delete(message.id);
+                });
+            } else {
+              // Mark as processed even if already delivered to avoid duplicate checks
+              markedAsDeliveredRef.current.add(message.id);
+            }
           }
         }
       });
