@@ -567,11 +567,23 @@ const Header = ({
     setProfileImageLoader(false);
   }, []);
 
+  // Determine which image to show based on isSelf
+  const profileImageUri = useMemo(() => {
+    if (!isSelf) {
+      return userData?.primary_image_to_show;
+    }
+    return userData?.media?.un_blur_primary_image;
+  }, [
+    isSelf,
+    userData?.primary_image_to_show,
+    userData?.media?.un_blur_primary_image,
+  ]);
+
   // Reset loader when image URI changes
   useEffect(() => {
     setProfileImageLoader(false);
     setProfileImageError(false);
-  }, [userData?.primary_image_to_show]);
+  }, [profileImageUri]);
 
   const formattedLastOnlineDate = useMemo(() => {
     if (!userData?.last_online_at) {
@@ -592,20 +604,24 @@ const Header = ({
       {fromUserProfile && <CheckMembershipStatus />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
 
-      {userData?.primary_image_to_show &&
-      userData?.primary_image_to_show?.length !== 0 &&
-      !profileImageError ? (
-        <ImageBackground
-          style={{
-            ...StyleSheet.absoluteFill,
-            backgroundColor: Colors.color1,
-          }}
-          source={{ uri: userData?.primary_image_to_show }}
-          resizeMode="contain"
-          onLoadStart={onProfileImageLoadStart}
-          onLoadEnd={onProfileImageLoadEnd}
-          onError={onProfileImageError}
-        >
+      {profileImageUri && profileImageUri.length !== 0 && !profileImageError ? (
+        <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]}>
+          {/* Blurred background image with cover */}
+          <ImageBackground
+            style={StyleSheet.absoluteFill}
+            source={{ uri: profileImageUri }}
+            resizeMode="cover"
+            blurRadius={5}
+          />
+          {/* Actual image on top with contain */}
+          <Image
+            style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
+            source={{ uri: profileImageUri }}
+            resizeMode="contain"
+            onLoadStart={onProfileImageLoadStart}
+            onLoadEnd={onProfileImageLoadEnd}
+            onError={onProfileImageError}
+          />
           {profileImageLoader && !profileImageError && (
             <ActivityIndicator
               style={{
@@ -617,7 +633,7 @@ const Header = ({
               size={wp(8)}
             />
           )}
-        </ImageBackground>
+        </View>
       ) : (
         <View
           style={{
@@ -773,7 +789,7 @@ const Header = ({
                       marginRight: Rtl ? 0 : wp(1.6),
                       marginLeft: Rtl ? wp(1.6) : 0,
                     }}
-                    name={userData?.is_blur ? 'eye' : 'eye-with-line'}
+                    name={userData?.is_blur ? 'eye-with-line' : 'eye'}
                     size={wp(5.5)}
                     color={Colors.color2}
                   />

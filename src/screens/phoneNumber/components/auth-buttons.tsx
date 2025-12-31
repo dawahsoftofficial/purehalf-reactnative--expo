@@ -16,14 +16,14 @@ type ButtonStatus = {
 
 type AuthButtonsProps = {
   buttonStatus: ButtonStatus | null;
-  loading: boolean;
+  loadingMethod: 'phone' | 'google' | 'apple' | null;
   checkBox: boolean;
   onContinuePress: (type: 'phone' | 'google' | 'apple') => void;
 };
 
 function AuthButtons({
   buttonStatus,
-  loading,
+  loadingMethod,
   checkBox,
   onContinuePress,
 }: AuthButtonsProps) {
@@ -69,7 +69,7 @@ function AuthButtons({
           onPress={() =>
             onContinuePress(button.key as 'phone' | 'google' | 'apple')
           }
-          loading={loading}
+          loading={loadingMethod === button.key}
           disabled={!checkBox}
           buttonStyle={button.buttonStyle}
           icon={

@@ -14,6 +14,7 @@ import {
 } from 'react-native-safe-area-context';
 import { usePusher } from './src/services/pusher';
 import { PUSHER_API_KEY, PUSHER_CLUSTER, PUSHER_AUTH_ENDPOINT } from '@env';
+import { requestNotificationPermission } from './src/notifications';
 
 const AppContent = (): JSX.Element => {
   const { top } = useSafeAreaInsets();
@@ -31,6 +32,19 @@ const AppContent = (): JSX.Element => {
       : null;
 
   usePusher(pusherConfig);
+
+  // Request notification permissions on app start
+  useEffect(() => {
+    const requestPermissions = async () => {
+      try {
+        await requestNotificationPermission();
+      } catch (error) {
+        console.error('Failed to request notification permissions:', error);
+      }
+    };
+
+    requestPermissions();
+  }, []);
 
   useEffect(() => {
     // Only set up RevenueCat listeners after it's configured
