@@ -1,16 +1,20 @@
-import { BlurView as BlurContainer } from '@react-native-community/blur';
+import {
+  BlurView as BlurContainer,
+  type BlurViewProps,
+} from '@react-native-community/blur';
 import React from 'react';
 import { StyleSheet } from 'react-native';
 
-const BlurView = (props: any) => {
-  const { style = null, blurAmount = 10 } = props;
+const BlurView = (props: BlurViewProps) => {
+  const { style = {}, blurAmount = 10 } = props;
 
   return (
     <BlurContainer
-      style={[Styles.mainView, style]}
       blurType="light"
       blurAmount={blurAmount}
+      style={[Styles.mainView, style]}
       reducedTransparencyFallbackColor="white"
+      {...props}
     />
   );
 };

@@ -26,6 +26,70 @@ const firebaseApp = getApp();
 const auth = getAuth(firebaseApp);
 
 class GApiServices {
+  /**
+   * Gets a valid FCM token from storage, or fetches a fresh one if the stored token is a placeholder
+   * @returns Promise<string> - A valid FCM token or placeholder 'FcmToken' for iOS emulator
+   */
+  private async getValidFcmToken(): Promise<string> {
+    try {
+      const storedToken = (await getData(storageKeys.FCM_TOKEN)) as
+        | string
+        | null
+        | undefined;
+
+      // If stored token is valid and not a placeholder, use it
+      if (storedToken && storedToken !== 'FcmToken' && storedToken.length > 0) {
+        return storedToken;
+      }
+
+      // If stored token is the placeholder 'FcmToken' or empty, try to get a fresh token
+      try {
+        const freshToken = (await Firebase.getFcmToken()) as
+          | string
+          | null
+          | undefined;
+        if (freshToken && freshToken !== 'FcmToken' && freshToken.length > 0) {
+          // Save the fresh token for future use
+          await setData(storageKeys.FCM_TOKEN, freshToken);
+          return freshToken;
+        }
+      } catch (error) {
+        // Silently handle error - permissions might not be granted yet
+        // This is expected behavior and not a critical error
+        console.log(
+          '[getValidFcmToken] Could not fetch fresh FCM token (permissions may not be granted):',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+
+      // Return stored token if exists, otherwise return placeholder
+      return storedToken || 'FcmToken';
+    } catch (error) {
+      console.error(
+        '[getValidFcmToken] Error retrieving FCM token from storage:',
+        error
+      );
+      // Try to get a fresh token as fallback
+      try {
+        const freshToken = (await Firebase.getFcmToken()) as
+          | string
+          | null
+          | undefined;
+        if (freshToken && freshToken.length > 0) {
+          return freshToken;
+        }
+      } catch (fallbackError) {
+        // Silently handle fallback error
+        console.log(
+          '[getValidFcmToken] Could not fetch fresh FCM token in fallback:',
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : String(fallbackError)
+        );
+      }
+      return 'FcmToken';
+    }
+  }
   socialAuthenticate = (provider: string) => {
     return new Promise(async (resolve, reject) => {
       console.log(
@@ -52,20 +116,11 @@ class GApiServices {
               hasDirectUser: !!googleRes?.user,
             },
           });
-          let fcmToken;
-          try {
-            fcmToken = await getData(storageKeys.FCM_TOKEN);
-            console.log(
-              '[socialAuthenticate] FCM token retrieved:',
-              !!fcmToken
-            );
-          } catch (error) {
-            console.error(
-              '[socialAuthenticate] Error retrieving FCM token:',
-              error
-            );
-            fcmToken = 'defaultFCMToken';
-          }
+          const fcmToken = await this.getValidFcmToken();
+          console.log('[socialAuthenticate] FCM token retrieved:', {
+            hasToken: !!fcmToken,
+            isPlaceholder: fcmToken === 'FcmToken',
+          });
           const requestPayload = {
             token: idToken,
             email: email,
@@ -231,20 +286,11 @@ class GApiServices {
                 userId: res?.user?.uid,
               }
             );
-            let fcmToken;
-            try {
-              fcmToken = await getData(storageKeys.FCM_TOKEN);
-              console.log(
-                '[socialAppleAuthenticate] FCM token retrieved:',
-                !!fcmToken
-              );
-            } catch (error) {
-              console.error(
-                '[socialAppleAuthenticate] Error retrieving FCM token:',
-                error
-              );
-              fcmToken = 'defaultFCMToken';
-            }
+            const fcmToken = await this.getValidFcmToken();
+            console.log('[socialAppleAuthenticate] FCM token retrieved:', {
+              hasToken: !!fcmToken,
+              isPlaceholder: fcmToken === 'FcmToken',
+            });
 
             const requestPayload = {
               token: identityToken,
@@ -446,13 +492,7 @@ class GApiServices {
 
   loginUser = async (phoneNumber: any, onLogin: any) => {
     return new Promise(async (resolve, reject) => {
-      let fcmToken;
-      try {
-        fcmToken = await getData(storageKeys.FCM_TOKEN);
-      } catch (error) {
-        console.error('Error retrieving FCM token:', error);
-        fcmToken = 'defaultFCMToken';
-      }
+      const fcmToken = await this.getValidFcmToken();
       Api.post(EndPoints.authenticate, {
         phone_number: phoneNumber,
         fcm_token: fcmToken,
@@ -665,13 +705,7 @@ class GApiServices {
   logout = () => {
     return new Promise(async (resolve, reject) => {
       // const fcmToken = await getData(storageKeys.FCM_TOKEN)
-      let fcmToken;
-      try {
-        fcmToken = await getData(storageKeys.FCM_TOKEN);
-      } catch (error) {
-        console.error('Error retrieving FCM token:', error);
-        fcmToken = 'defaultFCMToken';
-      }
+      const fcmToken = await this.getValidFcmToken();
       Api.post(EndPoints.logout, {
         fcm_token: fcmToken,
       })

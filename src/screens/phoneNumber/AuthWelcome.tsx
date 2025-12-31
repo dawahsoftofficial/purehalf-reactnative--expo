@@ -47,7 +47,9 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
   const Rtl = CheckRtl();
   const { getData, setData, storageKeys } = StorageManager;
   const { updateCurrentUser, updateDirection } = useGlobalContext();
-  const [loading, setLoading] = useState(false);
+  const [loadingMethod, setLoadingMethod] = useState<
+    'phone' | 'google' | 'apple' | null
+  >(null);
   const { getAuthenticationMethod } = useSettingsStore();
   const buttonStatus = getAuthenticationMethod();
 
@@ -87,7 +89,7 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
     }
   }, [Rtl, saveDataLocal, getToken, updateDirection]);
 
-  const hideLoading = useCallback(() => setLoading(false), []);
+  const hideLoading = useCallback(() => setLoadingMethod(null), []);
 
   const navigateAfterVerification = useCallback(
     (user: User) => {
@@ -172,7 +174,7 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
       } catch (error) {
         console.error('Error in onVerified:', error);
       } finally {
-        setLoading(false);
+        setLoadingMethod(null);
       }
     },
     [setData, storageKeys.USER, updateCurrentUser, navigateAfterVerification]
@@ -181,7 +183,7 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
   const handleSocialAuth = useCallback(
     async (type: 'google' | 'apple') => {
       try {
-        setLoading(true);
+        setLoadingMethod(type);
         const authMethod =
           type === 'google'
             ? ApiServices.socialAuthenticate('google')
@@ -245,7 +247,7 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
 
           <AuthButtons
             buttonStatus={buttonStatus}
-            loading={loading}
+            loadingMethod={loadingMethod}
             checkBox={checkBox}
             onContinuePress={onContinuePress}
           />

@@ -17,6 +17,8 @@ import {
   AuthorizationStatus,
   getMessaging,
   getToken,
+  isDeviceRegisteredForRemoteMessages,
+  registerDeviceForRemoteMessages,
   requestPermission,
 } from '@react-native-firebase/messaging';
 import {
@@ -195,17 +197,31 @@ class GFirebase {
 
   getFcmToken = () => {
     return new Promise(async (resolve, reject) => {
-      const authStatus = await requestPermission(messaging);
-      const enabled =
-        authStatus === AuthorizationStatus.AUTHORIZED ||
-        authStatus === AuthorizationStatus.PROVISIONAL;
-      if (enabled) {
-        getToken(messaging)
-          .then((token) => resolve(token))
-          .catch((err) => {
-            console.log('Error while getting device token =>', err);
-            reject('');
-          });
+      try {
+        const authStatus = await requestPermission(messaging);
+        const enabled =
+          authStatus === AuthorizationStatus.AUTHORIZED ||
+          authStatus === AuthorizationStatus.PROVISIONAL;
+        if (enabled) {
+          // Check if already registered
+          const isRegistered = isDeviceRegisteredForRemoteMessages(messaging);
+
+          if (!isRegistered) {
+            await registerDeviceForRemoteMessages(messaging);
+          }
+          getToken(messaging)
+            .then((token) => resolve(token))
+            .catch((err) => {
+              console.log('Error while getting device token =>', err);
+              reject('');
+            });
+        } else {
+          // Permissions not granted, reject with empty string
+          reject('');
+        }
+      } catch (error) {
+        console.log('Error while requesting FCM permission =>', error);
+        reject('');
       }
     });
   };
