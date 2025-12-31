@@ -12,13 +12,15 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { usePusher } from './src/services/pusher';
+import { usePusher, useUserCountersChannel } from './src/services/pusher';
 import { PUSHER_API_KEY, PUSHER_CLUSTER, PUSHER_AUTH_ENDPOINT } from '@env';
 import { requestNotificationPermission } from './src/notifications';
+import { useGlobalContext } from './src/services';
 
 const AppContent = (): JSX.Element => {
   const { top } = useSafeAreaInsets();
   const { refresh, revenueCatConfigured } = usePremiumStore();
+  const { currentUser, updateCurrentUser } = useGlobalContext();
 
   // Initialize Pusher
   // Note: AuthEndpoint is required for private channels
@@ -32,6 +34,9 @@ const AppContent = (): JSX.Element => {
       : null;
 
   usePusher(pusherConfig);
+
+  // Subscribe to user counters channel globally
+  useUserCountersChannel(currentUser, updateCurrentUser);
 
   // Request notification permissions on app start
   useEffect(() => {

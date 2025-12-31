@@ -4,8 +4,9 @@ import {
   type PusherEvent,
 } from '@pusher/pusher-websocket-react-native';
 import axios from 'axios';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { useConversationStore } from '../../stores/conversation-store';
 import BaseUrl from '../api/BaseUrl';
 import { StorageManager } from '../storageManager';
 
@@ -438,4 +439,304 @@ export function usePusher(config: PusherConfig | null) {
     pusherService,
     isConnected: pusherService.getConnectionStatus() && pusherService.isReady(),
   };
+}
+
+/**
+ * React Hook for subscribing to user counters channel globally
+ * This hook subscribes to private-user.counters.{userId} channel
+ * and handles counter-related events app-wide
+ */
+export function useUserCountersChannel(
+  currentUser: { id: string | number; user?: { id: string | number } } | null,
+  updateCurrentUser: (user: unknown) => void
+) {
+  const unsubscribeCountersChannelRef = useRef<(() => void) | null>(null);
+  const subscribedUserIdRef = useRef<string | number | null>(null);
+
+  // Extract userId using useMemo to avoid unnecessary re-renders
+  const userId = useMemo(() => {
+    return currentUser?.id === 'guardian'
+      ? currentUser?.user?.id
+      : currentUser?.id;
+  }, [currentUser?.id, currentUser?.user?.id]);
+
+  useEffect(() => {
+    // If no user or Pusher not ready, cleanup and return
+    if (!currentUser || !pusherService.isReady() || !userId) {
+      // Only cleanup if we were subscribed to a different user
+      if (
+        unsubscribeCountersChannelRef.current &&
+        subscribedUserIdRef.current !== userId
+      ) {
+        console.log(
+          '[useUserCountersChannel] Cleaning up counters channel for user:',
+          subscribedUserIdRef.current
+        );
+        unsubscribeCountersChannelRef.current();
+        unsubscribeCountersChannelRef.current = null;
+        subscribedUserIdRef.current = null;
+      }
+      return;
+    }
+
+    // If already subscribed to the same user, don't resubscribe
+    if (
+      subscribedUserIdRef.current === userId &&
+      unsubscribeCountersChannelRef.current
+    ) {
+      console.log(
+        '[useUserCountersChannel] Already subscribed to counters channel for user:',
+        userId
+      );
+      return;
+    }
+
+    const setupCountersChannel = async () => {
+      try {
+        // Cleanup previous subscription if switching users
+        if (
+          unsubscribeCountersChannelRef.current &&
+          subscribedUserIdRef.current !== userId
+        ) {
+          console.log(
+            '[useUserCountersChannel] Unsubscribing from previous user:',
+            subscribedUserIdRef.current
+          );
+          unsubscribeCountersChannelRef.current();
+          unsubscribeCountersChannelRef.current = null;
+        }
+
+        console.log(
+          '[useUserCountersChannel] Setting up counters channel for user:',
+          userId
+        );
+
+        // Subscribe to user counters channel: private-user.counters.{userId}
+        const countersChannelName = `private-user.counters.${userId}`;
+
+        const unsubscribeCounters = await pusherService.subscribeToChannel(
+          countersChannelName,
+          (event) => {
+            console.log(
+              '[useUserCountersChannel] Counter event received:',
+              event.eventName
+            );
+
+            try {
+              const rawData =
+                typeof event.data === 'string'
+                  ? JSON.parse(event.data)
+                  : event.data;
+
+              // Extract event type from Laravel event class name or from data.event
+              let eventType = event.eventName;
+              if (eventType.includes('\\')) {
+                // Laravel event class name format: App\Events\User\CounterUpdated
+                eventType = eventType.split('\\').pop() || eventType;
+              }
+
+              // If data has an 'event' field, use that as the event type
+              if (rawData?.event) {
+                eventType = rawData.event;
+              }
+
+              console.log(
+                '[useUserCountersChannel] Normalized counter event type:',
+                eventType
+              );
+
+              // Handle counter events - use current user from closure
+              // Get fresh currentUser from the latest state
+              const latestUserId =
+                currentUser?.id === 'guardian'
+                  ? currentUser?.user?.id
+                  : currentUser?.id;
+
+              if (latestUserId === userId) {
+                handleCounterEvent(
+                  eventType,
+                  rawData,
+                  currentUser,
+                  updateCurrentUser
+                );
+              }
+            } catch (error) {
+              console.error(
+                '[useUserCountersChannel] Error handling counter event:',
+                error
+              );
+            }
+          }
+        );
+
+        unsubscribeCountersChannelRef.current = unsubscribeCounters;
+        subscribedUserIdRef.current = userId;
+        console.log(
+          '[useUserCountersChannel] ✅ Subscribed to user counters channel'
+        );
+      } catch (error) {
+        console.error(
+          '[useUserCountersChannel] Error setting up counters channel:',
+          error
+        );
+        subscribedUserIdRef.current = null;
+      }
+    };
+
+    setupCountersChannel();
+
+    return () => {
+      // Only cleanup on unmount or when userId actually changes
+      // This cleanup will run when the component unmounts or userId changes
+      if (
+        unsubscribeCountersChannelRef.current &&
+        subscribedUserIdRef.current !== userId
+      ) {
+        console.log(
+          '[useUserCountersChannel] Cleanup: Unsubscribing from user:',
+          subscribedUserIdRef.current
+        );
+        unsubscribeCountersChannelRef.current();
+        unsubscribeCountersChannelRef.current = null;
+        subscribedUserIdRef.current = null;
+      }
+    };
+    // Only depend on userId to avoid resubscribing when currentUser object reference changes
+    // but userId remains the same. We intentionally don't include currentUser in deps
+    // because we only want to resubscribe when the userId changes, not when user data updates.
+  }, [userId, updateCurrentUser]);
+}
+
+/**
+ * Handle counter-related events from the counters channel
+ */
+// eslint-disable-next-line max-params
+function handleCounterEvent(
+  eventType: string,
+  rawData: unknown,
+  currentUser: { id: string | number; user?: { id: string | number } } | null,
+  updateCurrentUser: (user: unknown) => void
+) {
+  console.log(
+    '[useUserCountersChannel] Counter event received:',
+    eventType,
+    rawData
+  );
+
+  try {
+    // Handle different counter event types
+    switch (eventType) {
+      case 'counterUpdate':
+        // Counter update event with participant data
+        // Data structure: { event: 'counterUpdate', participant: { id, unread_conversations_count, unread_messages_count, chat_credits } }
+        console.log(
+          '[useUserCountersChannel] Counter update received:',
+          rawData
+        );
+
+        if (
+          rawData &&
+          typeof rawData === 'object' &&
+          'participant' in rawData &&
+          currentUser
+        ) {
+          const participant = rawData.participant as {
+            id?: number;
+            unread_conversations_count?: number;
+            unread_messages_count?: number | string;
+            chat_credits?: number;
+          };
+
+          // Update chat credits if present
+          if (participant.chat_credits !== undefined) {
+            const credits =
+              typeof participant.chat_credits === 'number'
+                ? participant.chat_credits
+                : parseInt(String(participant.chat_credits), 10) || 0;
+
+            console.log(
+              '[useUserCountersChannel] Updating chat credits:',
+              credits
+            );
+            updateCurrentUser({
+              ...currentUser,
+              chat_credits: credits,
+            });
+          }
+
+          // Update unread counts if present
+          if (
+            participant.unread_conversations_count !== undefined ||
+            participant.unread_messages_count !== undefined
+          ) {
+            const unreadConversationsCount =
+              participant.unread_conversations_count || 0;
+            const unreadMessagesCount =
+              typeof participant.unread_messages_count === 'string'
+                ? parseInt(participant.unread_messages_count, 10) || 0
+                : participant.unread_messages_count || 0;
+
+            console.log(
+              '[useUserCountersChannel] Updating unread counts:',
+              unreadConversationsCount,
+              'conversations,',
+              unreadMessagesCount,
+              'messages'
+            );
+
+            // Update conversation store
+            useConversationStore
+              .getState()
+              .setUnreadCounts(unreadConversationsCount, unreadMessagesCount);
+          }
+        }
+        break;
+
+      case 'CounterUpdated':
+      case 'CountersUpdated':
+        // Generic counter update event
+        console.log('[useUserCountersChannel] Counter updated:', rawData);
+        // You can add specific counter update logic here
+        // For example, updating chat credits, matches, etc.
+        break;
+
+      case 'ChatCreditsUpdated':
+        // Chat credits counter update
+        console.log('[useUserCountersChannel] Chat credits updated:', rawData);
+        if (
+          rawData &&
+          typeof rawData === 'object' &&
+          'chat_credits' in rawData &&
+          currentUser
+        ) {
+          const credits =
+            typeof rawData.chat_credits === 'number'
+              ? rawData.chat_credits
+              : parseInt(String(rawData.chat_credits), 10) || 0;
+          updateCurrentUser({
+            ...currentUser,
+            chat_credits: credits,
+          });
+        }
+        break;
+
+      case 'MatchesCountUpdated':
+        // Matches counter update
+        console.log('[useUserCountersChannel] Matches count updated:', rawData);
+        // Add matches count update logic if needed
+        break;
+
+      default:
+        console.log(
+          '[useUserCountersChannel] Unknown counter event type:',
+          eventType,
+          rawData
+        );
+    }
+  } catch (error) {
+    console.error(
+      '[useUserCountersChannel] Error handling counter event:',
+      error
+    );
+  }
 }

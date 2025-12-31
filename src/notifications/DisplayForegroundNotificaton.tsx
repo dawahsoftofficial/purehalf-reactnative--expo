@@ -233,11 +233,11 @@ const DisplayForegroundNotification = () => {
         //   }],
         // });
         break;
-      case 'account_unsuspended':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
+      // case 'account_unsuspended':
+      // navigation.navigate('UserProfile', {
+      //   userData: { id: remoteMessageData?.other_user_id }
+      // })
+      // break;
       case 'account_deletion':
         hideNotification(() => {
           setRemoteMessage(null);
@@ -245,42 +245,42 @@ const DisplayForegroundNotification = () => {
         });
         onLogoutPress();
         break;
-      case 'membership_upgraded':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'membership_downgraded':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'membership_extended':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        // navigation.reset({
-        //   index: 0,
-        //   routes: [{
-        //     name: "MembershipCongrats", params: {
-        //       date_of_expiry: remoteMessageData?.date_of_expiry
-        //       // amount: remoteMessageData?.price,
-        //       // title: remoteMessageData?.title
-        //     }
-        //   }],
-        // });
-        break;
-      case 'membership_cancelled':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'membership_expiring':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
+      // case 'membership_upgraded':
+      // navigation.navigate('UserProfile', {
+      //   userData: { id: remoteMessageData?.other_user_id }
+      // })
+      // break;
+      // case 'membership_downgraded':
+      // navigation.navigate('UserProfile', {
+      //   userData: { id: remoteMessageData?.other_user_id }
+      // })
+      // break;
+      // case 'membership_extended':
+      //   hideNotification(() => {
+      //     setRemoteMessage(null);
+      //     setRemoteMessageData(null);
+      //   });
+      // navigation.reset({
+      //   index: 0,
+      //   routes: [{
+      //     name: "MembershipCongrats", params: {
+      //       date_of_expiry: remoteMessageData?.date_of_expiry
+      //       // amount: remoteMessageData?.price,
+      //       // title: remoteMessageData?.title
+      //     }
+      //   }],
+      // });
+      // break;
+      // case 'membership_cancelled':
+      // navigation.navigate('UserProfile', {
+      //   userData: { id: remoteMessageData?.other_user_id }
+      // })
+      // break;
+      // case 'membership_expiring':
+      // navigation.navigate('UserProfile', {
+      //   userData: { id: remoteMessageData?.other_user_id }
+      // })
+      // break;
       // case "payment_received":
       //   hideNotification(() => {
       //     setRemoteMessage(null);
@@ -297,25 +297,25 @@ const DisplayForegroundNotification = () => {
       //     }],
       //   });
       //   break;
-      case 'membership_renewed':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'MembershipCongrats',
-              params: {
-                date_of_expiry: remoteMessageData?.date_of_expiry,
-                amount: remoteMessageData?.amount,
-                title: remoteMessageData?.title,
-              },
-            },
-          ],
-        });
-        break;
+      // case 'membership_renewed':
+      //   hideNotification(() => {
+      //     setRemoteMessage(null);
+      //     setRemoteMessageData(null);
+      //   });
+      //   navigation.reset({
+      //     index: 0,
+      //     routes: [
+      //       {
+      //         name: 'MembershipCongrats',
+      //         params: {
+      //           date_of_expiry: remoteMessageData?.date_of_expiry,
+      //           amount: remoteMessageData?.amount,
+      //           title: remoteMessageData?.title,
+      //         },
+      //       },
+      //     ],
+      //   });
+      //   break;
       case 'daily_matches':
         hideNotification(() => {
           setRemoteMessage(null);
@@ -339,17 +339,17 @@ const DisplayForegroundNotification = () => {
         });
         navigation.navigate('Welcome');
         break;
-      case 'expired_discount':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        StorageManager.setString(
-          storageKeys.MEMBERSHIP_DISCOUNT,
-          new Date().getTime().toString()
-        );
-        navigation.navigate('DiscountProFeaturesPromotion');
-        break;
+      // case 'expired_discount':
+      //   hideNotification(() => {
+      //     setRemoteMessage(null);
+      //     setRemoteMessageData(null);
+      //   });
+      //   StorageManager.setString(
+      //     storageKeys.MEMBERSHIP_DISCOUNT,
+      //     new Date().getTime().toString()
+      //   );
+      //   navigation.navigate('DiscountProFeaturesPromotion');
+      //   break;
 
       case 'new_message':
         hideNotification(() => {
@@ -357,6 +357,7 @@ const DisplayForegroundNotification = () => {
           setRemoteMessageData(null);
         });
         navigation.navigate('Messages');
+        // TODO: Shoaib - Add conversationId to the notification
         // if (remoteMessageData?.conversationId) {
         //   hideNotification(() => {
         //     setRemoteMessage(null);
@@ -384,6 +385,7 @@ const DisplayForegroundNotification = () => {
             console.log(errorMessage);
           }
         });
+        break;
       case 'profile_picture_update_required':
         currentUser.primary_image_to_show = null;
         updateCurrentUser(currentUser);

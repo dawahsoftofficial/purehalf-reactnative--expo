@@ -1,6 +1,12 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { CommonActions as CommonActionsNavigation } from '@react-navigation/native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -78,6 +84,7 @@ const Messages = (props: MessagesProps) => {
   const { setData, storageKeys } = StorageManager;
   const { currentUser, updateCurrentUser, language } = useGlobalContext();
   const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
+  const subscribedUserIdRef = useRef<string | number | null>(null);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -218,6 +225,13 @@ const Messages = (props: MessagesProps) => {
     [setUnreadCounts]
   );
 
+  // Extract userId using useMemo to avoid unnecessary re-renders
+  const userId = useMemo(() => {
+    return currentUser?.id === 'guardian'
+      ? currentUser?.user?.id
+      : currentUser?.id;
+  }, [currentUser?.id, currentUser?.user?.id]);
+
   // Setup Pusher real-time updates for user channel
   const setupPusherListeners = useCallback(async () => {
     if (!pusherService.isReady()) {
@@ -225,22 +239,53 @@ const Messages = (props: MessagesProps) => {
       return;
     }
 
-    const userId =
-      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
-
     if (!userId) {
       console.log('[Messages] No user ID available');
+      // Cleanup if we were subscribed to a different user
+      if (
+        unsubscribeUserChannelRef.current &&
+        subscribedUserIdRef.current !== userId
+      ) {
+        unsubscribeUserChannelRef.current();
+        unsubscribeUserChannelRef.current = null;
+        subscribedUserIdRef.current = null;
+      }
+      return;
+    }
+
+    // If already subscribed to the same user, don't resubscribe
+    if (
+      subscribedUserIdRef.current === userId &&
+      unsubscribeUserChannelRef.current
+    ) {
+      console.log(
+        '[Messages] Already subscribed to inbox channel for user:',
+        userId
+      );
       return;
     }
 
     try {
+      // Cleanup previous subscription if switching users
+      if (
+        unsubscribeUserChannelRef.current &&
+        subscribedUserIdRef.current !== userId
+      ) {
+        console.log(
+          '[Messages] Unsubscribing from previous user:',
+          subscribedUserIdRef.current
+        );
+        unsubscribeUserChannelRef.current();
+        unsubscribeUserChannelRef.current = null;
+      }
+
       console.log('[Messages] Setting up Pusher for user:', userId);
 
-      // Subscribe to user channel: private-user.inbox.{userId}
-      const channelName = `private-user.inbox.${userId}`;
+      // Subscribe to user inbox channel: private-user.inbox.{userId}
+      const inboxChannelName = `private-user.inbox.${userId}`;
 
-      const unsubscribe = await pusherService.subscribeToChannel(
-        channelName,
+      const unsubscribeInbox = await pusherService.subscribeToChannel(
+        inboxChannelName,
         (event) => {
           console.log('[Messages] Pusher event received:', event.eventName);
 
@@ -292,13 +337,15 @@ const Messages = (props: MessagesProps) => {
         }
       );
 
-      unsubscribeUserChannelRef.current = unsubscribe;
-      console.log('[Messages] ✅ Subscribed to user channel');
+      unsubscribeUserChannelRef.current = unsubscribeInbox;
+      subscribedUserIdRef.current = userId;
+      console.log('[Messages] ✅ Subscribed to user inbox channel');
     } catch (error) {
       console.error('[Messages] Error setting up Pusher:', error);
+      subscribedUserIdRef.current = null;
     }
   }, [
-    currentUser,
+    userId,
     handleNewConversationCreated,
     handleConversationUpdated,
     handleUnreadConversationCounter,
@@ -306,18 +353,29 @@ const Messages = (props: MessagesProps) => {
 
   // Setup Pusher when component mounts and screen is focused
   useEffect(() => {
-    if (currentUser) {
+    if (userId) {
       setupPusherListeners();
 
       return () => {
-        // Cleanup Pusher subscription
-        if (unsubscribeUserChannelRef.current) {
+        // Only cleanup on unmount or when userId actually changes
+        // This cleanup will run when the component unmounts or userId changes
+        if (
+          unsubscribeUserChannelRef.current &&
+          subscribedUserIdRef.current !== userId
+        ) {
+          console.log(
+            '[Messages] Cleanup: Unsubscribing from user:',
+            subscribedUserIdRef.current
+          );
           unsubscribeUserChannelRef.current();
           unsubscribeUserChannelRef.current = null;
+          subscribedUserIdRef.current = null;
         }
       };
     }
-  }, [currentUser, setupPusherListeners]);
+    // Only depend on userId to avoid resubscribing when currentUser object reference changes
+    // but userId remains the same
+  }, [userId, setupPusherListeners]);
 
   useFocusEffect(
     React.useCallback(() => {

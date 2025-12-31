@@ -27,29 +27,37 @@ const PremiumButton = () => {
       >
         <View
           style={{
-            flexDirection: Rtl ? 'row-reverse' : 'row',
+            flexDirection: 'row',
             alignItems: 'center',
+            paddingHorizontal: wp(4),
           }}
         >
-          <Image
-            source={Images.membershipWhite}
-            resizeMode="contain"
-            style={Styles.icon}
-          />
-          <View style={Styles.textCon}>
-            <Text style={Styles.heading}>
-              {LanguageKeys.goPremiumButtonHeading}
-            </Text>
-            <Text style={Styles.description}>
-              {LanguageKeys.goPremiumButtonDescription}
-            </Text>
+          <View
+            style={{
+              flexDirection: Rtl ? 'row-reverse' : 'row',
+              alignItems: 'center',
+            }}
+          >
+            <Image
+              source={Images.membershipWhite}
+              resizeMode="contain"
+              style={Styles.icon}
+            />
+            <View style={Styles.textCon}>
+              <Text style={Styles.heading}>
+                {LanguageKeys.goPremiumButtonHeading}
+              </Text>
+              <Text style={Styles.description}>
+                {LanguageKeys.goPremiumButtonDescription}
+              </Text>
+            </View>
           </View>
+          <AntDesign
+            name={Rtl ? 'arrowleft' : 'arrowright'}
+            size={wp(5)}
+            color={Colors.color2}
+          />
         </View>
-        <AntDesign
-          name={Rtl ? 'arrowleft' : 'arrowright'}
-          size={wp(5)}
-          color={Colors.color2}
-        />
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -62,7 +70,6 @@ const Styles = StyleSheet.create({
     height: 48,
     borderRadius: 30,
     flexDirection: 'row',
-    paddingHorizontal: wp(4),
     alignItems: 'center',
     justifyContent: 'space-between',
   },
@@ -83,5 +90,6 @@ const Styles = StyleSheet.create({
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.tiny,
+    includeFontPadding: false,
   },
 });

@@ -474,17 +474,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     });
   }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
 
-  const checkNewTransaction = useCallback(() => {
-    if (currentUser?.latest_transaction?.paid_tracking === 0) {
-      flashSuccessMessage('New transaction detected!');
-      navigation.navigate('MembershipCongrats', {
-        isNewTransaction: true,
-        title: currentUser?.latest_transaction?.name,
-        amount: currentUser?.latest_transaction?.amount,
-      });
-    }
-  }, [currentUser?.latest_transaction, navigation]);
-
   // Call getAttribute and getUsers once on mount only (using module-level flag to prevent refetch on remount)
   useEffect(() => {
     getAttribute();
@@ -500,17 +489,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       notifeeBackForHandler
     );
     notifee.onBackgroundEvent(notifeeBackForHandler);
-    const timer = setTimeout(() => {
-      checkNewTransaction();
-    }, 100);
 
     return () => {
       if (typeof unsubscribeForeground === 'function') {
         unsubscribeForeground();
       }
-      clearTimeout(timer);
     };
-  }, [checkNewTransaction, getInitialNotification, notifeeBackForHandler]);
+  }, [getInitialNotification, notifeeBackForHandler]);
 
   const onBoostProfilePress = useCallback(async () => {
     setIsBoostLoading(true);
