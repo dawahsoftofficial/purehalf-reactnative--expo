@@ -1,9 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { AppEventsLogger } from 'react-native-fbsdk-next';
 import * as ImagePickCrop from 'react-native-image-crop-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { hp, wp } from '@/global';
 import { Colors } from '@/res';
 
 import { Button, ImagePicker } from '../../components';
@@ -51,14 +51,17 @@ type User = {
   email?: string;
   phone_number?: string;
   media?: {
-    primary_image_to_show?: string[];
+    primary_image?: string;
+    un_blur_primary_image?: string;
   };
   [key: string]: unknown;
 };
 
 type ProfilePictureResponse = {
   results?: {
-    primary_image_to_show?: string[];
+    primary_image?: string;
+    un_blur_primary_image?: string;
+    [key: string]: unknown;
   };
   [key: string]: unknown;
 };
@@ -165,12 +168,21 @@ function ProfilePicture(props: ProfilePictureProps) {
             .then(async (res: unknown) => {
               const response = res as ProfilePictureResponse;
               const result = response?.results;
+
+              // Use primary_image from API response (or un_blur_primary_image as fallback)
+              const primaryImage = result?.un_blur_primary_image || '';
+
+              // Update user with profile picture from API response
               const user: User = {
                 ...(currentUser as User),
-                primary_image_to_show: result?.primary_image_to_show,
+                media: {
+                  un_blur_primary_image: primaryImage,
+                },
               };
+
               updateCurrentUser(user);
               await setData(storageKeys.USER, user);
+
               flashSuccessMessage('Profile Picture Updated');
               setImage(resizedImageObj.uri);
               resetUploadState();
@@ -206,10 +218,10 @@ function ProfilePicture(props: ProfilePictureProps) {
     };
 
     // Facebook Event For complete Registration
-    AppEventsLogger.logEvent(AppEventsLogger.AppEvents.CompletedRegistration, {
-      [AppEventsLogger.AppEventParams.RegistrationMethod]: 'email',
-      ...info,
-    });
+    // AppEventsLogger.logEvent(AppEventsLogger.AppEvents.CompletedRegistration, {
+    //   [AppEventsLogger.AppEventParams.RegistrationMethod]: 'email',
+    //   ...info,
+    // });
     addAnaylatics('complete_registration', info);
 
     const nextRoute =
@@ -280,7 +292,8 @@ const Styles = StyleSheet.create({
   },
   scrollContainer: {
     flex: 1,
-    marginHorizontal: 16,
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(1.5),
     justifyContent: 'center',
     alignItems: 'center',
   },

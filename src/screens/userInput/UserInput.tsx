@@ -110,13 +110,6 @@ function UserInput(props: UserInputProps) {
   const hideLoader = useCallback(() => {
     setSubmitLoader(false);
   }, []);
-  // const showCountryPicker = () => setCountryPickerVisible(true)
-  // const hideCountryPicker = () => setCountryPickerVisible(false)
-
-  // const onCountrySelection = (data: any) => {
-  //     setSelectedCountry(data?.name)
-  //     setCountryPickerVisible(false)
-  // }
 
   const onContinuePress = useCallback(() => {
     if (!dateOfBirth || typeof dateOfBirth === 'string') {
@@ -273,6 +266,8 @@ function UserInput(props: UserInputProps) {
   }, [
     getData,
     storageKeys.FIREBASE_VERIFICATION_ID,
+    storageKeys.IS_RECOMMENDED,
+    storageKeys.LANGUAGE,
     language,
     deleteAll,
     updateCurrentUser,
@@ -285,12 +280,12 @@ function UserInput(props: UserInputProps) {
   }, [props.navigation]);
 
   const scrollViewContentStyle = useMemo(
-    () => [Styles.container, { paddingHorizontal: 0 }],
-    []
-  );
-
-  const labelColor = useMemo(
-    () => (fromSettings ? Colors.color1 : Colors.color1),
+    () => ({
+      flexGrow: 1,
+      justifyContent: 'center' as const,
+      paddingHorizontal: fromSettings ? 0 : wp(4),
+      paddingBottom: hp(2),
+    }),
     [fromSettings]
   );
 
@@ -320,11 +315,13 @@ function UserInput(props: UserInputProps) {
     return (
       <KeyboardAwareScrollView
         enableOnAndroid
-        // enableAutomaticScroll
+        enableAutomaticScroll
         keyboardShouldPersistTaps="handled"
-        extraScrollHeight={isIOS ? 20 : 10}
+        extraScrollHeight={isIOS ? 100 : 80}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={scrollViewContentStyle}
+        keyboardOpeningTime={0}
+        style={Styles.scrollView}
       >
         {!fromSettings && <UserInputHeader />}
         <View style={Styles.inputFieldCon}>
@@ -349,7 +346,7 @@ function UserInput(props: UserInputProps) {
             icon={Images.calender}
             mode="date"
             selectedDate={onDateOfBirthSelection}
-            outerLabelStyle={{ color: labelColor }}
+            outerLabelStyle={{ color: Colors.color1 }}
             disabled={fromSettings}
           />
         </View>
@@ -357,7 +354,7 @@ function UserInput(props: UserInputProps) {
           <GenderPicker
             value={gender}
             onSelect={onGenderChange}
-            outerLabelStyle={{ color: labelColor }}
+            outerLabelStyle={{ color: Colors.color1 }}
             disabled={fromSettings}
           />
         </View>
@@ -367,7 +364,9 @@ function UserInput(props: UserInputProps) {
 
   if (fromSettings) {
     return (
-      <Container style={Styles.container}>
+      <Container
+        style={[Styles.container, fromSettings && { paddingHorizontal: wp(4) }]}
+      >
         <Header
           title={LanguageKeys.basicSettings}
           navigation={props.navigation}
@@ -379,7 +378,7 @@ function UserInput(props: UserInputProps) {
         />
         <CheckMembershipStatus />
         {renderContent()}
-        <View style={Styles.continueBtnCon}>
+        <View style={Styles.buttonContainer}>
           <Button
             text={buttonText}
             onPress={onContinuePress}
@@ -404,7 +403,7 @@ function UserInput(props: UserInputProps) {
       />
       <CheckMembershipStatus />
       {renderContent()}
-      <View style={Styles.continueBtnCon}>
+      <View style={Styles.buttonContainer}>
         <Button
           text={buttonText}
           onPress={onContinuePress}
@@ -422,14 +421,22 @@ export default UserInput;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingHorizontal: wp(4),
-    justifyContent: 'center',
     backgroundColor: Colors.color2,
+  },
+  scrollView: {
+    flex: 1,
   },
   inputFieldCon: {
     marginBottom: hp(3),
   },
+  buttonContainer: {
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(1.5),
+    backgroundColor: Colors.color2,
+  },
   continueBtnCon: {
     paddingHorizontal: wp(4),
+    paddingTop: hp(2),
+    paddingBottom: hp(2),
   },
 });

@@ -37,7 +37,6 @@ import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   capitalize,
-  Firebase,
   flashErrorMessage,
   flashSuccessMessage,
   isIOS,
@@ -46,6 +45,7 @@ import {
 } from '../../services';
 import messageServices from '../../services/api/message-services';
 import type { Conversation as ApiConversation } from '../../services/api/types/message-types';
+import { presentChatCreditsPaywall } from '../../services/paywall-service';
 
 const { width, height } = Dimensions.get('window');
 
@@ -450,40 +450,63 @@ const Header = ({
     });
   }, [currentUser?.membership_expiry, navigation, updateCurrentUser]);
 
-  const onMessagePress = useCallback(() => {
-    const conversationId = userConversation?.convDetails?.id;
-    if (!conversationId) {
-      navigateToChat();
-      return;
-    }
-    const handleChatCount = (count: unknown) => {
-      const totalChats = typeof count === 'number' ? count : Number(count ?? 0);
-      if (totalChats < 5) {
-        navigateToChat();
-      } else {
-        flashErrorMessage(LanguageKeys.conversationLimit);
+  const onMessagePress = useCallback(async () => {
+    // Check if this is a new conversation (no existing conversation)
+    // userConversation can be Conversation (old) or ApiConversation (new) type
+    const conversationId = userConversation
+      ? (userConversation as unknown as ApiConversation)?.id ||
+        (userConversation as Conversation)?.convDetails?.id
+      : null;
+    const isNewConversation = !conversationId;
+
+    // If it's a new conversation, check if user has sufficient credits (50 credits required)
+    if (isNewConversation) {
+      const chatCredits =
+        (currentUser as { chat_credits?: number })?.chat_credits ?? 0;
+      const requiredCredits = 50;
+
+      if (chatCredits < requiredCredits) {
+        // User doesn't have enough credits, show paywall
+        try {
+          const result = await presentChatCreditsPaywall();
+          if (result.success) {
+            // User purchased credits, refresh user data and try again
+            try {
+              const refreshedUser =
+                (await ApiServices.getCurrentUserDetail()) as User;
+              updateCurrentUser(refreshedUser);
+              const refreshedCredits =
+                (refreshedUser as { chat_credits?: number })?.chat_credits ?? 0;
+              if (refreshedCredits >= requiredCredits) {
+                navigateToChat();
+              } else {
+                flashErrorMessage(
+                  `You need at least ${requiredCredits} credits to start a new conversation`
+                );
+              }
+            } catch (error) {
+              console.error('Error refreshing user data:', error);
+              flashErrorMessage('Failed to refresh credits. Please try again.');
+            }
+          } else if (
+            result.error &&
+            result.error !== 'Purchase cancelled by user'
+          ) {
+            flashErrorMessage(
+              result.error || 'Failed to purchase chat credits'
+            );
+          }
+        } catch (error) {
+          console.error('Error presenting chat credits paywall:', error);
+          flashErrorMessage('Failed to open chat credits paywall');
+        }
+        return;
       }
-    };
-
-    if (currentUser?.gender === 'male') {
-      isPremiumUser().then(() => {
-        Firebase.getNoOfChats(currentUser?.id, conversationId).then(
-          handleChatCount
-        );
-      });
-      return;
     }
 
-    Firebase.getNoOfChats(currentUser?.id, conversationId).then(
-      handleChatCount
-    );
-  }, [
-    currentUser?.gender,
-    currentUser?.id,
-    isPremiumUser,
-    navigateToChat,
-    userConversation?.convDetails?.id,
-  ]);
+    // User has sufficient credits or it's an existing conversation, proceed to chat
+    navigateToChat();
+  }, [currentUser, navigateToChat, updateCurrentUser, userConversation]);
 
   const Rtl = CheckRtl();
 
@@ -871,7 +894,7 @@ const Header = ({
                 <View style={Styles.blurImageWrapper}>
                   <Image
                     source={{
-                      uri: userData?.primary_image_to_show,
+                      uri: userData?.media?.primary_image,
                     }}
                     style={Styles.blurComparisonImage}
                     resizeMode="cover"

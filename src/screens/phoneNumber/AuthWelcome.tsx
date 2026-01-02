@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Animation } from '../../animations';
 import { SlideShowContainer, Text } from '../../components';
-import { Typography } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { Firebase, setRevenueCat } from '../../services';
@@ -142,7 +142,6 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
     async (user: User) => {
       try {
         if (user?.id) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setRevenueCat(user.id as any);
         }
 
@@ -269,7 +268,8 @@ const Styles = StyleSheet.create({
     zIndex: 1,
     width: '100%',
     position: 'absolute',
-    paddingHorizontal: 16,
+    paddingBottom: hp(1.5),
+    paddingHorizontal: wp(4),
   },
   getStarted: {
     color: Colors.color1,

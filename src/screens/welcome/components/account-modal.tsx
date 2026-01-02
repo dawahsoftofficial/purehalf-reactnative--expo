@@ -47,6 +47,7 @@ type User = {
   primary_image_to_show?: string;
   media?: {
     cover_image?: string;
+    un_blur_primary_image?: string;
   };
   detail?: {
     tagline?: string;
@@ -174,9 +175,9 @@ export function AccountModal({
           <View style={Styles.modalHeaderContent}>
             <View style={Styles.profileSection}>
               <View style={Styles.profileImageContainer}>
-                {currentUser?.primary_image_to_show ? (
+                {currentUser?.media?.un_blur_primary_image ? (
                   <Image
-                    source={{ uri: currentUser.primary_image_to_show }}
+                    source={{ uri: currentUser?.media?.un_blur_primary_image }}
                     style={Styles.profileImage}
                   />
                 ) : (

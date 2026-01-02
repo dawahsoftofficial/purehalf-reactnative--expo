@@ -102,8 +102,8 @@ const Styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
     backgroundColor: Colors.color2,
-    paddingHorizontal: 16,
-
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.5),
     justifyContent: 'space-between',
   },
   bismillahText: {

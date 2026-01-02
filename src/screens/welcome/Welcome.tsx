@@ -594,10 +594,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               ]}
               onPress={() => setHeaderModal(!headerModal)}
             >
-              {currentUser?.primary_image_to_show &&
-              currentUser?.primary_image_to_show?.length ? (
+              {currentUser?.media?.un_blur_primary_image ? (
                 <Image
-                  source={{ uri: currentUser.primary_image_to_show }}
+                  source={{ uri: currentUser?.media?.un_blur_primary_image }}
                   style={[
                     Styles.headerIcon,
                     { width: 45, height: 45, borderRadius: 25 },

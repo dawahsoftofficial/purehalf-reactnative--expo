@@ -1082,7 +1082,7 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(10),
   },
   headingDesCon: {
-    paddingVertical: hp(4),
+    paddingVertical: hp(2),
     paddingHorizontal: wp(4),
   },
   heading: {
@@ -1278,7 +1278,7 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   addProfilePicBtnCon: {
-    paddingBottom: hp(2),
+    paddingTop: hp(2),
   },
   profileImageCon: {
     paddingHorizontal: wp(4),

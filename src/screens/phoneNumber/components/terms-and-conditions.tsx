@@ -74,7 +74,7 @@ const Styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: hp(2),
+    marginTop: hp(1),
     alignSelf: 'flex-start',
   },
   textRow: {
