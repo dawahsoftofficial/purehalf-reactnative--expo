@@ -9,7 +9,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { Animation } from '../../animations';
 import { CountryPicker, SlideShowContainer, Text } from '../../components';
 import { Button } from '../../components';
-import { Typography, wp } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import {
@@ -274,7 +274,7 @@ function PhoneNumber({ navigation }: PhoneNumberProps) {
   return (
     <SlideShowContainer disabled>
       <View style={Styles.container}>
-        <PhoneHeader top={top} onGoBack={handleGoBack} />
+        <PhoneHeader top={top + hp(1.5)} onGoBack={handleGoBack} />
 
         <KeyboardAwareScrollView
           enableOnAndroid
@@ -329,10 +329,10 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.color2,
   },
   phoneNumberSectionCon: {
-    position: 'absolute',
-
-    width: wp(100),
     zIndex: 1,
+    width: wp(100),
+    position: 'absolute',
+    paddingBottom: hp(1.5),
     paddingHorizontal: wp(4),
   },
   getStarted: {

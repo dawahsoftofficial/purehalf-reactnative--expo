@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Animation } from '../../animations';
 import { SlideShowContainer } from '../../components';
 import { Button } from '../../components/buttons';
-import { hp } from '../../global';
+import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors } from '../../res';
 import {
@@ -366,23 +366,13 @@ const Otp = (props: OtpProps) => {
     [from]
   );
 
-  const buttonContainerStyle = useMemo(
-    () => [
-      Styles.continueBtnCon,
-      {
-        marginBottom: !isIOS && isKeyboardOpen ? hp(-11) : hp(3),
-      },
-    ],
-    [isKeyboardOpen]
-  );
-
   return (
     <SlideShowContainer disabled>
       <KeyboardAwareScrollView
         enableOnAndroid
         enableAutomaticScroll
         keyboardShouldPersistTaps="handled"
-        extraScrollHeight={isIOS ? 20 : 10}
+        extraScrollHeight={isIOS ? 100 : 80}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={scrollViewContentStyle}
       >
@@ -404,7 +394,7 @@ const Otp = (props: OtpProps) => {
               textColor={textColor}
               onResendPress={onResendPress}
             />
-            <View style={buttonContainerStyle}>
+            <View style={Styles.continueBtnCon}>
               <Button
                 loading={continueLoader}
                 loadingMessage={continueLoaderMessage}
@@ -426,7 +416,8 @@ const Styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.color2,
     justifyContent: 'flex-end',
-    paddingHorizontal: 16,
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(1.5),
   },
   continueBtnCon: {
     marginBottom: hp(3),

@@ -5,7 +5,7 @@ import { Linking, PermissionsAndroid, StyleSheet, View } from 'react-native';
 import { Colors } from '@/res';
 
 import { Button, Container } from '../../components';
-import { hp } from '../../global';
+import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import {
   ApiServices,
@@ -292,6 +292,7 @@ const Styles = StyleSheet.create({
     zIndex: 1,
     width: '100%',
     position: 'absolute',
-    paddingHorizontal: 16,
+    paddingBottom: hp(1.5),
+    paddingHorizontal: wp(4),
   },
 });

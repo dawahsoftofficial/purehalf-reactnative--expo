@@ -39,7 +39,7 @@ export default memo(PhoneHeader);
 
 const Styles = StyleSheet.create({
   container: {
-    position: 'absolute',
     zIndex: 1000,
+    position: 'absolute',
   },
 });
