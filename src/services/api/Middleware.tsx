@@ -19,7 +19,9 @@ Api.interceptors.request.use(
     const token = await StorageManager.getData(
       StorageManager.storageKeys.USER_TOKEN
     );
-    config.headers.Authorization = `Bearer ${token}`;
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
 
     // Log request details
     const requestInfo = {
@@ -29,9 +31,6 @@ Api.interceptors.request.use(
       fullUrl: `${config.baseURL || ''}${config.url}`,
       headers: {
         ...config.headers,
-        Authorization: config.headers.Authorization
-          ? `Bearer ${token}`
-          : 'No token',
       },
       data: config.data,
       params: config.params,
@@ -72,11 +71,7 @@ Api.interceptors.response.use(
       hasData: !!response.data,
     };
 
-    // console.log(
-    //   '[API Response Success]',
-    //   JSON.stringify(responseInfo, null, 4)
-    // );
-
+    console.log('[API Response]', JSON.stringify(responseInfo, null, 4));
     return response;
   },
   async (error: any) => {
