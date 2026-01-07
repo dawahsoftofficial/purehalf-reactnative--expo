@@ -68,6 +68,7 @@ const EndPoints = {
     `/auth/conversations/${conversationId}/mark-all-read`,
   markMessageDelivered: (messageId: number) =>
     `/auth/conversations/messages/${messageId}/delivered`,
+  collectChatCredit: '/auth/collect/chat-credit',
 };
 
 export default EndPoints;

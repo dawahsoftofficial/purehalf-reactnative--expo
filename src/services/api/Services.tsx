@@ -19,6 +19,10 @@ import { StorageManager } from '../storageManager';
 import BaseUrl from './BaseUrl';
 import EndPoints from './EndPoints';
 import { Api } from './Middleware';
+import type {
+  CurrentUserDetail,
+  GetCurrentUserDetailResponse,
+} from './types/user-types';
 
 const { storageKeys, setData, getData } = StorageManager;
 
@@ -1017,20 +1021,36 @@ class GApiServices {
     });
   };
 
-  getCurrentUserDetail = () => {
+  getCurrentUserDetail = (): Promise<CurrentUserDetail> => {
     return new Promise((resolve, reject) => {
       Api.get(`${EndPoints.getCurrentUserDetail}`)
-        .then(async (data) => {
-          await setData(storageKeys.USER, data?.data?.results);
-          resolve(data?.data?.results);
+        .then(async (response) => {
+          const data = response.data as GetCurrentUserDetailResponse;
+          if (data?.error === false && data?.results) {
+            await setData(storageKeys.USER, data.results);
+            resolve(data.results);
+          } else {
+            const errorMessage =
+              data?.message || 'Failed to get current user detail';
+            console.error(
+              '[ApiServices.getCurrentUserDetail] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
         })
         .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to get current user detail';
           flashErrorMessage();
-          console.log(
-            'error while getting current user detail  =>',
+          console.error(
+            '[ApiServices.getCurrentUserDetail] Error:',
+            errorMessage,
             error?.response?.data
           );
-          reject('');
+          reject(errorMessage);
         });
     });
   };
@@ -1051,6 +1071,43 @@ class GApiServices {
         })
         .catch(() => {
           reject('');
+        });
+    });
+  };
+
+  /**
+   * Collect chat credits (premium members only)
+   * This endpoint is only available for premium members
+   * @returns Promise resolving to user object with updated data
+   */
+  collectChatCredits = () => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.collectChatCredit)
+        .then((response) => {
+          const data = response?.data;
+          if (data?.error === false && data?.results) {
+            resolve(data.results);
+          } else {
+            const errorMessage =
+              data?.message || 'Failed to collect chat credits';
+            console.error(
+              '[ApiServices.collectChatCredits] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to collect chat credits';
+          console.error('[ApiServices.collectChatCredits] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          reject(errorMessage);
         });
     });
   };

@@ -57,7 +57,8 @@ import type {
   UnreadConversationCounterEventData,
 } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
-import { useConversationStore } from '../../stores';
+import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
+import { useConversationStore, usePremiumStore } from '../../stores';
 
 type MessagesProps = {
   navigation: {
@@ -83,6 +84,7 @@ const Messages = (props: MessagesProps) => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { setData, storageKeys } = StorageManager;
   const { currentUser, updateCurrentUser, language } = useGlobalContext();
+  const isPremium = usePremiumStore((state) => state.isPremium);
   const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
   const subscribedUserIdRef = useRef<string | number | null>(null);
 
@@ -382,6 +384,48 @@ const Messages = (props: MessagesProps) => {
       // Fetch conversations on focus
       fetchConversations();
 
+      // Collect chat credits for premium members when screen is focused (once per 24 hours)
+      const isUserPremium = isPremium();
+      console.log(
+        '[Messages.useFocusEffect] last_chat_credit_collected_at:',
+        currentUser?.last_chat_credit_collected_at
+      );
+      const canCollect = canCollectChatCredits(
+        currentUser?.last_chat_credit_collected_at
+      );
+      console.log(
+        '[Messages.useFocusEffect] Premium check:',
+        isUserPremium,
+        'Can collect:',
+        canCollect
+      );
+
+      if (isUserPremium && canCollect) {
+        const collectCredits = async () => {
+          try {
+            await ApiServices.collectChatCredits();
+            // Refresh user data to get updated chat credits and last_chat_credit_collected_at
+            // try {
+            //   const refreshedUser =
+            //     (await ApiServices.getCurrentUserDetail()) as typeof currentUser;
+            //   if (refreshedUser) {
+            //     updateCurrentUser(refreshedUser);
+            //     await setData(storageKeys.USER, refreshedUser);
+            //   }
+            // } catch (refreshError) {
+            //   console.error(
+            //     '[Messages] Error refreshing user data after collect:',
+            //     refreshError
+            //   );
+            // }
+          } catch (error) {
+            // Silently handle error - don't block screen from loading
+            console.error('[Messages] Error collecting chat credits:', error);
+          }
+        };
+        collectCredits();
+      }
+
       const quotes = [
         t('adviceOneText'),
         t('adviceTwoText'),
@@ -398,7 +442,14 @@ const Messages = (props: MessagesProps) => {
         t('adviceThirteenText'),
       ];
       setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
-    }, [fetchConversations, t])
+    }, [
+      fetchConversations,
+      t,
+      isPremium,
+      updateCurrentUser,
+      setData,
+      storageKeys.USER,
+    ])
   );
 
   const hideModalLoader = () => {
@@ -433,7 +484,7 @@ const Messages = (props: MessagesProps) => {
 
   const onChatCreditsSuccessCollect = () => {
     setChatCreditsSuccessModalVisible(false);
-    // TODO: Backend integration - collect chat credits
+
     flashSuccessMessage('Chat credits added successfully!');
   };
 

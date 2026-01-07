@@ -36,6 +36,7 @@ import {
   useGlobalContext,
 } from '../../services';
 import { presentBoostProfilePaywall } from '../../services/paywall-service';
+import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
 import { AccountModal } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
@@ -537,6 +538,54 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       handleProfileCompleteData();
     }, [])
   );
+
+  // Collect chat credits when AccountModal opens (premium members only, once per 24 hours)
+  useEffect(() => {
+    const canCollect = canCollectChatCredits(
+      currentUser?.last_chat_credit_collected_at
+    );
+    console.log(
+      '[Welcome.useEffect] Modal open:',
+      headerModal,
+      'Premium:',
+      isPremiumUser,
+      'Can collect:',
+      canCollect
+    );
+
+    if (headerModal && isPremiumUser && canCollect) {
+      const collectCredits = async () => {
+        try {
+          await ApiServices.collectChatCredits();
+          // Refresh user data to get updated chat credits and last_chat_credit_collected_at
+          // try {
+          //   const refreshedUser =
+          //     (await ApiServices.getCurrentUserDetail()) as typeof currentUser;
+          //   if (refreshedUser) {
+          //     updateCurrentUser(refreshedUser);
+          //     await setData(storageKeys.USER, refreshedUser);
+          //   }
+          // } catch (refreshError) {
+          //   console.error(
+          //     '[Welcome] Error refreshing user data after collect:',
+          //     refreshError
+          //   );
+          // }
+        } catch (error) {
+          // Silently handle error - don't block modal from opening
+          console.error('[Welcome] Error collecting chat credits:', error);
+        }
+      };
+      collectCredits();
+    }
+  }, [
+    headerModal,
+    isPremiumUser,
+    currentUser,
+    updateCurrentUser,
+    setData,
+    storageKeys.USER,
+  ]);
 
   const onInfoItemPress = useCallback(
     (item: ProfileProgressItem) => {

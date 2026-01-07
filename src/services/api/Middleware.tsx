@@ -1,5 +1,5 @@
 import { CommonActions } from '@react-navigation/native';
-import axios from 'axios';
+import axios, { type AxiosResponse } from 'axios';
 
 import { navigationRef } from '../../navigation/RootNavigation';
 import { setGlobalState } from '../context';
@@ -25,17 +25,13 @@ Api.interceptors.request.use(
 
     // Log request details
     const requestInfo = {
-      timestamp: new Date().toISOString(),
       method: config.method?.toUpperCase(),
-      url: config.url,
       fullUrl: `${config.baseURL || ''}${config.url}`,
       headers: {
         ...config.headers,
       },
       data: config.data,
       params: config.params,
-      hasData: !!config.data,
-      dataSize: config.data ? JSON.stringify(config.data).length : 0,
     };
 
     console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
@@ -52,23 +48,14 @@ Api.interceptors.request.use(
 );
 
 Api.interceptors.response.use(
-  (response: any) => {
-    const requestDuration = response.config?.metadata?.startTime
-      ? Date.now() - response.config.metadata.startTime
-      : null;
-
+  (response: AxiosResponse) => {
     const responseInfo = {
-      timestamp: new Date().toISOString(),
       method: response.config?.method?.toUpperCase(),
-      url: response.config?.url,
       fullUrl: `${response.config?.baseURL || ''}${response.config?.url}`,
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
       data: response.data,
-      dataSize: response.data ? JSON.stringify(response.data).length : 0,
-      requestDuration: requestDuration ? `${requestDuration}ms` : null,
-      hasData: !!response.data,
     };
 
     console.log('[API Response]', JSON.stringify(responseInfo, null, 4));
@@ -80,9 +67,7 @@ Api.interceptors.response.use(
       : null;
 
     const errorInfo = {
-      timestamp: new Date().toISOString(),
       method: error?.config?.method?.toUpperCase(),
-      url: error?.config?.url,
       fullUrl: `${error?.config?.baseURL || ''}${error?.config?.url}`,
       requestData: error?.config?.data,
       status: error?.response?.status,
@@ -90,10 +75,6 @@ Api.interceptors.response.use(
       errorMessage: error?.message,
       errorCode: error?.code,
       responseData: error?.response?.data,
-      responseHeaders: error?.response?.headers,
-      requestDuration: requestDuration ? `${requestDuration}ms` : null,
-      hasResponse: !!error?.response,
-      hasRequest: !!error?.config,
     };
 
     console.error('[API Response Error]', JSON.stringify(errorInfo, null, 4));

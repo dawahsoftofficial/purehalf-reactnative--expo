@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useConversationStore } from '../../stores/conversation-store';
 import BaseUrl from '../api/BaseUrl';
+import type { CounterUpdateEventData } from '../api/types/message-types';
 import { StorageManager } from '../storageManager';
 
 type PusherConfig = {
@@ -616,7 +617,7 @@ function handleCounterEvent(
   rawData: unknown,
   currentUser: { id: string | number; user?: { id: string | number } } | null,
   updateCurrentUser: (user: unknown) => void
-) {
+): void {
   console.log(
     '[useUserCountersChannel] Counter event received:',
     eventType,
@@ -626,9 +627,9 @@ function handleCounterEvent(
   try {
     // Handle different counter event types
     switch (eventType) {
-      case 'counterUpdate':
+      case 'counterUpdate': {
         // Counter update event with participant data
-        // Data structure: { event: 'counterUpdate', participant: { id, unread_conversations_count, unread_messages_count, chat_credits } }
+        // Data structure: { event: 'counterUpdate', participant: { id, unread_conversations_count, unread_messages_count, chat_credits, last_chat_credit_collected_at } }
         console.log(
           '[useUserCountersChannel] Counter update received:',
           rawData
@@ -640,12 +641,14 @@ function handleCounterEvent(
           'participant' in rawData &&
           currentUser
         ) {
-          const participant = rawData.participant as {
-            id?: number;
-            unread_conversations_count?: number;
-            unread_messages_count?: number | string;
-            chat_credits?: number;
-          };
+          const eventData = rawData as CounterUpdateEventData;
+          const participant = eventData.participant;
+
+          // Prepare user updates object
+          const userUpdates: Partial<{
+            chat_credits: number;
+            last_chat_credit_collected_at: string | null;
+          }> = {};
 
           // Update chat credits if present
           if (participant.chat_credits !== undefined) {
@@ -658,9 +661,24 @@ function handleCounterEvent(
               '[useUserCountersChannel] Updating chat credits:',
               credits
             );
+            userUpdates.chat_credits = credits;
+          }
+
+          // Update last_chat_credit_collected_at if present
+          if (participant.last_chat_credit_collected_at !== undefined) {
+            console.log(
+              '[useUserCountersChannel] Updating last_chat_credit_collected_at:',
+              participant.last_chat_credit_collected_at
+            );
+            userUpdates.last_chat_credit_collected_at =
+              participant.last_chat_credit_collected_at;
+          }
+
+          // Apply user updates if any
+          if (Object.keys(userUpdates).length > 0) {
             updateCurrentUser({
               ...currentUser,
-              chat_credits: credits,
+              ...userUpdates,
             });
           }
 
@@ -670,11 +688,11 @@ function handleCounterEvent(
             participant.unread_messages_count !== undefined
           ) {
             const unreadConversationsCount =
-              participant.unread_conversations_count || 0;
+              participant.unread_conversations_count ?? 0;
             const unreadMessagesCount =
               typeof participant.unread_messages_count === 'string'
                 ? parseInt(participant.unread_messages_count, 10) || 0
-                : participant.unread_messages_count || 0;
+                : (participant.unread_messages_count ?? 0);
 
             console.log(
               '[useUserCountersChannel] Updating unread counts:',
@@ -691,40 +709,7 @@ function handleCounterEvent(
           }
         }
         break;
-
-      case 'CounterUpdated':
-      case 'CountersUpdated':
-        // Generic counter update event
-        console.log('[useUserCountersChannel] Counter updated:', rawData);
-        // You can add specific counter update logic here
-        // For example, updating chat credits, matches, etc.
-        break;
-
-      case 'ChatCreditsUpdated':
-        // Chat credits counter update
-        console.log('[useUserCountersChannel] Chat credits updated:', rawData);
-        if (
-          rawData &&
-          typeof rawData === 'object' &&
-          'chat_credits' in rawData &&
-          currentUser
-        ) {
-          const credits =
-            typeof rawData.chat_credits === 'number'
-              ? rawData.chat_credits
-              : parseInt(String(rawData.chat_credits), 10) || 0;
-          updateCurrentUser({
-            ...currentUser,
-            chat_credits: credits,
-          });
-        }
-        break;
-
-      case 'MatchesCountUpdated':
-        // Matches counter update
-        console.log('[useUserCountersChannel] Matches count updated:', rawData);
-        // Add matches count update logic if needed
-        break;
+      }
 
       default:
         console.log(
