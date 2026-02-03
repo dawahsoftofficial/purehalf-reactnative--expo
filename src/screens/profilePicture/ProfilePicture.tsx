@@ -50,9 +50,11 @@ type User = {
   lastName?: string;
   email?: string;
   phone_number?: string;
+  primary_image_to_show?: string;
   media?: {
     primary_image?: string;
     un_blur_primary_image?: string;
+    primary_image_to_show?: string;
   };
   [key: string]: unknown;
 };
@@ -61,6 +63,7 @@ type ProfilePictureResponse = {
   results?: {
     primary_image?: string;
     un_blur_primary_image?: string;
+    primary_image_to_show?: string;
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -130,23 +133,42 @@ function ProfilePicture(props: ProfilePictureProps) {
 
   const onImageSelection = useCallback(
     (data: ImageData[]) => {
+      console.log('[ProfilePicture] onImageSelection called with data:', data);
+
       if (!data || data.length === 0) {
+        console.log('[ProfilePicture] No data or empty array, returning early');
         return;
       }
 
       const firstImage = data[0];
+      console.log('[ProfilePicture] First image:', firstImage);
+
       if (!firstImage?.uri) {
+        console.log('[ProfilePicture] No URI in first image, returning early');
         return;
       }
 
+      console.log('[ProfilePicture] Opening cropper with URI:', firstImage.uri);
       ImagePickCrop.openCropper({
         path: firstImage.uri,
         mediaType: 'photo',
         width: 450,
         height: 450,
+        writeTempFile: true, // Ensure temp file is written (required for iOS)
       })
         .then((croppedImage: unknown) => {
+          console.log(
+            '[ProfilePicture] Cropper success, cropped image:',
+            croppedImage
+          );
           const image = croppedImage as CroppedImage;
+
+          if (!image?.path) {
+            console.error('[ProfilePicture] Cropped image has no path!', image);
+            resetUploadState();
+            return;
+          }
+
           const pathParts = image.path?.split('/') || [];
           const resizedImageObj: ResizedImageObj = {
             height: image.height || 0,
@@ -156,24 +178,58 @@ function ProfilePicture(props: ProfilePictureProps) {
             size: image.size || 0,
           };
 
+          console.log(
+            '[ProfilePicture] Prepared image object:',
+            resizedImageObj
+          );
           setUploading(true);
           setUploadingProgress(0);
 
+          console.log('[ProfilePicture] Calling addProfilePicture API...');
           ApiServices.addProfilePicture(resizedImageObj, handleUploadProgress)
             .then(async (res: unknown) => {
+              console.log(
+                '[ProfilePicture] API call successful, response:',
+                res
+              );
               const response = res as ProfilePictureResponse;
               const result = response?.results;
 
-              // Use primary_image from API response (or un_blur_primary_image as fallback)
+              // Extract image URLs from API response
+              // For current user, primary_image_to_show should be un_blur_primary_image
+              // (since they see their own unblurred image)
               const primaryImage = result?.un_blur_primary_image || '';
+              const primaryImageToShow =
+                result?.primary_image_to_show ||
+                result?.un_blur_primary_image ||
+                '';
+
+              console.log(
+                '[ProfilePicture] Extracted primary image:',
+                primaryImage
+              );
+              console.log(
+                '[ProfilePicture] Extracted primary_image_to_show:',
+                primaryImageToShow
+              );
 
               // Update user with profile picture from API response
+              // Must set both media.un_blur_primary_image AND primary_image_to_show at root level
+              // RootNavigation checks primary_image_to_show to determine initial route
               const user: User = {
                 ...(currentUser as User),
+                primary_image_to_show: primaryImageToShow, // Root level - required for RootNavigation check
                 media: {
+                  ...(currentUser?.media as Record<string, unknown>),
                   un_blur_primary_image: primaryImage,
+                  primary_image_to_show: primaryImageToShow, // Also in media for consistency
                 },
               };
+
+              console.log(
+                '[ProfilePicture] Saving user with primary_image_to_show:',
+                user.primary_image_to_show
+              );
 
               updateCurrentUser(user);
               await setData(storageKeys.USER, user);
@@ -183,13 +239,32 @@ function ProfilePicture(props: ProfilePictureProps) {
               resetUploadState();
             })
             .catch((error) => {
-              console.error('Error uploading profile picture:', error);
+              console.error(
+                '[ProfilePicture] Error uploading profile picture:',
+                error
+              );
               resetUploadState();
             });
         })
-        .catch((error) => {
-          console.error('Error cropping image:', error);
-          resetUploadState();
+        .catch((error: unknown) => {
+          // Handle cropper cancellation or errors
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          const errorCode = (error as { code?: string })?.code;
+
+          console.error('[ProfilePicture] Error cropping image:', {
+            error,
+            errorMessage,
+            errorCode,
+            errorType:
+              errorCode === 'E_PICKER_CANCELLED' ? 'USER_CANCELLED' : 'ERROR',
+          });
+
+          // Only reset state if it's not a user cancellation
+          // User cancellation is normal behavior, no need to show error
+          if (errorCode !== 'E_PICKER_CANCELLED') {
+            resetUploadState();
+          }
         });
     },
     [
@@ -256,11 +331,27 @@ function ProfilePicture(props: ProfilePictureProps) {
   }, [currentUser, props.navigation]);
 
   const handleImagePickerSelection = useCallback(
-    (res: ImageData[]) => {
+    (res: ImageData[] | undefined | null) => {
+      console.log(
+        '[ProfilePicture] handleImagePickerSelection called with:',
+        res
+      );
+
+      // Normalize the response - ImagePicker might pass res.assets which could be undefined
+      const imageData = Array.isArray(res) ? res : res ? [res] : [];
+
+      if (imageData.length === 0) {
+        console.log('[ProfilePicture] No image data received, returning early');
+        return;
+      }
+
       hideImagePicker();
       setTimeout(
         () => {
-          onImageSelection(res);
+          console.log(
+            '[ProfilePicture] Calling onImageSelection after timeout'
+          );
+          onImageSelection(imageData);
         },
         isIOS ? 1000 : 0
       );

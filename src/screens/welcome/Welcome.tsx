@@ -477,14 +477,21 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     });
   }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
 
-  // Call getAttribute and getUsers once on mount only (using module-level flag to prevent refetch on remount)
+  // Call getAttribute and getUsers on mount
   useEffect(() => {
     getAttribute();
+    // Always fetch users on mount, reset flag on unmount to allow refetch on remount
     if (!hasInitializedUsers) {
       hasInitializedUsers = true;
       getUsers(undefined, true);
     }
-  }, []);
+
+    return () => {
+      // Reset flag on unmount to allow fresh fetch if component remounts
+      // This ensures users are fetched after profile picture upload/navigation
+      hasInitializedUsers = false;
+    };
+  }, [getUsers, getAttribute]);
 
   useEffect(() => {
     getInitialNotification();
@@ -538,7 +545,21 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     React.useCallback(() => {
       getUserStats();
       handleProfileCompleteData();
-    }, [])
+
+      // Ensure users are fetched when screen is focused if list is empty and not loading
+      // This handles cases where component remounts after profile picture upload
+      if (usersList.length === 0 && !loader && !loadMoreLoader) {
+        setLoader(true);
+        getUsers(undefined, true);
+      }
+    }, [
+      getUserStats,
+      handleProfileCompleteData,
+      usersList.length,
+      loader,
+      loadMoreLoader,
+      getUsers,
+    ])
   );
 
   // Collect chat credits when AccountModal opens (premium members only, once per 24 hours)
@@ -597,7 +618,14 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     [navigation]
   );
 
-  if (!loaded) return null;
+  // Show loading state instead of blank screen if premium store hasn't loaded yet
+  // if (!loaded) {
+  //   return (
+  //     <Container style={Styles.container}>
+  //       <Loader />
+  //     </Container>
+  //   );
+  // }
 
   if (!isPremiumUser) {
     // navigation.replace('ProFeaturesPromotion');
