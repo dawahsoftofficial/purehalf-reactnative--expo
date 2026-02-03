@@ -1,8 +1,8 @@
-import { PermissionsAndroid } from 'react-native';
 import React, { memo, useCallback, useMemo, useState } from 'react';
+import { PermissionsAndroid } from 'react-native';
 import { Linking, Platform, ScrollView, StyleSheet } from 'react-native';
-import Rate from 'react-native-rate';
 
+import { requestRateApp } from '@/lib/utils/rate-app';
 import { usePremiumStore } from '@/stores';
 
 import { Container, SettingsButton, SettingsHeader } from '../../components';
@@ -70,7 +70,7 @@ function Settings(props: SettingsProps) {
   const onLocationPress = useCallback(async () => {
     // Check if permission is already granted
     const hasPermission = await checkLocationPermission();
-    
+
     if (hasPermission) {
       // Permission already granted, navigate directly
       navigate('UserLocation');
@@ -82,10 +82,10 @@ function Settings(props: SettingsProps) {
 
   const handleLocationConsentContinue = useCallback(async () => {
     setShowLocationConsentModal(false);
-    
+
     // Request native location permission
     const granted = await requestLocationPermission();
-    
+
     if (granted) {
       // Permission granted, navigate to map screen
       navigate('UserLocation');
@@ -127,22 +127,12 @@ function Settings(props: SettingsProps) {
     navigate('AddWali', { fromSettings: true });
   }, [navigate]);
 
-  const onRateAppPress = useCallback(() => {
-    const options = {
-      AppleAppID: '6450672518',
-      GooglePackageName: 'com.zojayn',
-      preferInApp: false,
-      openAppStoreIfInAppFails: true,
-    };
-
-    Rate.rate(options, (success, errorMessage) => {
-      if (success) {
-        // User successfully went to the Review Page
-      }
-      if (errorMessage) {
-        console.log(errorMessage);
-      }
-    });
+  const onRateAppPress = useCallback(async () => {
+    try {
+      await requestRateApp();
+    } catch (error) {
+      console.error('[Settings] Rate app failed:', error);
+    }
   }, []);
 
   const onHelpAndSupportPress = useCallback(() => {

@@ -15,8 +15,9 @@ import {
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Rate from 'react-native-rate';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { openAppStore } from '@/lib/utils/rate-app';
 
 import { hp, Typography, wp } from '../global';
 import { Colors, Fonts } from '../res';
@@ -372,19 +373,14 @@ const DisplayForegroundNotification = () => {
         // }
         break;
       case 'app_update':
-        const options = {
-          AppleAppID: '6450672518',
-          GooglePackageName: 'com.zojayn',
-          preferInApp: false,
-          openAppStoreIfInAppFails: true,
-        };
-        Rate.rate(options, (success, errorMessage) => {
-          if (success) {
-          }
-          if (errorMessage) {
-            console.log(errorMessage);
-          }
-        });
+        try {
+          await openAppStore();
+        } catch (error) {
+          console.error(
+            '[DisplayForegroundNotification] Open app store:',
+            error
+          );
+        }
         break;
       case 'profile_picture_update_required':
         currentUser.primary_image_to_show = null;
