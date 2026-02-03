@@ -2,6 +2,7 @@ import notifee from '@notifee/react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Dimensions,
@@ -81,6 +82,7 @@ const { width } = Dimensions.get('window');
 let hasInitializedUsers = false;
 
 const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const optionBarList = useMemo<OptionButton[]>(
     () => [
       {
@@ -667,6 +669,20 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             </Ripple>
           </View>
         </View>
+        {!currentUser?.is_approved && (
+          <Ripple
+            style={Styles.pendingApprovalBanner}
+            onPress={() => setHeaderModal(true)}
+          >
+            <Image
+              source={Images.infoIcon}
+              style={Styles.pendingApprovalIcon}
+            />
+            <Text style={Styles.pendingApprovalText}>
+              {t(LanguageKeys.profileInReview)}
+            </Text>
+          </Ripple>
+        )}
       </View>
       <AccountModal
         visible={headerModal}
@@ -823,5 +839,26 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small2,
     color: Colors.color2,
+  },
+  pendingApprovalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.color47,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.5),
+    borderRadius: wp(2),
+    marginTop: hp(1.5),
+    gap: wp(2.5),
+  },
+  pendingApprovalIcon: {
+    width: wp(5),
+    height: wp(5),
+    tintColor: Colors.color2,
+  },
+  pendingApprovalText: {
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+    color: Colors.color2,
+    flex: 1,
   },
 });
