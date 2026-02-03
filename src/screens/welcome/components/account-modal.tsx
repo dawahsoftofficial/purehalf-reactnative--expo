@@ -44,6 +44,8 @@ type User = {
   membership_status?: number | null;
   membership_expiry?: string | null;
   first_name?: string;
+  last_name?: string;
+  age?: number;
   primary_image_to_show?: string;
   media?: {
     cover_image?: string;
@@ -172,62 +174,60 @@ export function AccountModal({
     <Modal isVisible={visible} style={Styles.modal} onBackdropPress={onClose}>
       <View style={[Styles.modalContent, { paddingBottom: bottom }]}>
         <View style={Styles.modalHeader}>
-          <View style={Styles.modalHeaderContent}>
-            <View style={Styles.profileSection}>
-              <View style={Styles.profileImageContainer}>
-                {currentUser?.media?.un_blur_primary_image ? (
-                  <Image
-                    source={{ uri: currentUser?.media?.un_blur_primary_image }}
-                    style={Styles.profileImage}
-                  />
-                ) : (
-                  <View style={Styles.profileImagePlaceholder}>
-                    <Text style={Styles.profileImageText}>
-                      {currentUser?.first_name?.slice(0, 1)?.toUpperCase() ||
-                        'U'}
-                    </Text>
+          <View style={Styles.profileCardRow}>
+            <View style={Styles.profileImageContainer}>
+              {currentUser?.media?.un_blur_primary_image ? (
+                <Image
+                  source={{ uri: currentUser?.media?.un_blur_primary_image }}
+                  style={Styles.profileImage}
+                />
+              ) : (
+                <View style={Styles.profileImagePlaceholder}>
+                  <Text style={Styles.profileImageText}>
+                    {currentUser?.first_name?.slice(0, 1)?.toUpperCase() || 'U'}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={Styles.profileInfoColumn}>
+              <View style={[Styles.profileInfoRow, Styles.profileInfoRowFirst]}>
+                <Text style={Styles.profileName} numberOfLines={1}>
+                  {[
+                    [currentUser?.first_name, currentUser?.last_name]
+                      .filter(Boolean)
+                      .join(' ') || '—',
+                    currentUser?.age != null ? String(currentUser.age) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(', ')}
+                </Text>
+              </View>
+              <View style={[Styles.profileInfoRow, Styles.badgesRow]}>
+                {isVIP && (
+                  <View style={Styles.vipBadgeBelow}>
+                    <VipBadgeIcon width={wp(8)} height={wp(8)} />
                   </View>
                 )}
+                {isProfileCompleted && (
+                  <View style={Styles.badge}>
+                    <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />
+                  </View>
+                )}
+                {!isVIP && !isProfileCompleted && (
+                  <Text style={Styles.badgesPlaceholder}>—</Text>
+                )}
               </View>
-            </View>
-            <View style={Styles.rightBadgesContainer}>
-              {isVIP && (
-                <View style={Styles.vipBadgeBelow}>
-                  <VipBadgeIcon width={wp(8)} height={wp(8)} />
-                  {/* <Text style={Styles.badgeLabel}>VIP</Text> */}
-                </View>
-              )}
-              {/* {(isBoosted || true) && (
-                <View style={Styles.badge}>
-                  <PopularBadgeIcon width={wp(6)} height={wp(6)} />
-                  <Text style={Styles.badgeLabel}>Boosted</Text>
-                </View>
-              )} */}
-              {isProfileCompleted && (
-                <View style={Styles.badge}>
-                  <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />
-                  {/* <Text style={Styles.badgeLabel}>Completed</Text> */}
-                </View>
-              )}
+              <View style={[Styles.profileInfoRow, Styles.creditsRow]}>
+                <ChaCoinIcon width={wp(6)} height={wp(6)} />
+                <Text style={Styles.creditText}>
+                  {currentUser?.chat_credits ?? 0}
+                </Text>
+              </View>
             </View>
           </View>
           <TouchableOpacity onPress={onClose} style={Styles.modalCloseBtn}>
             <Entypo name="cross" size={wp(6)} />
           </TouchableOpacity>
-        </View>
-        <View style={Styles.creditsContainer}>
-          {/* <View style={Styles.creditBadge}>
-            <BoostCoinIcon width={wp(6)} height={wp(6)} />
-            <Text style={Styles.creditText}>
-              {currentUser?.boost_credits || 0}
-            </Text>
-          </View> */}
-          <View style={Styles.creditBadge}>
-            <ChaCoinIcon width={wp(8)} height={wp(8)} />
-            <Text style={Styles.creditText}>
-              {currentUser?.chat_credits || 0}
-            </Text>
-          </View>
         </View>
         <ScrollView showsVerticalScrollIndicator={false}>
           <View style={Styles.modalBody}>
@@ -340,28 +340,16 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
     paddingVertical: hp(2),
   },
-  modalHeaderContent: {
+  profileCardRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'space-between',
     flex: 1,
-    gap: wp(3),
-  },
-  modalCloseBtn: {
-    padding: wp(1),
-  },
-  modalHeaderIcon: {
-    width: wp(7),
-    height: wp(7),
-  },
-  profileSection: {
-    alignItems: 'center',
-    gap: hp(1),
+    gap: wp(4),
   },
   profileImageContainer: {
-    width: wp(30),
-    height: wp(30),
-    borderRadius: wp(20),
+    width: wp(28),
+    height: wp(28),
+    borderRadius: wp(14),
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: Colors.color8,
@@ -383,57 +371,51 @@ const Styles = StyleSheet.create({
     fontSize: Typography.large3,
     color: Colors.theme,
   },
+  profileInfoColumn: {
+    flex: 1,
+    justifyContent: 'flex-start',
+    gap: hp(1.2),
+    minWidth: 0,
+  },
+  profileInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+  },
+  profileInfoRowFirst: {
+    gap: wp(3),
+  },
+  profileName: {
+    flex: 1,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.medium,
+    color: Colors.color1,
+    includeFontPadding: false,
+  },
+  badgesRow: {
+    flexWrap: 'wrap',
+    minHeight: wp(8),
+  },
+  badgesPlaceholder: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    color: Colors.color4,
+    includeFontPadding: false,
+  },
   vipBadgeBelow: {
     flexDirection: 'row',
     alignItems: 'center',
-    // backgroundColor: Colors.color47,
-    // paddingHorizontal: wp(2),
-    // paddingVertical: hp(0.6),
     borderRadius: wp(3),
-    gap: wp(1),
-    // borderWidth: 1,
-    // borderColor: Colors.color47,
-  },
-  rightBadgesContainer: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: hp(1),
-    flex: 1,
   },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.theme,
-    paddingHorizontal: wp(2.5),
-    paddingVertical: hp(0.8),
-    borderRadius: wp(3),
-    gap: wp(1.5),
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
+    borderRadius: wp(2),
     borderWidth: 1,
     borderColor: Colors.theme,
-  },
-  badgeLabel: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.tiny2,
-    includeFontPadding: false,
-  },
-  creditsContainer: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: wp(2),
-    paddingBottom: hp(2),
-    paddingHorizontal: wp(4),
-  },
-  creditBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    // backgroundColor: Colors.theme,
-    paddingHorizontal: wp(2.5),
-    paddingVertical: hp(0.6),
-    borderRadius: wp(3),
-    gap: wp(1.5),
   },
   creditText: {
     fontFamily: Fonts.APPFONT_B,
@@ -441,8 +423,19 @@ const Styles = StyleSheet.create({
     color: Colors.color1,
     includeFontPadding: false,
   },
+  creditsRow: {
+    alignSelf: 'flex-start',
+  },
+  modalCloseBtn: {
+    padding: wp(1),
+  },
+  modalHeaderIcon: {
+    width: wp(7),
+    height: wp(7),
+  },
   modalBody: {
-    // paddingBottom: hp(2),
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(2),
   },
   accordContainer: {
     marginBottom: hp(2),

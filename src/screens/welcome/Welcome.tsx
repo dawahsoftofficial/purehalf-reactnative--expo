@@ -107,12 +107,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const profileProgressTemplate = useMemo<ProfileProgressItem[]>(
     () => [
-      {
-        label: LanguageKeys.profileImage,
-        id: 'primary_image_to_show',
-        navigation: 'PhotosAndVideos',
-        completed: false,
-      },
+      // {
+      //   label: LanguageKeys.profileImage,
+      //   id: 'primary_image_to_show',
+      //   navigation: 'PhotosAndVideos',
+      //   completed: false,
+      // },
       // Currently not entertaining cover photo
       // {
       //   label: LanguageKeys.coverImage,
