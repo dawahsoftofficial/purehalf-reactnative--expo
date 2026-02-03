@@ -38,35 +38,36 @@ export const TaglineSection = memo(function TaglineSection({
 }: TaglineSectionProps) {
   if (isEditing) {
     return (
-      <View
-        style={{
-          ...Styles.tagLineOuterCon,
-          // paddingHorizontal: wp(4),
-          flexDirection: rtl ? 'row-reverse' : 'row',
-        }}
-      >
-        <TextInput
-          style={{
-            ...Styles.tagLineInput,
-            textAlign: rtl ? 'right' : 'left',
-          }}
-          placeholder={'Enter One line about yourself'}
-          placeholderTextColor={Colors.color1}
-          onChangeText={onChange}
-          value={inputValue}
-        />
-        <Ripple style={Styles.tagLineSubmitBtn} onPress={onSubmit}>
-          <AntDesign name="check" color={Colors.theme} size={wp(6)} />
-        </Ripple>
-        <Ripple
-          style={{
-            ...Styles.tagLineSubmitBtn,
-            backgroundColor: Colors.blackRGBA25,
-          }}
-          onPress={onCancel}
+      <View style={Styles.tagLineOuterCon}>
+        <View
+          style={[
+            Styles.tagLineHeaderRow,
+            { flexDirection: rtl ? 'row-reverse' : 'row' },
+          ]}
         >
-          <AntDesign name="close" color={Colors.color1} size={wp(6)} />
-        </Ripple>
+          <TextInput
+            style={[
+              Styles.tagLineInput,
+              { textAlign: rtl ? 'right' : 'left', flex: 1 },
+            ]}
+            placeholder={'Enter One line about yourself'}
+            placeholderTextColor={Colors.color1}
+            onChangeText={onChange}
+            value={inputValue}
+          />
+          <Ripple style={Styles.tagLineSubmitBtn} onPress={onSubmit}>
+            <AntDesign name="check" color={Colors.theme} size={wp(6)} />
+          </Ripple>
+          <Ripple
+            style={[
+              Styles.tagLineSubmitBtn,
+              { backgroundColor: Colors.blackRGBA25 },
+            ]}
+            onPress={onCancel}
+          >
+            <AntDesign name="close" color={Colors.color1} size={wp(6)} />
+          </Ripple>
+        </View>
       </View>
     );
   }
@@ -76,20 +77,29 @@ export const TaglineSection = memo(function TaglineSection({
   }
 
   return (
-    <View
-      style={{
-        ...Styles.tagLineOuterCon,
-        flexDirection: rtl ? 'row-reverse' : 'row',
-        // paddingRight: wp(2),
-      }}
-    >
-      <Text style={Styles.tagLineHeading} numberOfLines={1}>
-        {LanguageKeys.tagline}
-      </Text>
-      {isOwnProfile ? (
-        <Ripple style={Styles.editButton} onPress={onEditPress}>
-          <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
-        </Ripple>
+    <View style={Styles.tagLineOuterCon}>
+      <View
+        style={[
+          Styles.tagLineHeaderRow,
+          { flexDirection: rtl ? 'row-reverse' : 'row' },
+        ]}
+      >
+        <Text style={Styles.tagLineHeading} numberOfLines={1}>
+          {LanguageKeys.tagline}
+        </Text>
+        {isOwnProfile ? (
+          <Ripple style={Styles.editButton} onPress={onEditPress}>
+            <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
+          </Ripple>
+        ) : null}
+      </View>
+      {tagline ? (
+        <Text
+          style={[Styles.tagLineText, { textAlign: rtl ? 'right' : 'left' }]}
+          numberOfLines={3}
+        >
+          {tagline}
+        </Text>
       ) : null}
     </View>
   );
