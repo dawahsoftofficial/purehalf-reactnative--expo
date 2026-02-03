@@ -4492,8 +4492,6 @@ PODS:
   - RNPurchases (9.6.12):
     - PurchasesHybridCommon (= 17.25.0)
     - React-Core
-  - RNRate (1.2.12):
-    - React-Core
   - RNReanimated (4.2.0):
     - boost
     - DoubleConversion
@@ -4930,7 +4928,6 @@ DEPENDENCIES:
   - "RNNotifee (from `../node_modules/@notifee/react-native`)"
   - RNPaywalls (from `../node_modules/react-native-purchases-ui`)
   - RNPurchases (from `../node_modules/react-native-purchases`)
-  - RNRate (from `../node_modules/react-native-rate`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
   - RNSVG (from `../node_modules/react-native-svg`)
@@ -5208,8 +5205,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-purchases-ui"
   RNPurchases:
     :path: "../node_modules/react-native-purchases"
-  RNRate:
-    :path: "../node_modules/react-native-rate"
   RNReanimated:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
@@ -5381,7 +5376,6 @@ SPEC CHECKSUMS:
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPaywalls: 599481f4480f87c2b3d8c72dc4c74e215dce141e
   RNPurchases: cc3333cede6c0f040545a95c38ae627d0174c058
-  RNRate: 7641919330e0d6688ad885a985b4bd697ed7d14c
   RNReanimated: 97d1a1419c06fdd51105089b551a891d57fe01f7
   RNScreens: 98771ad898d1c0528fc8139606bbacf5a2e9d237
   RNSVG: 122ad5db3ef9be375bbf7f371e37306eeed7e4fa
