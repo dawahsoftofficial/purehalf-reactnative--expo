@@ -724,44 +724,35 @@ class GApiServices {
   };
 
   imageUpload = (file: any, key: any, youtubeURL: any) => {
-    return new Promise(async (resolve, reject) => {
-      const myHeaders = new Headers();
-      myHeaders.append(
-        'Authorization',
-        `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`
-      );
-      myHeaders.append('Content-Type', 'multipart/form-data');
+    const formData = new FormData();
+    if (file?.uri && key) {
+      formData.append('file', {
+        uri: file.uri,
+        type: file?.type ?? 'image/jpeg',
+        name: file.name ?? 'image.jpg',
+      } as any);
+      formData.append('key', key);
+    }
+    if (youtubeURL?.length !== 0) {
+      formData.append('youtube_url', youtubeURL);
+    }
 
-      const formdata = new FormData();
-      if (file?.uri && key) {
-        formdata.append('file', {
-          uri: file.uri,
-          type: file?.type ? file.type : 'image/jpeg',
-          name: file.name,
-        });
-        formdata.append('key', key);
-      }
-
-      if (youtubeURL?.length !== 0) {
-        formdata.append('youtube_url', youtubeURL);
-      }
-
-      const requestOptions = {
-        method: 'POST',
-        headers: myHeaders,
-        body: formdata,
-        redirect: 'follow',
-      };
-      fetch(`${BaseUrl}/auth/media/upload`, requestOptions)
-        .then((response) => response.text())
-        .then((result) => {
-          resolve(JSON.parse(result).results);
-        })
-        .catch((error) => {
-          reject('');
-          console.log('error while uploading image =>', error);
-        });
-    });
+    return Api.post(EndPoints.mediaUpload, formData, {
+      transformRequest: [
+        (data, headers) => {
+          delete headers['Content-Type'];
+          return data;
+        },
+      ],
+    })
+      .then((res) => res?.data?.results ?? res?.data)
+      .catch((error) => {
+        console.log(
+          'error while uploading image =>',
+          error?.response?.data ?? error
+        );
+        return Promise.reject(error);
+      });
   };
 
   deleteImage = (params: any) => {
