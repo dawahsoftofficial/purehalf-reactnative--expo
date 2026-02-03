@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, ScrollView, StatusBar, StyleSheet, View } from 'react-native';
-import { hasNotch } from 'react-native-device-info';
-import LinearGradient from 'react-native-linear-gradient';
+import { ScrollView, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
@@ -28,7 +26,6 @@ import {
   emailValidation,
   flashErrorMessage,
   flashSuccessMessage,
-  isIOS,
   StorageManager,
   useGlobalContext,
 } from '../../services';
@@ -441,13 +438,7 @@ const AddWali = ({ navigation, route }: any) => {
         backgroundColor={'transparent'}
         barStyle="light-content"
       />
-      <View>
-        <Image source={Images.slide1} resizeMode="cover" style={Styles.image} />
-        <LinearGradient
-          style={Styles.imageOuterView}
-          colors={[Colors.blackRGBA25, Colors.blackRGBA38]}
-        />
-      </View>
+
       <SafeAreaView style={Styles.container2}>
         <CommonActions navigation={navigation} userId={currentUser?.id} />
         <CheckMembershipStatus />
@@ -474,7 +465,7 @@ const AddWali = ({ navigation, route }: any) => {
                     value={firstName}
                     onChangeText={onChangeFirstName}
                     inputStyle={{ width: wp(35) }}
-                    outerLabelStyle={{ color: Colors.color2 }}
+                    outerLabelStyle={{ color: Colors.color1 }}
                   />
                 </View>
                 <View style={Styles.inputFieldCon}>
@@ -485,7 +476,7 @@ const AddWali = ({ navigation, route }: any) => {
                     value={lastName}
                     onChangeText={onChangeLastName}
                     inputStyle={{ width: wp(35) }}
-                    outerLabelStyle={{ color: Colors.color2 }}
+                    outerLabelStyle={{ color: Colors.color1 }}
                   />
                 </View>
               </View>
@@ -496,14 +487,14 @@ const AddWali = ({ navigation, route }: any) => {
                   icon={Images.email}
                   value={email}
                   onChangeText={onChangeEmail}
-                  outerLabelStyle={{ color: Colors.color2 }}
+                  outerLabelStyle={{ color: Colors.color1 }}
                 />
               </View>
               <View style={Styles.inputFieldCon}>
                 <RelationPicker
                   value={relation}
                   onSelect={onRelationChange}
-                  outerLabelStyle={{ color: Colors.color2 }}
+                  outerLabelStyle={{ color: Colors.color1 }}
                   relations={relations}
                   setRelations={setRelations}
                 />
@@ -551,7 +542,7 @@ const Styles = StyleSheet.create({
   phoneNumberCon: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderColor: Colors.color2,
+    borderColor: Colors.color1,
     height: wp(11),
     alignItems: 'center',
     marginTop: hp(0.8),
@@ -601,13 +592,9 @@ const Styles = StyleSheet.create({
     height: '100%',
   },
   container2: {
-    position: 'absolute',
-    height: '100%',
-    width: wp(100),
-    // paddingHorizontal: wp(2),
-    // justifyContent: 'center',
-    paddingVertical: hasNotch() && isIOS ? 20 : 0,
-    zIndex: 1,
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: Colors.color2,
   },
   imageOuterView: {
     height: '100%',
@@ -617,7 +604,7 @@ const Styles = StyleSheet.create({
   },
   heading: {
     fontSize: Typography.large2,
-    color: Colors.color2,
+    color: Colors.color1,
     fontFamily: Fonts.APPFONT_B,
     includeFontPadding: false,
     marginBottom: hp(3),
