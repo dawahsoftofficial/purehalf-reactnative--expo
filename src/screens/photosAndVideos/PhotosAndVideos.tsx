@@ -490,8 +490,9 @@ const PhotosAndVideos = (props: any) => {
             style={Styles.itemCon}
             onLoadStart={onProfileImageLoadStart}
             onLoadEnd={onProfileImageLoadEnd}
+            onError={onProfileImageError}
           />
-          <View
+          {/* <View
             style={{
               ...Styles.downBtnConProfile,
               top: hp(-2),
@@ -504,7 +505,7 @@ const PhotosAndVideos = (props: any) => {
             >
               <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
             </Ripple>
-          </View>
+          </View> */}
           {/* {publicPhotos?.length < 10 ? (
             <View
               style={{
@@ -529,11 +530,20 @@ const PhotosAndVideos = (props: any) => {
             </View>
           ) : null} */}
           {profileImageLoader && (
-            <ActivityIndicator
-              color={Colors.theme}
-              size={wp(5)}
-              style={{ position: 'absolute' }}
-            />
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: Colors.color2 + '80', // Semi-transparent overlay
+              }}
+            >
+              <ActivityIndicator color={Colors.theme} size={wp(5)} />
+            </View>
           )}
         </View>
       )}
@@ -849,6 +859,10 @@ const PhotosAndVideos = (props: any) => {
   };
 
   const onProfileImageLoadEnd = () => {
+    setProfileImageLoader(false);
+  };
+
+  const onProfileImageError = () => {
     setProfileImageLoader(false);
   };
 
