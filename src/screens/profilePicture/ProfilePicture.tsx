@@ -81,11 +81,6 @@ function ProfilePicture(props: ProfilePictureProps) {
   const [uploadingProgress, setUploadingProgress] = useState(0);
   const [toolTipVisible, setToolTipVisible] = useState(false);
 
-  const guardian = useMemo(
-    () => Boolean(currentUser?.guardian),
-    [currentUser?.guardian]
-  );
-
   const onAddImagePress = useCallback(() => {
     setImagePickerVisible(true);
   }, []);
@@ -209,6 +204,31 @@ function ProfilePicture(props: ProfilePictureProps) {
 
   const onContinuePress = useCallback(() => {
     const user = currentUser as User;
+
+    // Check if user has already completed onboarding
+    // Indicators: membership_status is set, or they have profile details (detail object with data)
+    const hasMembership =
+      user?.membership_status !== null &&
+      user?.membership_status !== undefined &&
+      user?.membership_status !== 0;
+
+    const hasProfileDetails =
+      user?.detail &&
+      typeof user.detail === 'object' &&
+      Object.keys(user.detail).length > 0;
+
+    const hasCompletedOnboarding = hasMembership || hasProfileDetails;
+
+    if (hasCompletedOnboarding) {
+      // Existing user updating profile picture - go directly to BottomTab
+      props.navigation.reset({
+        index: 0,
+        routes: [{ name: 'BottomTab' }],
+      });
+      return;
+    }
+
+    // New user during signup - go through onboarding flow
     const info = {
       gender: user?.gender || '',
       firstName: user?.firstName || '',
@@ -224,14 +244,16 @@ function ProfilePicture(props: ProfilePictureProps) {
     // });
     addAnaylatics('complete_registration', info);
 
-    const nextRoute =
-      guardian || user?.gender !== 'female' ? 'WelcomeUser' : 'AddWali';
+    // For females: if they already have guardian, skip AddWali
+    const isFemale = user?.gender === 'female';
+    const hasGuardian = Boolean(user?.guardian);
+    const nextRoute = isFemale && !hasGuardian ? 'AddWali' : 'WelcomeUser';
 
     props.navigation.reset({
       index: 0,
       routes: [{ name: nextRoute }],
     });
-  }, [currentUser, guardian, props.navigation]);
+  }, [currentUser, props.navigation]);
 
   const handleImagePickerSelection = useCallback(
     (res: ImageData[]) => {
