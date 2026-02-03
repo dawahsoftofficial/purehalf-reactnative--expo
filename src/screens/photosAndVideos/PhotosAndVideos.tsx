@@ -959,8 +959,8 @@ const PhotosAndVideos = (props: any) => {
                   </Text>
                   <Text style={Styles.tootltipDesc}>
                     We request you to uphold modesty, inviting blessings and
-                    mercy from Allah. Female profile pictures are blurred by
-                    default. They can decide who gets to see their images.
+                    mercy from Allah. Profile pictures can be blurred for
+                    privacy. You can decide who gets to see your images.
                   </Text>
                   <Text style={Styles.tootltipTitle}>Quranic Versed:</Text>
                   <Text style={Styles.tootltipText}>
