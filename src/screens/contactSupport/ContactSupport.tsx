@@ -1,5 +1,5 @@
 import { t } from 'i18next';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Linking, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Entypo from 'react-native-vector-icons/Entypo';
@@ -16,17 +16,17 @@ import {
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
-import { ApiServices, flashSuccessMessage } from '../../services';
+import {
+  ApiServices,
+  flashSuccessMessage,
+  StorageManager,
+} from '../../services';
 
 const ContactSupport = ({ navigation }: any) => {
+  const { setData, getData, storageKeys } = StorageManager;
+
   const Rtl = CheckRtl();
-  const [reasonsList] = useState([
-    { value: 'Membership issue', id: 'membershipIssue' },
-    { value: 'Issue in chatting with others', id: 'issueInChatting' },
-    { value: 'Found a bug', id: 'foundBug' },
-    { value: 'Cant make payment', id: 'cantMakePayment' },
-    { value: 'Others', id: 'others' },
-  ]);
+  const [reasonsList, setReasonsList] = useState();
   const [selectedReason, setSelectedReason] = useState({ id: '', value: '' });
   const [comment, setComment] = useState('');
   const [pickerVisible, setPickerVisible] = useState(false);
@@ -46,6 +46,7 @@ const ContactSupport = ({ navigation }: any) => {
       type: 1,
       description: comment,
       source: selectedReason?.id,
+      reason: selectedReason?.id,
     })
       .then(async () => {
         setComment('');
@@ -58,6 +59,15 @@ const ContactSupport = ({ navigation }: any) => {
         setLoading(false);
       });
   };
+
+  useEffect(() => {
+    getData(storageKeys.ATTRIBUTE).then((res: any) => {
+      const queryAttribute = res['other-0']['query-0'];
+      if (queryAttribute && queryAttribute?.length !== 0) {
+        setReasonsList(queryAttribute);
+      }
+    });
+  }, []);
 
   return (
     <Container>
