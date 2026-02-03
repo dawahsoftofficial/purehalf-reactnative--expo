@@ -159,8 +159,12 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
             membership_status: membershipRes || user?.membership_status ? 1 : 0,
           };
 
-          const userData = (await ApiServices.getCurrentUserDetail()) as User;
-          const mergedUser = { ...userData, ...updatedUser };
+          const userData = await ApiServices.getCurrentUserDetail();
+          const mergedUser: User = {
+            ...userData,
+            id: userData.id?.toString(),
+            ...updatedUser,
+          };
 
           updateCurrentUser(mergedUser);
           await setData(storageKeys.USER, mergedUser);
@@ -189,7 +193,11 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
             : ApiServices.socialAppleAuthenticate('apple');
 
         await authMethod;
-        const user = (await ApiServices.getCurrentUserDetail()) as User;
+        const userData = await ApiServices.getCurrentUserDetail();
+        const user: User = {
+          ...userData,
+          id: userData.id?.toString(),
+        };
         updateCurrentUser(user);
         await onVerified(user);
       } catch (error: unknown) {

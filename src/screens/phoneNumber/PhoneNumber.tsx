@@ -151,7 +151,11 @@ function PhoneNumber({ navigation }: PhoneNumberProps) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setRevenueCat(currentUser.id as any);
         }
-        const user = (await ApiServices.getCurrentUserDetail()) as User;
+        const userData = await ApiServices.getCurrentUserDetail();
+        const user: User = {
+          ...userData,
+          id: userData.id?.toString(),
+        };
         const mergedUser = {
           ...(currentUser as Record<string, unknown>),
           ...(user as Record<string, unknown>),
