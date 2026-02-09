@@ -100,9 +100,9 @@ Api.interceptors.response.use(
               routes: [{ name: 'AuthWelcome' }],
             })
           );
-          // console.log(
-          //   '[API Response Error] User logged out and navigated to AuthWelcome'
-          // );
+          console.log(
+            '[API Response Error] User logged out and navigated to AuthWelcome'
+          );
         })
         .catch((err) =>
           console.error(
