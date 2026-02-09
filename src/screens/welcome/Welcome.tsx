@@ -273,11 +273,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   );
 
   const getUserStats = useCallback(() => {
-    ApiServices.getUserStats()
-      .then((res: any) => {
-        setUserStats(res);
-      })
-      .catch(() => {});
+    // Commented out counter API call
+    // ApiServices.getUserStats()
+    //   .then((res: any) => {
+    //     setUserStats(res);
+    //   })
+    //   .catch(() => {});
   }, []);
 
   const ensureActiveMembership = useCallback(async (): Promise<boolean> => {
@@ -315,23 +316,23 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       const { value } = item;
       setLoader(true);
 
-      if (value === '1' || value === '3') {
-        // const hasMembership = await ensureActiveMembership();
-        if (!isPremiumUser) {
-          const defaultOption = optionBarList[0];
-          applyOptionSelection(defaultOption);
-          getUsers({ page: 1, type: defaultOption.value }, true);
-          getUserStats();
-          navigation.navigate('ProFeaturesPromotion', {
-            navigateTo: 'BottomTab',
-          });
-          return;
-        }
-      }
+      // if (value === '1' || value === '3') {
+      //   // const hasMembership = await ensureActiveMembership();
+      //   if (!isPremiumUser) {
+      //     const defaultOption = optionBarList[0];
+      //     applyOptionSelection(defaultOption);
+      //     getUsers({ page: 1, type: defaultOption.value }, true);
+      //     getUserStats();
+      //     navigation.navigate('ProFeaturesPromotion', {
+      //       navigateTo: 'BottomTab',
+      //     });
+      //     return;
+      //   }
+      // }
 
       applyOptionSelection(item);
       getUsers({ page: 1, type: value }, true);
-      getUserStats();
+      // getUserStats(); // Commented out counter API call
     },
     [
       applyOptionSelection,
@@ -543,7 +544,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      getUserStats();
+      // getUserStats(); // Commented out counter API call
       handleProfileCompleteData();
 
       // Ensure users are fetched when screen is focused if list is empty and not loading
