@@ -58,7 +58,11 @@ import type {
 } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
 import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
-import { useConversationStore, usePremiumStore } from '../../stores';
+import {
+  useConversationStore,
+  usePremiumStore,
+  useUserStatsStore,
+} from '../../stores';
 
 type MessagesProps = {
   navigation: {
@@ -104,6 +108,7 @@ const Messages = (props: MessagesProps) => {
     (state) => state.setUnreadCounts
   );
   const resetConversationStore = useConversationStore((state) => state.reset);
+  const resetUserStatsStore = useUserStatsStore((state) => state.reset);
 
   // Handle new conversation created event
   const handleNewConversationCreated = useCallback(
@@ -505,6 +510,7 @@ const Messages = (props: MessagesProps) => {
       .then(async () => {
         updateCurrentUser(null);
         resetConversationStore(); // Reset unread counts on logout
+        resetUserStatsStore(); // Reset user stats counters on logout
         await setData(storageKeys.LANGUAGE, language);
         hideModalLoader();
         props.navigation.dispatch(

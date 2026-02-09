@@ -144,6 +144,12 @@ const SingleChat = (props: any) => {
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
 
+    // Prevent duplicate fetches if already fetching
+    if (isFetchingMessagesRef.current) {
+      console.log('[SingleChat] Already fetching messages, skipping');
+      return;
+    }
+
     // Set loader to true when starting to fetch messages
     setLoader(true);
     isFetchingMessagesRef.current = true;
@@ -632,6 +638,7 @@ const SingleChat = (props: any) => {
   }, [messages]);
 
   // Initial fetch and setup Pusher
+  // Only run when conversationId changes, not when callbacks are recreated
   useEffect(() => {
     if (conversationId) {
       // Reset messages ref when conversation changes
@@ -653,7 +660,7 @@ const SingleChat = (props: any) => {
         isFetchingMessagesRef.current = false;
       };
     }
-  }, [conversationId, fetchMessages, setupPusherListeners]);
+  }, [conversationId]);
 
   // Mark all unread messages as read individually when screen is focused
   useFocusEffect(

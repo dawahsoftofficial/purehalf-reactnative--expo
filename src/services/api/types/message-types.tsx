@@ -233,6 +233,9 @@ export type CounterParticipant = {
   unread_messages_count?: string | number;
   chat_credits?: number;
   last_chat_credit_collected_at?: string | null;
+  like_count?: number;
+  visit_count?: number;
+  photo_request_count?: number;
 };
 
 /**

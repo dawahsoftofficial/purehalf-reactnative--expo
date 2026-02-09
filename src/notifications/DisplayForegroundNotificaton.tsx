@@ -382,10 +382,19 @@ const DisplayForegroundNotification = () => {
           );
         }
         break;
+      case 'profile_approved':
+        hideNotification(() => {
+          setRemoteMessage(null);
+          setRemoteMessageData(null);
+        });
+        break;
       case 'profile_picture_update_required':
-        currentUser.primary_image_to_show = null;
-        updateCurrentUser(currentUser);
-        await setData(storageKeys.USER, currentUser);
+        const updatedUser = {
+          ...currentUser,
+          primary_image_to_show: null,
+        };
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
         navigation.navigate('ProfilePicture');
         break;
       default:
@@ -404,7 +413,7 @@ const DisplayForegroundNotification = () => {
       userImage = userData?.user?.image;
     }
   }
-  return null;
+  // return null;
   return remoteMessage ? (
     <SafeAreaView style={Styles.container} {...panResponder.panHandlers}>
       <Ripple onPress={onNotificationPress}>

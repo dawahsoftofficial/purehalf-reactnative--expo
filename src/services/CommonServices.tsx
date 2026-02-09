@@ -21,7 +21,8 @@ const emailValidation = (email: any) => {
 };
 
 const formatDate = (date: any) => {
-  const inputDate = moment(date);
+  // Parse UTC timestamp from backend and convert to user's local timezone
+  const inputDate = moment.utc(date).local();
   const today = moment();
 
   const yesterday = moment().subtract(1, 'day');

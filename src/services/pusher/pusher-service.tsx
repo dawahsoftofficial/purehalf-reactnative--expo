@@ -7,6 +7,7 @@ import axios from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { useConversationStore } from '../../stores/conversation-store';
+import { useUserStatsStore } from '../../stores/user-stats-store';
 import BaseUrl from '../api/BaseUrl';
 import type { CounterUpdateEventData } from '../api/types/message-types';
 import { StorageManager } from '../storageManager';
@@ -22,9 +23,15 @@ type PusherConfig = {
  * Pusher Service for Real-Time Chat
  * Handles WebSocket connections for real-time messaging
  */
+type ChannelSubscription = {
+  channel: PusherChannel;
+  callbacks: Set<(event: PusherEvent) => void>;
+};
+
 class PusherService {
   private pusher: Pusher | null = null;
-  private channels: Map<string, PusherChannel> = new Map();
+  private channels: Map<string, ChannelSubscription> = new Map();
+  private pendingSubscriptions: Map<string, Promise<void>> = new Map();
   private config: PusherConfig | null = null;
   private isConnected = false;
   private initialized = false;
@@ -196,12 +203,12 @@ class PusherService {
   };
 
   /**
-   * Unsubscribe from a channel
+   * Unsubscribe from a channel (removes channel from Pusher and local map)
    * @param channelName - Channel name to unsubscribe from
    */
   unsubscribeFromChannel = async (channelName: string) => {
-    const channel = this.channels.get(channelName);
-    if (channel && this.pusher) {
+    const sub = this.channels.get(channelName);
+    if (sub && this.pusher) {
       try {
         await this.pusher.unsubscribe({ channelName });
         this.channels.delete(channelName);
@@ -250,14 +257,16 @@ class PusherService {
   };
 
   /**
-   * Subscribe to any channel (public or private)
+   * Subscribe to any channel (public or private).
+   * Safe to call multiple times for the same channel (e.g. when both users send at once):
+   * only one native subscription is created and callbacks are multiplexed.
    * @param channelName - Channel name to subscribe to
    * @param onEvent - Callback for any event received on this channel
    */
   subscribeToChannel = async (
     channelName: string,
     onEvent?: (event: PusherEvent) => void
-  ) => {
+  ): Promise<() => void> => {
     if (!this.isReady() || !this.pusher) {
       console.error('[PusherService] Pusher not initialized or ready', {
         initialized: this.initialized,
@@ -267,111 +276,141 @@ class PusherService {
       return () => {};
     }
 
-    try {
-      const channel = await this.pusher.subscribe({
-        channelName,
-        onSubscriptionSucceeded: () => {
-          console.log(
-            '[PusherService] ✅ Successfully subscribed to channel:',
-            channelName
-          );
-        },
-        onSubscriptionError: (channelName: string, message: string) => {
-          console.error('[PusherService] ❌ Subscription error:', {
-            channelName,
-            message,
-          });
+    const cleanup = (): void => {
+      const sub = this.channels.get(channelName);
+      if (!sub) return;
+      if (onEvent) sub.callbacks.delete(onEvent);
+      if (sub.callbacks.size === 0) {
+        this.unsubscribeFromChannel(channelName);
+      }
+    };
 
-          // Check if it's a method not allowed error
-          if (
-            message.includes('MethodNotAllowed') ||
-            message.includes('POST method is not supported')
-          ) {
-            console.error(
-              '[PusherService] ⚠️ Backend Route Error: ' +
-                'The broadcasting/auth endpoint must accept POST requests. ' +
-                'Please ask your backend developer to ensure the route accepts POST method.'
+    // Already subscribed: add callback and return cleanup
+    const existing = this.channels.get(channelName);
+    if (existing) {
+      if (onEvent) existing.callbacks.add(onEvent);
+      return cleanup;
+    }
+
+    // Subscription in progress: wait then add callback (avoid duplicate native subscribe)
+    const pending = this.pendingSubscriptions.get(channelName);
+    if (pending) {
+      await pending.catch(() => {}); // don't throw to caller if first subscribe failed
+      const subAfter = this.channels.get(channelName);
+      if (subAfter && onEvent) {
+        subAfter.callbacks.add(onEvent);
+      }
+      return cleanup;
+    }
+
+    try {
+      const callbacks = new Set<(event: PusherEvent) => void>();
+      if (onEvent) callbacks.add(onEvent);
+
+      const subscribePromise = (async (): Promise<void> => {
+        const channel = await this.pusher!.subscribe({
+          channelName,
+          onSubscriptionSucceeded: () => {
+            console.log(
+              '[PusherService] ✅ Successfully subscribed to channel:',
+              channelName
             );
-          }
-        },
-        onEvent: (event: PusherEvent) => {
-          // Handle subscription errors separately
-          if (event.eventName === 'pusher:subscription_error') {
-            console.error(
-              '[PusherService] ❌ Subscription error event received'
+          },
+          onSubscriptionError: (name: string, message: string) => {
+            console.error('[PusherService] ❌ Subscription error:', {
+              channelName: name,
+              message,
+            });
+            if (
+              message.includes('MethodNotAllowed') ||
+              message.includes('POST method is not supported')
+            ) {
+              console.error(
+                '[PusherService] ⚠️ Backend Route Error: ' +
+                  'The broadcasting/auth endpoint must accept POST requests. ' +
+                  'Please ask your backend developer to ensure the route accepts POST method.'
+              );
+            }
+          },
+          onEvent: (event: PusherEvent) => {
+            if (event.eventName === 'pusher:subscription_error') {
+              console.error(
+                '[PusherService] ❌ Subscription error event received'
+              );
+              try {
+                const errorData =
+                  typeof event.data === 'string'
+                    ? JSON.parse(event.data)
+                    : event.data;
+                console.error(
+                  '[PusherService] Subscription error details:',
+                  errorData
+                );
+              } catch (e) {
+                console.error(
+                  '[PusherService] Error parsing subscription error:',
+                  e
+                );
+                if (
+                  typeof event.data === 'string' &&
+                  event.data.includes('<!DOCTYPE html>')
+                ) {
+                  if (event.data.includes('MethodNotAllowedHttpException')) {
+                    console.error(
+                      '[PusherService] ⚠️ Backend Configuration Issue:\n' +
+                        'The broadcasting/auth route only accepts GET/HEAD, but Pusher requires POST.\n' +
+                        'Backend fix needed: Ensure the route accepts POST method.\n' +
+                        'In Laravel, check routes/channels.php or broadcasting.php configuration.'
+                    );
+                  } else {
+                    console.error(
+                      '[PusherService] Backend returned HTML error page instead of JSON'
+                    );
+                  }
+                } else {
+                  console.error(
+                    '[PusherService] Error parsing subscription error:',
+                    event.data
+                  );
+                }
+              }
+              return;
+            }
+
+            console.log(
+              '[PusherService] 📨 Event received on',
+              channelName,
+              ':',
+              { eventName: event.eventName, data: event.data }
             );
             try {
-              const errorData =
+              const data =
                 typeof event.data === 'string'
                   ? JSON.parse(event.data)
                   : event.data;
-              console.error(
-                '[PusherService] Subscription error details:',
-                errorData
-              );
-            } catch (e) {
-              console.error(
-                '[PusherService] Error parsing subscription error:',
-                e
-              );
-              // Check if it's an HTML error page (Laravel error)
-              if (
-                typeof event.data === 'string' &&
-                event.data.includes('<!DOCTYPE html>')
-              ) {
-                if (event.data.includes('MethodNotAllowedHttpException')) {
-                  console.error(
-                    '[PusherService] ⚠️ Backend Configuration Issue:\n' +
-                      'The broadcasting/auth route only accepts GET/HEAD, but Pusher requires POST.\n' +
-                      'Backend fix needed: Ensure the route accepts POST method.\n' +
-                      'In Laravel, check routes/channels.php or broadcasting.php configuration.'
-                  );
-                } else {
-                  console.error(
-                    '[PusherService] Backend returned HTML error page instead of JSON'
-                  );
-                }
-              } else {
-                console.error(
-                  '[PusherService] Error parsing subscription error:',
-                  event.data
-                );
-              }
+              console.log('[PusherService] 📦 Parsed event data:', data);
+            } catch (_error) {
+              console.log('[PusherService] 📦 Raw event data:', event.data);
             }
-            return; // Don't call onEvent for subscription errors
-          }
+            callbacks.forEach((cb) => cb(event));
+          },
+        });
 
-          console.log(
-            '[PusherService] 📨 Event received on',
-            channelName,
-            ':',
-            {
-              eventName: event.eventName,
-              data: event.data,
-            }
-          );
-          try {
-            const data =
-              typeof event.data === 'string'
-                ? JSON.parse(event.data)
-                : event.data;
-            console.log('[PusherService] 📦 Parsed event data:', data);
-          } catch (_error) {
-            console.log('[PusherService] 📦 Raw event data:', event.data);
-          }
-          onEvent?.(event);
-        },
-      });
+        this.channels.set(channelName, { channel, callbacks });
+      })();
 
-      this.channels.set(channelName, channel);
-
-      return () => {
-        this.unsubscribeFromChannel(channelName);
-      };
+      this.pendingSubscriptions.set(channelName, subscribePromise);
+      await subscribePromise;
     } catch (error) {
       console.error('[PusherService.subscribeToChannel] Error:', error);
+      this.pendingSubscriptions.delete(channelName);
+      this.channels.delete(channelName);
       return () => {};
+    } finally {
+      this.pendingSubscriptions.delete(channelName);
     }
+
+    return cleanup;
   };
 }
 
@@ -706,6 +745,31 @@ function handleCounterEvent(
             useConversationStore
               .getState()
               .setUnreadCounts(unreadConversationsCount, unreadMessagesCount);
+          }
+
+          // Update interaction counters (like_count, visit_count, photo_request_count)
+          if (
+            participant.like_count !== undefined ||
+            participant.visit_count !== undefined ||
+            participant.photo_request_count !== undefined
+          ) {
+            const likeCount = participant.like_count ?? 0;
+            const visitCount = participant.visit_count ?? 0;
+            const photoRequestCount = participant.photo_request_count ?? 0;
+
+            console.log(
+              '[useUserCountersChannel] Updating interaction counters:',
+              {
+                like_count: likeCount,
+                visit_count: visitCount,
+                photo_request_count: photoRequestCount,
+              }
+            );
+
+            // Update user stats store
+            useUserStatsStore
+              .getState()
+              .setUserStats(likeCount, visitCount, photoRequestCount);
           }
         }
         break;

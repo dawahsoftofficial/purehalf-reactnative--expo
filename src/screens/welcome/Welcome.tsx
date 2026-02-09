@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
-import { usePremiumStore, useSettingsStore } from '@/stores';
+import { usePremiumStore, useSettingsStore, useUserStatsStore } from '@/stores';
 
 import {
   CheckMembershipStatus,
@@ -55,11 +55,6 @@ type ProfileProgressItem = {
   navigation: string;
   scrollTo?: number;
   completed: boolean;
-};
-
-type UserStats = {
-  photo_requested_you_counter?: number;
-  [key: string]: unknown;
 };
 
 type WelcomeRouteParams = {
@@ -188,7 +183,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [loader, setLoader] = useState(true);
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
   const [modalLoader, setModalLoader] = useState(false);
-  const [userStats, setUserStats] = useState<UserStats>({});
+  // Get user stats from Pusher store (updated via counterUpdate events)
+  const { like_count, visit_count, photo_request_count } = useUserStatsStore();
   const [activeOptionButton, setActiveOptionButton] = useState<OptionButton>(
     optionBarList[0]
   );
@@ -272,14 +268,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     []
   );
 
-  const getUserStats = useCallback(() => {
-    // Commented out counter API call
-    // ApiServices.getUserStats()
-    //   .then((res: any) => {
-    //     setUserStats(res);
-    //   })
-    //   .catch(() => {});
-  }, []);
+  // getUserStats removed - counters now come from Pusher events via useUserStatsStore
 
   const ensureActiveMembership = useCallback(async (): Promise<boolean> => {
     const now = moment();
@@ -316,32 +305,25 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       const { value } = item;
       setLoader(true);
 
-      // if (value === '1' || value === '3') {
-      //   // const hasMembership = await ensureActiveMembership();
-      //   if (!isPremiumUser) {
-      //     const defaultOption = optionBarList[0];
-      //     applyOptionSelection(defaultOption);
-      //     getUsers({ page: 1, type: defaultOption.value }, true);
-      //     getUserStats();
-      //     navigation.navigate('ProFeaturesPromotion', {
-      //       navigateTo: 'BottomTab',
-      //     });
-      //     return;
-      //   }
-      // }
+      if (value === '1' || value === '3') {
+        // const hasMembership = await ensureActiveMembership();
+        if (!isPremiumUser) {
+          const defaultOption = optionBarList[0];
+          applyOptionSelection(defaultOption);
+          getUsers({ page: 1, type: defaultOption.value }, true);
+
+          navigation.navigate('ProFeaturesPromotion', {
+            navigateTo: 'BottomTab',
+          });
+          return;
+        }
+      }
 
       applyOptionSelection(item);
       getUsers({ page: 1, type: value }, true);
-      // getUserStats(); // Commented out counter API call
+      // Counters now come from Pusher events, no API call needed
     },
-    [
-      applyOptionSelection,
-      getUserStats,
-      getUsers,
-      isPremiumUser,
-      navigation,
-      optionBarList,
-    ]
+    [applyOptionSelection, getUsers, isPremiumUser, navigation, optionBarList]
   );
 
   const onLoadMorePress = useCallback(() => {
@@ -544,7 +526,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      // getUserStats(); // Commented out counter API call
+      // Counters now come from Pusher events, no API call needed
       handleProfileCompleteData();
 
       // Ensure users are fetched when screen is focused if list is empty and not loading
@@ -554,7 +536,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         getUsers(undefined, true);
       }
     }, [
-      getUserStats,
       handleProfileCompleteData,
       usersList.length,
       loader,
@@ -722,11 +703,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       />
       {/* <RecommendationButton onPress={onRecommendationPress} /> */}
       {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
-      {userStats?.photo_requested_you_counter &&
-      userStats?.photo_requested_you_counter >= 1 ? (
+      {photo_request_count && photo_request_count >= 1 ? (
         <PrivatePhotoAccessBtn
           navigation={navigation}
-          photoRequests={userStats?.photo_requested_you_counter}
+          photoRequests={photo_request_count}
         />
       ) : null}
       <PurchaseSuccessModal
@@ -737,7 +717,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       />
       <OptionsBar
         onPress={onOptionPress}
-        userStats={userStats}
+        userStats={{
+          like_you_counter: like_count,
+          visit_you_counter: visit_count,
+          photo_requested_you_counter: photo_request_count,
+        }}
         activeOptionButton={activeOptionButton}
         options={optionBarList}
       />
