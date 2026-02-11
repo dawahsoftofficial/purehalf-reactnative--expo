@@ -56,6 +56,8 @@
 	<string>Location Required for Sign-Up: To ensure relevant matchmaking, we need your city location during sign-up to connect you with nearby potential matches.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PureHalf needs to access photo library for uploading profile pictures</string>
+	<key>GoogleMapsAPIKey</key>
+	<string>AIzaSyB9EQeJK_jPG0tSGK1fpfxSSSuwEHMKKc8</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UIAppFonts</key>

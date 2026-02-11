@@ -14,7 +14,6 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors } from '../../res';
-import { isIOS } from '../../services';
 import { Button } from '../buttons';
 
 interface MapWithMarkerProps {
@@ -55,6 +54,21 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
     }
   };
 
+  const onMarkerDragEnd = (event: {
+    nativeEvent: { coordinate: { latitude: number; longitude: number } };
+  }) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    const newPosition = {
+      ...position,
+      latitude,
+      longitude,
+    };
+    setPosition(newPosition);
+    if (mapRef?.current) {
+      mapRef.current.animateToRegion(newPosition, 500);
+    }
+  };
+
   return (
     <View style={Styles.container}>
       <View style={[Styles.headerWrapper, { paddingTop: top + 10 }]}>
@@ -84,7 +98,7 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
       </View>
       <MapView
         ref={mapRef}
-        provider={isIOS ? undefined : PROVIDER_GOOGLE}
+        provider={PROVIDER_GOOGLE}
         style={Styles.map}
         initialRegion={position}
         showsUserLocation={dragable}
@@ -95,11 +109,13 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
         zoomEnabled={dragable}
         pitchEnabled={dragable}
         rotateEnabled={dragable}
-        onRegionChangeComplete={(location: Region) =>
-          dragable && setPosition(location)
-        }
       >
-        <Marker title="You are here" coordinate={position} />
+        <Marker
+          title="You are here"
+          coordinate={position}
+          draggable={dragable}
+          onDragEnd={onMarkerDragEnd}
+        />
       </MapView>
       <Ripple style={Styles.gpsIcon} onPress={getCurrentLocation}>
         <MaterialCommunityIcons

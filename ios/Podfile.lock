@@ -1353,6 +1353,8 @@ PODS:
   - FirebaseSharedSwift (12.6.0)
   - fmt (11.0.2)
   - glog (0.3.5)
+  - Google-Maps-iOS-Utils (6.1.0):
+    - GoogleMaps (~> 9.0)
   - GoogleAppMeasurement/Core (12.6.0):
     - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
     - GoogleUtilities/MethodSwizzler (~> 8.1)
@@ -1369,6 +1371,9 @@ PODS:
   - GoogleDataTransport (10.1.0):
     - nanopb (~> 3.30910.0)
     - PromisesObjC (~> 2.4)
+  - GoogleMaps (9.4.0):
+    - GoogleMaps/Maps (= 9.4.0)
+  - GoogleMaps/Maps (9.4.0)
   - GoogleSignIn (9.0.0):
     - AppAuth (~> 2.0)
     - AppCheckCore (~> 11.0)
@@ -3518,6 +3523,38 @@ PODS:
     - ReactCommon/turbomodule/core
     - SocketRocket
     - Yoga
+  - react-native-maps/Google (1.26.20):
+    - boost
+    - DoubleConversion
+    - fast_float
+    - fmt
+    - glog
+    - Google-Maps-iOS-Utils (= 6.1.0)
+    - GoogleMaps (= 9.4.0)
+    - hermes-engine
+    - RCT-Folly
+    - RCT-Folly/Fabric
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-maps/Generated
+    - react-native-maps/Maps
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - SocketRocket
+    - Yoga
   - react-native-maps/Maps (1.26.20):
     - boost
     - DoubleConversion
@@ -4874,6 +4911,7 @@ DEPENDENCIES:
   - "react-native-image-resizer (from `../node_modules/@bam.tech/react-native-image-resizer`)"
   - react-native-in-app-review (from `../node_modules/react-native-in-app-review`)
   - react-native-maps (from `../node_modules/react-native-maps`)
+  - react-native-maps/Google (from `../node_modules/react-native-maps`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - react-native-splash-screen (from `../node_modules/react-native-splash-screen`)
   - react-native-video (from `../node_modules/react-native-video`)
@@ -4968,8 +5006,10 @@ SPEC REPOS:
     - FirebaseRemoteConfigInterop
     - FirebaseSessions
     - FirebaseSharedSwift
+    - Google-Maps-iOS-Utils
     - GoogleAppMeasurement
     - GoogleDataTransport
+    - GoogleMaps
     - GoogleSignIn
     - GoogleUtilities
     - "gRPC-C++"
@@ -5256,8 +5296,10 @@ SPEC CHECKSUMS:
   FirebaseSharedSwift: 79f27fff0addd15c3de19b87fba426f3cc2c964f
   fmt: a40bb5bd0294ea969aaaba240a927bd33d878cdd
   glog: 5683914934d5b6e4240e497e0f4a3b42d1854183
+  Google-Maps-iOS-Utils: 0a484b05ed21d88c9f9ebbacb007956edd508a96
   GoogleAppMeasurement: 3bf40aff49a601af5da1c3345702fcb4991d35ee
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
+  GoogleMaps: 0608099d4870cac8754bdba9b6953db543432438
   GoogleSignIn: c7f09cfbc85a1abf69187be091997c317cc33b77
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
   "gRPC-C++": cc207623316fb041a7a3e774c252cf68a058b9e8
@@ -5385,6 +5427,6 @@ SPEC CHECKSUMS:
   TOCropViewController: 797deaf39c90e6e9ddd848d88817f6b9a8a09888
   Yoga: 526f25666395d30c297d53154398ffd249eaf9e1
 
-PODFILE CHECKSUM: 9bcf5afac4177dd805703266e3bc4b2c47eef3d6
+PODFILE CHECKSUM: 792631a5bc7628574ac94eb199a5741bfabf6f4d
 
 COCOAPODS: 1.16.2
