@@ -2,7 +2,9 @@ import ImageResizer from '@bam.tech/react-native-image-resizer';
 
 const imageResizer = (params: any) => {
   return new Promise(async (resolve, reject) => {
-    const { uri, width, height, fileSize, fileName } = params;
+    const { uri, path, width, height, fileSize, fileName } = params;
+    // Android may provide path instead of uri; RN expects a single source
+    const imageSource = uri ?? path;
     let newWidth, newHeight;
     if (width > height) {
       newWidth = 1080;
@@ -11,19 +13,29 @@ const imageResizer = (params: any) => {
       newHeight = 1080;
       newWidth = Math.round((width / height) * newHeight);
     }
-    ImageResizer.createResizedImage(uri, newWidth, newHeight, 'JPEG', 80, 0)
+    ImageResizer.createResizedImage(
+      imageSource,
+      newWidth,
+      newHeight,
+      'JPEG',
+      80,
+      0
+    )
       .then((resizedImage) => {
         if (resizedImage.size < fileSize) {
-          resolve(resizedImage);
+          // Resizer may return path on Android; ensure uri for upload
+          resolve({
+            ...resizedImage,
+            uri: resizedImage.uri ?? resizedImage.path ?? imageSource,
+          });
         } else {
-          const resizedImage = {
+          resolve({
             height: height,
             width: width,
-            uri: uri,
+            uri: imageSource,
             name: fileName,
             size: fileSize,
-          };
-          resolve(resizedImage);
+          });
         }
       })
       .catch((error) => {

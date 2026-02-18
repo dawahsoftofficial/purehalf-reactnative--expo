@@ -603,9 +603,9 @@ const Header = ({
       navigation.navigate('PhotosAndVideos');
       return;
     }
-    isPremiumUser().then(() => {
-      navigation.navigate('ImageViewer', { userData });
-    });
+    // isPremiumUser().then(() => {
+    navigation.navigate('ImageViewer', { userData });
+    // });
   }, [fromUserProfile, isPremiumUser, navigation, userData]);
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);

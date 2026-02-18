@@ -723,13 +723,15 @@ class GApiServices {
     });
   };
 
-  imageUpload = (file: any, key: any, youtubeURL: any) => {
+  imageUpload = async (file: any, key: any, youtubeURL: any) => {
     const formData = new FormData();
-    if (file?.uri && key) {
+    // Android: cropper/resizer often return `path`; RN FormData requires `uri` on the file object
+    const fileUri = file?.uri ?? file?.path;
+    if (fileUri && key) {
       formData.append('file', {
-        uri: file.uri,
+        uri: fileUri,
         type: file?.type ?? 'image/jpeg',
-        name: file.name ?? 'image.jpg',
+        name: file?.name ?? 'image.jpg',
       } as any);
       formData.append('key', key);
     }
@@ -737,22 +739,44 @@ class GApiServices {
       formData.append('youtube_url', youtubeURL);
     }
 
-    return Api.post(EndPoints.mediaUpload, formData, {
-      transformRequest: [
-        (data, headers) => {
-          delete headers['Content-Type'];
-          return data;
-        },
-      ],
-    })
-      .then((res) => res?.data?.results ?? res?.data)
-      .catch((error) => {
-        console.log(
-          'error while uploading image =>',
-          error?.response?.data ?? error
-        );
-        return Promise.reject(error);
-      });
+    // Use fetch instead of axios: React Native's fetch handles FormData on Android
+    // correctly; axios often causes ERR_NETWORK with multipart on Android.
+    const token = await getData(storageKeys.USER_TOKEN);
+    const url = `${BaseUrl}${EndPoints.mediaUpload}`;
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Authorization: token ? `Bearer ${token}` : '',
+    };
+    // Do not set Content-Type; let the runtime set multipart/form-data; boundary=...
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      let errData: unknown;
+      try {
+        errData = errBody ? JSON.parse(errBody) : null;
+      } catch {
+        errData = errBody;
+      }
+      console.log(
+        'error while uploading image =>',
+        (errData as any)?.response ?? errData
+      );
+      const error = new Error(
+        (errData as any)?.message ?? `Upload failed: ${response.status}`
+      ) as Error & { response?: { data?: unknown }; status?: number };
+      (error as any).response = { data: errData };
+      (error as any).status = response.status;
+      throw error;
+    }
+
+    const data = await response.json();
+    return data?.results ?? data;
   };
 
   deleteImage = (params: any) => {

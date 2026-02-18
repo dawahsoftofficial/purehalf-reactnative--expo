@@ -1,3 +1,4 @@
+import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -134,6 +135,8 @@ export function AccountModal({
   onInfoItemPress,
   currentUser,
 }: AccountModalProps) {
+  const { navigate } = useNavigation();
+
   const { bottom } = useSafeAreaInsets();
   const { t } = useTranslation();
   const Rtl = CheckRtl();
@@ -175,7 +178,12 @@ export function AccountModal({
       <View style={[Styles.modalContent, { paddingBottom: bottom }]}>
         <View style={Styles.modalHeader}>
           <View style={Styles.profileCardRow}>
-            <View style={Styles.profileImageContainer}>
+            <TouchableOpacity
+              style={Styles.profileImageContainer}
+              onPress={() => {
+                (navigate as (name: string) => void)('PhotosAndVideos');
+              }}
+            >
               {currentUser?.media?.un_blur_primary_image ? (
                 <Image
                   source={{ uri: currentUser?.media?.un_blur_primary_image }}
@@ -188,7 +196,7 @@ export function AccountModal({
                   </Text>
                 </View>
               )}
-            </View>
+            </TouchableOpacity>
             <View style={Styles.profileInfoColumn}>
               <View style={[Styles.profileInfoRow, Styles.profileInfoRowFirst]}>
                 <Text style={Styles.profileName} numberOfLines={1}>

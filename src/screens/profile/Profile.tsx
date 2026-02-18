@@ -639,7 +639,7 @@ const Profile = ({
                         onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
-                      {(userData?.gender === 'female' ||
+                      {/* {(userData?.gender === 'female' ||
                         userData?.detail?.gender === 'female') && (
                         <InfoCard
                           data={categoriesData?.waliInformation}
@@ -648,7 +648,7 @@ const Profile = ({
                           fromUserProfile={fromUserProfile}
                           from={'waliInformation'}
                         />
-                      )}
+                      )} */}
                       <InfoCard
                         data={categoriesData?.islamicValues}
                         headerHeading={LanguageKeys.islamicValues}

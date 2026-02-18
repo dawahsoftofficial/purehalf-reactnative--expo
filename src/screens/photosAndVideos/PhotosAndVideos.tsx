@@ -1,7 +1,6 @@
 import _ from 'lodash';
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
@@ -483,16 +482,25 @@ const PhotosAndVideos = (props: any) => {
           />
         </Ripple>
       ) : (
-        <View style={Styles.profileImageCon}>
-          <Image
-            source={{ uri: profileImage }}
-            resizeMode="cover"
-            style={Styles.itemCon}
-            onLoadStart={onProfileImageLoadStart}
-            onLoadEnd={onProfileImageLoadEnd}
-            onError={onProfileImageError}
-          />
-          {/* <View
+        <Ripple
+          style={{
+            ...Styles.addPhotoBtn,
+            marginVertical: 0,
+            marginLeft: wp(4),
+            marginRight: wp(4),
+          }}
+          onPress={onAddPofilePress}
+        >
+          <View style={Styles.profileImageCon}>
+            <Image
+              source={{ uri: profileImage }}
+              resizeMode="cover"
+              style={Styles.itemCon}
+              onLoadStart={onProfileImageLoadStart}
+              onLoadEnd={onProfileImageLoadEnd}
+              onError={onProfileImageError}
+            />
+            {/* <View
             style={{
               ...Styles.downBtnConProfile,
               top: hp(-2),
@@ -506,7 +514,7 @@ const PhotosAndVideos = (props: any) => {
               <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
             </Ripple>
           </View> */}
-          {/* {publicPhotos?.length < 10 ? (
+            {/* {publicPhotos?.length < 10 ? (
             <View
               style={{
                 ...Styles.downBtnConProfile,
@@ -529,7 +537,7 @@ const PhotosAndVideos = (props: any) => {
               </Ripple>
             </View>
           ) : null} */}
-          {profileImageLoader && (
+            {/* {profileImageLoader && (
             <View
               style={{
                 position: 'absolute',
@@ -544,8 +552,9 @@ const PhotosAndVideos = (props: any) => {
             >
               <ActivityIndicator color={Colors.theme} size={wp(5)} />
             </View>
-          )}
-        </View>
+          )} */}
+          </View>
+        </Ripple>
       )}
     </View>
   );

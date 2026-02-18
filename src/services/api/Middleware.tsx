@@ -22,15 +22,18 @@ Api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // Log request details
+    // Android: FormData uploads require no Content-Type so the runtime sets
+    // multipart/form-data with the correct boundary (iOS/Android native layer).
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+      delete config.headers['content-type'];
+    }
+    // Log request details (avoid stringifying FormData; it doesn't serialize)
     const requestInfo = {
       method: config.method?.toUpperCase(),
       fullUrl: `${config.baseURL || ''}${config.url}`,
-      headers: {
-        ...config.headers,
-      },
-      data: config.data,
+      headers: { ...config.headers },
+      data: config.data instanceof FormData ? '[FormData]' : config.data,
       params: config.params,
     };
 
