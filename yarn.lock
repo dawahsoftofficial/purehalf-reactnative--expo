@@ -8506,11 +8506,6 @@ react-native-purchases@^9.6.12:
     "@revenuecat/purchases-js-hybrid-mappings" "17.25.0"
     "@revenuecat/purchases-typescript-internal" "17.25.0"
 
-react-native-rate@^1.2.12:
-  version "1.2.12"
-  resolved "https://registry.yarnpkg.com/react-native-rate/-/react-native-rate-1.2.12.tgz#d4307b2994f9c849b987eb65599ec467db4aee04"
-  integrity sha512-A/z3s7Zth08aXcJnru6S4p71NG8acx2w5LhIfItwTJUbQruNJugk8WrN51dLBCSDv8W33kbS5YoUT4M9jOP5gA==
-
 react-native-reanimated-carousel@^4.0.3:
   version "4.0.3"
   resolved "https://registry.yarnpkg.com/react-native-reanimated-carousel/-/react-native-reanimated-carousel-4.0.3.tgz#975f4ff3f5da5bb3790fe60850a46ad8119612bc"

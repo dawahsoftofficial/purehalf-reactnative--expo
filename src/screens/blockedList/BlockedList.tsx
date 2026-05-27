@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -119,10 +118,12 @@ const BlockedList = (props: any) => {
       ApiServices.interactionAction(params)
         .then(() => {
           flashSuccessMessage(LanguageKeys.unBlocked);
-          _.remove(blockedList, function (n: any) {
-            return userId === n?.id;
-          });
-          setBlockedList(blockedList);
+          // M15 fix: build a new array. Mutating in place and passing the same
+          // reference to setState skipped the re-render, so the unblocked user
+          // stayed visible until the screen was remounted.
+          setBlockedList((prev: any[]) =>
+            (prev || []).filter((n: any) => n?.id !== userId)
+          );
           hideModalLoader();
         })
         .catch(hideLoader);

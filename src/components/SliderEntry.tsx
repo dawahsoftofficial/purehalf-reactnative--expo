@@ -213,7 +213,20 @@ const SliderEntry = ({
     });
   };
 
+  // M10 fix: guard against double-taps. Without this, two rapid taps fire
+  // both onLikePress and onPassPress (or like twice) before the swipe animation
+  // and parent state catch up — server gets duplicate actions for the same card.
+  const swipeInFlightRef = useRef(false);
   const onLikeUnlike = (type: string) => {
+    if (swipeInFlightRef.current) return;
+    swipeInFlightRef.current = true;
+    // Release the lock after the bounce animation duration; the parent typically
+    // also swaps the card out within this window. If the action never resolves,
+    // the next mount of this card resets the ref anyway.
+    setTimeout(() => {
+      swipeInFlightRef.current = false;
+    }, 600);
+
     if (type === 'like') {
       setProfileImageError(false);
       likeIconRef.current?.bounce(500);

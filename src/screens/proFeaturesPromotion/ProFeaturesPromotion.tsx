@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -27,6 +27,12 @@ import {
 import PackagesList from './PackagesList';
 import PaymentMethodList from './PaymentMethodList';
 
+// RevenueCat entitlement key — also referenced in App.tsx, premium-store.ts,
+// and use-premium.ts. M18 requires verifying the entitlement is genuinely
+// active before granting premium on restore; using `activeSubscriptions.length`
+// alone counts expired entries.
+const ENTITLEMENT_ID = '2026-packages';
+
 const ProFeaturesPromotion = (props: any) => {
   const { top } = useSafeAreaInsets();
   const Rtl = CheckRtl();
@@ -42,6 +48,27 @@ const ProFeaturesPromotion = (props: any) => {
   const [packagesList, setPackagesList] = useState<PurchasesPackage[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<any>('');
   const [showSubscribeButton, setShowSubscribeButton] = useState(false);
+  // M17 fix: lock against re-entrant purchase calls (double-tap on a package).
+  const purchaseInFlightRef = useRef(false);
+
+  // Returns true when the customer payload reflects a currently-active
+  // entitlement for this app. Fixes M18 — checking activeSubscriptions.length
+  // alone was wrong because expired subscriptions remain in that array.
+  const hasActiveEntitlement = (customerInfo: any): boolean => {
+    const ci = customerInfo?.customerInfo ?? customerInfo;
+    if (!ci) return false;
+    const entitlement = ci?.entitlements?.active?.[ENTITLEMENT_ID];
+    if (entitlement?.isActive === true) return true;
+    // Fallback for older payload shapes where entitlements aren't surfaced —
+    // require BOTH a non-empty active subscriptions array AND a future
+    // expiration date, not either-or.
+    const expiry =
+      ci?.latestExpirationDate ?? customerInfo?.latestExpirationDate;
+    const hasActive =
+      Array.isArray(ci?.activeSubscriptions) &&
+      ci.activeSubscriptions.length > 0;
+    return hasActive && !!expiry && new Date(expiry).getTime() > Date.now();
+  };
 
   const hideLoaderModal = () =>
     setLoaderModal({
@@ -87,6 +114,8 @@ const ProFeaturesPromotion = (props: any) => {
   };
 
   const onPlayOrAppStorePress = async (fromRestore = false) => {
+    if (purchaseInFlightRef.current) return;
+    purchaseInFlightRef.current = true;
     setPaymentMethodListVisible(false);
     setLoaderModal({
       visible: true,
@@ -100,11 +129,7 @@ const ProFeaturesPromotion = (props: any) => {
         customerInfo = await Purchases.purchasePackage(selectedPackage);
       }
 
-      if (
-        customerInfo?.activeSubscriptions?.length !== 0 &&
-        (customerInfo?.latestExpirationDate ||
-          customerInfo?.customerInfo?.latestExpirationDate)
-      ) {
+      if (hasActiveEntitlement(customerInfo)) {
         const updatedUser = {
           ...currentUser,
           membership_expiry:
@@ -141,6 +166,8 @@ const ProFeaturesPromotion = (props: any) => {
       }
     } catch {
       hideLoaderModal();
+    } finally {
+      purchaseInFlightRef.current = false;
     }
   };
 
@@ -218,6 +245,8 @@ const ProFeaturesPromotion = (props: any) => {
   }, [getPackages]);
 
   const onPackageSelection = async (item: any) => {
+    if (purchaseInFlightRef.current) return;
+    purchaseInFlightRef.current = true;
     setSelectedPackage(item);
     setShowSubscribeButton(false);
 
@@ -230,11 +259,7 @@ const ProFeaturesPromotion = (props: any) => {
 
       const customerInfo: any = await Purchases.purchasePackage(item);
 
-      if (
-        customerInfo?.activeSubscriptions?.length !== 0 &&
-        (customerInfo?.latestExpirationDate ||
-          customerInfo?.customerInfo?.latestExpirationDate)
-      ) {
+      if (hasActiveEntitlement(customerInfo)) {
         const updatedUser = {
           ...currentUser,
           membership_expiry:
@@ -271,6 +296,8 @@ const ProFeaturesPromotion = (props: any) => {
       hideLoaderModal();
       // If user cancels or RevenueCat fails, show subscribe button
       setShowSubscribeButton(true);
+    } finally {
+      purchaseInFlightRef.current = false;
     }
   };
 

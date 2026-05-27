@@ -40,21 +40,26 @@ const SearchResults = (props: any) => {
   }, []);
 
   const onLoadMoreData = useCallback(() => {
+    // M8 + M9 fix: prevent overlapping requests AND pass the next page number
+    // explicitly. The previous code called setState(prev+1) then read the OLD
+    // `searchResultsPageNo` in the API call, sending the same page twice.
+    if (loadMoreLoader) return;
+    const nextPage = searchResultsPageNo;
     setLoadMoreLoader(true);
-    setsearchResultsPageNo((prevPageNo) => prevPageNo + 1);
-    ApiServices.searchFilterApply(urlParams, searchResultsPageNo)
+    ApiServices.searchFilterApply(urlParams, nextPage)
       .then((data: any) => {
         setSearchResults((prevResults: any[]) => {
-          if (prevResults.length === 0) {
+          if (!prevResults || prevResults.length === 0) {
             return data?.results;
           } else {
-            return [...prevResults, ...data?.results];
+            return [...prevResults, ...(data?.results ?? [])];
           }
         });
+        setsearchResultsPageNo((prev) => prev + 1);
         setLoadMoreLoader(false);
       })
       .catch(hideLoadMoreLoader);
-  }, [urlParams, searchResultsPageNo]);
+  }, [urlParams, searchResultsPageNo, loadMoreLoader]);
 
   useEffect(() => {
     // Defer state updates to avoid cascading renders

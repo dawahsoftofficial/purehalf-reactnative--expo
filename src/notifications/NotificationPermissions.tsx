@@ -2,6 +2,7 @@ import { getApp } from '@react-native-firebase/app';
 import {
   AuthorizationStatus,
   getMessaging,
+  hasPermission,
   requestPermission,
 } from '@react-native-firebase/messaging';
 import { PermissionsAndroid, Platform } from 'react-native';
@@ -18,7 +19,21 @@ const requestNotificationPermission = async (): Promise<
 > => {
   try {
     if (Platform.OS === 'ios') {
-      // iOS: Use Firebase messaging requestPermission
+      // M16 fix: don't prompt if iOS has already authorized — App.tsx fires
+      // this on every cold start. If status is anything other than NOT_DETERMINED
+      // we already know the user's answer.
+      const existing = await hasPermission(messaging);
+      if (
+        existing === AuthorizationStatus.AUTHORIZED ||
+        existing === AuthorizationStatus.PROVISIONAL
+      ) {
+        return 'granted';
+      }
+      if (existing === AuthorizationStatus.DENIED) {
+        return 'denied';
+      }
+
+      // Only NOT_DETERMINED reaches here — safe to show the system prompt.
       const authStatus = await requestPermission(messaging);
       const enabled =
         authStatus === AuthorizationStatus.AUTHORIZED ||
