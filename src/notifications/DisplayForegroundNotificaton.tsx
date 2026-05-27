@@ -1,5 +1,4 @@
 import { getApp } from '@react-native-firebase/app';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { getMessaging, onMessage } from '@react-native-firebase/messaging';
 import { useNavigation } from '@react-navigation/native';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
@@ -23,18 +22,18 @@ import { hp, Typography, wp } from '../global';
 import { Colors, Fonts } from '../res';
 import {
   ApiServices,
-  stopConversationsListener,
+  cleanupSession,
   StorageManager,
   useGlobalContext,
 } from '../services';
 
 const firebaseApp = getApp();
-const auth = getAuth(firebaseApp);
 const messaging = getMessaging(firebaseApp);
 
 const DisplayForegroundNotification = () => {
-  const { getData, setData, deleteAll, storageKeys } = StorageManager;
-  const { currentUser, updateCurrentUser, language } = useGlobalContext();
+  const { getData, setData, storageKeys } = StorageManager;
+  const { currentUser, updateCurrentUser, updateConversations, language } =
+    useGlobalContext();
   const navigation: any = useNavigation();
   const [remoteMessage, setRemoteMessage] = useState<any>(null);
   const [remoteMessageData, setRemoteMessageData] = useState<any>(null);
@@ -95,32 +94,52 @@ const DisplayForegroundNotification = () => {
   };
 
   const onLogoutPress = async () => {
-    const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
-    StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
-    await ApiServices.logout().catch();
-    await signOut(auth).catch();
-    await deleteAll()
-      .then(async () => {
-        updateCurrentUser(null);
-        const { setData } = StorageManager;
-        await setData(storageKeys.LANGUAGE, language);
-        await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
-        await stopConversationsListener();
-        navigation.dispatch(
-          CommonActionsNav.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
+    // Best-effort server-side logout — failure here shouldn't block the local
+    // teardown (server may already have invalidated the session if this was
+    // triggered by an account_suspended push).
+    try {
+      await ApiServices.logout();
+    } catch (error) {
+      console.log('[DisplayForegroundNotification] ApiServices.logout:', error);
+    }
+    // Full session teardown — same helper used by handleLogout and account
+    // deletion. Preserves language and firebase verification id.
+    await cleanupSession({ language });
+    updateCurrentUser(null);
+    updateConversations([]);
+    navigation.dispatch(
+      CommonActionsNav.reset({
+        index: 1,
+        routes: [{ name: 'AuthWelcome' }],
       })
-      .catch();
+    );
   };
 
   useEffect(() => {
-    onMessage(messaging, async (remoteMessage: any) => {
+    // Subscribe to foreground FCM messages. The listener needs cleaning up
+    // on unmount (M4 audit finding) — otherwise the callback closes over
+    // stale handlers after user-switch and never stops firing.
+    const unsubscribe = onMessage(messaging, async (remoteMessage: any) => {
       const pressAction = remoteMessage?.data?.pressAction;
 
-      const data = JSON.parse(remoteMessage?.data?.data || {});
+      // Parse the payload exactly once. Re-parsing the already-parsed
+      // object (as the old code did) throws "[object Object]" errors and
+      // silently dropped most non-openChat notifications.
+      let data: any = null;
+      try {
+        const raw = remoteMessage?.data?.data;
+        if (typeof raw === 'string' && raw.length > 0) {
+          data = JSON.parse(raw);
+        } else if (raw && typeof raw === 'object') {
+          data = raw;
+        }
+      } catch (error) {
+        console.error(
+          '[DisplayForegroundNotification] Failed to parse data payload:',
+          error
+        );
+      }
+
       if (pressAction === 'openChat') {
         getData(storageKeys.OPENED_CONVERSATION_ID)
           .then((res) => {
@@ -136,47 +155,45 @@ const DisplayForegroundNotification = () => {
           .catch(() => {
             handleOnMessage(data, remoteMessage);
           });
+      } else if (data?.notification_type === 'account_suspended') {
+        handleOnMessage(data, remoteMessage);
+        onLogoutPress();
+      } else if (
+        data?.notification_type === 'membership_extended' ||
+        data?.notification_type === 'payment_received'
+      ) {
+        handleOnMessage(data, remoteMessage);
+        navigation.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MembershipCongrats',
+              params: {
+                date_of_expiry: data?.date_of_expiry,
+                amount: data?.amount,
+                title: data?.title,
+              },
+            },
+          ],
+        });
       } else {
-        if (JSON.parse(data)?.notification_type === 'account_suspended') {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-          onLogoutPress();
-        } else if (
-          JSON.parse(data)?.notification_type === 'membership_extended'
-        ) {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MembershipCongrats',
-                params: {
-                  date_of_expiry: JSON.parse(data)?.date_of_expiry,
-                  amount: JSON.parse(data)?.amount,
-                  title: JSON.parse(data)?.title,
-                },
-              },
-            ],
-          });
-        } else if (JSON.parse(data)?.notification_type === 'payment_received') {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MembershipCongrats',
-                params: {
-                  date_of_expiry: JSON.parse(data)?.date_of_expiry,
-                  amount: JSON.parse(data)?.amount,
-                  title: JSON.parse(data)?.title,
-                },
-              },
-            ],
-          });
-        } else {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-        }
+        handleOnMessage(data, remoteMessage);
       }
     });
+
+    return () => {
+      try {
+        unsubscribe?.();
+      } catch (error) {
+        console.error(
+          '[DisplayForegroundNotification] Failed to unsubscribe FCM listener:',
+          error
+        );
+      }
+    };
+    // Intentionally not depending on currentUser / navigation — the listener
+    // reads navigation and dispatcher functions that are stable across renders,
+    // and we don't want to re-bind the FCM listener on every profile update.
   }, []);
 
   const onNotificationPress = async () => {

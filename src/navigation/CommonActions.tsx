@@ -1,20 +1,16 @@
-import { getApp } from '@react-native-firebase/app';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions } from '@react-navigation/native';
 import _ from 'lodash';
 import { useEffect } from 'react';
 
 import {
   Api,
+  cleanupSession,
   getConversationsOnce,
   startConversationsListener,
   stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../services';
-
-const firebaseApp = getApp();
-const auth = getAuth(firebaseApp);
 
 interface CommonActionProps {
   navigation?: any;
@@ -25,29 +21,22 @@ const CommonActionsFun = (props: CommonActionProps) => {
   const {
     updateCurrentUser,
     language,
-    currentUser,
     updateConversations,
     updateConversationLoading,
   } = useGlobalContext();
   const { navigation = {}, userId = '' } = props;
-  const { setData, deleteAll, storageKeys, getData } = StorageManager;
+  const { setData, storageKeys, getData } = StorageManager;
 
   const handleLogout = async () => {
-    StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
-    // Check if there's a current user before signing out
-    try {
-      const currentFirebaseUser = auth.currentUser;
-      if (currentFirebaseUser) {
-        await signOut(auth);
-      }
-    } catch (error) {
-      // Ignore signOut errors if no user is signed in
-      console.log('[CommonActions] No user to sign out:', error);
-    }
-    await deleteAll();
+    // Full session teardown — see services/session.ts. The helper handles
+    // Firebase signOut, conversations listener, Pusher, RevenueCat,
+    // Zustand stores, MMKV wipe, and preserving language + verification id.
+    await cleanupSession({ language });
+
+    // Context + navigation are React-scoped, so the helper can't touch them.
     updateCurrentUser(null);
-    await setData(storageKeys.LANGUAGE, language);
-    await stopConversationsListener();
+    updateConversations([]);
+
     navigation?.dispatch(
       CommonActions.reset({
         index: 1,

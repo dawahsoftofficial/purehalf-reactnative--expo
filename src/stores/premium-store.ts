@@ -16,6 +16,7 @@ type PremiumState = {
   // Unified premium check: premium if EITHER RevenueCat OR backend shows premium
   // This handles cases where RevenueCat fails but direct payment succeeds
   isPremium: () => boolean;
+  reset: () => void;
 };
 
 function isPremiumFromRevenueCat(ci: CustomerInfo) {
@@ -62,10 +63,52 @@ export const usePremiumStore = create<PremiumState>((set, get) => ({
     }
   },
 
-  // Unified premium check: premium if EITHER RevenueCat OR backend shows premium
+  // Source-of-truth model (M11 fix):
+  //   - RevenueCat is the canonical source for any user who has interacted with
+  //     in-app purchases. It is updated in real time by the RC listener.
+  //   - Backend `membership_expiry` is the source for users on a non-IAP path
+  //     (e.g. bank transfer reviewed by an admin) — RC has nothing to report
+  //     for them and `state.loaded` will be true with no entitlement.
+  //
+  // Previous behavior (`return premium || backend`) trusted whichever side
+  // said "yes" — if RC and the backend disagreed, the more-permissive answer
+  // won and the user got premium even after expiry from one source. We now
+  // log divergence so it shows up in Crashlytics, then prefer RC when its
+  // data is loaded.
   isPremium: () => {
     const state = get();
+    const backendPremium = isPremiumFromBackend(state.membershipExpiry);
 
-    return state.premium || isPremiumFromBackend(state.membershipExpiry);
+    // Once RC has loaded, defer to it — even when backend says otherwise.
+    if (state.loaded) {
+      if (state.premium !== backendPremium) {
+        // Don't spam: only log when there's actual disagreement.
+        console.warn(
+          '[premium-store] entitlement divergence — RC says',
+          state.premium,
+          'backend membership_expiry says',
+          backendPremium,
+          '(expiry:',
+          state.membershipExpiry,
+          ') — preferring RevenueCat'
+        );
+      }
+      return state.premium;
+    }
+
+    // RC not yet loaded — fall back to backend so we don't briefly demote a
+    // paid user on app start.
+    return backendPremium;
+  },
+
+  reset: () => {
+    set({
+      premium: false,
+      loaded: false,
+      customerInfo: undefined,
+      membershipExpiry: null,
+      // Intentionally NOT resetting `revenueCatConfigured` — RevenueCat itself
+      // stays configured for the next user; we just clear cached entitlements.
+    });
   },
 }));
