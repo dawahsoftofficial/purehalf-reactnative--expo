@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
 import { hp, Typography, wp } from '../../../global';
@@ -9,9 +9,24 @@ interface TypingIndicatorProps {
 }
 
 const TypingIndicator: React.FC<TypingIndicatorProps> = ({ userName }) => {
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  // useMemo (not useRef) so we don't read `.current` during render —
+  // satisfies React 19's react-hooks/refs rule.
+  const dot1 = useMemo(() => new Animated.Value(0), []);
+  const dot2 = useMemo(() => new Animated.Value(0), []);
+  const dot3 = useMemo(() => new Animated.Value(0), []);
+
+  const translate1 = useMemo(
+    () => dot1.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }),
+    [dot1]
+  );
+  const translate2 = useMemo(
+    () => dot2.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }),
+    [dot2]
+  );
+  const translate3 = useMemo(
+    () => dot3.interpolate({ inputRange: [0, 1], outputRange: [0, -5] }),
+    [dot3]
+  );
 
   useEffect(() => {
     const animateDot = (dot: Animated.Value, delay: number) => {
@@ -55,49 +70,19 @@ const TypingIndicator: React.FC<TypingIndicatorProps> = ({ userName }) => {
           <Animated.View
             style={[
               styles.dot,
-              {
-                opacity: dot1,
-                transform: [
-                  {
-                    translateY: dot1.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, -5],
-                    }),
-                  },
-                ],
-              },
+              { opacity: dot1, transform: [{ translateY: translate1 }] },
             ]}
           />
           <Animated.View
             style={[
               styles.dot,
-              {
-                opacity: dot2,
-                transform: [
-                  {
-                    translateY: dot2.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, -5],
-                    }),
-                  },
-                ],
-              },
+              { opacity: dot2, transform: [{ translateY: translate2 }] },
             ]}
           />
           <Animated.View
             style={[
               styles.dot,
-              {
-                opacity: dot3,
-                transform: [
-                  {
-                    translateY: dot3.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [0, -5],
-                    }),
-                  },
-                ],
-              },
+              { opacity: dot3, transform: [{ translateY: translate3 }] },
             ]}
           />
         </View>

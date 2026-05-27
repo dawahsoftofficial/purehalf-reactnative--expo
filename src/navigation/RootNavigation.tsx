@@ -24,7 +24,6 @@ import {
   GiftMembershipCongrats,
   GuardianChangePassword,
   GuardianEmailInput,
-  GuardianOtpInput,
   GuardianPasswordInput,
   Languages,
   Location,
@@ -194,7 +193,6 @@ function App() {
             name="GuardianEmailInput"
             component={GuardianEmailInput}
           />
-          <Stack.Screen name="GuardianOtpInput" component={GuardianOtpInput} />
           <Stack.Screen name="AddWali" component={AddWali} />
           <Stack.Screen name="VerifyWaliCode" component={VerifyWaliCode} />
           <Stack.Screen

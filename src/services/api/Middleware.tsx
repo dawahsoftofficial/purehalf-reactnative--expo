@@ -14,8 +14,29 @@ const Api = axios.create({
   },
 });
 
+// Replace any auth-bearing header value with a redaction marker before logging.
+// Token leakage via console.log in release builds was a real audit finding —
+// keep this function pure-defensive even though logs are now __DEV__-gated.
+const redactHeaders = (headers: any) => {
+  if (!headers) return headers;
+  const safe: Record<string, any> = { ...headers };
+  for (const key of Object.keys(safe)) {
+    if (key.toLowerCase() === 'authorization') {
+      safe[key] = '[REDACTED]';
+    }
+  }
+  return safe;
+};
+
 Api.interceptors.request.use(
   async (config: any) => {
+    if (!config) {
+      console.error('[API Request] Received undefined request config');
+      return Promise.reject(new Error('Invalid request configuration'));
+    }
+
+    config.headers = config.headers ?? {};
+
     const token = await StorageManager.getData(
       StorageManager.storageKeys.USER_TOKEN
     );
@@ -28,16 +49,17 @@ Api.interceptors.request.use(
       delete config.headers['Content-Type'];
       delete config.headers['content-type'];
     }
-    // Log request details (avoid stringifying FormData; it doesn't serialize)
-    const requestInfo = {
-      method: config.method?.toUpperCase(),
-      fullUrl: `${config.baseURL || ''}${config.url}`,
-      headers: { ...config.headers },
-      data: config.data instanceof FormData ? '[FormData]' : config.data,
-      params: config.params,
-    };
 
-    console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
+    if (__DEV__) {
+      const requestInfo = {
+        method: config.method?.toUpperCase(),
+        fullUrl: `${config.baseURL || ''}${config.url}`,
+        headers: redactHeaders(config.headers),
+        data: config.data instanceof FormData ? '[FormData]' : config.data,
+        params: config.params,
+      };
+      console.log('[API Request]', JSON.stringify(requestInfo, null, 4));
+    }
 
     // Store request timestamp for response time calculation
     config.metadata = { startTime: Date.now() };
@@ -45,56 +67,59 @@ Api.interceptors.request.use(
     return config;
   },
   (error: any) => {
-    console.error('[API Request Error]', JSON.stringify(error, null, 4));
+    if (__DEV__) {
+      console.error('[API Request Error]', JSON.stringify(error, null, 4));
+    }
     return Promise.reject(error);
   }
 );
 
 Api.interceptors.response.use(
   (response: AxiosResponse) => {
-    const responseInfo = {
-      method: response.config?.method?.toUpperCase(),
-      fullUrl: `${response.config?.baseURL || ''}${response.config?.url}`,
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers,
-      data: response.data,
-    };
+    if (!response) {
+      console.error('[API Response] Received undefined response object');
+      return response;
+    }
 
-    console.log('[API Response]', JSON.stringify(responseInfo, null, 4));
+    if (__DEV__) {
+      const responseInfo = {
+        method: response.config?.method?.toUpperCase(),
+        fullUrl: `${response.config?.baseURL || ''}${response.config?.url}`,
+        status: response.status,
+        statusText: response.statusText,
+        headers: redactHeaders(response.headers),
+        data: response.data,
+      };
+      console.log('[API Response]', JSON.stringify(responseInfo, null, 4));
+    }
     return response;
   },
   async (error: any) => {
-    const requestDuration = error?.config?.metadata?.startTime
-      ? Date.now() - error.config.metadata.startTime
-      : null;
+    if (__DEV__) {
+      const errorInfo = {
+        method: error?.config?.method?.toUpperCase(),
+        fullUrl: `${error?.config?.baseURL || ''}${error?.config?.url}`,
+        status: error?.response?.status,
+        statusText: error?.response?.statusText,
+        errorMessage: error?.message,
+        errorCode: error?.code,
+        responseData: error?.response?.data,
+      };
+      console.error('[API Response Error]', JSON.stringify(errorInfo, null, 4));
+    }
 
-    const errorInfo = {
-      method: error?.config?.method?.toUpperCase(),
-      fullUrl: `${error?.config?.baseURL || ''}${error?.config?.url}`,
-      requestData: error?.config?.data,
-      status: error?.response?.status,
-      statusText: error?.response?.statusText,
-      errorMessage: error?.message,
-      errorCode: error?.code,
-      responseData: error?.response?.data,
-    };
-
-    console.error('[API Response Error]', JSON.stringify(errorInfo, null, 4));
-
-    // Handle authentication errors
-    if (error?.response?.status === 401 || error?.response?.status === 400) {
+    // Only 401 (unauthenticated) should trigger forced logout. 400 = bad
+    // request / validation error — those must surface to the caller, not
+    // wipe the user's session.
+    if (error?.response?.status === 401) {
       const { getData, setData, deleteAll, storageKeys } = StorageManager;
       const verificationId = await getData(
         storageKeys.FIREBASE_VERIFICATION_ID
       );
       StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
-      // await ApiServices.logout();
-      // auth().signOut().catch();
       await deleteAll()
         .then(async () => {
           setGlobalState({ currentUser: null });
-          // await setData(storageKeys.LANGUAGE, language);
           await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
           await stopConversationsListener();
           navigationRef.dispatch(
@@ -102,9 +127,6 @@ Api.interceptors.response.use(
               index: 1,
               routes: [{ name: 'AuthWelcome' }],
             })
-          );
-          console.log(
-            '[API Response Error] User logged out and navigated to AuthWelcome'
           );
         })
         .catch((err) =>
