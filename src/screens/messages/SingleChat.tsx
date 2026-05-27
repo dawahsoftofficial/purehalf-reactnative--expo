@@ -242,6 +242,22 @@ const SingleChat = (props: any) => {
       return;
     }
 
+    // M6 fix: if a previous subscription is still active (e.g. the screen
+    // re-mounted with the same conversationId or the effect re-ran), unsubscribe
+    // it first — otherwise the ref gets overwritten and the old subscription
+    // becomes an orphan that keeps receiving events.
+    if (unsubscribeConversationRef.current) {
+      try {
+        unsubscribeConversationRef.current();
+      } catch (error) {
+        console.error(
+          '[SingleChat] Error unsubscribing previous channel:',
+          error
+        );
+      }
+      unsubscribeConversationRef.current = null;
+    }
+
     try {
       console.log(
         '[SingleChat] Setting up Pusher for conversation:',

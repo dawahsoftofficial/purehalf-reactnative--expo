@@ -88,51 +88,44 @@ class PusherService {
           this.isConnected = false;
         },
         onAuthorizer: async (channelName: string, socketId: string) => {
-          // Custom authorizer for private channels
-          // NOTE: When authEndpoint is provided, Pusher SDK should call it automatically
-          // This onAuthorizer is a fallback or can be used for custom logic
-          // However, if authEndpoint is set, the SDK might use it instead of this function
+          // Custom authorizer for private channels.
+          // M3 fix: previously returned `{ auth: '' }` when authEndpoint was
+          // missing — Pusher accepted the empty auth and silently rejected the
+          // subscription with a cryptic error, making "chat is broken" very
+          // hard to diagnose. Now we throw so failures surface in Crashlytics.
 
           if (!config.authEndpoint) {
-            console.warn(
-              '[PusherService] No authEndpoint provided, custom authorizer cannot work'
+            const err = new Error(
+              '[PusherService] No authEndpoint configured — private channel subscription cannot succeed. ' +
+                'Set PUSHER_AUTH_ENDPOINT in .env.'
             );
-            return {
-              auth: '',
-            };
+            console.error(err.message);
+            throw err;
           }
 
+          // Get user token from storage
+          const token = await StorageManager.getData(
+            StorageManager.storageKeys.USER_TOKEN
+          );
+
+          if (!token) {
+            const err = new Error(
+              '[PusherService] No user token — cannot authorize private channel.'
+            );
+            console.error(err.message);
+            throw err;
+          }
+
+          // Determine if authEndpoint is absolute or relative URL
+          const isAbsoluteUrl =
+            config.authEndpoint.startsWith('http://') ||
+            config.authEndpoint.startsWith('https://');
+
+          const authUrl = isAbsoluteUrl
+            ? config.authEndpoint
+            : `${BaseUrl}${config.authEndpoint.startsWith('/') ? '' : '/'}${config.authEndpoint}`;
+
           try {
-            // Get user token from storage
-            const token = await StorageManager.getData(
-              StorageManager.storageKeys.USER_TOKEN
-            );
-
-            if (!token) {
-              console.error(
-                '[PusherService] No user token found for authorization'
-              );
-              throw new Error('User not authenticated');
-            }
-
-            // Determine if authEndpoint is absolute or relative URL
-            const isAbsoluteUrl =
-              config.authEndpoint.startsWith('http://') ||
-              config.authEndpoint.startsWith('https://');
-
-            const authUrl = isAbsoluteUrl
-              ? config.authEndpoint
-              : `${BaseUrl}${config.authEndpoint.startsWith('/') ? '' : '/'}${config.authEndpoint}`;
-
-            console.log(
-              '[PusherService] Custom authorizer - Making auth request to:',
-              authUrl
-            );
-            console.log('[PusherService] Request data:', {
-              socket_id: socketId,
-              channel_name: channelName,
-            });
-
             const response = await axios.post(
               authUrl,
               {
@@ -147,16 +140,18 @@ class PusherService {
               }
             );
 
-            console.log(
-              '[PusherService] Custom authorizer - Auth response:',
-              response.data
-            );
-            console.log('response.data', response.data);
-            // Return the auth signature from backend
-            // Note: channel_data is only needed for presence channels
-            // For private channels, omit it if not provided (empty string is invalid JSON)
+            // Reject if the backend didn't return an auth signature — empty
+            // strings cause Pusher to fail subscription without explanation.
+            if (!response?.data?.auth) {
+              const err = new Error(
+                `[PusherService] Auth response missing 'auth' field for channel ${channelName}`
+              );
+              console.error(err.message, response?.data);
+              throw err;
+            }
+
             const authResponse: { auth: string; channel_data?: string } = {
-              auth: response.data.auth || '',
+              auth: response.data.auth,
             };
 
             // Only include channel_data if it's provided and not empty
@@ -166,17 +161,18 @@ class PusherService {
 
             return authResponse;
           } catch (error: any) {
-            console.error('[PusherService] Custom authorizer error:', error);
-            if (error.response) {
-              console.error(
-                '[PusherService] Response status:',
-                error.response.status
-              );
-              console.error(
-                '[PusherService] Response data:',
-                error.response.data
-              );
-            }
+            console.error(
+              '[PusherService] Custom authorizer error for',
+              channelName,
+              {
+                status: error?.response?.status,
+                data: error?.response?.data,
+                message: error?.message,
+              }
+            );
+            // Re-throw so subscription failure surfaces to the caller (which
+            // then logs the error and skips event handling rather than
+            // silently sitting on a dead channel).
             throw error;
           }
         },
@@ -493,6 +489,15 @@ export function useUserCountersChannel(
   const unsubscribeCountersChannelRef = useRef<(() => void) | null>(null);
   const subscribedUserIdRef = useRef<string | number | null>(null);
 
+  // Mirror `currentUser` into a ref so the Pusher event handler below can
+  // always read the latest value WITHOUT having to be in the effect's deps
+  // (which would trigger a resubscribe on every profile update). This fixes
+  // the stale-closure issue audited as M2.
+  const currentUserRef = useRef(currentUser);
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
+
   // Extract userId using useMemo to avoid unnecessary re-renders
   const userId = useMemo(() => {
     return currentUser?.id === 'guardian'
@@ -585,18 +590,19 @@ export function useUserCountersChannel(
                 eventType
               );
 
-              // Handle counter events - use current user from closure
-              // Get fresh currentUser from the latest state
+              // Always read the latest currentUser via the ref — closure
+              // captured at subscribe-time is stale (M2 fix).
+              const latestUser = currentUserRef.current;
               const latestUserId =
-                currentUser?.id === 'guardian'
-                  ? currentUser?.user?.id
-                  : currentUser?.id;
+                latestUser?.id === 'guardian'
+                  ? latestUser?.user?.id
+                  : latestUser?.id;
 
               if (latestUserId === userId) {
                 handleCounterEvent(
                   eventType,
                   rawData,
-                  currentUser,
+                  latestUser,
                   updateCurrentUser
                 );
               }
