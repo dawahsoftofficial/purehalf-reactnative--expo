@@ -19,6 +19,10 @@ import { StorageManager } from '../storageManager';
 import BaseUrl from './BaseUrl';
 import EndPoints from './EndPoints';
 import { Api } from './Middleware';
+import type {
+  CurrentUserDetail,
+  GetCurrentUserDetailResponse,
+} from './types/user-types';
 
 const { storageKeys, setData, getData } = StorageManager;
 
@@ -719,45 +723,60 @@ class GApiServices {
     });
   };
 
-  imageUpload = (file: any, key: any, youtubeURL: any) => {
-    return new Promise(async (resolve, reject) => {
-      const myHeaders = new Headers();
-      myHeaders.append(
-        'Authorization',
-        `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`
-      );
-      myHeaders.append('Content-Type', 'multipart/form-data');
+  imageUpload = async (file: any, key: any, youtubeURL: any) => {
+    const formData = new FormData();
+    // Android: cropper/resizer often return `path`; RN FormData requires `uri` on the file object
+    const fileUri = file?.uri ?? file?.path;
+    if (fileUri && key) {
+      formData.append('file', {
+        uri: fileUri,
+        type: file?.type ?? 'image/jpeg',
+        name: file?.name ?? 'image.jpg',
+      } as any);
+      formData.append('key', key);
+    }
+    if (youtubeURL?.length !== 0) {
+      formData.append('youtube_url', youtubeURL);
+    }
 
-      const formdata = new FormData();
-      if (file?.uri && key) {
-        formdata.append('file', {
-          uri: file.uri,
-          type: file?.type ? file.type : 'image/jpeg',
-          name: file.name,
-        });
-        formdata.append('key', key);
-      }
+    // Use fetch instead of axios: React Native's fetch handles FormData on Android
+    // correctly; axios often causes ERR_NETWORK with multipart on Android.
+    const token = await getData(storageKeys.USER_TOKEN);
+    const url = `${BaseUrl}${EndPoints.mediaUpload}`;
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Authorization: token ? `Bearer ${token}` : '',
+    };
+    // Do not set Content-Type; let the runtime set multipart/form-data; boundary=...
 
-      if (youtubeURL?.length !== 0) {
-        formdata.append('youtube_url', youtubeURL);
-      }
-
-      const requestOptions = {
-        method: 'POST',
-        headers: myHeaders,
-        body: formdata,
-        redirect: 'follow',
-      };
-      fetch(`${BaseUrl}/auth/media/upload`, requestOptions)
-        .then((response) => response.text())
-        .then((result) => {
-          resolve(JSON.parse(result).results);
-        })
-        .catch((error) => {
-          reject('');
-          console.log('error while uploading image =>', error);
-        });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      let errData: unknown;
+      try {
+        errData = errBody ? JSON.parse(errBody) : null;
+      } catch {
+        errData = errBody;
+      }
+      console.log(
+        'error while uploading image =>',
+        (errData as any)?.response ?? errData
+      );
+      const error = new Error(
+        (errData as any)?.message ?? `Upload failed: ${response.status}`
+      ) as Error & { response?: { data?: unknown }; status?: number };
+      (error as any).response = { data: errData };
+      (error as any).status = response.status;
+      throw error;
+    }
+
+    const data = await response.json();
+    return data?.results ?? data;
   };
 
   deleteImage = (params: any) => {
@@ -1017,20 +1036,36 @@ class GApiServices {
     });
   };
 
-  getCurrentUserDetail = () => {
+  getCurrentUserDetail = (): Promise<CurrentUserDetail> => {
     return new Promise((resolve, reject) => {
       Api.get(`${EndPoints.getCurrentUserDetail}`)
-        .then(async (data) => {
-          await setData(storageKeys.USER, data?.data?.results);
-          resolve(data?.data?.results);
+        .then(async (response) => {
+          const data = response.data as GetCurrentUserDetailResponse;
+          if (data?.error === false && data?.results) {
+            await setData(storageKeys.USER, data.results);
+            resolve(data.results);
+          } else {
+            const errorMessage =
+              data?.message || 'Failed to get current user detail';
+            console.error(
+              '[ApiServices.getCurrentUserDetail] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
         })
         .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to get current user detail';
           flashErrorMessage();
-          console.log(
-            'error while getting current user detail  =>',
+          console.error(
+            '[ApiServices.getCurrentUserDetail] Error:',
+            errorMessage,
             error?.response?.data
           );
-          reject('');
+          reject(errorMessage);
         });
     });
   };
@@ -1051,6 +1086,43 @@ class GApiServices {
         })
         .catch(() => {
           reject('');
+        });
+    });
+  };
+
+  /**
+   * Collect chat credits (premium members only)
+   * This endpoint is only available for premium members
+   * @returns Promise resolving to user object with updated data
+   */
+  collectChatCredits = () => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.collectChatCredit)
+        .then((response) => {
+          const data = response?.data;
+          if (data?.error === false && data?.results) {
+            resolve(data.results);
+          } else {
+            const errorMessage =
+              data?.message || 'Failed to collect chat credits';
+            console.error(
+              '[ApiServices.collectChatCredits] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to collect chat credits';
+          console.error('[ApiServices.collectChatCredits] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          reject(errorMessage);
         });
     });
   };

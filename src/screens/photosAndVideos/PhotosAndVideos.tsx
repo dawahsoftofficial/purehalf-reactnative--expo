@@ -1,7 +1,6 @@
 import _ from 'lodash';
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
@@ -85,53 +84,56 @@ const PhotosAndVideos = (props: any) => {
   const [publicPhotos, setPublicPhotos] = useState<any>([]);
   const [privatePhotos, setPrivatePhotos] = useState<any>([]);
 
-  const setUserData = async () => {
+  const setUserData = useCallback(async () => {
     const { media } = currentUser;
-    if (media) {
-      const {
-        cover_image,
-        youtube_url,
-        public_gallery,
-        private_gallery,
-        un_blur_primary_image,
-      } = media;
-      if (cover_image) {
-        setCoverImage(cover_image);
-      }
-      if (un_blur_primary_image) {
-        setProfileImage(un_blur_primary_image);
-      }
-      if (youtube_url) {
-        setYoutubeURL(youtube_url);
-      }
-      if (public_gallery && public_gallery.length !== 0) {
-        const publicPhotosData: any = [];
-        for await (const element of public_gallery) {
-          const data = {
-            uri: element,
-            uploadSuccessful: true,
-          };
-          publicPhotosData.push(data);
-        }
-        setPublicPhotos(publicPhotosData);
-      }
-      if (private_gallery && private_gallery.length !== 0) {
-        const privatePhotosData: any = [];
-        for await (const element of private_gallery) {
-          const data = {
-            uri: element,
-            uploadSuccessful: true,
-          };
-          privatePhotosData.push(data);
-        }
-        setPrivatePhotos(privatePhotosData);
-      }
+    if (!media) {
+      return;
     }
-  };
+
+    const {
+      cover_image,
+      youtube_url,
+      public_gallery,
+      private_gallery,
+      un_blur_primary_image,
+      primary_image_to_show,
+      primary_image,
+    } = media as any;
+
+    if (cover_image) {
+      setCoverImage(cover_image);
+    }
+
+    const nextProfileImage =
+      un_blur_primary_image ?? primary_image_to_show ?? primary_image ?? '';
+    if (nextProfileImage) {
+      setProfileImage(nextProfileImage);
+    }
+
+    if (youtube_url) {
+      setYoutubeURL(youtube_url);
+    }
+
+    if (public_gallery && public_gallery.length !== 0) {
+      const publicPhotosData: any = [];
+      for await (const element of public_gallery) {
+        publicPhotosData.push({ uri: element, uploadSuccessful: true });
+      }
+      setPublicPhotos(publicPhotosData);
+    }
+
+    if (private_gallery && private_gallery.length !== 0) {
+      const privatePhotosData: any = [];
+      for await (const element of private_gallery) {
+        privatePhotosData.push({ uri: element, uploadSuccessful: true });
+      }
+      setPrivatePhotos(privatePhotosData);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     setUserData();
-  }, []);
+  }, [setUserData]);
 
   const hideLoader = () => {
     setLoader({
@@ -402,29 +404,40 @@ const PhotosAndVideos = (props: any) => {
     );
   };
 
-  const onUpoadPicture = (imageObj: {
-    height: number | string;
-    width: number | string;
-    uri: string;
-    name: string;
-    size: number | string;
-  }) => {
-    showUploadingLoader();
+  const onUpoadPicture = (
+    imageObj: {
+      height: number | string;
+      width: number | string;
+      uri: string;
+      name: string;
+      size: number | string;
+    },
+    fromKey?: string
+  ) => {
+    const uploadKey = fromKey ?? imagePicker.from;
+    const apiKey =
+      uploadKey === 'primary_image_to_show' ? 'primary_image' : uploadKey;
+    showUploadingLoader(uploadKey);
     hideImagePicker();
-    ApiServices.imageUpload(imageObj, imagePicker.from, youtubeURL)
+    ApiServices.imageUpload(imageObj, apiKey, youtubeURL)
       .then(async (res: any) => {
         if (res) {
-          const { primary_image_to_show } = res;
-
-          if (primary_image_to_show) {
-            setProfileImage(primary_image_to_show);
+          const nextProfileImage =
+            res?.un_blur_primary_image ??
+            res?.primary_image_to_show ??
+            res?.primary_image ??
+            '';
+          if (nextProfileImage) {
+            setProfileImage(nextProfileImage);
           }
-          currentUser.media = res;
-          await setData(storageKeys.USER, currentUser);
-          hideUploadingLoader();
+
+          const updatedUser = { ...(currentUser as any), media: res };
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+          hideUploadingLoader(uploadKey);
         }
       })
-      .catch(hideUploadingLoader);
+      .catch(() => hideUploadingLoader(uploadKey));
   };
 
   const onAddPofilePress = () => {
@@ -469,15 +482,25 @@ const PhotosAndVideos = (props: any) => {
           />
         </Ripple>
       ) : (
-        <View style={Styles.profileImageCon}>
-          <Image
-            source={{ uri: profileImage }}
-            resizeMode="cover"
-            style={Styles.itemCon}
-            onLoadStart={onProfileImageLoadStart}
-            onLoadEnd={onProfileImageLoadEnd}
-          />
-          <View
+        <Ripple
+          style={{
+            ...Styles.addPhotoBtn,
+            marginVertical: 0,
+            marginLeft: wp(4),
+            marginRight: wp(4),
+          }}
+          onPress={onAddPofilePress}
+        >
+          <View style={Styles.profileImageCon}>
+            <Image
+              source={{ uri: profileImage }}
+              resizeMode="cover"
+              style={Styles.itemCon}
+              onLoadStart={onProfileImageLoadStart}
+              onLoadEnd={onProfileImageLoadEnd}
+              onError={onProfileImageError}
+            />
+            {/* <View
             style={{
               ...Styles.downBtnConProfile,
               top: hp(-2),
@@ -490,8 +513,8 @@ const PhotosAndVideos = (props: any) => {
             >
               <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
             </Ripple>
-          </View>
-          {/* {publicPhotos?.length < 10 ? (
+          </View> */}
+            {/* {publicPhotos?.length < 10 ? (
             <View
               style={{
                 ...Styles.downBtnConProfile,
@@ -514,14 +537,24 @@ const PhotosAndVideos = (props: any) => {
               </Ripple>
             </View>
           ) : null} */}
-          {profileImageLoader && (
-            <ActivityIndicator
-              color={Colors.theme}
-              size={wp(5)}
-              style={{ position: 'absolute' }}
-            />
-          )}
-        </View>
+            {/* {profileImageLoader && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: Colors.color2 + '80', // Semi-transparent overlay
+              }}
+            >
+              <ActivityIndicator color={Colors.theme} size={wp(5)} />
+            </View>
+          )} */}
+          </View>
+        </Ripple>
       )}
     </View>
   );
@@ -648,43 +681,49 @@ const PhotosAndVideos = (props: any) => {
     });
   };
 
-  const showUploadingLoader = () => {
-    if (imagePicker.from === 'cover_image') {
+  const showUploadingLoader = (key?: string) => {
+    const fromKey = key ?? imagePicker.from;
+    if (fromKey === 'cover_image') {
       setUploadingCoverLoader(true);
-    } else if (imagePicker.from === 'primary_image_to_show') {
+    } else if (fromKey === 'primary_image_to_show') {
       setUploadingProfileLoader(true);
     }
   };
 
-  const hideUploadingLoader = () => {
-    if (imagePicker.from === 'cover_image') {
+  const hideUploadingLoader = (key?: string) => {
+    const fromKey = key ?? imagePicker.from;
+    if (fromKey === 'cover_image') {
       setUploadingCoverLoader(false);
-    } else if (imagePicker.from === 'primary_image_to_show') {
+    } else if (fromKey === 'primary_image_to_show') {
       setUploadingProfileLoader(false);
     }
   };
 
-  const onImageProfileCoverSelection = (images: any) => {
-    if (images.length !== 0) {
-      ImagePickCrop.openCropper({
-        writeTempFile: true,
-        path: images[0]?.uri,
-        mediaType: images[0]?.type,
-        width: imagePicker.from === 'cover_image' ? 600 : 450,
-        height: imagePicker.from === 'cover_image' ? 300 : 450,
-      })
-        .then((image) => {
-          const resizedImageObj = {
-            height: image?.height,
-            width: image?.width,
-            uri: image?.path,
-            name: image?.path?.split('/')[image?.path?.split('/')?.length - 1],
-            size: image?.size,
-          };
-          onUpoadPicture(resizedImageObj);
-        })
-        .catch(hideUploadingLoader);
+  const onImageProfileCoverSelection = (images: any, fromKey?: string) => {
+    const key = fromKey ?? imagePicker.from;
+    const first = Array.isArray(images) ? images[0] : images;
+    const imagePath = first?.uri ?? first?.path;
+    if (!imagePath) {
+      return;
     }
+    ImagePickCrop.openCropper({
+      writeTempFile: true,
+      path: imagePath,
+      mediaType: 'photo',
+      width: key === 'cover_image' ? 600 : 450,
+      height: key === 'cover_image' ? 300 : 450,
+    })
+      .then((image) => {
+        const resizedImageObj = {
+          height: image?.height,
+          width: image?.width,
+          uri: image?.path,
+          name: image?.path?.split('/')[image?.path?.split('/')?.length - 1],
+          size: image?.size,
+        };
+        onUpoadPicture(resizedImageObj, key);
+      })
+      .catch(() => hideUploadingLoader(key));
   };
 
   const onImagePublicPrivateSelection = (images: any) => {
@@ -832,6 +871,10 @@ const PhotosAndVideos = (props: any) => {
     setProfileImageLoader(false);
   };
 
+  const onProfileImageError = () => {
+    setProfileImageLoader(false);
+  };
+
   const youtubeURLValidation = (url: any) => {
     const p =
       /^(?:https?:\/\/)?(?:www\.)?(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))((\w|-){11})(?:\S+)?$/;
@@ -939,8 +982,8 @@ const PhotosAndVideos = (props: any) => {
                   </Text>
                   <Text style={Styles.tootltipDesc}>
                     We request you to uphold modesty, inviting blessings and
-                    mercy from Allah. Female profile pictures are blurred by
-                    default. They can decide who gets to see their images.
+                    mercy from Allah. Profile pictures can be blurred for
+                    privacy. You can decide who gets to see your images.
                   </Text>
                   <Text style={Styles.tootltipTitle}>Quranic Versed:</Text>
                   <Text style={Styles.tootltipText}>
@@ -1044,17 +1087,14 @@ const PhotosAndVideos = (props: any) => {
         visible={imagePicker.visible}
         from={imagePicker.from}
         onImageSelection={(res: any) => {
+          const fromKey = imagePicker.from;
           hideImagePicker();
-          if (
-            imagePicker.from === 'public_gallery' ||
-            imagePicker.from === 'private_gallery'
-          ) {
+          if (fromKey === 'public_gallery' || fromKey === 'private_gallery') {
             onImagePublicPrivateSelection(res);
           } else {
+            const selection = Array.isArray(res) ? res : res ? [res] : [];
             setTimeout(
-              () => {
-                onImageProfileCoverSelection(res);
-              },
+              () => onImageProfileCoverSelection(selection, fromKey),
               isIOS ? 1000 : 0
             );
           }

@@ -2,7 +2,8 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { type JSX, useCallback, useEffect, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import RNBootSplash from 'react-native-bootsplash';
-import Rate from 'react-native-rate';
+
+import { openAppStore } from '@/lib/utils/rate-app';
 
 import { Button, Text } from '../components';
 import { hp, wp } from '../global';
@@ -99,22 +100,15 @@ const Initialization = (): JSX.Element => {
     }
   }, [isLoading]);
 
-  const handleUpdatePress = useCallback(() => {
-    const options = {
-      AppleAppID: '6450672518',
-      GooglePackageName: 'com.zojayn',
-      preferInApp: false,
-      openAppStoreIfInAppFails: true,
-    } as const;
-
-    Rate.rate(options, (_success, errorMessage) => {
-      if (errorMessage) {
-        console.error(
-          'Unable to open the app store for the update prompt.',
-          errorMessage
-        );
-      }
-    });
+  const handleUpdatePress = useCallback(async () => {
+    try {
+      await openAppStore();
+    } catch (error) {
+      console.error(
+        'Unable to open the app store for the update prompt.',
+        error
+      );
+    }
   }, []);
 
   return (

@@ -39,7 +39,7 @@ const ImagePicker = (props: any) => {
     }
 
     launchCamera(options, (res) => {
-      if (!res?.didCancel) {
+      if (!res?.didCancel && res?.assets && res.assets.length > 0) {
         if (props?.onImageSelection) {
           props.onImageSelection(res.assets);
         }
@@ -64,7 +64,7 @@ const ImagePicker = (props: any) => {
       };
     }
     launchImageLibrary(options, (res) => {
-      if (!res?.didCancel) {
+      if (!res?.didCancel && res?.assets && res.assets.length > 0) {
         if (props?.onImageSelection) {
           props.onImageSelection(res.assets);
         }

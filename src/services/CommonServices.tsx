@@ -21,7 +21,8 @@ const emailValidation = (email: any) => {
 };
 
 const formatDate = (date: any) => {
-  const inputDate = moment(date);
+  // Parse UTC timestamp from backend and convert to user's local timezone
+  const inputDate = moment.utc(date).local();
   const today = moment();
 
   const yesterday = moment().subtract(1, 'day');
@@ -42,27 +43,36 @@ const formatDate = (date: any) => {
 const capitalize = (str: string) =>
   str?.charAt(0)?.toUpperCase() + str?.slice(1);
 
-const setRevenueCat = (userID = null) => {
+const setRevenueCat = (userID: string | number | null = null) => {
   try {
-    const userIDString = JSON.stringify(userID) || null;
-    if (userIDString) {
+    // m4 fix: was `JSON.stringify(userID)` which produced JSON-quoted strings
+    // (e.g. "123") instead of the raw "123" RevenueCat expects for appUserID.
+    // Affected subscription linking across reinstalls and account switches.
+    if (userID === null || userID === undefined) return;
+    const appUserID = String(userID);
+    if (!appUserID) return;
+
+    // m3 fix: only enable DEBUG-level RC logging in dev. Was always-on,
+    // which polluted production native logs.
+    if (__DEV__) {
       Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
-      if (Platform.OS === 'ios') {
-        Purchases.configure({
-          apiKey: 'appl_QVhBMyOFJKhfsiWaYPwcpMFLXQW',
-          appUserID: userIDString,
-        });
-      } else if (Platform.OS === 'android') {
-        Purchases.configure({
-          apiKey: 'goog_bNKRQVnCPRZBhpImNqqFhIubskO',
-          appUserID: userIDString,
-        });
-      }
-      // Mark RevenueCat as configured and trigger refresh
-      usePremiumStore.getState().setRevenueCatConfigured(true);
-      // Trigger initial refresh after configuration
-      usePremiumStore.getState().refresh();
     }
+
+    if (Platform.OS === 'ios') {
+      Purchases.configure({
+        apiKey: 'appl_QVhBMyOFJKhfsiWaYPwcpMFLXQW',
+        appUserID,
+      });
+    } else if (Platform.OS === 'android') {
+      Purchases.configure({
+        apiKey: 'goog_bNKRQVnCPRZBhpImNqqFhIubskO',
+        appUserID,
+      });
+    }
+    // Mark RevenueCat as configured and trigger refresh
+    usePremiumStore.getState().setRevenueCatConfigured(true);
+    // Trigger initial refresh after configuration
+    usePremiumStore.getState().refresh();
   } catch (error) {
     console.warn('RevenueCat configuration failed:', error);
   }

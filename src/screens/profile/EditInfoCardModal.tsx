@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Modal from 'react-native-modal';
@@ -18,6 +19,7 @@ import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
   flashSuccessMessage,
   StorageManager,
   useGlobalContext,
@@ -55,6 +57,7 @@ type EditInfoCardModalProps = {
 };
 
 const EditInfoCardModal = (props: EditInfoCardModalProps) => {
+  const { t } = useTranslation();
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
@@ -299,7 +302,75 @@ const EditInfoCardModal = (props: EditInfoCardModalProps) => {
     [heightWeightPicker.activePicker, onCloseHeightWeightPicker]
   );
 
+  const validateWaliInformation = useCallback(
+    (data: any[]): string | null => {
+      const waliFields: Record<string, { value: string; label: string }> = {};
+
+      data.forEach((item) => {
+        if (item?.category === 'wali-0') {
+          const value = item?.selected?.value?.trim() || '';
+          if (item.id === 'firstName') {
+            waliFields.firstName = { value, label: t(LanguageKeys.firstName) };
+          } else if (item.id === 'lastName') {
+            waliFields.lastName = { value, label: t(LanguageKeys.lastName) };
+          } else if (item.id === 'phoneNumber') {
+            waliFields.phoneNumber = {
+              value,
+              label: t(LanguageKeys.phoneNumber),
+            };
+          } else if (item.id === 'email') {
+            waliFields.email = { value, label: t(LanguageKeys.email) };
+          }
+        }
+      });
+
+      if (!waliFields.firstName?.value) {
+        return `${t(LanguageKeys.enterFirstName)} is required`;
+      }
+      if (!waliFields.lastName?.value) {
+        return `${t(LanguageKeys.enterLastName)} is required`;
+      }
+      if (!waliFields.phoneNumber?.value) {
+        return `${t(LanguageKeys.phoneNumber)} is required`;
+      }
+      if (!waliFields.email?.value) {
+        return `${t(LanguageKeys.email)} is required`;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(waliFields.email.value)) {
+        return t(LanguageKeys.invalidEmailError);
+      }
+
+      const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+      const phoneValue = waliFields.phoneNumber.value.replace(
+        /[\s\-\+\(\)]/g,
+        ''
+      );
+      if (
+        !phoneRegex.test(waliFields.phoneNumber.value) ||
+        phoneValue.length < 8
+      ) {
+        return t(LanguageKeys.invalidPhoneNumber);
+      }
+
+      return null;
+    },
+    [t]
+  );
+
   const onUpdatePress = useCallback(async () => {
+    const isWaliInformation =
+      from === 'waliInformation' || formData[0]?.category === 'wali-0';
+
+    if (isWaliInformation) {
+      const validationError = validateWaliInformation(formData);
+      if (validationError) {
+        flashErrorMessage(validationError);
+        return;
+      }
+    }
+
     setUpdateLoader(true);
     updateDetails(formData)
       .then(async (res: any) => {
@@ -322,11 +393,13 @@ const EditInfoCardModal = (props: EditInfoCardModalProps) => {
   }, [
     currentUser,
     formData,
+    from,
     setData,
     storageKeys.USER,
     updateCurrentUser,
     onClose,
     fetchData,
+    validateWaliInformation,
   ]);
 
   const ScallingButton = useCallback(

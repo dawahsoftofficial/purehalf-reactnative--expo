@@ -13,7 +13,8 @@ export const containsRestrictedWord = (message: string) => {
 
 export const getTimeAgo = (timestamp: any) => {
   const now = moment();
-  const time = moment(timestamp);
+  // Parse UTC timestamp and convert to local timezone
+  const time = moment.utc(timestamp).local();
   const daysDiff = now.diff(time, 'days');
 
   if (daysDiff === 0) {
@@ -32,7 +33,8 @@ export const getTimeAgo = (timestamp: any) => {
 };
 
 export const getMessageTime = (timestamp: any) => {
-  return moment(timestamp).format('hh:mm A');
+  // Parse UTC timestamp from backend and convert to user's local timezone
+  return moment.utc(timestamp).local().format('hh:mm A');
 };
 
 /**

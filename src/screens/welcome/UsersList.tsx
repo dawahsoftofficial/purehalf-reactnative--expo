@@ -19,6 +19,15 @@ import { Colors, Fonts, Images } from '../../res';
 const UsersList = (props: any) => {
   const { data = [], onLoadMorePress = () => null, optionTab } = props;
 
+  // M9 fix: FlatList's onEndReached fires on mount when the list doesn't fill
+  // the viewport, then keeps firing on scroll. Guard against:
+  //   1. firing when the list is empty (would spam pagination on an empty result)
+  //   2. firing before there's content to scroll past
+  const handleEndReached = () => {
+    if (!data || data.length === 0) return;
+    onLoadMorePress();
+  };
+
   const onUserPress = (item: any) =>
     props.navigation.navigate('UserProfile', {
       userData: item,
@@ -106,7 +115,7 @@ const UsersList = (props: any) => {
       extraData={data}
       renderItem={RenderUsers}
       onEndReachedThreshold={0.5}
-      onEndReached={onLoadMorePress}
+      onEndReached={handleEndReached}
       ListEmptyComponent={renderEmptyList}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={Styles.container}

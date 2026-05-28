@@ -91,13 +91,50 @@ type DailyRecommendations = {
   end: string;
 };
 
+type SubscriptionPackage = {
+  revenueCatProductId: string;
+  iosProductId: string;
+  androidProductId: string;
+  bonusChatsOnPurchase: number;
+  dailyChats: number;
+  defaultSelected?: boolean;
+};
+
+type ChatPack = {
+  revenueCatProductId: string;
+  iosProductId: string;
+  androidProductId: string;
+  chats: number;
+};
+
+type BoostPack = {
+  revenueCatProductId: string;
+  iosProductId: string;
+  androidProductId: string;
+  boosts: number;
+};
+
+type PackagesAndEntitlements = {
+  subscriptionsMonthly: SubscriptionPackage[];
+  chatPacks: ChatPack[];
+  boostPacks: BoostPack[];
+};
+
+type AppLink = {
+  url: string;
+  icon: string;
+  label: string;
+};
+
 type SettingValue =
   | AuthenticationMethod
   | ChatCredits
   | boolean
   | MaxChatsPerDay
   | BadgesAndPayments
-  | DailyRecommendations;
+  | DailyRecommendations
+  | PackagesAndEntitlements
+  | AppLink[];
 
 type SettingItem = {
   title: string;
@@ -124,6 +161,8 @@ type SettingsState = {
   getMaxChatsPerDay: () => MaxChatsPerDay | null;
   getBadgesAndPayments: () => BadgesAndPayments | null;
   getDailyRecommendations: () => DailyRecommendations | null;
+  getPackagesAndEntitlements: () => PackagesAndEntitlements | null;
+  getAppLinks: () => AppLink[] | null;
   getSettingByKey: <T extends SettingValue>(key: string) => T | null;
 };
 
@@ -169,6 +208,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return state.getSettingByKey<DailyRecommendations>('daily_recommendations');
   },
 
+  getPackagesAndEntitlements: () => {
+    const state = get();
+    return state.getSettingByKey<PackagesAndEntitlements>(
+      'packages_and_entitlements'
+    );
+  },
+
+  getAppLinks: () => {
+    const state = get();
+    return state.getSettingByKey<AppLink[]>('app_links');
+  },
+
   getSettingByKey: <T extends SettingValue>(key: string) => {
     const state = get();
     if (!state.settings) return null;
@@ -182,13 +233,18 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
 // Export types for use in other files
 export type {
+  AppLink,
   AuthenticationMethod,
   BadgeConfig,
   BadgesAndPayments,
+  BoostPack,
   ChatCredits,
+  ChatPack,
   DailyRecommendations,
   MaxChatsPerDay,
+  PackagesAndEntitlements,
   PaymentWallConfig,
   SettingItem,
   SettingsResponse,
+  SubscriptionPackage,
 };

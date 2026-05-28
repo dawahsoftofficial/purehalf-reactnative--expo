@@ -2,6 +2,7 @@ import notifee from '@notifee/react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Dimensions,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
-import { usePremiumStore, useSettingsStore } from '@/stores';
+import { usePremiumStore, useSettingsStore, useUserStatsStore } from '@/stores';
 
 import {
   CheckMembershipStatus,
@@ -36,6 +37,7 @@ import {
   useGlobalContext,
 } from '../../services';
 import { presentBoostProfilePaywall } from '../../services/paywall-service';
+import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
 import { AccountModal } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
@@ -53,11 +55,6 @@ type ProfileProgressItem = {
   navigation: string;
   scrollTo?: number;
   completed: boolean;
-};
-
-type UserStats = {
-  photo_requested_you_counter?: number;
-  [key: string]: unknown;
 };
 
 type WelcomeRouteParams = {
@@ -80,6 +77,7 @@ const { width } = Dimensions.get('window');
 let hasInitializedUsers = false;
 
 const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
+  const { t } = useTranslation();
   const optionBarList = useMemo<OptionButton[]>(
     () => [
       {
@@ -104,12 +102,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const profileProgressTemplate = useMemo<ProfileProgressItem[]>(
     () => [
-      {
-        label: LanguageKeys.profileImage,
-        id: 'primary_image_to_show',
-        navigation: 'PhotosAndVideos',
-        completed: false,
-      },
+      // {
+      //   label: LanguageKeys.profileImage,
+      //   id: 'primary_image_to_show',
+      //   navigation: 'PhotosAndVideos',
+      //   completed: false,
+      // },
       // Currently not entertaining cover photo
       // {
       //   label: LanguageKeys.coverImage,
@@ -185,7 +183,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [loader, setLoader] = useState(true);
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
   const [modalLoader, setModalLoader] = useState(false);
-  const [userStats, setUserStats] = useState<UserStats>({});
+  // Get user stats from Pusher store (updated via counterUpdate events)
+  const { like_count, visit_count, photo_request_count } = useUserStatsStore();
   const [activeOptionButton, setActiveOptionButton] = useState<OptionButton>(
     optionBarList[0]
   );
@@ -269,13 +268,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     []
   );
 
-  const getUserStats = useCallback(() => {
-    ApiServices.getUserStats()
-      .then((res: any) => {
-        setUserStats(res);
-      })
-      .catch(() => {});
-  }, []);
+  // getUserStats removed - counters now come from Pusher events via useUserStatsStore
 
   const ensureActiveMembership = useCallback(async (): Promise<boolean> => {
     const now = moment();
@@ -318,7 +311,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           const defaultOption = optionBarList[0];
           applyOptionSelection(defaultOption);
           getUsers({ page: 1, type: defaultOption.value }, true);
-          getUserStats();
+
           navigation.navigate('ProFeaturesPromotion', {
             navigateTo: 'BottomTab',
           });
@@ -328,16 +321,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
       applyOptionSelection(item);
       getUsers({ page: 1, type: value }, true);
-      getUserStats();
+      // Counters now come from Pusher events, no API call needed
     },
-    [
-      applyOptionSelection,
-      getUserStats,
-      getUsers,
-      isPremiumUser,
-      navigation,
-      optionBarList,
-    ]
+    [applyOptionSelection, getUsers, isPremiumUser, navigation, optionBarList]
   );
 
   const onLoadMorePress = useCallback(() => {
@@ -474,14 +460,21 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     });
   }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
 
-  // Call getAttribute and getUsers once on mount only (using module-level flag to prevent refetch on remount)
+  // Call getAttribute and getUsers on mount
   useEffect(() => {
     getAttribute();
+    // Always fetch users on mount, reset flag on unmount to allow refetch on remount
     if (!hasInitializedUsers) {
       hasInitializedUsers = true;
       getUsers(undefined, true);
     }
-  }, []);
+
+    return () => {
+      // Reset flag on unmount to allow fresh fetch if component remounts
+      // This ensures users are fetched after profile picture upload/navigation
+      hasInitializedUsers = false;
+    };
+  }, [getUsers, getAttribute]);
 
   useEffect(() => {
     getInitialNotification();
@@ -533,10 +526,71 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      getUserStats();
+      // Counters now come from Pusher events, no API call needed
       handleProfileCompleteData();
-    }, [])
+
+      // Ensure users are fetched when screen is focused if list is empty and not loading
+      // This handles cases where component remounts after profile picture upload
+      if (usersList.length === 0 && !loader && !loadMoreLoader) {
+        setLoader(true);
+        getUsers(undefined, true);
+      }
+    }, [
+      handleProfileCompleteData,
+      usersList.length,
+      loader,
+      loadMoreLoader,
+      getUsers,
+    ])
   );
+
+  // Collect chat credits when AccountModal opens (premium members only, once per 24 hours)
+  useEffect(() => {
+    const canCollect = canCollectChatCredits(
+      currentUser?.last_chat_credit_collected_at
+    );
+    console.log(
+      '[Welcome.useEffect] Modal open:',
+      headerModal,
+      'Premium:',
+      isPremiumUser,
+      'Can collect:',
+      canCollect
+    );
+
+    if (headerModal && isPremiumUser && canCollect) {
+      const collectCredits = async () => {
+        try {
+          await ApiServices.collectChatCredits();
+          // Refresh user data to get updated chat credits and last_chat_credit_collected_at
+          // try {
+          //   const refreshedUser =
+          //     (await ApiServices.getCurrentUserDetail()) as typeof currentUser;
+          //   if (refreshedUser) {
+          //     updateCurrentUser(refreshedUser);
+          //     await setData(storageKeys.USER, refreshedUser);
+          //   }
+          // } catch (refreshError) {
+          //   console.error(
+          //     '[Welcome] Error refreshing user data after collect:',
+          //     refreshError
+          //   );
+          // }
+        } catch (error) {
+          // Silently handle error - don't block modal from opening
+          console.error('[Welcome] Error collecting chat credits:', error);
+        }
+      };
+      collectCredits();
+    }
+  }, [
+    headerModal,
+    isPremiumUser,
+    currentUser,
+    updateCurrentUser,
+    setData,
+    storageKeys.USER,
+  ]);
 
   const onInfoItemPress = useCallback(
     (item: ProfileProgressItem) => {
@@ -546,7 +600,14 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     [navigation]
   );
 
-  if (!loaded) return null;
+  // Show loading state instead of blank screen if premium store hasn't loaded yet
+  // if (!loaded) {
+  //   return (
+  //     <Container style={Styles.container}>
+  //       <Loader />
+  //     </Container>
+  //   );
+  // }
 
   if (!isPremiumUser) {
     // navigation.replace('ProFeaturesPromotion');
@@ -618,6 +679,20 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             </Ripple>
           </View>
         </View>
+        {!currentUser?.is_approved && (
+          <Ripple
+            style={Styles.pendingApprovalBanner}
+            onPress={() => setHeaderModal(true)}
+          >
+            <Image
+              source={Images.infoIcon}
+              style={Styles.pendingApprovalIcon}
+            />
+            <Text style={Styles.pendingApprovalText}>
+              {t(LanguageKeys.profileInReview)}
+            </Text>
+          </Ripple>
+        )}
       </View>
       <AccountModal
         visible={headerModal}
@@ -628,11 +703,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       />
       {/* <RecommendationButton onPress={onRecommendationPress} /> */}
       {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
-      {userStats?.photo_requested_you_counter &&
-      userStats?.photo_requested_you_counter >= 1 ? (
+      {photo_request_count && photo_request_count >= 1 ? (
         <PrivatePhotoAccessBtn
           navigation={navigation}
-          photoRequests={userStats?.photo_requested_you_counter}
+          photoRequests={photo_request_count}
         />
       ) : null}
       <PurchaseSuccessModal
@@ -643,7 +717,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       />
       <OptionsBar
         onPress={onOptionPress}
-        userStats={userStats}
+        userStats={{
+          like_you_counter: like_count,
+          visit_you_counter: visit_count,
+          photo_requested_you_counter: photo_request_count,
+        }}
         activeOptionButton={activeOptionButton}
         options={optionBarList}
       />
@@ -774,5 +852,26 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small2,
     color: Colors.color2,
+  },
+  pendingApprovalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.color47,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.5),
+    borderRadius: wp(2),
+    marginTop: hp(1.5),
+    gap: wp(2.5),
+  },
+  pendingApprovalIcon: {
+    width: wp(5),
+    height: wp(5),
+    tintColor: Colors.color2,
+  },
+  pendingApprovalText: {
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+    color: Colors.color2,
+    flex: 1,
   },
 });

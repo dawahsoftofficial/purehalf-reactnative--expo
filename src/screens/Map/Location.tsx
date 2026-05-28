@@ -8,7 +8,6 @@ import {
   ApiServices,
   flashErrorMessage,
   flashSuccessMessage,
-  isIOS,
   StorageManager,
   useGlobalContext,
 } from '../../services';

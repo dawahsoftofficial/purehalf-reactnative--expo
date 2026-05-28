@@ -32,9 +32,20 @@ let activeListeners: {
 } = {};
 
 /**
- * Creates a query reference for conversations filtered by user ID
+ * Returns the RTDB query for the global conversations node.
+ *
+ * NOTE: This used to claim it "filters by user ID" but the implementation
+ * never did — `conversationsPath` is a single global node and the userId
+ * parameter is unused. Filtering to the current user's conversations relies
+ * on (a) Firebase Realtime Database security rules being correctly scoped on
+ * the server, and (b) callbacks that consume this query checking participant
+ * membership client-side (see `CommonActions.onChildChanged` which checks
+ * `participantsDeleteFlag[userId]`).
+ *
+ * Audited as M1. A proper fix is a server-side schema/rules change — out of
+ * scope for this client repo.
  */
-const getConversationsQuery = (userId: string): Query => {
+const getConversationsQuery = (_userId: string): Query => {
   const conversationsRef = ref(database, conversationsPath);
   return conversationsRef;
 };

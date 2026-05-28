@@ -144,6 +144,12 @@ const SingleChat = (props: any) => {
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
 
+    // Prevent duplicate fetches if already fetching
+    if (isFetchingMessagesRef.current) {
+      console.log('[SingleChat] Already fetching messages, skipping');
+      return;
+    }
+
     // Set loader to true when starting to fetch messages
     setLoader(true);
     isFetchingMessagesRef.current = true;
@@ -234,6 +240,22 @@ const SingleChat = (props: any) => {
     if (!conversationId || !pusherService.isReady()) {
       console.log('[SingleChat] Pusher not ready or no conversation ID');
       return;
+    }
+
+    // M6 fix: if a previous subscription is still active (e.g. the screen
+    // re-mounted with the same conversationId or the effect re-ran), unsubscribe
+    // it first — otherwise the ref gets overwritten and the old subscription
+    // becomes an orphan that keeps receiving events.
+    if (unsubscribeConversationRef.current) {
+      try {
+        unsubscribeConversationRef.current();
+      } catch (error) {
+        console.error(
+          '[SingleChat] Error unsubscribing previous channel:',
+          error
+        );
+      }
+      unsubscribeConversationRef.current = null;
     }
 
     try {
@@ -632,6 +654,7 @@ const SingleChat = (props: any) => {
   }, [messages]);
 
   // Initial fetch and setup Pusher
+  // Only run when conversationId changes, not when callbacks are recreated
   useEffect(() => {
     if (conversationId) {
       // Reset messages ref when conversation changes
@@ -653,7 +676,7 @@ const SingleChat = (props: any) => {
         isFetchingMessagesRef.current = false;
       };
     }
-  }, [conversationId, fetchMessages, setupPusherListeners]);
+  }, [conversationId]);
 
   // Mark all unread messages as read individually when screen is focused
   useFocusEffect(

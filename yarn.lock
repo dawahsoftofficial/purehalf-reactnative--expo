@@ -8422,6 +8422,11 @@ react-native-image-picker@^8.2.1:
   resolved "https://registry.yarnpkg.com/react-native-image-picker/-/react-native-image-picker-8.2.1.tgz#1ac7826563cbaa5d5298d9f2acc53c69805e5393"
   integrity sha512-FBeGYJGFDjMdGCcyubDJgBAPCQ4L1D3hwLXyUU91jY9ahOZMTbluceVvRmrEKqnDPFJ0gF1NVhJ0nr1nROFLdg==
 
+react-native-in-app-review@^4.4.2:
+  version "4.4.2"
+  resolved "https://registry.yarnpkg.com/react-native-in-app-review/-/react-native-in-app-review-4.4.2.tgz#eaa908cdc7adee26158903a0e6f22ca6af415f7b"
+  integrity sha512-iUoZnP4cgpbiNMLpqPgK40AcT7xluJhlwEPKFEfcCZsWT4MzGygS8p1dxf6e1NH/LUgUEtjsZQ8ka/SbF1pE8Q==
+
 react-native-iphone-screen-helper@^2.0.2:
   version "2.2.1"
   resolved "https://registry.yarnpkg.com/react-native-iphone-screen-helper/-/react-native-iphone-screen-helper-2.2.1.tgz#34125de16426f1011ecec595be01876be9ccf2bf"
@@ -8500,11 +8505,6 @@ react-native-purchases@^9.6.12:
   dependencies:
     "@revenuecat/purchases-js-hybrid-mappings" "17.25.0"
     "@revenuecat/purchases-typescript-internal" "17.25.0"
-
-react-native-rate@^1.2.12:
-  version "1.2.12"
-  resolved "https://registry.yarnpkg.com/react-native-rate/-/react-native-rate-1.2.12.tgz#d4307b2994f9c849b987eb65599ec467db4aee04"
-  integrity sha512-A/z3s7Zth08aXcJnru6S4p71NG8acx2w5LhIfItwTJUbQruNJugk8WrN51dLBCSDv8W33kbS5YoUT4M9jOP5gA==
 
 react-native-reanimated-carousel@^4.0.3:
   version "4.0.3"

@@ -224,16 +224,39 @@ export type ConversationUpdatedEventData = {
 };
 
 /**
+ * Counter participant data structure
+ * Contains user counter information (unread counts, chat credits, etc.)
+ */
+export type CounterParticipant = {
+  id: number;
+  unread_conversations_count?: number;
+  unread_messages_count?: string | number;
+  chat_credits?: number;
+  last_chat_credit_collected_at?: string | null;
+  like_count?: number;
+  visit_count?: number;
+  photo_request_count?: number;
+};
+
+/**
+ * CounterUpdate event data (from Pusher)
+ * Sent on private-user.counters.{userId} channel to update user counters
+ * This is the normalized event type when event.eventName is normalized to 'counterUpdate'
+ */
+export type CounterUpdateEventData = {
+  event: 'counterUpdate';
+  participant: CounterParticipant;
+};
+
+/**
  * UnreadConversationCounter event data (from Pusher)
  * Sent on user channel to update unread conversation and message counts
+ * Note: This event may also include chat_credits and last_chat_credit_collected_at
+ * when sent via the counters channel
  */
 export type UnreadConversationCounterEventData = {
-  event: 'UnreadConversationCounter';
-  participant: {
-    id: number;
-    unread_conversations_count: number;
-    unread_messages_count: string | number;
-  };
+  event: 'UnreadConversationCounter' | 'counterUpdate';
+  participant: CounterParticipant;
 };
 
 /**

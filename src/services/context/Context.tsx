@@ -25,7 +25,6 @@ let initialState = {
 
 const AppProvider = ({ children }: any) => {
   const [state, dispatch]: any = useReducer(Reducer, initialState);
-  console.log('currentUser id', state.currentUser?.id);
   const updateCustomModal = useCallback((visible: any, data: any) => {
     dispatch({
       type: 'UPDATE_CUSTOM_MODAL',

@@ -1,6 +1,13 @@
 import Geolocation from '@react-native-community/geolocation';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Linking, PermissionsAndroid, StyleSheet, View } from 'react-native';
+import {
+  AppState,
+  type AppStateStatus,
+  Linking,
+  PermissionsAndroid,
+  StyleSheet,
+  View,
+} from 'react-native';
 
 import { Colors } from '@/res';
 
@@ -184,9 +191,6 @@ function Location({ navigation }: LocationProps) {
         flashErrorMessage('Please enable location from settings');
         setLoading(false);
         setFailed(true);
-        if (!isIOS) {
-          Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
-        }
       },
       {
         enableHighAccuracy: false,
@@ -233,8 +237,23 @@ function Location({ navigation }: LocationProps) {
     };
   }, [requestLocationPermission]);
 
+  // When user returns from Settings (e.g. after enabling location on iOS), retry
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextState: AppStateStatus) => {
+        if (nextState === 'active' && failed) {
+          requestLocationPermission();
+        }
+      }
+    );
+    return () => subscription.remove();
+  }, [failed, requestLocationPermission]);
+
   const onEnablePress = useCallback(() => {
-    if (!isIOS) {
+    if (isIOS) {
+      Linking.openSettings();
+    } else {
       Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
     }
   }, []);
@@ -262,7 +281,13 @@ function Location({ navigation }: LocationProps) {
     <Container style={Styles.container}>
       <LocationHeader />
       <View style={Styles.buttonContainer}>
-        {failed && <TryAgainLink onPress={requestLocationPermission} />}
+        {failed && (
+          <TryAgainLink
+            onPress={
+              isIOS ? () => Linking.openSettings() : requestLocationPermission
+            }
+          />
+        )}
         <Button
           buttonStyle={Styles.locationBtn}
           text={buttonText}

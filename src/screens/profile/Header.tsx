@@ -22,6 +22,8 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
+import { type CurrentUserDetail } from '@/services/api/types/user-types';
+
 import {
   Button,
   CheckMembershipStatus,
@@ -46,6 +48,8 @@ import {
 import messageServices from '../../services/api/message-services';
 import type { Conversation as ApiConversation } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
+import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
+import { usePremiumStore } from '../../stores';
 
 const { width, height } = Dimensions.get('window');
 
@@ -311,6 +315,7 @@ const Header = ({
   onLikeUnlikePress,
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
+  const isPremium = usePremiumStore((state) => state.isPremium);
   const [userConversation, setUserConversation] = useState<Conversation | null>(
     null
   );
@@ -427,8 +432,8 @@ const Header = ({
       ) {
         setModalLoader(true);
         ApiServices.getCurrentUserDetail()
-          .then((response) => {
-            const userResponse = response as User;
+          .then((response: CurrentUserDetail) => {
+            const userResponse = response as CurrentUserDetail;
             const membershipExpiry = userResponse?.membership_expiry;
             updateCurrentUser(userResponse);
             setModalLoader(false);
@@ -451,6 +456,45 @@ const Header = ({
   }, [currentUser?.membership_expiry, navigation, updateCurrentUser]);
 
   const onMessagePress = useCallback(async () => {
+    // Collect chat credits for premium members (once per 24 hours)
+    const isUserPremium = isPremium();
+    const canCollect = canCollectChatCredits(
+      currentUser?.last_chat_credit_collected_at
+    );
+    console.log(
+      '[Header.onMessagePress] Premium check:',
+      isUserPremium,
+      'Can collect:',
+      canCollect
+    );
+
+    if (isUserPremium && canCollect) {
+      try {
+        await ApiServices.collectChatCredits();
+        // Refresh user data to get updated chat credits and last_chat_credit_collected_at
+        // try {
+        //   const refreshedUser =
+        //     (await ApiServices.getCurrentUserDetail()) as unknown as User;
+        //   updateCurrentUser(refreshedUser);
+        //   await StorageManager.setData(
+        //     StorageManager.storageKeys.USER,
+        //     refreshedUser
+        //   );
+        // } catch (refreshError) {
+        //   console.error(
+        //     '[Header.onMessagePress] Error refreshing user data after collect:',
+        //     refreshError
+        //   );
+        // }
+      } catch (error) {
+        // Silently handle error - don't block user from messaging
+        console.error(
+          '[Header.onMessagePress] Error collecting chat credits:',
+          error
+        );
+      }
+    }
+
     // Check if this is a new conversation (no existing conversation)
     // userConversation can be Conversation (old) or ApiConversation (new) type
     const conversationId = userConversation
@@ -473,7 +517,7 @@ const Header = ({
             // User purchased credits, refresh user data and try again
             try {
               const refreshedUser =
-                (await ApiServices.getCurrentUserDetail()) as User;
+                (await ApiServices.getCurrentUserDetail()) as unknown as User;
               updateCurrentUser(refreshedUser);
               const refreshedCredits =
                 (refreshedUser as { chat_credits?: number })?.chat_credits ?? 0;
@@ -506,7 +550,13 @@ const Header = ({
 
     // User has sufficient credits or it's an existing conversation, proceed to chat
     navigateToChat();
-  }, [currentUser, navigateToChat, updateCurrentUser, userConversation]);
+  }, [
+    currentUser,
+    navigateToChat,
+    updateCurrentUser,
+    userConversation,
+    isPremium,
+  ]);
 
   const Rtl = CheckRtl();
 
@@ -553,9 +603,9 @@ const Header = ({
       navigation.navigate('PhotosAndVideos');
       return;
     }
-    isPremiumUser().then(() => {
-      navigation.navigate('ImageViewer', { userData });
-    });
+    // isPremiumUser().then(() => {
+    navigation.navigate('ImageViewer', { userData });
+    // });
   }, [fromUserProfile, isPremiumUser, navigation, userData]);
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);

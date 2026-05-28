@@ -14,7 +14,8 @@ module.exports = {
   ],
   moduleFileExtensions: ['js', 'ts', 'tsx'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native(-community)?|@react-navigation)/)',
+    // Allow Jest to transform RN-ecosystem packages that ship untranspiled ESM.
+    'node_modules/(?!(?:.pnpm/)?(react-native|@react-native(-community)?|@react-navigation|@notifee|@pusher|react-native-.*|@invertase/react-native-apple-authentication)/)',
   ],
   coverageReporters: ['json-summary', ['text', { file: 'coverage.txt' }]],
   reporters: [

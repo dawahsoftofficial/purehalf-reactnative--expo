@@ -65,6 +65,7 @@ type User = {
   blocked_you?: number;
   match_percentage?: number;
   is_blur?: boolean;
+  gender?: string;
 };
 
 type Conversation = {
@@ -362,6 +363,7 @@ const Profile = ({
             });
             catData[child] = Data[child];
           }
+          console.log('catData', catData);
           setCategoriesData(catData);
           setDataLoader(false);
         }
@@ -404,7 +406,13 @@ const Profile = ({
             visible: true,
             message: LanguageKeys.loading,
           });
-          const user = (await ApiServices.getCurrentUserDetail()) as User;
+          const userData = await ApiServices.getCurrentUserDetail();
+          const user: User = {
+            ...userData,
+            is_blur: userData.is_blur === 1,
+            detail: userData.detail ?? undefined,
+            match_percentage: userData.match_percentage ?? undefined,
+          };
           setUserData(user);
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
@@ -631,13 +639,16 @@ const Profile = ({
                         onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
-                      <InfoCard
-                        data={categoriesData?.waliInformation}
-                        headerHeading={LanguageKeys.waliInformation}
-                        onEditPress={onInfoCardEdit}
-                        fromUserProfile={fromUserProfile}
-                        from={'waliInformation'}
-                      />
+                      {/* {(userData?.gender === 'female' ||
+                        userData?.detail?.gender === 'female') && (
+                        <InfoCard
+                          data={categoriesData?.waliInformation}
+                          headerHeading={LanguageKeys.waliInformation}
+                          onEditPress={onInfoCardEdit}
+                          fromUserProfile={fromUserProfile}
+                          from={'waliInformation'}
+                        />
+                      )} */}
                       <InfoCard
                         data={categoriesData?.islamicValues}
                         headerHeading={LanguageKeys.islamicValues}
