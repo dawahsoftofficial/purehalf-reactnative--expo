@@ -1,5 +1,7 @@
 import type React from 'react';
 
+import { recordSentMessage } from '@/services/rating/ratingEngagement';
+
 import { flashErrorMessage } from '../../../services';
 import messageServices from '../../../services/api/message-services';
 import type {
@@ -138,6 +140,7 @@ export function useSendMessage({
     }
 
     await sendMessage(inputMessage);
+    recordSentMessage();
     return { type: 'sent' };
   };
 
