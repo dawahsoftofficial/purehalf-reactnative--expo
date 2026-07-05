@@ -42,6 +42,7 @@ const EndPoints = {
   guardianLogout: 'guardian/auth/logout',
   storeQuerySupport: '/auth/query/store',
   getAppSettings: '/settings',
+  storeRating: '/auth/rating/store',
   paymentInfo: '/auth/list/paymentinfo',
   snedMessageNotification: '/auth/send/message/notification',
 

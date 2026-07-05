@@ -826,6 +826,22 @@ class GApiServices {
     });
   };
 
+  storeRating = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.storeRating, params)
+        .then((res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          reject(error?.response?.data?.message || '');
+          console.log(
+            'error while hiting rating store api =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
   topPicks = (params: any) => {
     return new Promise((resolve, reject) => {
       Api.post(EndPoints.topPicks, params)
