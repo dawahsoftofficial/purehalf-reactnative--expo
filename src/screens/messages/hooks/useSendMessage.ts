@@ -44,7 +44,7 @@ export function useSendMessage({
   isBlockedByYou,
   setInputMessage,
 }: UseSendMessageParams): UseSendMessageReturn {
-  const sendMessage = async (inputMessage: string): Promise<void> => {
+  const sendMessage = async (inputMessage: string): Promise<boolean> => {
     setInputMessage('');
 
     // New conversation - check if conversationData is null/undefined or doesn't have an id
@@ -72,6 +72,7 @@ export function useSendMessage({
           });
           setMessages(sortedMessages);
         }
+        return true;
       } catch (error: unknown) {
         const errorMessage = error as string;
         // Check if error is about chat credits
@@ -85,21 +86,21 @@ export function useSendMessage({
         } else {
           flashErrorMessage(errorMessage);
         }
+        return false;
       }
-      return;
     }
 
     // Existing conversation - send message
     if (!conversationId) {
       flashErrorMessage('Conversation ID is missing');
-      return;
+      return false;
     }
 
     try {
       const conversationIdNum = parseInt(conversationId, 10);
       if (isNaN(conversationIdNum)) {
         flashErrorMessage('Invalid conversation ID');
-        return;
+        return false;
       }
 
       const sentMessage: Message =
@@ -127,8 +128,10 @@ export function useSendMessage({
         });
         return sortedMessages;
       });
+      return true;
     } catch (error: unknown) {
       flashErrorMessage(error as string);
+      return false;
     }
   };
 
@@ -139,8 +142,10 @@ export function useSendMessage({
       return { type: 'blockedByYou' };
     }
 
-    await sendMessage(inputMessage);
-    recordSentMessage();
+    const didSend = await sendMessage(inputMessage);
+    if (didSend) {
+      recordSentMessage();
+    }
     return { type: 'sent' };
   };
 

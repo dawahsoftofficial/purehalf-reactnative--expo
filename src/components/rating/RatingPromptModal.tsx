@@ -16,7 +16,7 @@ import { hp, wp } from '@/global';
 import { LanguageKeys } from '@/languages';
 import { requestRateApp } from '@/lib/utils/rate-app';
 import { Colors, Fonts } from '@/res';
-import { ApiServices, flashSuccessMessage, useGlobalContext } from '@/services';
+import { ApiServices, flashSuccessMessage } from '@/services';
 import {
   markCompleted,
   markPromptShown,
@@ -28,7 +28,6 @@ const STAR_COUNT = 5;
 const RatingPromptModal = () => {
   const { t } = useTranslation();
   const { visible, trigger, hide } = useRatingStore();
-  const { currentUser } = useGlobalContext();
   const getRatingPrompt = useSettingsStore((s) => s.getRatingPrompt);
 
   const [stars, setStars] = useState(0);
