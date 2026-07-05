@@ -34,6 +34,7 @@ import {
   MembershipInfo,
   Messages,
   MyVideo,
+  Notifications,
   Otp,
   PaymentOptions,
   PhoneNumber,
@@ -140,6 +141,7 @@ function App() {
           initialRouteName={initialRouteName}
         >
           <Stack.Screen name="BottomTab" component={BottomTab} />
+          <Stack.Screen name="Notifications" component={Notifications} />
           <Stack.Screen name="ChooseLanguage" component={ChooseLanguage} />
           <Stack.Screen name="Languages" component={Languages} />
           <Stack.Screen name="AuthWelcome" component={AuthWelcome} />

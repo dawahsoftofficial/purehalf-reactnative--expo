@@ -14,6 +14,7 @@ export * from './membershipCongrats';
 export * from './membershipInfo';
 export * from './messages';
 export * from './MyVideo';
+export * from './notifications';
 export * from './otp';
 export * from './paymentOptions';
 export * from './phoneNumber';
