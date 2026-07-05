@@ -3,7 +3,9 @@ import React, { type JSX, useCallback, useEffect, useState } from 'react';
 import { Modal, StyleSheet, View } from 'react-native';
 import RNBootSplash from 'react-native-bootsplash';
 
+import RatingPromptModal from '@/components/rating/RatingPromptModal';
 import { openAppStore } from '@/lib/utils/rate-app';
+import { recordFirstOpenIfNeeded } from '@/services/rating/ratingEngagement';
 
 import { Button, Text } from '../components';
 import { hp, wp } from '../global';
@@ -75,6 +77,10 @@ const Initialization = (): JSX.Element => {
   }, [OPENED_CONVERSATION_ID, setData]);
 
   useEffect(() => {
+    recordFirstOpenIfNeeded();
+  }, []);
+
+  useEffect(() => {
     checkForMandatoryUpdate();
   }, [checkForMandatoryUpdate]);
 
@@ -137,6 +143,7 @@ const Initialization = (): JSX.Element => {
         </View>
       </Modal>
       {isLoading ? <View /> : <RootNavigation />}
+      <RatingPromptModal />
     </View>
   );
 };
