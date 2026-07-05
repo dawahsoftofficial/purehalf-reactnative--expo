@@ -26,6 +26,8 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../services';
+import { useNotificationStore } from '../stores';
+import { routeNotification } from './routeNotification';
 
 const firebaseApp = getApp();
 const messaging = getMessaging(firebaseApp);
@@ -91,6 +93,9 @@ const DisplayForegroundNotification = () => {
     setRemoteMessageData(data);
     setRemoteMessage(remoteMessage);
     showNotification();
+    if (data?.notification_type && data?.notification_type !== 'new_message') {
+      useNotificationStore.getState().increment();
+    }
   };
 
   const onLogoutPress = async () => {
@@ -197,226 +202,29 @@ const DisplayForegroundNotification = () => {
   }, []);
 
   const onNotificationPress = async () => {
-    switch (remoteMessageData?.notification_type) {
-      case 'profile_liked':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('UserProfile', {
-          userData: { id: remoteMessageData?.id },
-        });
-        break;
-      case 'profile_visited':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('UserProfile', {
-          userData: { id: remoteMessageData?.id },
-        });
-        break;
-      case 'photo_access_request':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('PrivatePhotoRequest');
-        break;
-      case 'photo_request_declined':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('PrivatePhotoRequest');
-        break;
-      case 'photo_request_approved':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('UserProfile', {
-          userData: { id: remoteMessageData?.id },
-        });
-        break;
-      case 'account_suspended':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        // navigation.reset({
-        //   index: 0,
-        //   routes: [{
-        //     name: "AccountSuspended"
-        //   }],
-        // });
-        break;
-      // case 'account_unsuspended':
-      // navigation.navigate('UserProfile', {
-      //   userData: { id: remoteMessageData?.other_user_id }
-      // })
-      // break;
-      case 'account_deletion':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        onLogoutPress();
-        break;
-      // case 'membership_upgraded':
-      // navigation.navigate('UserProfile', {
-      //   userData: { id: remoteMessageData?.other_user_id }
-      // })
-      // break;
-      // case 'membership_downgraded':
-      // navigation.navigate('UserProfile', {
-      //   userData: { id: remoteMessageData?.other_user_id }
-      // })
-      // break;
-      // case 'membership_extended':
-      //   hideNotification(() => {
-      //     setRemoteMessage(null);
-      //     setRemoteMessageData(null);
-      //   });
-      // navigation.reset({
-      //   index: 0,
-      //   routes: [{
-      //     name: "MembershipCongrats", params: {
-      //       date_of_expiry: remoteMessageData?.date_of_expiry
-      //       // amount: remoteMessageData?.price,
-      //       // title: remoteMessageData?.title
-      //     }
-      //   }],
-      // });
-      // break;
-      // case 'membership_cancelled':
-      // navigation.navigate('UserProfile', {
-      //   userData: { id: remoteMessageData?.other_user_id }
-      // })
-      // break;
-      // case 'membership_expiring':
-      // navigation.navigate('UserProfile', {
-      //   userData: { id: remoteMessageData?.other_user_id }
-      // })
-      // break;
-      // case "payment_received":
-      //   hideNotification(() => {
-      //     setRemoteMessage(null);
-      //     setRemoteMessageData(null);
-      //   });
-      //   navigation.reset({
-      //     index: 0,
-      //     routes: [{
-      //       name: "MembershipCongrats", params: {
-      //         date_of_expiry: remoteMessageData?.date_of_expiry,
-      //         amount: remoteMessageData?.amount,
-      //         title: remoteMessageData?.title
-      //       }
-      //     }],
-      //   });
-      //   break;
-      // case 'membership_renewed':
-      //   hideNotification(() => {
-      //     setRemoteMessage(null);
-      //     setRemoteMessageData(null);
-      //   });
-      //   navigation.reset({
-      //     index: 0,
-      //     routes: [
-      //       {
-      //         name: 'MembershipCongrats',
-      //         params: {
-      //           date_of_expiry: remoteMessageData?.date_of_expiry,
-      //           amount: remoteMessageData?.amount,
-      //           title: remoteMessageData?.title,
-      //         },
-      //       },
-      //     ],
-      //   });
-      //   break;
-      case 'daily_matches':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Welcome', {
-          openRecommendationModal: true,
-        });
-        break;
-      case 'new_female_signups':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Welcome');
-        break;
-      case 'new_male_signups':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Welcome');
-        break;
-      // case 'expired_discount':
-      //   hideNotification(() => {
-      //     setRemoteMessage(null);
-      //     setRemoteMessageData(null);
-      //   });
-      //   StorageManager.setString(
-      //     storageKeys.MEMBERSHIP_DISCOUNT,
-      //     new Date().getTime().toString()
-      //   );
-      //   navigation.navigate('DiscountProFeaturesPromotion');
-      //   break;
+    const type = remoteMessageData?.notification_type;
+    const data = remoteMessageData;
 
-      case 'new_message':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Messages');
-        // TODO: Shoaib - Add conversationId to the notification
-        // if (remoteMessageData?.conversationId) {
-        //   hideNotification(() => {
-        //     setRemoteMessage(null);
-        //     setRemoteMessageData(null);
-        //   });
-        //   navigation.navigate('SingleChat', {
-        //     from: 'notification',
-        //     conversationId: remoteMessageData?.conversationId,
-        //     otherUserData: remoteMessageData?.user,
-        //     message: remoteMessageData?.message
-        //   })
-        // }
-        break;
-      case 'app_update':
-        try {
-          await openAppStore();
-        } catch (error) {
-          console.error(
-            '[DisplayForegroundNotification] Open app store:',
-            error
-          );
-        }
-        break;
-      case 'profile_approved':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        break;
-      case 'profile_picture_update_required':
-        const updatedUser = {
-          ...currentUser,
-          primary_image_to_show: null,
-        };
-        updateCurrentUser(updatedUser);
-        await setData(storageKeys.USER, updatedUser);
-        navigation.navigate('ProfilePicture');
-        break;
-      default:
-        break;
-    }
+    hideNotification(() => {
+      setRemoteMessage(null);
+      setRemoteMessageData(null);
+    });
+
+    await routeNotification(navigation, type, {
+      data,
+      deps: {
+        onLogout: onLogoutPress,
+        openAppStore,
+        onProfilePictureUpdateRequired: async () => {
+          const updatedUser = {
+            ...currentUser,
+            primary_image_to_show: null,
+          };
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+        },
+      },
+    });
   };
 
   let userImage = '';
