@@ -53,6 +53,8 @@ const EndPoints = {
     `/auth/conversations/${conversationId}/messages`,
   sendConversationMessage: (conversationId: number) =>
     `/auth/conversations/${conversationId}/messages`,
+  getMessageAudioUrl: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/audio`,
   clearConversation: (conversationId: number) =>
     `/auth/conversations/${conversationId}/clear`,
   deleteConversation: (conversationId: number) =>

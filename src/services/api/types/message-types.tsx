@@ -28,6 +28,16 @@ export type MessageStatus = {
 };
 
 /**
+ * Audio attachment metadata for a voice message
+ */
+export type MessageAudio = {
+  path: string;
+  duration_seconds: number;
+  mime: string;
+  size_bytes: number;
+};
+
+/**
  * Message object (used in messages list and last message detail)
  */
 export type Message = {
@@ -39,6 +49,7 @@ export type Message = {
   sender_id: number;
   created_at: string;
   statuses: MessageStatus[];
+  audio?: MessageAudio | null;
 };
 
 /**
@@ -111,11 +122,37 @@ export type GetConversationMessagesResponse = {
 };
 
 /**
- * Send Conversation Message Request Payload
+ * File reference used to upload an audio recording as multipart form data
  */
-export type SendConversationMessagePayload = {
+export type AudioUploadFile = {
+  uri: string;
+  name: string;
+  type: string;
+};
+
+/**
+ * Send Conversation Message Request Payload (text variant)
+ */
+export type SendTextConversationMessagePayload = {
+  type?: 'text';
   body: string;
 };
+
+/**
+ * Send Conversation Message Request Payload (audio variant)
+ */
+export type SendAudioConversationMessagePayload = {
+  type: 'audio';
+  audio: AudioUploadFile;
+  duration_seconds: number;
+};
+
+/**
+ * Send Conversation Message Request Payload
+ */
+export type SendConversationMessagePayload =
+  | SendTextConversationMessagePayload
+  | SendAudioConversationMessagePayload;
 
 /**
  * Send Conversation Message Response
@@ -125,6 +162,19 @@ export type SendConversationMessageResponse = {
   error: boolean;
   code: number;
   results: Message;
+};
+
+/**
+ * Get Message Audio Url Response
+ */
+export type GetMessageAudioUrlResponse = {
+  message: string;
+  error: boolean;
+  code: number;
+  results: {
+    url: string;
+    expires_at: string;
+  };
 };
 
 /**

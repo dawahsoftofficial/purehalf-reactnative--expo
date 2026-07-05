@@ -6,6 +6,7 @@ import type {
   GetConversationMessagesResponse,
   GetConversationsListParams,
   GetConversationsListResponse,
+  GetMessageAudioUrlResponse,
   Message,
   ReportMessagePayload,
   SendConversationMessagePayload,
@@ -21,6 +22,29 @@ import type {
  * Built from scratch based on Swagger API specifications
  */
 class MessageServices {
+  /**
+   * Builds the request payload for sendConversationMessage.
+   * Text messages are sent as a plain JSON object; audio messages are sent
+   * as multipart form data so the audio file can be uploaded.
+   * @param payload - Send conversation message payload
+   * @returns JSON-serializable object for text, or FormData for audio
+   */
+  private buildSendPayload = (payload: SendConversationMessagePayload) => {
+    if (payload.type !== 'audio') {
+      return {
+        type: payload.type ?? 'text',
+        body: payload.body,
+      };
+    }
+
+    const formData = new FormData();
+    formData.append('type', 'audio');
+    formData.append('duration_seconds', String(payload.duration_seconds));
+    formData.append('audio', payload.audio as unknown as Blob);
+
+    return formData;
+  };
+
   /**
    * Starts a new conversation with a user
    * @param payload - Start conversation payload
@@ -173,7 +197,10 @@ class MessageServices {
     payload: SendConversationMessagePayload
   ) => {
     return new Promise<Message>((resolve, reject) => {
-      Api.post(EndPoints.sendConversationMessage(conversationId), payload)
+      Api.post(
+        EndPoints.sendConversationMessage(conversationId),
+        this.buildSendPayload(payload)
+      )
         .then((response) => {
           const data = response.data as SendConversationMessageResponse;
 
@@ -210,6 +237,46 @@ class MessageServices {
           reject(errorMessage);
         });
     });
+  };
+
+  /**
+   * Fetches a temporary playback URL for a voice message's audio attachment
+   * @param messageId - Message ID
+   * @returns Promise resolving to a signed url and its expiry timestamp
+   */
+  getMessageAudioUrl = (messageId: number) => {
+    return new Promise<{ url: string; expires_at: string }>(
+      (resolve, reject) => {
+        Api.get(EndPoints.getMessageAudioUrl(messageId))
+          .then((response) => {
+            const data = response.data as GetMessageAudioUrlResponse;
+
+            // Validate response structure
+            if (data?.error === true) {
+              console.error(
+                '[MessageServices.getMessageAudioUrl] API returned error:',
+                data?.message || 'Unknown error'
+              );
+              reject(data?.message || 'Failed to fetch audio URL');
+              return;
+            }
+
+            resolve(data.results);
+          })
+          .catch((error) => {
+            const errorMessage =
+              error?.response?.data?.message ||
+              error?.message ||
+              'Failed to fetch audio URL';
+            console.error('[MessageServices.getMessageAudioUrl] Error:', {
+              message: errorMessage,
+              status: error?.response?.status,
+              data: error?.response?.data,
+            });
+            reject(errorMessage);
+          });
+      }
+    );
   };
 
   /**
