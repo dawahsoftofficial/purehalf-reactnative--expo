@@ -126,6 +126,24 @@ type AppLink = {
   label: string;
 };
 
+type RatingPromptConfig = {
+  enabled: boolean;
+  minAccountAgeDays: number;
+  minSentMessages: number;
+  cooldownDays: number;
+  maxPrompts: number;
+  storeMinStars: number;
+};
+
+const RATING_PROMPT_DEFAULTS: RatingPromptConfig = {
+  enabled: true,
+  minAccountAgeDays: 7,
+  minSentMessages: 15,
+  cooldownDays: 60,
+  maxPrompts: 3,
+  storeMinStars: 4,
+};
+
 type SettingValue =
   | AuthenticationMethod
   | ChatCredits
@@ -134,6 +152,7 @@ type SettingValue =
   | BadgesAndPayments
   | DailyRecommendations
   | PackagesAndEntitlements
+  | RatingPromptConfig
   | AppLink[];
 
 type SettingItem = {
@@ -163,6 +182,7 @@ type SettingsState = {
   getDailyRecommendations: () => DailyRecommendations | null;
   getPackagesAndEntitlements: () => PackagesAndEntitlements | null;
   getAppLinks: () => AppLink[] | null;
+  getRatingPrompt: () => RatingPromptConfig;
   getSettingByKey: <T extends SettingValue>(key: string) => T | null;
 };
 
@@ -220,6 +240,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return state.getSettingByKey<AppLink[]>('app_links');
   },
 
+  getRatingPrompt: () => {
+    const state = get();
+    const value = state.getSettingByKey<RatingPromptConfig>('rating_prompt');
+    return { ...RATING_PROMPT_DEFAULTS, ...(value ?? {}) };
+  },
+
   getSettingByKey: <T extends SettingValue>(key: string) => {
     const state = get();
     if (!state.settings) return null;
@@ -244,6 +270,7 @@ export type {
   MaxChatsPerDay,
   PackagesAndEntitlements,
   PaymentWallConfig,
+  RatingPromptConfig,
   SettingItem,
   SettingsResponse,
   SubscriptionPackage,
