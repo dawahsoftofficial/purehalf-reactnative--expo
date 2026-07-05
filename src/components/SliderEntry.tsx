@@ -6,8 +6,7 @@ import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { useSettingsStore } from '@/stores';
 
@@ -32,8 +31,6 @@ const wp = (percentage: any) => {
 
 export const sliderWidth = viewportWidth;
 export const itemWidth = viewportWidth;
-
-const entryBorderRadius = 8;
 
 const SliderEntry = ({
   data,
@@ -78,6 +75,7 @@ const SliderEntry = ({
   };
 
   const Rtl = CheckRtl();
+  const displayFont = Rtl ? Fonts.APPFONT_B : Fonts.DISPLAY;
   const { currentUser, conversations } = useGlobalContext();
   const navigation: any = useNavigation();
   const [userConversation, setUserConversation] = useState({
@@ -289,19 +287,18 @@ const SliderEntry = ({
     return (
       <View style={Styles.nullSlideInnerContainer}>
         <View style={Styles.nullUserInfoContainer}>
-          <Image source={Images.recommendationIcon2} style={Styles.nullIcon} />
+          <View style={Styles.nullIconCircle}>
+            <Ionicons name="sparkles" size={wp(11)} color={Colors.primary} />
+          </View>
           <Text style={Styles.userNullTxtName}>
             {t('noRcommendedUserAvailable', {
               timeRange: getTimeRangeText(),
             })}
           </Text>
-        </View>
-        <View style={Styles.closeTextContainer}>
           <Button
             text={LanguageKeys.close}
-            buttonStyle={Styles.btnContainer}
+            buttonStyle={Styles.nullCloseBtn}
             onPress={() => onPress()}
-            textStyle={Styles.closeBtnText}
           />
         </View>
       </View>
@@ -318,15 +315,32 @@ const SliderEntry = ({
       </View>
       <View style={Styles.userDataContainer}>
         <View>
-          <Text style={Styles.userInfoTxtName}>
+          <Text
+            style={[
+              Styles.userInfoTxtName,
+              { fontFamily: displayFont, textAlign: Rtl ? 'right' : 'left' },
+            ]}
+          >
             {chatUserData?.name}, {chatUserData?.age}
           </Text>
           {chatUserData?.city && (
-            <Text style={Styles.userInfoTxt}>
-              {chatUserData?.city}
-              {chatUserData?.city && chatUserData?.country && ', '}
-              {chatUserData?.country}
-            </Text>
+            <View
+              style={[
+                Styles.locationRow,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <Ionicons
+                name="location-sharp"
+                size={wp(3.6)}
+                color={Colors.whiteRGBA90}
+              />
+              <Text style={Styles.userInfoTxt}>
+                {chatUserData?.city}
+                {chatUserData?.city && chatUserData?.country && ', '}
+                {chatUserData?.country}
+              </Text>
+            </View>
           )}
         </View>
         {matchingData?.length ? (
@@ -346,55 +360,49 @@ const SliderEntry = ({
         <View style={Styles.textContainer}>
           <Animatable.View
             ref={likeIconRef}
-            style={[
-              Styles.bottomBtnContainer,
-              { backgroundColor: Colors.color22 },
-            ]}
+            style={[Styles.actionBtn, Styles.likeBtn]}
           >
             <Ripple
               style={Styles.btnWrapper}
+              rippleColor={Colors.primary}
               onPress={() => onLikeUnlike('like')}
             >
-              <View style={Styles.iconCon}>
-                <AntDesign name="like1" size={wp(5)} color={Colors.color2} />
-              </View>
-              <Text style={[Styles.btnTxt]}>Like</Text>
+              <Ionicons name="heart" size={wp(5)} color={Colors.primary} />
+              <Text style={[Styles.btnTxt, { color: Colors.primary }]}>
+                Like
+              </Text>
             </Ripple>
           </Animatable.View>
           <Animatable.View
             ref={unLikeIconRef}
-            style={[
-              Styles.bottomBtnContainer,
-              { backgroundColor: Colors.color22 },
-            ]}
+            style={[Styles.actionBtn, Styles.passBtn]}
           >
             <Ripple
               style={Styles.btnWrapper}
+              rippleColor={Colors.surface}
               onPress={() => onLikeUnlike('unlike')}
             >
-              <View style={Styles.iconCon}>
-                <AntDesign name="dislike1" size={wp(5)} color={Colors.color2} />
-              </View>
-              <Text style={Styles.btnTxt}>Pass</Text>
+              <Ionicons name="close" size={wp(5.4)} color={Colors.surface} />
+              <Text style={[Styles.btnTxt, { color: Colors.surface }]}>
+                Pass
+              </Text>
             </Ripple>
           </Animatable.View>
           <Ripple
-            style={[
-              Styles.bottomBtnContainer,
-              { flex: 1.5, backgroundColor: Colors.color47 },
-            ]}
+            style={[Styles.actionBtn, Styles.messageBtn]}
+            rippleColor={Colors.surface}
             onPress={onMessagePress}
           >
-            <View style={Styles.iconCon}>
-              <MaterialCommunityIcons
-                name="message-processing-outline"
-                size={wp(5)}
-                color={Colors.color2}
+            <View style={Styles.btnWrapper}>
+              <Ionicons
+                name="chatbubble-ellipses"
+                size={wp(4.6)}
+                color={Colors.surface}
               />
+              <Text style={[Styles.btnTxt, { color: Colors.surface }]}>
+                Message
+              </Text>
             </View>
-            <Text style={[Styles.btnTxt, { color: Colors.color2 }]}>
-              Message
-            </Text>
           </Ripple>
         </View>
       </View>
@@ -433,30 +441,28 @@ const Styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.appBg,
+    paddingHorizontal: wp(10),
   },
-  nullIcon: {
-    marginBottom: 20,
-    width: 102,
-    height: 100,
+  nullIconCircle: {
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    backgroundColor: Colors.lavender,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hp(3),
   },
   userNullTxtName: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_R,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small3,
-    paddingLeft: wp(3),
-    paddingRight: wp(3),
-    // textShadowColor: Colors.blackRGBA70,
-    // textShadowOffset: { width: 2, height: 2 },
-    // textShadowRadius: 15,
     textAlign: 'center',
+    lineHeight: hp(3),
   },
-  closeTextContainer: {
-    position: 'absolute',
-    bottom: 0,
-    marginBottom: 10,
-    justifyContent: 'center',
-    width: '95%',
+  nullCloseBtn: {
+    marginTop: hp(3),
+    width: wp(55),
   },
   slideInnerContainer: {
     height: '100%',
@@ -473,11 +479,11 @@ const Styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowOffset: { width: 0, height: 5 },
     shadowRadius: 10,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.lavender,
   },
   imageContainer: {
     marginBottom: isIOS ? 0 : -1,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.lavender,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -485,7 +491,7 @@ const Styles = StyleSheet.create({
     bottom: 0,
   },
   imageContainerEven: {
-    backgroundColor: Colors.color1,
+    backgroundColor: Colors.lavender,
   },
   profileImageCon: {
     justifyContent: 'center',
@@ -505,22 +511,26 @@ const Styles = StyleSheet.create({
   },
   userInfoTxtName: {
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large2,
-    paddingHorizontal: wp(2.5),
+    fontSize: Typography.large1,
+    paddingHorizontal: wp(3),
     textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 15,
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 12,
     textTransform: 'capitalize',
   },
+  locationRow: {
+    alignItems: 'center',
+    gap: wp(1.2),
+    paddingHorizontal: wp(3),
+    marginTop: hp(0.3),
+  },
   userInfoTxt: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium2,
-    paddingHorizontal: wp(2.5),
+    color: Colors.whiteRGBA90,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small3,
     textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 15,
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 12,
   },
   listItemContainer: {
     flexWrap: 'wrap',
@@ -529,68 +539,55 @@ const Styles = StyleSheet.create({
     marginBottom: 10,
   },
   item: {
-    marginTop: 10,
-    paddingHorizontal: wp(1.5),
-    paddingVertical: hp(0.5),
+    marginTop: 8,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.6),
     borderRadius: 50,
-    borderColor: Colors.color2,
-    borderWidth: 1,
-    textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 4, height: 4 },
-    textShadowRadius: 15,
+    backgroundColor: Colors.whiteRGBA18,
   },
   itemValue: {
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small,
-    alignSelf: 'flex-start',
-    textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 4, height: 4 },
-    textShadowRadius: 15,
   },
   textContainer: {
-    paddingHorizontal: wp(2.5),
-    marginBottom: 10,
+    paddingHorizontal: wp(3),
     justifyContent: 'center',
     flexDirection: 'row',
-    borderBottomLeftRadius: entryBorderRadius,
-    borderBottomRightRadius: entryBorderRadius,
-    gap: 5,
-    marginTop: 10,
+    gap: wp(2.5),
+    marginTop: hp(1.4),
   },
-  btnContainer: {
-    backgroundColor: Colors.color2,
-    borderWidth: 1,
-    borderColor: Colors.greyRGBA61,
-  },
-  closeBtnText: {
-    color: Colors.blackRGBA70,
-  },
-  bottomBtnContainer: {
+  actionBtn: {
     flex: 1,
-    height: hp(5.5),
-    borderRadius: 5,
+    height: hp(6.4),
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 5,
+    overflow: 'hidden',
+  },
+  likeBtn: {
+    backgroundColor: Colors.surface,
+  },
+  passBtn: {
+    backgroundColor: Colors.whiteRGBA18,
+    borderWidth: 1,
+    borderColor: Colors.whiteRGBA18,
+  },
+  messageBtn: {
+    flex: 1.6,
+    backgroundColor: Colors.primary,
   },
   btnWrapper: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: wp(1.6),
   },
   btnTxt: {
-    alignSelf: 'center',
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small2,
-    paddingLeft: wp(2.5),
-  },
-  iconCon: {
-    justifyContent: 'center',
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
   },
 });

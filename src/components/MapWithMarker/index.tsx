@@ -72,13 +72,12 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
   return (
     <View style={Styles.container}>
       <View style={[Styles.headerWrapper, { paddingTop: top + 10 }]}>
-        <Ripple onPress={() => navigation?.goBack()}>
-          <AntDesign
-            name={'arrowleft'}
-            color={Colors.color1}
-            size={wp(6)}
-            style={{ top: 7 }}
-          />
+        <Ripple
+          style={Styles.backBtn}
+          onPress={() => navigation?.goBack()}
+          rippleColor={Colors.primary}
+        >
+          <AntDesign name={'arrowleft'} color={Colors.ink} size={wp(5.5)} />
         </Ripple>
         <GooglePlacesAutocomplete
           fetchDetails={true}
@@ -90,9 +89,11 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
             language: 'en',
           }}
           styles={{
+            container: Styles.autocompleteContainer,
             textInputContainer: Styles.textInputContainer,
             textInput: Styles.textInput,
-            description: { color: Colors.color1 },
+            listView: Styles.autocompleteListView,
+            description: { color: Colors.ink },
           }}
         />
       </View>
@@ -115,12 +116,13 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
           coordinate={position}
           draggable={dragable}
           onDragEnd={onMarkerDragEnd}
+          pinColor={Colors.primary}
         />
       </MapView>
       <Ripple style={Styles.gpsIcon} onPress={getCurrentLocation}>
         <MaterialCommunityIcons
           name="crosshairs-gps"
-          color={Colors.color22}
+          color={Colors.primary}
           size={24}
         />
       </Ripple>
@@ -138,24 +140,60 @@ const MapWithMarker: React.FC<MapWithMarkerProps> = ({
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: 'red',
+    backgroundColor: Colors.appBg,
   },
   headerWrapper: {
     flexDirection: 'row',
+    alignItems: 'center',
     width: '95%',
-    gap: 5,
+    gap: wp(2),
     position: 'absolute',
     left: wp(2.5),
     zIndex: 9,
   },
+  backBtn: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.color1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  autocompleteContainer: {
+    flex: 1,
+  },
   textInputContainer: {
-    overflow: 'hidden',
+    backgroundColor: 'transparent',
   },
   textInput: {
-    height: 40,
-    backgroundColor: '#fff',
-    borderRadius: 5,
-    paddingHorizontal: 10,
+    height: 44,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    color: Colors.ink,
+    shadowColor: Colors.color1,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  autocompleteListView: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    marginTop: 4,
   },
   map: {
     ...StyleSheet.absoluteFillObject,
@@ -168,12 +206,16 @@ const Styles = StyleSheet.create({
     left: wp(2.5),
   },
   gpsIcon: {
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.surface,
     zIndex: 9,
     position: 'absolute',
     bottom: 100,
     right: 20,
-    padding: 8,
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: Colors.color1,
     shadowOffset: {
       width: 0,

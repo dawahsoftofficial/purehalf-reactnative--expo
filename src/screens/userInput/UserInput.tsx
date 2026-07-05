@@ -15,11 +15,12 @@ import {
   GenderPicker,
   Header,
   Loader,
+  Text,
 } from '../../components';
-import { hp, wp } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
-import { Colors, Images } from '../../res';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   checkEmpty,
@@ -32,7 +33,6 @@ import {
 } from '../../services';
 import AccountActions from './components/account-actions';
 import NameInputFields from './components/name-input-fields';
-import UserInfoDisplay from './components/user-info-display';
 import UserInputHeader from './components/user-input-header';
 
 const firebaseApp = getApp();
@@ -52,6 +52,7 @@ type User = {
   gender?: string;
   phone_number?: string;
   email?: string;
+  primary_image_to_show?: string;
   [key: string]: unknown;
 };
 
@@ -282,8 +283,11 @@ function UserInput(props: UserInputProps) {
   const scrollViewContentStyle = useMemo(
     () => ({
       flexGrow: 1,
-      justifyContent: 'center' as const,
+      justifyContent: fromSettings
+        ? ('flex-start' as const)
+        : ('center' as const),
       paddingHorizontal: fromSettings ? 0 : wp(4),
+      paddingTop: fromSettings ? hp(2) : 0,
       paddingBottom: hp(2),
     }),
     [fromSettings]
@@ -307,6 +311,25 @@ function UserInput(props: UserInputProps) {
     [fromSettings]
   );
 
+  const renderIdentity = () => {
+    const u = currentUser as User;
+    const fullName = `${u?.first_name ?? ''} ${u?.last_name ?? ''}`.trim();
+    const contact = u?.phone_number || u?.email || '';
+    if (!fullName && !contact) {
+      return null;
+    }
+    return (
+      <View style={Styles.identityCon}>
+        {fullName ? (
+          <Text variant="display" style={Styles.identityName}>
+            {fullName}
+          </Text>
+        ) : null}
+        {contact ? <Text style={Styles.identityContact}>{contact}</Text> : null}
+      </View>
+    );
+  };
+
   const renderContent = () => {
     if (loader) {
       return <Loader />;
@@ -324,39 +347,37 @@ function UserInput(props: UserInputProps) {
         style={Styles.scrollView}
       >
         {!fromSettings && <UserInputHeader />}
-        <View style={Styles.inputFieldCon}>
-          <NameInputFields
-            firstName={firstName}
-            lastName={lastName}
-            onFirstNameChange={onChangeFirstName}
-            onLastNameChange={onChangeLastName}
-            fromSettings={fromSettings}
-          />
-        </View>
+        {fromSettings && renderIdentity()}
+        <View style={fromSettings ? Styles.formCard : undefined}>
+          <View style={Styles.inputFieldCon}>
+            <NameInputFields
+              firstName={firstName}
+              lastName={lastName}
+              onFirstNameChange={onChangeFirstName}
+              onLastNameChange={onChangeLastName}
+              fromSettings={fromSettings}
+            />
+          </View>
 
-        <UserInfoDisplay
-          user={currentUser as User}
-          fromSettings={fromSettings}
-        />
-
-        <View style={Styles.inputFieldCon}>
-          <DateTimePicker
-            label={LanguageKeys.dateOfBirth}
-            date={dateOfBirth}
-            icon={Images.calender}
-            mode="date"
-            selectedDate={onDateOfBirthSelection}
-            outerLabelStyle={{ color: Colors.color1 }}
-            disabled={fromSettings}
-          />
-        </View>
-        <View style={Styles.inputFieldCon}>
-          <GenderPicker
-            value={gender}
-            onSelect={onGenderChange}
-            outerLabelStyle={{ color: Colors.color1 }}
-            disabled={fromSettings}
-          />
+          <View style={Styles.inputFieldCon}>
+            <DateTimePicker
+              label={LanguageKeys.dateOfBirth}
+              date={dateOfBirth}
+              icon={Images.calender}
+              mode="date"
+              selectedDate={onDateOfBirthSelection}
+              outerLabelStyle={{ color: Colors.ink }}
+              disabled={fromSettings}
+            />
+          </View>
+          <View style={Styles.lastFieldCon}>
+            <GenderPicker
+              value={gender}
+              onSelect={onGenderChange}
+              outerLabelStyle={{ color: Colors.ink }}
+              disabled={fromSettings}
+            />
+          </View>
         </View>
       </KeyboardAwareScrollView>
     );
@@ -371,6 +392,7 @@ function UserInput(props: UserInputProps) {
           title={LanguageKeys.basicSettings}
           navigation={props.navigation}
           containerStyle={{ paddingHorizontal: 0 }}
+          titleVariant="display"
         />
         <CommonActions
           navigation={props.navigation}
@@ -421,22 +443,45 @@ export default UserInput;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.appBg,
   },
   scrollView: {
     flex: 1,
   },
+  identityCon: {
+    alignItems: 'center',
+    marginBottom: hp(3),
+  },
+  identityName: {
+    color: Colors.ink,
+    fontSize: Typography.large1,
+    textAlign: 'center',
+  },
+  identityContact: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    marginTop: hp(0.3),
+  },
+  formCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    paddingHorizontal: wp(4),
+    paddingTop: hp(3),
+    paddingBottom: hp(1),
+  },
   inputFieldCon: {
     marginBottom: hp(3),
   },
+  lastFieldCon: {
+    marginBottom: hp(0.5),
+  },
   buttonContainer: {
     paddingHorizontal: wp(4),
+    paddingTop: hp(1.5),
     paddingBottom: hp(1.5),
-    backgroundColor: Colors.color2,
-  },
-  continueBtnCon: {
-    paddingHorizontal: wp(4),
-    paddingTop: hp(2),
-    paddingBottom: hp(2),
+    backgroundColor: Colors.appBg,
   },
 });

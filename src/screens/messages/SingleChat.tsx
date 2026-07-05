@@ -13,6 +13,7 @@ import {
   VirtualizedList,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import pusherService from '@/services/pusher';
 
@@ -884,7 +885,7 @@ const SingleChat = (props: any) => {
         >
           {loader ? (
             <ActivityIndicator
-              color={Colors.theme}
+              color={Colors.primary}
               size={'small'}
               style={{ marginLeft: wp(46) }}
             />
@@ -950,7 +951,7 @@ const SingleChat = (props: any) => {
               textAlign: Rtl ? 'right' : 'left',
             }}
             placeholder={t('message')}
-            placeholderTextColor={Colors.color15}
+            placeholderTextColor={Colors.muted}
             value={inputMessage}
             onChangeText={onChangeInputMessage}
             onFocus={onInputFocus}
@@ -964,8 +965,8 @@ const SingleChat = (props: any) => {
               ...Styles.sendBtn,
               backgroundColor:
                 inputMessage.trim().length === 0
-                  ? Colors.themeRGBA50
-                  : Colors.theme,
+                  ? Colors.primaryLite
+                  : Colors.primary,
             }}
             onPress={async () => {
               const res = await onSendPress(inputMessage);
@@ -978,19 +979,16 @@ const SingleChat = (props: any) => {
             }}
             disabled={inputMessage.trim().length === 0 ? true : false}
           >
-            {Rtl ? (
-              <Image
-                source={Images.sendLeft}
-                resizeMode="contain"
-                style={[Styles.sendIcon, { marginRight: wp(0.5) }]}
-              />
-            ) : (
-              <Image
-                source={Images.sendRight}
-                resizeMode="contain"
-                style={[Styles.sendIcon, { marginLeft: wp(0.5) }]}
-              />
-            )}
+            <Ionicons
+              name="send"
+              size={wp(4.6)}
+              color={Colors.color2}
+              style={{
+                marginLeft: Rtl ? 0 : wp(0.5),
+                marginRight: Rtl ? wp(0.5) : 0,
+                transform: Rtl ? [{ scaleX: -1 }] : [],
+              }}
+            />
           </TouchableOpacity>
         </View>
       </ScrollView>

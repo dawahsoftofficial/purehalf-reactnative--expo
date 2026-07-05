@@ -99,7 +99,7 @@ const SwiperComponent = ({
           style={[Styles.closeWrapper, { top: top + hp(2) }]}
           onPress={() => onPress()}
         >
-          <AntDesign name="close" size={wp(6)} color={Colors.color1} />
+          <AntDesign name="close" size={wp(6)} color={Colors.ink} />
         </Ripple>
         {users?.length ? (
           <Carousel
@@ -137,19 +137,22 @@ const Styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color1,
+    backgroundColor: Colors.ink,
   },
   closeWrapper: {
     position: 'absolute',
-    right: hp(2),
+    right: wp(4),
     zIndex: 10,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.surface,
     borderRadius: 100,
-    padding: wp(2),
+    padding: wp(2.5),
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.color27,
+    shadowColor: Colors.blackRGBA50,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   slider: {
     // marginTop: 50,

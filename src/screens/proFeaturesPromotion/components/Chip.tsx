@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Fonts } from '@/res';
+import { Colors, Fonts } from '@/res';
 
 type ChipProps = {
   label: string;
@@ -32,21 +32,19 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    gap: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: Colors.lavender,
   },
   chipDot: { width: 7, height: 7, borderRadius: 99 },
-  dotNeutral: { backgroundColor: 'rgba(255,255,255,0.35)' },
-  dotPro: { backgroundColor: 'rgba(167,139,250,0.95)' },
-  dotSuccess: { backgroundColor: 'rgba(45,212,191,0.95)' },
-  dotWarn: { backgroundColor: 'rgba(251,191,36,0.95)' },
+  dotNeutral: { backgroundColor: Colors.primaryLite },
+  dotPro: { backgroundColor: Colors.primary },
+  dotSuccess: { backgroundColor: Colors.verified },
+  dotWarn: { backgroundColor: Colors.primaryMid },
   chipText: {
-    color: 'rgba(255,255,255,0.72)',
+    color: Colors.primary,
     fontSize: 12,
     fontFamily: Fonts.APPFONT_M,
   },

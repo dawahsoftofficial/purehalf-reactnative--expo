@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { Fonts } from '@/res';
+import { Colors, Fonts } from '@/res';
 
 const FONT = {
   regular: Fonts.APPFONT_R,
@@ -61,10 +61,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     textAlign: 'center',
     fontFamily: FONT.regular,
-    color: 'rgba(255,255,255,0.68)',
+    color: Colors.muted,
     includeFontPadding: false,
   },
   termsLink: {
     textDecorationLine: 'underline',
+    color: Colors.primary,
   },
 });

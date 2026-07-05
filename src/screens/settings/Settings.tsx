@@ -1,15 +1,20 @@
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { PermissionsAndroid } from 'react-native';
-import { Linking, Platform, ScrollView, StyleSheet } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import { requestRateApp } from '@/lib/utils/rate-app';
 import { usePremiumStore } from '@/stores';
 
-import { Container, SettingsButton, SettingsHeader } from '../../components';
+import {
+  Container,
+  SettingsButton,
+  SettingsHeader,
+  Text,
+} from '../../components';
 import LocationConsentModal from '../../components/alerts/LocationConsentModal';
-import { hp, wp } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import { useGlobalContext } from '../../services';
 
 type SettingsProps = {
@@ -19,10 +24,15 @@ type SettingsProps = {
 };
 
 type SettingsMenuItem = {
-  icon: number;
+  iconName: string;
   name: string;
   onPress: () => void;
   showCondition?: () => boolean;
+};
+
+type SettingsSection = {
+  title: string;
+  data: SettingsMenuItem[];
 };
 
 function Settings(props: SettingsProps) {
@@ -145,58 +155,73 @@ function Settings(props: SettingsProps) {
     navigate('ContactSupport');
   }, [navigate]);
 
-  const settingsMenuItems = useMemo<SettingsMenuItem[]>(
+  const settingsSections = useMemo<SettingsSection[]>(
     () => [
       {
-        icon: Images.user,
-        name: LanguageKeys.basicSettings,
-        onPress: onBasicInfoPress,
+        title: LanguageKeys.accountSection,
+        data: [
+          {
+            iconName: 'person-outline',
+            name: LanguageKeys.basicSettings,
+            onPress: onBasicInfoPress,
+          },
+          {
+            iconName: 'location-outline',
+            name: LanguageKeys.updateLocation,
+            onPress: onLocationPress,
+          },
+          {
+            iconName: 'diamond-outline',
+            name: LanguageKeys.membershipInformation,
+            onPress: onMembershipPress,
+          },
+        ],
       },
       {
-        icon: Images.mapIcon,
-        name: LanguageKeys.updateLocation,
-        onPress: onLocationPress,
+        title: LanguageKeys.privacySafetySection,
+        data: [
+          {
+            iconName: 'lock-closed-outline',
+            name: LanguageKeys.privacySettings,
+            onPress: onPrivacyPress,
+          },
+          {
+            iconName: 'images-outline',
+            name: LanguageKeys.privatePhotoBtnDes,
+            onPress: onPrivatePhotoAccessPress,
+          },
+          {
+            iconName: 'ban-outline',
+            name: LanguageKeys.blockedListControl,
+            onPress: onBlockListPress,
+          },
+          {
+            iconName: 'person-add-outline',
+            name: LanguageKeys.addWali,
+            onPress: onAddWaliPress,
+            showCondition: () => currentUser?.gender !== 'male',
+          },
+        ],
       },
       {
-        icon: Images.block,
-        name: LanguageKeys.blockedListControl,
-        onPress: onBlockListPress,
-      },
-      {
-        icon: Images.privacy,
-        name: LanguageKeys.privacySettings,
-        onPress: onPrivacyPress,
-      },
-      {
-        icon: Images.privatePhotoRequest,
-        name: LanguageKeys.privatePhotoBtnDes,
-        onPress: onPrivatePhotoAccessPress,
-      },
-      {
-        icon: Images.guardian,
-        name: LanguageKeys.addWali,
-        onPress: onAddWaliPress,
-        showCondition: () => currentUser?.gender !== 'male',
-      },
-      {
-        icon: Images.membership,
-        name: LanguageKeys.membershipInformation,
-        onPress: onMembershipPress,
-      },
-      {
-        icon: Images.starBlack,
-        name: LanguageKeys.rateApp,
-        onPress: onRateAppPress,
-      },
-      {
-        icon: Images.questionIcon,
-        name: LanguageKeys.helpAndSupport,
-        onPress: onHelpAndSupportPress,
-      },
-      {
-        icon: Images.needHelp,
-        name: LanguageKeys.needHelp,
-        onPress: onNeedHelpPress,
+        title: LanguageKeys.supportSection,
+        data: [
+          {
+            iconName: 'star-outline',
+            name: LanguageKeys.rateApp,
+            onPress: onRateAppPress,
+          },
+          {
+            iconName: 'help-circle-outline',
+            name: LanguageKeys.helpAndSupport,
+            onPress: onHelpAndSupportPress,
+          },
+          {
+            iconName: 'chatbubble-ellipses-outline',
+            name: LanguageKeys.needHelp,
+            onPress: onNeedHelpPress,
+          },
+        ],
       },
     ],
     [
@@ -214,12 +239,17 @@ function Settings(props: SettingsProps) {
     ]
   );
 
-  const visibleMenuItems = useMemo(
+  const visibleSections = useMemo(
     () =>
-      settingsMenuItems.filter(
-        (item) => !item.showCondition || item.showCondition()
-      ),
-    [settingsMenuItems]
+      settingsSections
+        .map((section) => ({
+          ...section,
+          data: section.data.filter(
+            (item) => !item.showCondition || item.showCondition()
+          ),
+        }))
+        .filter((section) => section.data.length > 0),
+    [settingsSections]
   );
 
   return (
@@ -229,14 +259,22 @@ function Settings(props: SettingsProps) {
         contentContainerStyle={Styles.innerCon}
         showsVerticalScrollIndicator={false}
       >
-        {visibleMenuItems.map((item) => (
-          <SettingsButton
-            key={item.name}
-            icon={item.icon}
-            name={item.name}
-            onPress={item.onPress}
-            accessibilityLabel={item.name}
-          />
+        {visibleSections.map((section) => (
+          <View key={section.title} style={Styles.section}>
+            <Text style={Styles.sectionLabel}>{section.title}</Text>
+            <View style={Styles.groupCard}>
+              {section.data.map((item, index) => (
+                <SettingsButton
+                  key={item.name}
+                  iconName={item.iconName}
+                  name={item.name}
+                  onPress={item.onPress}
+                  accessibilityLabel={item.name}
+                  showDivider={index < section.data.length - 1}
+                />
+              ))}
+            </View>
+          </View>
         ))}
       </ScrollView>
       <LocationConsentModal
@@ -253,9 +291,29 @@ export default memo(Settings);
 const Styles = StyleSheet.create({
   container: {
     paddingHorizontal: wp(4),
+    backgroundColor: Colors.appBg,
   },
   innerCon: {
-    paddingBottom: hp(1),
+    paddingBottom: hp(3),
     flexGrow: 1,
+  },
+  section: {
+    marginTop: hp(2.4),
+  },
+  sectionLabel: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    marginBottom: hp(1),
+    marginLeft: wp(1),
+  },
+  groupCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
   },
 });

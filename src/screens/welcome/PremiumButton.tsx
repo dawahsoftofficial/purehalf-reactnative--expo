@@ -1,12 +1,12 @@
 import { useNavigation } from '@react-navigation/native';
 import React from 'react';
-import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { LinearGradient, Text } from '../../components';
-import { Typography, wp } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 
 const PremiumButton = () => {
   const Rtl = CheckRtl();
@@ -17,45 +17,32 @@ const PremiumButton = () => {
   };
 
   return (
-    <TouchableOpacity activeOpacity={0.7} onPress={onPremiumPress}>
+    <TouchableOpacity activeOpacity={0.85} onPress={onPremiumPress}>
       <LinearGradient
+        colors={[Colors.primary, Colors.primaryMid]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={[
           Styles.container,
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
-        colors={[Colors.color47, Colors.color48]}
       >
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: wp(4),
-          }}
-        >
-          <View
-            style={{
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-              alignItems: 'center',
-            }}
-          >
-            <Image
-              source={Images.membershipWhite}
-              resizeMode="contain"
-              style={Styles.icon}
-            />
-            <View style={Styles.textCon}>
-              <Text style={Styles.heading}>
-                {LanguageKeys.goPremiumButtonHeading}
-              </Text>
-              <Text style={Styles.description}>
-                {LanguageKeys.goPremiumButtonDescription}
-              </Text>
-            </View>
-          </View>
-          <AntDesign
-            name={Rtl ? 'arrowleft' : 'arrowright'}
-            size={wp(5)}
-            color={Colors.color2}
+        <View style={Styles.iconCircle}>
+          <Ionicons name="diamond" size={wp(5)} color={Colors.surface} />
+        </View>
+        <View style={Styles.textCon}>
+          <Text style={Styles.heading} numberOfLines={1}>
+            {LanguageKeys.goPremiumButtonHeading}
+          </Text>
+          <Text style={Styles.description} numberOfLines={1}>
+            {LanguageKeys.goPremiumButtonDescription}
+          </Text>
+        </View>
+        <View style={Styles.arrowCircle}>
+          <Ionicons
+            name={Rtl ? 'chevron-back' : 'chevron-forward'}
+            size={wp(4.5)}
+            color={Colors.surface}
           />
         </View>
       </LinearGradient>
@@ -67,29 +54,43 @@ export default PremiumButton;
 
 const Styles = StyleSheet.create({
   container: {
-    height: 48,
-    borderRadius: 30,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    borderRadius: 18,
+    paddingVertical: hp(1.6),
+    paddingHorizontal: wp(4),
+    marginTop: hp(1.6),
   },
-  icon: {
-    height: 20,
-    width: 20,
+  iconCircle: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    backgroundColor: Colors.whiteRGBA18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   textCon: {
-    paddingHorizontal: wp(2),
+    flex: 1,
+    paddingHorizontal: wp(3),
   },
   heading: {
-    color: Colors.color2,
+    color: Colors.surface,
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.tiny,
+    fontSize: Typography.small2,
     includeFontPadding: false,
   },
   description: {
-    color: Colors.color2,
+    color: Colors.whiteRGBA90,
     fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.tiny,
+    fontSize: Typography.small,
     includeFontPadding: false,
+    marginTop: hp(0.3),
+  },
+  arrowCircle: {
+    width: wp(7.5),
+    height: wp(7.5),
+    borderRadius: wp(3.75),
+    backgroundColor: Colors.whiteRGBA18,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

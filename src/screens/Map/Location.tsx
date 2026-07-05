@@ -95,7 +95,14 @@ const Location = (props: any) => {
       },
       (error: any) => {
         console.log({ error });
-        // Open native location settings when GPS icon is clicked and permission not granted
+        // Geolocation error codes: 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT.
+        // A timeout is transient (GPS just couldn't get a fix in time) — let the user retry
+        // instead of bouncing them out to the system settings screen.
+        if (error?.code === 3) {
+          flashErrorMessage('Could not find your location. Please try again.');
+          return;
+        }
+        // Permission denied or location services off — direct the user to settings.
         if (Platform.OS === 'android') {
           Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
         } else {

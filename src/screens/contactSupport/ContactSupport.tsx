@@ -70,8 +70,12 @@ const ContactSupport = ({ navigation }: any) => {
   }, []);
 
   return (
-    <Container>
-      <Header title={LanguageKeys.contactSupport} navigation={navigation} />
+    <Container style={Styles.screen}>
+      <Header
+        title={LanguageKeys.contactSupport}
+        navigation={navigation}
+        titleVariant="display"
+      />
 
       <ScrollView
         contentContainerStyle={Styles.container}
@@ -82,7 +86,9 @@ const ContactSupport = ({ navigation }: any) => {
           animation={'zoomInUp'}
           duration={500}
         >
-          <Text style={Styles.heading}>{LanguageKeys.helpandsupport}</Text>
+          <Text variant="display" style={Styles.heading}>
+            {LanguageKeys.helpandsupport}
+          </Text>
           {/* <Text style={Styles.description}>
             {LanguageKeys.whatWouldYouLikeToTalkAbout}
           </Text> */}
@@ -96,8 +102,8 @@ const ContactSupport = ({ navigation }: any) => {
                 {
                   color:
                     selectedReason?.value?.length === 0
-                      ? Colors.color28
-                      : Colors.color32,
+                      ? Colors.muted
+                      : Colors.ink,
                 },
               ]}
             >
@@ -106,7 +112,7 @@ const ContactSupport = ({ navigation }: any) => {
                 : selectedReason?.value}
             </Text>
             <View style={Styles.arrowCon}>
-              <Entypo name="chevron-down" color={Colors.color1} size={25} />
+              <Entypo name="chevron-down" color={Colors.primary} size={22} />
             </View>
           </Ripple>
         </Animation>
@@ -119,7 +125,7 @@ const ContactSupport = ({ navigation }: any) => {
             style={[Styles.input, { textAlign: Rtl ? 'right' : 'left' }]}
             multiline
             placeholder={`${t(LanguageKeys.addYourComment)}`}
-            placeholderTextColor={Colors.color28}
+            placeholderTextColor={Colors.muted}
             value={comment}
             onChangeText={(text) => setComment(text)}
           />
@@ -127,21 +133,23 @@ const ContactSupport = ({ navigation }: any) => {
         <SocialLinks />
       </ScrollView>
 
-      <Ripple
-        onPress={() =>
-          Linking.openURL('https://purehalf.com/terms-conditions/')
-        }
-      >
-        <Text style={Styles.underline}>{t('termsAndConditions')}</Text>
-      </Ripple>
-
-      <Ripple
-        onPress={() => Linking.openURL('https://purehalf.com/privacy-policy/')}
-      >
-        <Text style={[Styles.underline, { marginTop: 10 }]}>
-          {t('privacyPolicy')}
-        </Text>
-      </Ripple>
+      <View style={Styles.legalRow}>
+        <Ripple
+          onPress={() =>
+            Linking.openURL('https://purehalf.com/terms-conditions/')
+          }
+        >
+          <Text style={Styles.underline}>{t('termsAndConditions')}</Text>
+        </Ripple>
+        <Text style={Styles.legalDot}>·</Text>
+        <Ripple
+          onPress={() =>
+            Linking.openURL('https://purehalf.com/privacy-policy/')
+          }
+        >
+          <Text style={Styles.underline}>{t('privacyPolicy')}</Text>
+        </Ripple>
+      </View>
 
       <Animation duration={500}>
         <Button
@@ -167,9 +175,12 @@ const ContactSupport = ({ navigation }: any) => {
 export default ContactSupport;
 
 const Styles = StyleSheet.create({
+  screen: {
+    backgroundColor: Colors.appBg,
+  },
   container: {
     flexGrow: 1,
-    paddingTop: hp(8),
+    paddingTop: hp(6),
     alignItems: 'center',
     paddingHorizontal: wp(4),
   },
@@ -177,9 +188,8 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   heading: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.large,
+    color: Colors.ink,
+    fontSize: Typography.large1,
     includeFontPadding: false,
     alignSelf: 'center',
   },
@@ -190,6 +200,7 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: Typography.small2,
+    color: Colors.muted,
     alignSelf: 'center',
   },
   description1: {
@@ -201,11 +212,12 @@ const Styles = StyleSheet.create({
     alignSelf: 'center',
   },
   reasonBtn: {
-    borderWidth: 1,
-    borderColor: Colors.color18,
-    marginTop: hp(7),
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.surface,
+    marginTop: hp(3.5),
     width: wp(85),
-    borderRadius: 8,
+    borderRadius: 14,
     height: 60,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -213,7 +225,7 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
   },
   arrowCon: {
-    backgroundColor: Colors.color51,
+    backgroundColor: Colors.lavender,
     width: 30,
     height: 30,
     borderRadius: 30 / 2,
@@ -221,22 +233,23 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   reasonBtnTxt: {
-    color: Colors.color28,
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small2,
     includeFontPadding: false,
     alignSelf: 'center',
   },
   input: {
-    borderWidth: 1,
-    borderColor: Colors.color18,
-    color: Colors.color32,
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.surface,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small2,
     marginTop: 15,
     width: wp(85),
     height: hp(25),
-    borderRadius: 8,
+    borderRadius: 14,
     paddingHorizontal: wp(3),
     paddingTop: hp(1.8),
     textAlignVertical: 'top',
@@ -246,12 +259,22 @@ const Styles = StyleSheet.create({
     marginVertical: hp(4),
   },
   underline: {
-    color: Colors.color32,
-    fontFamily: Fonts.APPFONT_R,
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_M,
     includeFontPadding: false,
     fontSize: Typography.small1,
     alignSelf: 'center',
-    marginLeft: wp(1),
     textDecorationLine: 'underline',
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(3),
+    marginTop: hp(1),
+  },
+  legalDot: {
+    color: Colors.muted,
+    fontSize: Typography.small1,
   },
 });

@@ -1,9 +1,9 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import ChatCoinIcon from '../../assets/svgs/coins/chat-coin.svg';
-import { wp } from '../../global';
+import { hp, wp } from '../../global';
 import { Colors, Fonts } from '../../res';
 import Text from '../Text';
 
@@ -24,9 +24,7 @@ function ChatCreditsBadge({
 
   const badgeContent = (
     <View style={Styles.container}>
-      <View style={Styles.iconContainer}>
-        <ChatCoinIcon width={wp(6)} height={wp(6)} />
-      </View>
+      <Ionicons name="sparkles" size={wp(4)} color={Colors.primary} />
       <Text style={Styles.creditsText}>{credits?.toString()}</Text>
     </View>
   );
@@ -50,26 +48,23 @@ export default ChatCreditsBadge;
 
 const Styles = StyleSheet.create({
   rippleContainer: {
-    borderRadius: wp(4),
+    borderRadius: 999,
     overflow: 'hidden',
   },
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    // backgroundColor: Colors.theme,
-    // paddingHorizontal: wp(3),
-    // paddingVertical: hp(0.8),
-    borderRadius: wp(4),
-  },
-  iconContainer: {
-    marginRight: wp(1.5),
-    justifyContent: 'center',
-    alignItems: 'center',
+    gap: wp(1.2),
+    backgroundColor: Colors.lavender,
+    paddingHorizontal: wp(2.8),
+    paddingVertical: hp(0.5),
+    borderRadius: 999,
   },
   creditsText: {
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
-    fontSize: wp(4),
+    fontSize: wp(3.6),
     includeFontPadding: false,
+    alignSelf: 'center',
   },
 });

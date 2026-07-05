@@ -6,9 +6,9 @@ import React, {
   useReducer,
   useState,
 } from 'react';
-import { Dimensions, FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Animation } from '../../animations';
 import { Loader, ModalLoader, Picker, Text } from '../../components';
@@ -83,6 +83,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       message: '',
     });
     const [peopleSearch, setPeopleSearch] = useState<string>('location');
+    const [activeTab, setActiveTab] = useState<'basic' | 'premium'>('basic');
     const [searchTitle, setSearchTitle] = useState('');
     const [minAge, setMinAge] = useState<any>(LanguageKeys.any);
     const [maxAge, setMaxAge] = useState<any>(LanguageKeys.any);
@@ -92,8 +93,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
     const [filtersDataList, setFiltersDataList] = useState(filtersData);
     const [listLoader, setListLoader] = useState(true);
     const { getData, storageKeys } = StorageManager;
-    const [ignore, forceUpdate] = useReducer((x) => x + 1, 0);
-    console.log('ignore', ignore);
+    const [, forceUpdate] = useReducer((x) => x + 1, 0);
     const [pickerDataLoader, setPickerDataLoader] = useState(false);
     const [picker, setPicker] = useState<any>({
       visible: false,
@@ -137,57 +137,155 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       forceUpdate();
     };
 
-    const renderRadioButtonsList = ({ item, index }: any) => {
+    const renderProPill = () => (
+      <View style={Styles.proPill}>
+        <Ionicons name="lock-closed" color={Colors.primary} size={wp(3)} />
+        <Text style={Styles.proPillTxt}>{LanguageKeys.proTag}</Text>
+      </View>
+    );
+
+    const renderClearLink = (onPress: () => void) => (
+      <Ripple onPress={onPress} hitSlop={12} style={Styles.clearLink}>
+        <Text style={Styles.clearLinkTxt}>{LanguageKeys.clear}</Text>
+      </Ripple>
+    );
+
+    const renderPremiumUpsell = () => (
+      <Ripple
+        style={{
+          ...Styles.upsell,
+          flexDirection: Rtl ? 'row-reverse' : 'row',
+        }}
+        onPress={handleLockedFilterPress}
+        rippleColor={Colors.primary}
+      >
+        <View style={Styles.upsellIcon}>
+          <Ionicons name="diamond" color={Colors.primary} size={wp(5)} />
+        </View>
+        <View style={Styles.upsellTextCol}>
+          <Text
+            style={{
+              ...Styles.upsellTitle,
+              textAlign: Rtl ? 'right' : 'left',
+            }}
+          >
+            {LanguageKeys.premiumFiltersUnlockTitle}
+          </Text>
+          <Text
+            style={{
+              ...Styles.upsellDesc,
+              textAlign: Rtl ? 'right' : 'left',
+            }}
+          >
+            {LanguageKeys.premiumFiltersUnlockDesc}
+          </Text>
+        </View>
+        <Ionicons
+          name={Rtl ? 'chevron-back' : 'chevron-forward'}
+          color={Colors.primaryMid}
+          size={wp(5)}
+        />
+      </Ripple>
+    );
+
+    const renderSegmentedTabs = () => (
+      <View
+        style={{
+          ...Styles.tabsRow,
+          flexDirection: Rtl ? 'row-reverse' : 'row',
+        }}
+      >
+        <Ripple
+          style={{
+            ...Styles.tab,
+            backgroundColor:
+              activeTab === 'basic' ? Colors.primary : Colors.lavender,
+          }}
+          onPress={() => setActiveTab('basic')}
+          rippleColor={Colors.primary}
+        >
+          <Text
+            style={{
+              ...Styles.tabTxt,
+              color: activeTab === 'basic' ? Colors.color2 : Colors.muted,
+            }}
+          >
+            {LanguageKeys.filterTabBasic}
+          </Text>
+        </Ripple>
+        <Ripple
+          style={{
+            ...Styles.tab,
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+            backgroundColor:
+              activeTab === 'premium' ? Colors.primary : Colors.lavender,
+          }}
+          onPress={() => setActiveTab('premium')}
+          rippleColor={Colors.primary}
+        >
+          <Ionicons
+            name="diamond"
+            color={activeTab === 'premium' ? Colors.color2 : Colors.primaryMid}
+            size={wp(3.6)}
+            style={{ marginHorizontal: wp(1.4) }}
+          />
+          <Text
+            style={{
+              ...Styles.tabTxt,
+              color: activeTab === 'premium' ? Colors.color2 : Colors.muted,
+            }}
+          >
+            {LanguageKeys.filterTabPremium}
+          </Text>
+        </Ripple>
+      </View>
+    );
+
+    const renderRadioButtonsList = ({ item }: any) => {
       const { title, data, id } = item;
       const { selected } = item;
       const isLocked = isFilterLocked(id);
+      const hasSelection = Object.keys(selected || {}).length !== 0;
       return (
-        <View
-          style={{
-            ...Styles.fieldItemCon,
-            // backgroundColor: index % 2 === 0 ? Colors.color31 : Colors.color2,
-            borderBottomWidth: 1,
-            borderBottomColor: Colors.color27,
-            // opacity: isLocked ? 0.6 : 1,
-            borderLeftWidth: isLocked ? 3 : 0,
-            borderLeftColor: isLocked ? Colors.theme : 'transparent',
-          }}
-        >
+        <View style={Styles.fieldItemCon}>
           <View
             style={{
+              ...Styles.fieldTitleRow,
               flexDirection: Rtl ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              marginBottom: hp(0.5),
             }}
           >
-            <Text style={Styles.fieldHeading}>{title}</Text>
-            {isLocked && (
-              <View
-                style={{
-                  marginLeft: Rtl ? 0 : wp(2),
-                  marginRight: Rtl ? wp(2) : 0,
-                }}
-              >
-                <AntDesign name="lock" color={Colors.theme} size={wp(4)} />
-              </View>
-            )}
+            <View
+              style={{
+                ...Styles.fieldTitleLeft,
+                flexDirection: Rtl ? 'row-reverse' : 'row',
+              }}
+            >
+              <Text style={Styles.fieldHeading}>{title}</Text>
+              {isLocked && renderProPill()}
+            </View>
+            {!isLocked &&
+              hasSelection &&
+              renderClearLink(onRadioClearPress.bind(null, item))}
           </View>
           <View
             style={{
-              ...Styles.radioButtonOutercon,
+              ...Styles.chipsWrap,
               flexDirection: Rtl ? 'row-reverse' : 'row',
-              opacity: isLocked ? 0.5 : 1,
+              opacity: isLocked ? 0.55 : 1,
             }}
           >
             {data &&
               data.length !== 0 &&
               data.map((element: any, index: any) => {
+                const active = element?.id === selected?.id;
                 return (
                   <Ripple
                     style={{
-                      ...Styles.radioButtonCon,
-                      marginRight: Rtl ? 0 : wp(4),
-                      marginLeft: Rtl ? wp(4) : 0,
+                      ...Styles.chip,
+                      backgroundColor: active
+                        ? Colors.primary
+                        : Colors.lavender,
+                      borderColor: active ? Colors.primary : Colors.hairline,
                     }}
                     onPress={
                       isLocked
@@ -195,36 +293,21 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
                         : onRadioPress.bind(null, data, element, item)
                     }
                     key={index}
-                    hitSlop={20}
-                    rippleColor={Colors.theme}
+                    hitSlop={6}
+                    rippleColor={active ? Colors.color2 : Colors.primary}
                   >
-                    <View
+                    <Text
                       style={{
-                        ...Styles.radioButton,
-                        backgroundColor:
-                          element?.id === selected?.id
-                            ? Colors.color1
-                            : 'transparent',
+                        ...Styles.chipTxt,
+                        color: active ? Colors.color2 : Colors.ink,
                       }}
-                    />
-                    <Text style={Styles.fieldDescription}>{element.value}</Text>
+                    >
+                      {element.value}
+                    </Text>
                   </Ripple>
                 );
               })}
           </View>
-          {!isLocked && (
-            <Ripple
-              style={{
-                ...Styles.clearButton,
-                alignSelf: Rtl ? 'flex-start' : 'flex-end',
-              }}
-              onPress={onRadioClearPress.bind(null, item)}
-              hitSlop={20}
-              rippleColor={Colors.theme}
-            >
-              <Text style={Styles.clearButtonText}>{LanguageKeys.clear}</Text>
-            </Ripple>
-          )}
         </View>
       );
     };
@@ -353,102 +436,77 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       forceUpdate();
     };
 
-    const renderDropDownList = ({ item, index }: any) => {
+    const renderDropDownList = ({ item }: any) => {
       const { title, selected, id } = item;
       const value = selected?.value ? selected.value : '';
       const isLocked = isFilterLocked(id);
+      const hasSelection = Object.keys(selected || {}).length !== 0;
       if (peopleSearch === 'location' && item?.id === 'country') return null;
       if (peopleSearch === 'country' && item?.id === 'distance') return null;
+
+      const isNumber = typeof value === 'number';
+      const hasValue = isNumber ? true : !!(value && value.length !== 0);
+      const displayValue = isNumber
+        ? value === 1
+          ? LanguageKeys.yes
+          : value === 0
+            ? LanguageKeys.no
+            : JSON.stringify(value)
+        : hasValue
+          ? value
+          : LanguageKeys.notYetProvided;
+
       return (
         <Animation
           style={{
             ...Styles.fieldItemCon,
-            backgroundColor:
-              isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
-                ? Colors.color39 + '20'
-                : Colors.color2,
-            borderBottomWidth: 1,
-            borderBottomColor: Colors.color27,
-            borderTopWidth:
-              isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
-                ? 3
-                : 0,
-            borderTopColor:
-              isLocked || isPremiumFilter(id, currentUser?.gender === 'male')
-                ? Colors.color37
-                : 'transparent',
+            backgroundColor: isLocked ? Colors.primaryRGBA12 : Colors.surface,
           }}
           animation="fadeIn"
-          duration={1000}
+          duration={600}
         >
           <View
             style={{
+              ...Styles.fieldTitleRow,
               flexDirection: Rtl ? 'row-reverse' : 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              marginBottom: hp(0.5),
             }}
           >
-            <Text style={Styles.fieldHeading}>{title}</Text>
-            {isLocked && (
-              <Ripple
-                style={Styles.upgradeToPremiumButton}
-                onPress={handleLockedFilterPress}
-                hitSlop={10}
-                rippleColor={Colors.theme}
-              >
-                <Text style={Styles.upgradeToPremiumText}>
-                  Upgrade to Premium
-                </Text>
-              </Ripple>
-            )}
+            <View
+              style={{
+                ...Styles.fieldTitleLeft,
+                flexDirection: Rtl ? 'row-reverse' : 'row',
+              }}
+            >
+              <Text style={Styles.fieldHeading}>{title}</Text>
+              {isLocked && renderProPill()}
+            </View>
+            {!isLocked &&
+              hasSelection &&
+              renderClearLink(onPickerClearPress.bind(null, item))}
           </View>
           <Ripple
             style={{
-              ...Styles.dropDownBtn,
-              alignSelf: Rtl ? 'flex-end' : 'flex-start',
-              opacity: isLocked ? 0.5 : 1,
+              ...Styles.boxedField,
+              flexDirection: Rtl ? 'row-reverse' : 'row',
+              opacity: isLocked ? 0.55 : 1,
             }}
             onPress={
               isLocked ? handleLockedFilterPress : openPicker.bind(null, item)
             }
-            hitSlop={20}
-            rippleColor={Colors.theme}
-            disabled={
-              (peopleSearch === 'location' && item?.id === 'country') ||
-              (peopleSearch === 'country' && item?.id === 'distance')
-            }
+            hitSlop={6}
+            rippleColor={Colors.primary}
           >
             <Text
-              style={{ ...Styles.fieldDescription, ...Styles.dropDownBtnTxt }}
-            >
-              {typeof value === 'number'
-                ? value === 1
-                  ? 'Yes'
-                  : value === 0
-                    ? 'No'
-                    : JSON.stringify(value)
-                : value && value.length !== 0
-                  ? value
-                  : LanguageKeys.notYetProvided}
-            </Text>
-            <View style={Styles.arrowBtn}>
-              <AntDesign name="down" color={Colors.color1} size={wp(3)} />
-            </View>
-          </Ripple>
-          {!isLocked && (
-            <Ripple
               style={{
-                ...Styles.clearButton,
-                alignSelf: Rtl ? 'flex-start' : 'flex-end',
+                ...Styles.boxedValue,
+                color: hasValue ? Colors.ink : Colors.muted,
+                textAlign: Rtl ? 'right' : 'left',
               }}
-              onPress={onPickerClearPress.bind(null, item)}
-              hitSlop={20}
-              rippleColor={Colors.theme}
             >
-              <Text style={Styles.clearButtonText}>{LanguageKeys.clear}</Text>
-            </Ripple>
-          )}
+              {displayValue}
+            </Text>
+            <Ionicons name="chevron-down" color={Colors.muted} size={wp(4.5)} />
+          </Ripple>
         </Animation>
       );
     };
@@ -609,9 +667,6 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
         (item?.id === 'doYouHaveABeard' || // Beard
           item?.id === 'is_wali'); // With Wali (already hidden)
 
-      // Hide hijab for males (existing logic)
-      const hideHijabForMale = item?.id === 'hijab-0' && isMale;
-
       const hideItem = hideForFemale || hideForMale;
       return hideItem
         ? null
@@ -620,62 +675,98 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
           : renderRadioButtonsList({ item, index });
     };
 
+    const isMale = currentUser?.gender !== 'female';
+    const premiumIds = isMale
+      ? MALE_PREMIUM_FILTER_IDS
+      : FEMALE_PREMIUM_FILTER_IDS;
+    const basicData = filtersDataList.filter(
+      (f: any) => !premiumIds.includes(f.id)
+    );
+    const premiumData = filtersDataList.filter((f: any) =>
+      premiumIds.includes(f.id)
+    );
+    const anySelected = hasFiltersSelected();
+
     return (
       <View style={Styles.container}>
-        <Text style={Styles.heading}>{LanguageKeys.refineYourSearch}</Text>
-        <Ripple
-          style={{
-            ...Styles.clearAllButton,
-            alignSelf: Rtl ? 'flex-start' : 'flex-end',
-          }}
-          hitSlop={20}
-          onPress={onClearAllPress}
-          rippleColor={Colors.theme}
-        >
-          <Text style={Styles.clearButtonText}>{LanguageKeys.clearAll}</Text>
-        </Ripple>
-        <View style={Styles.innerContainer}>
-          <ModalLoader
-            visible={modalLoader.visible}
-            useModalLayout={true}
-            message={modalLoader.message}
-          />
-          <AgeRange
-            minAge={minAge}
-            maxAge={maxAge}
-            onMinAgeChange={onMinAgeChange}
-            onMaxAgeChange={onMaxAgeChange}
-            onClearPress={onAgeClearPress}
-          />
-          {listLoader ? (
-            <Loader />
-          ) : (
-            <FlatList
-              data={filtersDataList}
-              renderItem={renderList}
-              scrollEnabled={false}
-            />
-          )}
+        {renderSegmentedTabs()}
+        {anySelected && (
+          <View
+            style={{
+              ...Styles.clearAllRow,
+              alignItems: Rtl ? 'flex-start' : 'flex-end',
+            }}
+          >
+            <Ripple
+              style={Styles.clearAllLink}
+              hitSlop={12}
+              onPress={onClearAllPress}
+              rippleColor={Colors.primary}
+            >
+              <Text style={Styles.clearAllTxt}>{LanguageKeys.clearAll}</Text>
+            </Ripple>
+          </View>
+        )}
 
-          <Picker
-            visible={picker.visible}
-            onClose={onClosePicker}
-            onPress={onPickerItemPress}
-            data={picker.data}
-            headerTitle={picker.headerTitle}
-            loader={pickerDataLoader}
-          />
-          <SaveAndSearchAlert
-            visible={saveAndSearchAlertVisble}
-            onClose={closeSaveAndSearchAlert}
-            onPress={onSaveAndSearchAlertPress}
-          />
-          <ConfirmAlert
-            visible={confirmAlertVisible}
-            onClose={closeConfirmAlert}
-            onPress={onConfirmSaveandSearchAlertPress}
-          />
-        </View>
+        {activeTab === 'basic' ? (
+          <View style={Styles.card}>
+            <AgeRange
+              minAge={minAge}
+              maxAge={maxAge}
+              onMinAgeChange={onMinAgeChange}
+              onMaxAgeChange={onMaxAgeChange}
+              onClearPress={onAgeClearPress}
+            />
+            {listLoader ? (
+              <Loader />
+            ) : (
+              <FlatList
+                data={basicData}
+                renderItem={renderList}
+                scrollEnabled={false}
+              />
+            )}
+          </View>
+        ) : (
+          <>
+            {!premium && renderPremiumUpsell()}
+            <View style={Styles.card}>
+              {listLoader ? (
+                <Loader />
+              ) : (
+                <FlatList
+                  data={premiumData}
+                  renderItem={renderList}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
+          </>
+        )}
+
+        <ModalLoader
+          visible={modalLoader.visible}
+          useModalLayout={true}
+          message={modalLoader.message}
+        />
+        <Picker
+          visible={picker.visible}
+          onClose={onClosePicker}
+          onPress={onPickerItemPress}
+          data={picker.data}
+          headerTitle={picker.headerTitle}
+          loader={pickerDataLoader}
+        />
+        <SaveAndSearchAlert
+          visible={saveAndSearchAlertVisble}
+          onClose={closeSaveAndSearchAlert}
+          onPress={onSaveAndSearchAlertPress}
+        />
+        <ConfirmAlert
+          visible={confirmAlertVisible}
+          onClose={closeConfirmAlert}
+          onPress={onConfirmSaveandSearchAlertPress}
+        />
       </View>
     );
   }
@@ -683,117 +774,161 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
 
 export default RefineSearch;
 
-const { width } = Dimensions.get('window');
-
 const Styles = StyleSheet.create({
   container: {
-    marginTop: hp(4),
+    marginTop: hp(2.4),
   },
-  innerContainer: {
-    backgroundColor: Colors.color2,
-    borderWidth: 0.5,
-    borderColor: Colors.color27,
-    overflow: 'hidden',
-    borderRadius: 8,
+  tabsRow: {
+    flexDirection: 'row',
+    gap: wp(2.5),
+    marginBottom: hp(1.2),
   },
-  heading: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
+  tab: {
+    flex: 1,
+    height: hp(5),
+    borderRadius: 999,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    includeFontPadding: false,
+    alignSelf: 'center',
+  },
+  clearAllRow: {
+    marginBottom: hp(1),
+  },
+  upsell: {
+    alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: 16,
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(1.6),
+    marginBottom: hp(1.4),
+    gap: wp(3),
+  },
+  upsellIcon: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  upsellTextCol: {
+    flex: 1,
+  },
+  upsellTitle: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small2,
-    lineHeight: wp(5),
-    marginBottom: hp(1.5),
+    includeFontPadding: false,
+  },
+  upsellDesc: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    includeFontPadding: false,
+    marginTop: hp(0.3),
+  },
+  clearAllLink: {
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.4),
+  },
+  clearAllTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    color: Colors.primaryMid,
+    includeFontPadding: false,
+  },
+  card: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
+    borderRadius: 16,
   },
   fieldItemCon: {
-    paddingVertical: hp(2),
+    paddingVertical: hp(1.8),
     paddingHorizontal: wp(4),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+  },
+  fieldTitleRow: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  fieldTitleLeft: {
+    alignItems: 'center',
+    flexShrink: 1,
   },
   fieldHeading: {
-    color: Colors.color1,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  proPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(0.3),
+    marginHorizontal: wp(2),
+  },
+  proPillTxt: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.tiny,
+    letterSpacing: 0.5,
+    includeFontPadding: false,
+    marginLeft: wp(1),
+  },
+  clearLink: {
+    paddingHorizontal: wp(1),
+  },
+  clearLinkTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    color: Colors.primaryMid,
+    includeFontPadding: false,
+  },
+  chipsWrap: {
+    flexWrap: 'wrap',
+    marginTop: hp(1.2),
+    gap: wp(2),
+  },
+  chip: {
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(0.9),
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  chipTxt: {
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
     includeFontPadding: false,
   },
-  radioButtonOutercon: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  radioButtonCon: {
-    flexDirection: 'row',
+  boxedField: {
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: wp(3.5),
+    height: hp(6),
+    marginTop: hp(1.1),
     alignItems: 'center',
-    marginTop: hp(1),
+    justifyContent: 'space-between',
   },
-  radioButton: {
-    width: width * 0.035,
-    height: width * 1 * 0.035,
-    borderRadius: (width * 1 * 0.035) / 2,
-    borderWidth: 0.7,
-  },
-  fieldDescription: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.small1,
-    lineHeight: wp(4.8),
-    alignSelf: 'center',
+  boxedValue: {
+    flex: 1,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small3,
+    includeFontPadding: false,
     marginHorizontal: wp(1),
-  },
-  clearButton: {
-    position: 'absolute',
-    top: '35%',
-    paddingHorizontal: wp(3),
-  },
-  clearButtonText: {
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.tiny2,
-    color: Colors.color4,
-    includeFontPadding: false,
-  },
-  dropDownBtn: {
-    flexDirection: 'row',
-    alignSelf: 'flex-start',
-    marginTop: hp(1),
-    alignItems: 'center',
-    paddingHorizontal: wp(2),
-    backgroundColor: Colors.color2,
-    paddingVertical: hp(0.2),
-    borderRadius: 4,
-
-    shadowColor: Colors.color1,
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.18,
-    shadowRadius: 1.0,
-    elevation: 1,
-    borderWidth: 0.4,
-    borderColor: Colors.color7,
-  },
-  dropDownBtnTxt: {
-    alignSelf: 'flex-start',
-    marginHorizontal: 0,
-  },
-  arrowBtn: {
-    marginLeft: wp(2),
-  },
-  searchBtn: {
-    backgroundColor: Colors.color1,
-    marginHorizontal: wp(4),
-  },
-  clearAllButton: {
-    position: 'absolute',
-    top: hp(0.2),
-  },
-  upgradeToPremiumButton: {
-    backgroundColor: Colors.color37,
-    paddingHorizontal: wp(2.5),
-    paddingVertical: hp(0.5),
-    borderRadius: 2,
-    alignSelf: 'flex-end',
-  },
-  upgradeToPremiumText: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.tiny,
-    includeFontPadding: false,
+    alignSelf: 'center',
   },
 });

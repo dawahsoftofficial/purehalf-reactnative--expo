@@ -21,8 +21,6 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
-import EditInfoCardModal from './EditInfoCardModal';
-import EditInterestCardModal from './EditInterestCardModal';
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
@@ -35,6 +33,13 @@ import {
   ScreenLoader,
   TaglineSection,
 } from './profile-components';
+import {
+  computeCompletion,
+  DetailSectionList,
+  type GroupMeta,
+  InterestsPreview,
+  SectionLabel,
+} from './profile-hub';
 import Styles from './Styles';
 
 type LoaderState = { visible: boolean; message: string };
@@ -83,17 +88,6 @@ type ProfileProps = {
   fromUserProfile?: boolean;
 };
 
-type EditPayload = {
-  data: unknown;
-  from: string;
-};
-
-type EditCardState = {
-  visible: boolean;
-  data: any;
-  from: string;
-};
-
 const Profile = ({
   navigation,
   route,
@@ -125,18 +119,6 @@ const Profile = ({
   });
 
   const { getData, storageKeys, setData } = StorageManager;
-
-  const [editInfoCard, setEditInfoCard] = useState<EditCardState>({
-    visible: false,
-    data: [],
-    from: '',
-  });
-
-  const [editInterestCard, setEditInterestCard] = useState<EditCardState>({
-    visible: false,
-    data: [],
-    from: '',
-  });
 
   const [userData, setUserData] = useState<User>(
     propUserData ? propUserData : currentUser
@@ -260,37 +242,19 @@ const Profile = ({
     });
   }, []);
 
-  const closeEditInfoCard = useCallback(() => {
-    setEditInfoCard({
-      visible: false,
-      data: [],
-      from: '',
-    });
-  }, []);
+  const onOpenGroup = useCallback(
+    (group: GroupMeta) => {
+      navigation.navigate('EditProfileGroup', {
+        title: group.title,
+        data: categoriesData?.[group.key] ?? [],
+      });
+    },
+    [navigation, categoriesData]
+  );
 
-  const onInfoCardEdit = ({ data, from }: EditPayload) => {
-    setEditInfoCard({
-      visible: true,
-      data: data,
-      from: from,
-    });
-  };
-
-  const closeEditInterestCard = useCallback(() => {
-    setEditInterestCard({
-      visible: false,
-      data: [],
-      from: '',
-    });
-  }, []);
-
-  const onInterestCardEdit = ({ data, from }: EditPayload) => {
-    setEditInterestCard({
-      visible: true,
-      data: data,
-      from: from,
-    });
-  };
+  const onEditInterests = useCallback(() => {
+    navigation.navigate('EditInterests', { data: interestAndHobbies });
+  }, [navigation, interestAndHobbies]);
 
   const getAttribute = useCallback(
     (Data: any, nextUserData: User) => {
@@ -577,6 +541,23 @@ const Profile = ({
             onBlockPress={onBlockPress}
             onLikeUnlikePress={onLikeUnlikePress}
             isBlockedYou={isBlockedYou}
+            profileStrength={
+              isOwnProfile
+                ? computeCompletion({
+                    categoriesData,
+                    interests: interestAndHobbies,
+                    tagline: userData?.detail?.tagline,
+                    gender: userData?.detail?.gender ?? userData?.gender,
+                  })
+                : undefined
+            }
+            tagline={userData?.detail?.tagline}
+            taglineEditing={tagLineInputVisible}
+            taglineInput={tagLineInput}
+            onTaglineChange={onChangeTagLine}
+            onTaglineSubmit={onTagLineSubmit}
+            onTaglineEditPress={showTagLineInput}
+            onTaglineCancel={hideTagLineInput}
           />
           {isBlockedYou ? (
             <Text style={Styles.userNotAvailDes}>
@@ -584,23 +565,40 @@ const Profile = ({
             </Text>
           ) : (
             <>
-              <TaglineSection
-                rtl={Rtl}
-                tagline={userData?.detail?.tagline}
-                isEditing={tagLineInputVisible}
-                inputValue={tagLineInput}
-                onChange={onChangeTagLine}
-                onSubmit={onTagLineSubmit}
-                onEditPress={showTagLineInput}
-                onCancel={hideTagLineInput}
-                isOwnProfile={isOwnProfile}
-              />
+              {!isOwnProfile && (
+                <TaglineSection
+                  rtl={Rtl}
+                  tagline={userData?.detail?.tagline}
+                  isEditing={tagLineInputVisible}
+                  inputValue={tagLineInput}
+                  onChange={onChangeTagLine}
+                  onSubmit={onTagLineSubmit}
+                  onEditPress={showTagLineInput}
+                  onCancel={hideTagLineInput}
+                  isOwnProfile={isOwnProfile}
+                />
+              )}
               {dataLoader ? (
                 <Loader />
               ) : (
                 <View>
                   {error ? (
                     <ErrorRetry onRetry={fetchData} />
+                  ) : isOwnProfile ? (
+                    <>
+                      <SectionLabel label={LanguageKeys.aboutSectionLabel} />
+                      <InterestsPreview
+                        interests={interestAndHobbies}
+                        onEdit={onEditInterests}
+                      />
+                      <SectionLabel label={LanguageKeys.profileDetailsLabel} />
+                      <DetailSectionList
+                        categoriesData={categoriesData}
+                        gender={userData?.detail?.gender ?? userData?.gender}
+                        onOpenGroup={onOpenGroup}
+                      />
+                      <View style={{ height: 28 }} />
+                    </>
                   ) : (
                     <>
                       <InterestAndHobbyCardStatic
@@ -612,53 +610,36 @@ const Profile = ({
                       <InterestAndHobbyCard
                         data={interestAndHobbies}
                         headerHeading={LanguageKeys.myInterestAndHobbies}
-                        onEditPress={onInterestCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.appearanceAndHealth}
                         headerHeading={LanguageKeys.appearanceHealth}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.familyBackground}
                         headerHeading={LanguageKeys.familyBackground}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.lifeStyle}
                         headerHeading={LanguageKeys.lifeStyle}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.personalityRequirements}
                         headerHeading={LanguageKeys.personalityRequirements}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
-                      {/* {(userData?.gender === 'female' ||
-                        userData?.detail?.gender === 'female') && (
-                        <InfoCard
-                          data={categoriesData?.waliInformation}
-                          headerHeading={LanguageKeys.waliInformation}
-                          onEditPress={onInfoCardEdit}
-                          fromUserProfile={fromUserProfile}
-                          from={'waliInformation'}
-                        />
-                      )} */}
                       <InfoCard
                         data={categoriesData?.islamicValues}
                         headerHeading={LanguageKeys.islamicValues}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.futurePlan}
                         headerHeading={LanguageKeys.futurePlans}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                         userData={{ gender: userData?.detail?.gender }}
                       />
@@ -669,17 +650,6 @@ const Profile = ({
             </>
           )}
         </ContentScroll>
-
-        <EditInfoCardModal
-          fetchData={fetchData}
-          details={editInfoCard}
-          onClose={closeEditInfoCard}
-        />
-        <EditInterestCardModal
-          fetchData={fetchData}
-          details={editInterestCard}
-          onClose={closeEditInterestCard}
-        />
       </View>
 
       <BlockPickerSheet

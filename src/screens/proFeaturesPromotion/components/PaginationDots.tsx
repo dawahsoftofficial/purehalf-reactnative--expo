@@ -2,6 +2,8 @@ import React from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 import { type PurchasesPackage } from 'react-native-purchases';
 
+import { Colors } from '@/res';
+
 type PaginationDotsProps = {
   packages: PurchasesPackage[];
   currentIndex: number;
@@ -66,6 +68,6 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 99,
-    backgroundColor: 'rgba(255,255,255,0.65)',
+    backgroundColor: Colors.primary,
   },
 });

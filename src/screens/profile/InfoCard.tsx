@@ -43,24 +43,43 @@ const InfoCard = ({
     [userData?.gender]
   );
 
+  const hasRealValue = useCallback((item: InfoItem) => {
+    const value = item?.selected?.value;
+    if (typeof value === 'number') {
+      return true;
+    }
+    if (typeof value === 'string' && value.length !== 0) {
+      return true;
+    }
+    // disabilities still renders a meaningful "None" when empty
+    return item?.title === 'disabilities';
+  }, []);
+
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const id = item?.id;
-      if (!id) {
-        return true;
+      if (id) {
+        if (fromUserProfile) {
+          if (
+            (id === 'doYouHaveABeard' && isMale) ||
+            (id === 'hijab-0' && !isMale)
+          ) {
+            return false;
+          }
+        } else if (
+          (id === 'doYouHaveABeard' && !isMale) ||
+          (id === 'hijab-0' && isMale)
+        ) {
+          return false;
+        }
       }
-      if (fromUserProfile) {
-        return !(
-          (id === 'doYouHaveABeard' && isMale) ||
-          (id === 'hijab-0' && !isMale)
-        );
+      // On another member's profile, hide fields they haven't filled in.
+      if (fromUserProfile && !hasRealValue(item)) {
+        return false;
       }
-      return !(
-        (id === 'doYouHaveABeard' && !isMale) ||
-        (id === 'hijab-0' && isMale)
-      );
+      return true;
     });
-  }, [data, fromUserProfile, isMale]);
+  }, [data, fromUserProfile, isMale, hasRealValue]);
 
   const keyExtractor = useCallback(
     (item: InfoItem, index: number) => `${item?.id ?? index}-${index}`,
@@ -68,7 +87,11 @@ const InfoCard = ({
   );
 
   const renderHeader = useMemo(
-    () => <Text style={Styles.headerTxt}>{headerHeading}</Text>,
+    () => (
+      <Text variant="display" style={Styles.headerTxt}>
+        {headerHeading}
+      </Text>
+    ),
     [headerHeading]
   );
 
@@ -97,6 +120,7 @@ const InfoCard = ({
             ? LanguageKeys.none
             : LanguageKeys.notYetProvided;
       const title = item.title ?? '';
+      const isLast = index === filteredData.length - 1;
 
       return (
         <View
@@ -104,7 +128,7 @@ const InfoCard = ({
             Styles.listItemContainer,
             {
               flexDirection: Rtl ? 'row-reverse' : 'row',
-              backgroundColor: index % 2 === 0 ? Colors.color31 : Colors.color2,
+              borderBottomWidth: isLast ? 0 : 1,
             },
           ]}
         >
@@ -121,7 +145,7 @@ const InfoCard = ({
         </View>
       );
     },
-    [Rtl]
+    [Rtl, filteredData.length]
   );
 
   if (data.length === 0) {
@@ -156,6 +180,18 @@ const InfoCard = ({
       >
         {from === 'waliInformation' && fromUserProfile && data.length !== 0 ? (
           <Text style={Styles.waliInfoDes}>{LanguageKeys.moderatedByWali}</Text>
+        ) : fromUserProfile && filteredData.length === 0 ? (
+          <View
+            style={{
+              ...Styles.emptyRow,
+              flexDirection: Rtl ? 'row-reverse' : 'row',
+            }}
+          >
+            <View style={Styles.emptyChip}>
+              <Feather name="inbox" color={Colors.primary} size={wp(4)} />
+            </View>
+            <Text style={Styles.emptyTxt}>{LanguageKeys.notYetProvided}</Text>
+          </View>
         ) : (
           <ScrollView horizontal scrollEnabled={false}>
             <FlatList
@@ -176,12 +212,12 @@ export default React.memo(InfoCard);
 const Styles = StyleSheet.create({
   container: {
     marginHorizontal: wp(4),
-    backgroundColor: Colors.color2,
-    paddingTop: hp(1.5),
-    borderRadius: 10,
-    marginBottom: hp(4.5),
-    borderWidth: 0.5,
-    borderColor: Colors.color27,
+    backgroundColor: Colors.surface,
+    paddingTop: hp(1.8),
+    borderRadius: 16,
+    marginBottom: hp(2),
+    borderWidth: 1,
+    borderColor: Colors.hairline,
     overflow: 'hidden',
   },
   headerContainer: {
@@ -192,9 +228,8 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(1),
   },
   headerTxt: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
+    color: Colors.ink,
+    fontSize: Typography.medium1,
     marginBottom: Constants.fontFamilyMarginBottom,
   },
   listContainer: {
@@ -206,23 +241,45 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: wp(92),
-    paddingVertical: hp(1),
-    marginBottom: Constants.fontFamilyMarginBottom,
+    paddingVertical: hp(1.3),
+    borderBottomColor: Colors.hairline,
+  },
+  emptyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(0.6),
+  },
+  emptyChip: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyTxt: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+    alignSelf: 'center',
   },
   itemHeading: {
     width: wp(42),
-    color: Colors.color12,
-    fontFamily: Fonts.APPFONT_SB,
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
   },
   itemValue: {
     width: wp(38),
-    color: Colors.color11,
-    fontFamily: Fonts.APPFONT_R,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
   },
   waliInfoDes: {
-    color: Colors.color11,
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small3,
     includeFontPadding: false,

@@ -122,7 +122,7 @@ const RequestedList = (props: any) => {
 
   const RenderSignleButton = ({ name, onPress }: any) => (
     <Ripple style={Styles.buttonCon} onPress={onPress}>
-      <AntDesign name={name} color={Colors.color1} size={wp(5)} />
+      <AntDesign name={name} color={Colors.primary} size={wp(5)} />
     </Ripple>
   );
   const RenderButtons = ({ item }: any) =>
@@ -169,41 +169,38 @@ const RequestedList = (props: any) => {
   const renderList = ({ item }: any) => {
     return (
       <TouchableOpacity
-        style={Styles.itemCon}
+        style={[Styles.itemCon, { flexDirection: Rtl ? 'row-reverse' : 'row' }]}
         activeOpacity={Constants.btnActiveOpacity}
         onPress={onItemPress.bind(null, item)}
       >
-        {item?.primary_image_to_show ? (
-          <View style={Styles.itemImage}>
-            <Image
-              source={{ uri: item.primary_image_to_show }}
-              resizeMode="cover"
-              style={Styles.itemImage}
-              onLoadStart={onImageLoadStart}
-              onLoadEnd={onImageLoadEnd}
-            />
-            {imageLoader && (
-              <ActivityIndicator
-                color={Colors.theme}
-                size={wp(5)}
-                style={{ position: 'absolute' }}
+        <View style={Styles.avatar}>
+          {item?.primary_image_to_show ? (
+            <>
+              <Image
+                source={{ uri: item.primary_image_to_show }}
+                resizeMode="cover"
+                style={Styles.avatarImg}
+                onLoadStart={onImageLoadStart}
+                onLoadEnd={onImageLoadEnd}
               />
-            )}
-          </View>
-        ) : (
-          <View style={Styles.itemImage}>
-            <Image source={Images.user} resizeMode="contain" />
-          </View>
-        )}
-        <View
-          style={{
-            ...Styles.itemContentCon,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-          }}
-        >
-          <RenderItemContent item={item} />
-          <RenderButtons item={item} />
+              {imageLoader && (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size={wp(4)}
+                  style={Styles.avatarLoader}
+                />
+              )}
+            </>
+          ) : (
+            <Image
+              source={Images.user}
+              resizeMode="contain"
+              style={Styles.avatarPlaceholder}
+            />
+          )}
         </View>
+        <RenderItemContent item={item} />
+        <RenderButtons item={item} />
       </TouchableOpacity>
     );
   };
@@ -335,6 +332,7 @@ const RequestedList = (props: any) => {
 export default RequestedList;
 
 const { width } = Dimensions.get('window');
+const AVATAR = width * 0.14;
 const Styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: wp(4),
@@ -342,41 +340,51 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(15),
   },
   itemCon: {
-    borderTopRightRadius: 4,
-    borderTopLeftRadius: 4,
-    marginBottom: hp(4),
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    padding: wp(3),
+    marginBottom: hp(1.4),
   },
-  itemImage: {
-    width: '100%',
-    height: width * 1 * 0.5,
-    borderTopRightRadius: 4,
-    borderTopLeftRadius: 4,
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color18,
   },
-  itemContentCon: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: hp(1),
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: AVATAR * 0.5,
+    height: AVATAR * 0.5,
+    opacity: 0.5,
+  },
+  avatarLoader: {
+    position: 'absolute',
   },
   itemInnerCon: {
-    width: wp(55),
+    flex: 1,
+    marginHorizontal: wp(3),
   },
   itemName: {
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium,
-    color: Colors.color1,
+    color: Colors.ink,
     includeFontPadding: false,
-    // maxWidth: wp(45),
   },
   itemLocation: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.medium,
-    color: Colors.color1,
-    lineHeight: wp(5.5),
-    maxWidth: wp(45),
+    fontSize: Typography.small1,
+    color: Colors.muted,
+    marginTop: hp(0.2),
   },
   requestedOnView: {
     flexDirection: 'row',
@@ -392,17 +400,15 @@ const Styles = StyleSheet.create({
     marginHorizontal: wp(1),
   },
   buttonsOuterCon: {
-    width: wp(20),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: hp(1),
+    gap: wp(2),
   },
   buttonCon: {
     width: width * 0.09,
     height: width * 1 * 0.09,
     borderRadius: (width * 1 * 0.09) / 2,
-    backgroundColor: Colors.color17,
+    backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -416,7 +422,7 @@ const Styles = StyleSheet.create({
     opacity: 0.2,
   },
   emptyListText: {
-    color: Colors.color22,
+    color: Colors.muted,
     includeFontPadding: false,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.medium,
@@ -424,6 +430,7 @@ const Styles = StyleSheet.create({
     marginTop: 30,
     paddingHorizontal: wp(10),
   },
+
   loadMoreBtn: {
     alignSelf: 'center',
     width: wp(45),

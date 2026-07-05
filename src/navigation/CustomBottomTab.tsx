@@ -135,7 +135,14 @@ const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
               style={Styles.button}
             >
               {icon}
-              <Text style={Styles.iconText}>{iconText}</Text>
+              <Text
+                style={[
+                  Styles.iconText,
+                  { color: isFocused ? Colors.primary : Colors.muted },
+                ]}
+              >
+                {iconText}
+              </Text>
               {route.name === 'Messages' && unreadConversationsCount > 0 && (
                 <View
                   style={{
@@ -173,7 +180,7 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.color2,
     paddingHorizontal: wp(4),
     borderTopWidth: 0.7,
-    borderColor: Colors.color7,
+    borderColor: Colors.hairline,
   },
   button: {
     paddingHorizontal: wp(4.9),

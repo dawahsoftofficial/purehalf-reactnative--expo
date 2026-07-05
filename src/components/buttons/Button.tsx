@@ -20,14 +20,36 @@ const Button = (props: any) => {
     loading = false,
     loadingMessage = '',
     textStyle = {},
+    // 'primary' (default) | 'outline' | 'ghost'
+    variant = 'primary',
   } = props;
+
+  const isOutline = variant === 'outline';
+  const isGhost = variant === 'ghost';
+
+  const backgroundColor =
+    disabled || loading
+      ? isOutline
+        ? 'transparent'
+        : isGhost
+          ? Colors.lavender
+          : Colors.themeRGBA50
+      : isOutline
+        ? 'transparent'
+        : isGhost
+          ? Colors.lavender
+          : Colors.theme;
+
+  const foreground = isOutline || isGhost ? Colors.primary : Colors.color2;
+
   return (
     <Ripple
       style={[
         Styles.btnContainer,
         {
-          backgroundColor:
-            disabled || loading ? Colors.themeRGBA50 : Colors.theme,
+          backgroundColor,
+          borderWidth: isOutline ? 1.5 : 0,
+          borderColor: isOutline ? Colors.primaryLite : 'transparent',
           opacity: disabled ? 0.5 : 1,
         },
         buttonStyle,
@@ -43,13 +65,9 @@ const Button = (props: any) => {
         animation="fadeInRight"
         duration={600}
       >
-        {loading ? (
-          <ActivityIndicator color={Colors.color2} size="small" />
-        ) : (
-          icon
-        )}
+        {loading ? <ActivityIndicator color={foreground} size="small" /> : icon}
       </Animation>
-      <Text style={[Styles.btnTxt, textStyle]}>
+      <Text style={[Styles.btnTxt, { color: foreground }, textStyle]}>
         {loading && loadingMessage ? loadingMessage : text}
       </Text>
     </Ripple>
@@ -61,7 +79,7 @@ export default Button;
 const Styles = StyleSheet.create({
   btnContainer: {
     height: hp(6.5),
-    borderRadius: 30,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -78,7 +96,7 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
     height: hp(6.5),
-    borderRadius: 30,
+    borderRadius: 16,
     width: wp(84),
     paddingHorizontal: wp(4),
   },

@@ -25,6 +25,7 @@ import {
 } from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import ChatCreditsBadge from '@/components/badges/chat-credits-badge';
 import pusherService from '@/services/pusher';
@@ -578,14 +579,15 @@ const Messages = (props: MessagesProps) => {
         otherParticipant.last_read_message_id >= item.last_message_detail.id;
     }
 
+    const isUnread = unReadCount > 0;
     return (
       <Ripple
         style={[
           Styles.itemContainer,
-          Styles.itemHeight,
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
         onPress={() => onItemPress(item)}
+        rippleColor={Colors.primary}
       >
         <View style={Styles.profilePictureCon}>
           {otherParticipant?.name && !isBlockedYou ? (
@@ -597,80 +599,80 @@ const Messages = (props: MessagesProps) => {
           ) : (
             <FontAwesome5
               name="user-alt"
-              size={wp(6.5)}
-              color={Colors.color1}
+              size={wp(5.5)}
+              color={Colors.primaryLite}
             />
           )}
         </View>
         <View
           style={[
-            Styles.itemInnerCon,
-            Styles.itemHeight,
-            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            Styles.middleCon,
+            { alignItems: Rtl ? 'flex-end' : 'flex-start' },
           ]}
         >
-          <View style={Styles.nameMsgCon}>
-            <Text style={Styles.itemHeading}>{otherParticipant.name}</Text>
-            {hasLastMessage && (
-              <Text style={Styles.itemMessage} numberOfLines={2}>
-                {item.last_message}
-              </Text>
-            )}
-          </View>
-          <View style={Styles.timeCon}>
-            {hasLastMessage && (
-              <View style={Styles.timeAndSeenCon}>
-                <ReactText
-                  style={[
-                    Styles.itemMessage,
-                    { fontSize: Typography.tiny2, marginBottom: hp(0.2) },
-                  ]}
-                >
-                  {formattedDate}
-                </ReactText>
-                {isLastMessageSeen && (
-                  <View style={Styles.seenProfileIconContainer}>
-                    <Image
-                      source={{ uri: otherParticipant.image }}
-                      resizeMode="cover"
-                      style={Styles.seenProfileIcon}
-                    />
-                  </View>
-                )}
-              </View>
-            )}
-            {unReadCount > 0 && (
-              <View style={Styles.unReadCountCon}>
-                <ReactText style={Styles.unReadCount}>{unReadCount}</ReactText>
-              </View>
-            )}
-          </View>
+          <Text variant="display" style={Styles.itemHeading} numberOfLines={1}>
+            {otherParticipant.name}
+          </Text>
+          {hasLastMessage && (
+            <Text
+              style={[Styles.itemMessage, isUnread && Styles.itemMessageUnread]}
+              numberOfLines={1}
+            >
+              {item.last_message}
+            </Text>
+          )}
+        </View>
+        <View style={Styles.rightCon}>
+          {hasLastMessage && (
+            <ReactText style={Styles.timeTxt}>{formattedDate}</ReactText>
+          )}
+          {isUnread ? (
+            <View style={Styles.unReadCountCon}>
+              <ReactText style={Styles.unReadCount}>{unReadCount}</ReactText>
+            </View>
+          ) : isLastMessageSeen ? (
+            <Ionicons
+              name="checkmark-done"
+              size={wp(4)}
+              color={Colors.primaryMid}
+              style={Styles.seenTick}
+            />
+          ) : null}
         </View>
       </Ripple>
     );
   };
 
   const renderEmptyList = () => {
+    const quoteMain = quote?.split('|')[0];
+    const quoteAttr = quote?.split('|')[1];
     return (
       <View style={Styles.textContainer}>
-        <View style={Styles.logoContainer}>
-          <Image
-            source={Images.quotesIcon}
-            resizeMode="contain"
-            style={Styles.logo}
+        <View style={Styles.emptyIconCircle}>
+          <Ionicons
+            name="chatbubbles-outline"
+            size={wp(11)}
+            color={Colors.primaryLite}
           />
-          <Text style={Styles.subText}>{quote?.split('|')[0]}</Text>
-          <Text style={[Styles.subText, { fontFamily: Fonts.APPFONT_B }]}>
-            {quote?.split('|')[1]}
-          </Text>
         </View>
-        {/* <View style={Styles.findMatchButtonContainer}>
-          <Button
-            text="Find Match"
-            onPress={onFindMatchPress}
-            buttonStyle={Styles.findMatchButton}
-          />
-        </View> */}
+        <Text variant="display" style={Styles.emptyTitle}>
+          {LanguageKeys.noConversationsYet}
+        </Text>
+        {quoteMain ? <Text style={Styles.quoteText}>{quoteMain}</Text> : null}
+        {quoteAttr ? (
+          <Text style={[Styles.quoteText, Styles.quoteAttr]}>{quoteAttr}</Text>
+        ) : null}
+        <Ripple
+          style={[
+            Styles.emptyCtaBtn,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+          onPress={onFindMatchPress}
+          rippleColor={Colors.color2}
+        >
+          <Ionicons name="search" size={wp(4.4)} color={Colors.color2} />
+          <Text style={Styles.emptyCtaTxt}>{LanguageKeys.discoverMatches}</Text>
+        </Ripple>
       </View>
     );
   };
@@ -698,6 +700,7 @@ const Messages = (props: MessagesProps) => {
     <Container>
       <Header
         title={LanguageKeys.messages}
+        titleVariant="display"
         customConponent={() => (
           <View
             style={[
@@ -741,10 +744,20 @@ const Messages = (props: MessagesProps) => {
       />
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
+          <Ionicons
+            name="shield-checkmark"
+            size={wp(4)}
+            color={Colors.primary}
+          />
           <Text style={Styles.guardianText}>{t('monitoredByWali')}</Text>
         </Ripple>
       ) : currentUser?.gender === 'female' ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
+          <Ionicons
+            name="add-circle-outline"
+            size={wp(4)}
+            color={Colors.primary}
+          />
           <Text style={Styles.guardianText}>{t('addAWali')}</Text>
         </Ripple>
       ) : null}
@@ -796,119 +809,88 @@ const Messages = (props: MessagesProps) => {
 export default Messages;
 
 const { width } = Dimensions.get('window');
+const AVATAR = width * 0.135;
 
 const Styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
+    backgroundColor: Colors.surface,
   },
-  textContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    textAlign: 'center',
-  },
-  mainText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_B,
-    color: Colors.color1,
-  },
-  subText: {
-    width: wp(80),
-    textAlign: 'center',
-    fontSize: Typography.small1,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color4,
-    marginTop: 10,
-  },
-  itemHeight: {
-    height: width * 1 * 0.18,
-  },
+  // conversation row
   itemContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 0.7,
-    borderBottomColor: Colors.color7,
-    backgroundColor: Colors.color56,
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.5),
   },
   profilePictureCon: {
-    borderWidth: 1,
-    borderColor: Colors.color7,
-    width: width * 0.135,
-    height: width * 1 * 0.135,
-    borderRadius: (width * 1 * 0.135) / 2,
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color18,
-    marginHorizontal: wp(3),
+    backgroundColor: Colors.lavender,
     overflow: 'hidden',
-    marginTop: hp(1),
   },
   image: {
-    width: width * 0.13,
-    height: width * 1 * 0.13,
-    borderRadius: (width * 1 * 0.13) / 2,
+    width: '100%',
+    height: '100%',
   },
-  itemInnerCon: {
-    width: wp(81),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  nameMsgCon: {
-    width: wp(47),
-  },
-  timeCon: {
-    width: wp(34),
-    alignItems: 'flex-end',
-    paddingHorizontal: wp(4),
+  middleCon: {
+    flex: 1,
+    marginHorizontal: wp(3),
+    justifyContent: 'center',
   },
   itemHeading: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
+    color: Colors.ink,
+    fontSize: Typography.small3,
     includeFontPadding: false,
   },
   itemMessage: {
-    color: Colors.color35,
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small,
     includeFontPadding: false,
+    marginTop: hp(0.3),
   },
-  unReadCountCon: {
-    marginTop: hp(1),
-    minWidth: width * 0.05,
-    minHeight: width * 1 * 0.052,
-    borderRadius: (width * 1 * 0.05) / 2,
-    backgroundColor: Colors.theme,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: wp(1.5),
-  },
-  unReadCount: {
-    color: Colors.color2,
+  itemMessageUnread: {
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
+  },
+  rightCon: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: wp(13),
+  },
+  timeTxt: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.tiny2,
     includeFontPadding: false,
   },
-  logoutBtn: {
-    position: 'absolute',
-    flexDirection: 'row',
-    right: wp(4),
+  seenTick: {
+    marginTop: hp(0.6),
   },
-  logoutTxt: {
-    color: Colors.color1,
+  unReadCountCon: {
+    marginTop: hp(0.6),
+    minWidth: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(1.4),
+  },
+  unReadCount: {
+    color: Colors.color2,
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
-    marginHorizontal: wp(2),
+    fontSize: Typography.tiny2,
+    includeFontPadding: false,
   },
-  logoutIcon: {
-    width: width * 0.05,
-    height: width * 0.05 * 1,
-  },
+  // header right + guardian menu
   headerRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -924,71 +906,111 @@ const Styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   menuOptionsContainer: {
-    borderRadius: wp(2),
-    paddingVertical: hp(0.5),
+    borderRadius: 14,
+    paddingVertical: hp(0.6),
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    marginTop: hp(1),
   },
   destructiveOption: {
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.surface,
   },
+  // guardian banner
   guardianTextWrapper: {
-    backgroundColor: Colors.color55,
-    paddingHorizontal: wp(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.lavender,
+    paddingVertical: hp(0.9),
+    paddingHorizontal: wp(4),
   },
   guardianText: {
-    width: wp(100),
-    fontSize: Typography.small2,
+    fontSize: Typography.small,
+    fontFamily: Fonts.APPFONT_M,
+    color: Colors.primary,
+    alignSelf: 'center',
+    marginHorizontal: wp(2),
+    includeFontPadding: false,
+  },
+  // empty state
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(8),
+  },
+  emptyIconCircle: {
+    width: wp(22),
+    height: wp(22),
+    borderRadius: wp(11),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(2.2),
+  },
+  emptyTitle: {
+    color: Colors.ink,
+    fontSize: Typography.medium,
+    alignSelf: 'center',
+    textAlign: 'center',
+    marginBottom: hp(1.4),
+    includeFontPadding: false,
+  },
+  quoteText: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    fontSize: Typography.small1,
     fontFamily: Fonts.APPFONT_R,
+    color: Colors.muted,
+    fontStyle: 'italic',
+    lineHeight: wp(5.6),
+  },
+  quoteAttr: {
+    fontFamily: Fonts.APPFONT_SB,
+    color: Colors.ink,
+    fontStyle: 'normal',
+    marginTop: hp(0.8),
+  },
+  emptyCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(2),
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+    paddingVertical: hp(1.3),
+    paddingHorizontal: wp(7),
+    marginTop: hp(3.2),
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyCtaTxt: {
     color: Colors.color2,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    alignSelf: 'center',
+    includeFontPadding: false,
   },
-  timeAndSeenCon: {
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: hp(0.5),
-  },
-  seenProfileIconContainer: {
-    width: wp(5),
-    height: wp(5),
-    borderRadius: wp(2.5),
-    borderWidth: 1,
-    borderColor: Colors.color2,
-    overflow: 'hidden',
-    backgroundColor: Colors.color18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  seenProfileIcon: {
-    width: wp(5),
-    height: wp(5),
-    borderRadius: wp(2.5),
-  },
-  findMatchButtonContainer: {
-    marginTop: hp(4),
-    paddingHorizontal: wp(10),
-    width: '100%',
-  },
-  findMatchButton: {
-    width: '100%',
-    opacity: 1,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    opacity: 0.5,
-  },
+  // FAB
   btnPlus: {
     position: 'absolute',
-    bottom: 0,
-    right: wp(8),
-    backgroundColor: Colors.theme,
-    borderRadius: wp(10),
-    padding: wp(4),
+    bottom: hp(2.5),
+    right: wp(6),
+    backgroundColor: Colors.primary,
+    borderRadius: wp(8),
+    width: wp(15),
+    height: wp(15),
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: Colors.color1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
     zIndex: 1000,
   },
 });

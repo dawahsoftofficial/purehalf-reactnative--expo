@@ -1,7 +1,7 @@
 import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 
-import { Fonts } from '@/res';
+import { Colors, Fonts } from '@/res';
 
 export function FinePrint() {
   return (
@@ -19,21 +19,22 @@ export function FinePrint() {
 const styles = StyleSheet.create({
   finePrint: {
     marginTop: 10,
-    padding: 10,
-    borderRadius: 18,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.surface,
     gap: 6,
   },
   finePrintText: {
-    color: 'rgba(255,255,255,0.62)',
+    color: Colors.muted,
     fontSize: 12,
+    lineHeight: 18,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
   },
   finePrintStrong: {
-    color: 'rgba(255,255,255,0.78)',
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
   },
 });

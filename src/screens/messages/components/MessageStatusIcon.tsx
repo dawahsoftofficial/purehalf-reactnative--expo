@@ -11,80 +11,62 @@ type Props = {
   wasSentWhileBlocked: boolean;
 };
 
+const ICON_STYLE = { marginLeft: wp(0.5) };
+
+// Ticks always sit on the outgoing (violet) bubble, so the resting colour is a
+// translucent white; a "read" receipt pops in a bright legible blue.
+const SENT_COLOR = Colors.whiteRGBA90;
+const READ_COLOR = Colors.color25;
+
 const MessageStatusIcon = ({
   status,
   isSeen,
   isBlocked,
   wasSentWhileBlocked,
 }: Props) => {
-  // If seen, show double tick blue (preserve seen status even if blocked)
+  // Read → blue double tick (preserved even if later blocked)
   if (isSeen) {
     return (
       <Ionicons
         name="checkmark-done"
-        color="#0084FF"
+        color={READ_COLOR}
         size={wp(4)}
-        style={{ marginLeft: wp(0.5) }}
+        style={ICON_STYLE}
       />
     );
   }
 
-  // If message was sent while blocked and not seen, show single tick only (gray)
-  // This preserves the single tick even after unblocking
-  if (wasSentWhileBlocked) {
+  // Sent while blocked, or currently blocked, and not seen → single tick
+  if (wasSentWhileBlocked || isBlocked) {
     return (
       <Ionicons
         name="checkmark"
-        color={Colors.color2}
+        color={SENT_COLOR}
         size={wp(4)}
-        style={{ marginLeft: wp(0.5) }}
+        style={ICON_STYLE}
       />
     );
   }
 
-  // If currently blocked and not seen, show single tick only (gray)
-  if (isBlocked) {
-    return (
-      <Ionicons
-        name="checkmark"
-        color={Colors.color2}
-        size={wp(4)}
-        style={{ marginLeft: wp(0.5) }}
-      />
-    );
-  }
-
-  // If sent (delivered but not seen), show double tick gray
+  // Delivered but not seen → double tick
   if (status === 'sent') {
     return (
       <Ionicons
         name="checkmark-done"
-        color={Colors.color2}
+        color={SENT_COLOR}
         size={wp(4)}
-        style={{ marginLeft: wp(0.5) }}
+        style={ICON_STYLE}
       />
     );
   }
 
-  // If sending, show single tick (gray)
-  if (status === 'sending') {
-    return (
-      <Ionicons
-        name="checkmark"
-        color={Colors.color2}
-        size={wp(4)}
-        style={{ marginLeft: wp(0.5) }}
-      />
-    );
-  }
-
-  // Default: single tick (gray) - for failed or unknown status
+  // Sending / unknown → single tick
   return (
     <Ionicons
       name="checkmark"
-      color={Colors.color2}
+      color={SENT_COLOR}
       size={wp(4)}
-      style={{ marginLeft: wp(0.5) }}
+      style={ICON_STYLE}
     />
   );
 };

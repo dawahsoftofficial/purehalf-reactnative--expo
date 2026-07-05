@@ -2,7 +2,6 @@ import { useNavigation } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TextStyle, ViewStyle } from 'react-native';
 import {
   Image,
   ScrollView,
@@ -14,17 +13,12 @@ import {
 import Ripple from 'react-native-material-ripple';
 import Modal from 'react-native-modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import Entypo from 'react-native-vector-icons/Entypo';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import ProfileCompleteBadgeIcon from '../../../assets/svgs/badges/profile-complete-badge.svg';
-import VipBadgeIcon from '../../../assets/svgs/badges/vip-badge.svg';
-import ChaCoinIcon from '../../../assets/svgs/coins/chat-coin.svg';
 import { hp, Typography, wp } from '../../../global';
 import { CheckRtl, LanguageKeys } from '../../../languages';
 import { checkProfileCompleted } from '../../../lib/utils/profile-utils';
-import { Colors, Fonts, Images } from '../../../res';
+import { Colors, Fonts } from '../../../res';
 import { StorageManager } from '../../../services';
 import { usePremiumStore } from '../../../stores';
 
@@ -62,17 +56,6 @@ type User = {
   [key: string]: unknown;
 };
 
-type AccordionItemProps = {
-  children: React.ReactNode;
-  title: string;
-  count?: React.ReactNode;
-  type?: 'profile';
-  titleStyle?: TextStyle;
-  counterWrapperStyle?: ViewStyle;
-  counterTextStyle?: TextStyle;
-  accordionContainerStyle?: ViewStyle;
-};
-
 type AccountModalProps = {
   visible: boolean;
   onClose: () => void;
@@ -80,53 +63,6 @@ type AccountModalProps = {
   onInfoItemPress: (item: ProfileProgressItem) => void;
   currentUser: User | null;
 };
-
-function AccordionItem({
-  children,
-  title,
-  count = 0,
-  titleStyle,
-  counterWrapperStyle,
-  accordionContainerStyle,
-  counterTextStyle,
-}: AccordionItemProps) {
-  const [expanded, setExpanded] = useState(false);
-
-  const toggleItem = () => {
-    setExpanded((prev) => !prev);
-  };
-
-  return (
-    <View style={[Styles.accordContainer, accordionContainerStyle]}>
-      <Ripple
-        rippleColor={Colors.theme}
-        style={Styles.accordHeader}
-        onPress={toggleItem}
-      >
-        <View style={Styles.headerListLeftWrapper}>
-          {count !== undefined && count !== 0 && (
-            <View
-              style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
-            >
-              {typeof count === 'string' || typeof count === 'number' ? (
-                <Text style={[Styles.headerlistCounterText, counterTextStyle]}>
-                  {count}
-                </Text>
-              ) : (
-                count
-              )}
-            </View>
-          )}
-          <View style={{}}>
-            <Text style={[Styles.accordTitle, titleStyle]}>{title}</Text>
-          </View>
-        </View>
-        <Entypo name={expanded ? 'chevron-up' : 'chevron-down'} size={wp(6)} />
-      </Ripple>
-      {expanded && <View style={Styles.accordBody}>{children}</View>}
-    </View>
-  );
-}
 
 export function AccountModal({
   visible,
@@ -136,13 +72,15 @@ export function AccountModal({
   currentUser,
 }: AccountModalProps) {
   const { navigate } = useNavigation();
-
   const { bottom } = useSafeAreaInsets();
   const { t } = useTranslation();
   const Rtl = CheckRtl();
   const isPremium = usePremiumStore((state) => state.isPremium);
   const { getData, storageKeys } = StorageManager;
   const [isProfileCompleted, setIsProfileCompleted] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  const displayFont = Rtl ? Fonts.APPFONT_B : Fonts.DISPLAY;
 
   const isVIP = useMemo(() => {
     if (!currentUser) return false;
@@ -156,11 +94,6 @@ export function AccountModal({
     return isPremium();
   }, [currentUser, isPremium]);
 
-  const isBoosted = useMemo(() => {
-    if (!currentUser) return false;
-    return Boolean(currentUser.boosted || currentUser.is_boosted);
-  }, [currentUser]);
-
   useEffect(() => {
     if (currentUser) {
       getData(storageKeys.PROFILE_DETAIL_LOCAL)
@@ -173,157 +106,270 @@ export function AccountModal({
     }
   }, [currentUser, getData, storageKeys.PROFILE_DETAIL_LOCAL]);
 
+  const fullName = [currentUser?.first_name, currentUser?.last_name]
+    .filter(Boolean)
+    .join(' ');
+  const nameLine = [
+    fullName || '—',
+    currentUser?.age != null ? String(currentUser.age) : null,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const tagline = currentUser?.detail?.tagline;
+
+  const completed = profileCompleteProgress.filter((i) => i.completed).length;
+  const total = profileCompleteProgress.length || 1;
+  const pct = Math.min(1, completed / total);
+
+  const openPhotos = () =>
+    (navigate as (name: string) => void)('PhotosAndVideos');
+
   return (
-    <Modal isVisible={visible} style={Styles.modal} onBackdropPress={onClose}>
-      <View style={[Styles.modalContent, { paddingBottom: bottom }]}>
-        <View style={Styles.modalHeader}>
-          <View style={Styles.profileCardRow}>
-            <TouchableOpacity
-              style={Styles.profileImageContainer}
-              onPress={() => {
-                (navigate as (name: string) => void)('PhotosAndVideos');
-              }}
-            >
-              {currentUser?.media?.un_blur_primary_image ? (
-                <Image
-                  source={{ uri: currentUser?.media?.un_blur_primary_image }}
-                  style={Styles.profileImage}
-                />
-              ) : (
-                <View style={Styles.profileImagePlaceholder}>
-                  <Text style={Styles.profileImageText}>
-                    {currentUser?.first_name?.slice(0, 1)?.toUpperCase() || 'U'}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            <View style={Styles.profileInfoColumn}>
-              <View style={[Styles.profileInfoRow, Styles.profileInfoRowFirst]}>
-                <Text style={Styles.profileName} numberOfLines={1}>
-                  {[
-                    [currentUser?.first_name, currentUser?.last_name]
-                      .filter(Boolean)
-                      .join(' ') || '—',
-                    currentUser?.age != null ? String(currentUser.age) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(', ')}
+    <Modal
+      isVisible={visible}
+      style={Styles.modal}
+      onBackdropPress={onClose}
+      onBackButtonPress={onClose}
+      swipeDirection="down"
+      onSwipeComplete={onClose}
+      propagateSwipe
+      useNativeDriverForBackdrop
+    >
+      <View style={[Styles.sheet, { paddingBottom: bottom + hp(1) }]}>
+        <View style={Styles.dragHandle} />
+
+        {/* ---- Identity header ---- */}
+        <View
+          style={[
+            Styles.header,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+        >
+          <Ripple
+            style={Styles.avatarWrap}
+            onPress={openPhotos}
+            rippleColor={Colors.primary}
+          >
+            {currentUser?.media?.un_blur_primary_image ? (
+              <Image
+                source={{ uri: currentUser?.media?.un_blur_primary_image }}
+                style={Styles.avatar}
+              />
+            ) : (
+              <View style={Styles.avatarPlaceholder}>
+                <Text style={Styles.avatarInitial}>
+                  {currentUser?.first_name?.slice(0, 1)?.toUpperCase() || 'U'}
                 </Text>
               </View>
-              <View style={[Styles.profileInfoRow, Styles.badgesRow]}>
-                {isVIP && (
-                  <View style={Styles.vipBadgeBelow}>
-                    <VipBadgeIcon width={wp(8)} height={wp(8)} />
-                  </View>
-                )}
-                {isProfileCompleted && (
-                  <View style={Styles.badge}>
-                    <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />
-                  </View>
-                )}
-                {!isVIP && !isProfileCompleted && (
-                  <Text style={Styles.badgesPlaceholder}>—</Text>
-                )}
-              </View>
-              <View style={[Styles.profileInfoRow, Styles.creditsRow]}>
-                <ChaCoinIcon width={wp(6)} height={wp(6)} />
-                <Text style={Styles.creditText}>
+            )}
+            <View style={Styles.cameraBadge}>
+              <Ionicons name="camera" size={wp(3.4)} color={Colors.surface} />
+            </View>
+          </Ripple>
+
+          <View style={Styles.infoCol}>
+            <Text
+              style={[
+                Styles.name,
+                { fontFamily: displayFont, textAlign: Rtl ? 'right' : 'left' },
+              ]}
+              numberOfLines={1}
+            >
+              {nameLine}
+            </Text>
+            {tagline ? (
+              <Text
+                style={[Styles.tagline, { textAlign: Rtl ? 'right' : 'left' }]}
+                numberOfLines={1}
+              >
+                {tagline}
+              </Text>
+            ) : null}
+            <View
+              style={[
+                Styles.chipsRow,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              {isVIP && (
+                <View style={Styles.iconChip}>
+                  <Ionicons
+                    name="diamond"
+                    size={wp(3.6)}
+                    color={Colors.primary}
+                  />
+                </View>
+              )}
+              {isProfileCompleted && (
+                <View style={Styles.iconChip}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={wp(4)}
+                    color={Colors.verified}
+                  />
+                </View>
+              )}
+              <View
+                style={[
+                  Styles.creditsPill,
+                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                ]}
+              >
+                <Ionicons name="sparkles" size={wp(4)} color={Colors.primary} />
+                <Text style={Styles.creditsTxt}>
                   {currentUser?.chat_credits ?? 0}
                 </Text>
               </View>
             </View>
           </View>
-          <TouchableOpacity onPress={onClose} style={Styles.modalCloseBtn}>
-            <Entypo name="cross" size={wp(6)} />
+
+          <TouchableOpacity
+            onPress={onClose}
+            style={Styles.closeBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="close" size={wp(5.5)} color={Colors.muted} />
           </TouchableOpacity>
         </View>
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={Styles.modalBody}>
-            <AccordionItem
-              title={`${t(LanguageKeys.profileCompletion)} (${profileCompleteProgress.filter((item) => item.completed).length} out of ${profileCompleteProgress.length})`}
-              type="profile"
-              count={
-                <Image
-                  source={Images.userCircle}
-                  style={Styles.modalHeaderIcon}
-                />
-              }
-              counterWrapperStyle={{
-                borderWidth: 0,
-                width: wp(7),
-                height: wp(7),
-              }}
-              accordionContainerStyle={{ marginBottom: 0 }}
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={Styles.body}
+          bounces={false}
+        >
+          {/* ---- Profile completion ---- */}
+          <View style={Styles.card}>
+            <Ripple
+              style={[
+                Styles.cardHeader,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+              onPress={() => setExpanded((p) => !p)}
+              rippleColor={Colors.primary}
             >
-              <View style={Styles.completeProfileWrapper}>
+              <View style={Styles.chip}>
+                <Ionicons name="person" size={wp(4.2)} color={Colors.primary} />
+              </View>
+              <View style={Styles.cardHeaderCol}>
+                <Text style={Styles.cardTitle}>
+                  {t(LanguageKeys.profileCompletion)}
+                </Text>
+                <Text style={Styles.cardSub}>
+                  {completed} / {total}
+                </Text>
+              </View>
+              <Ionicons
+                name={expanded ? 'chevron-up' : 'chevron-down'}
+                size={wp(5)}
+                color={Colors.muted}
+              />
+            </Ripple>
+
+            <View style={Styles.progressWrap}>
+              <View style={Styles.progressTrack}>
+                <View
+                  style={[Styles.progressFill, { width: `${pct * 100}%` }]}
+                />
+              </View>
+            </View>
+
+            {expanded && (
+              <View style={Styles.steps}>
                 {profileCompleteProgress?.map((item, ind) => (
                   <Ripple
                     key={ind}
-                    style={{
-                      ...Styles.infoItemCon,
-                      flexDirection: Rtl ? 'row-reverse' : 'row',
-                    }}
+                    style={[
+                      Styles.stepRow,
+                      { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                      ind === profileCompleteProgress.length - 1 &&
+                        Styles.stepRowLast,
+                    ]}
                     onPress={() => onInfoItemPress(item)}
+                    rippleColor={Colors.primary}
                   >
-                    <View
-                      style={{
-                        ...Styles.checkCircle,
-                        backgroundColor: item.completed
-                          ? Colors.color10
-                          : Colors.color46,
-                      }}
+                    <Ionicons
+                      name={
+                        item.completed ? 'checkmark-circle' : 'ellipse-outline'
+                      }
+                      size={wp(5)}
+                      color={
+                        item.completed ? Colors.verified : Colors.primaryLite
+                      }
                     />
-                    <Text style={Styles.infoItemText}>{t(item.label)}</Text>
+                    <Text style={Styles.stepTxt} numberOfLines={1}>
+                      {t(item.label)}
+                    </Text>
+                    <Ionicons
+                      name={Rtl ? 'chevron-back' : 'chevron-forward'}
+                      size={wp(4)}
+                      color={Colors.muted}
+                    />
                   </Ripple>
                 ))}
               </View>
-            </AccordionItem>
-            {!currentUser?.is_approved ? (
-              <AccordionItem
-                title={t(LanguageKeys.profileInReview)}
-                accordionContainerStyle={{ marginBottom: 0 }}
-                count={
-                  <MaterialCommunityIcons
-                    size={wp(5)}
-                    color={Colors.color37}
-                    name="information-variant"
-                  />
-                }
-                titleStyle={{ color: Colors.color37 }}
-                counterWrapperStyle={{ borderColor: Colors.color37 }}
-                counterTextStyle={{ color: Colors.color37 }}
-              >
-                <View style={Styles.completeProfileWrapper}>
-                  <Text style={Styles.completeProfileText}>
-                    Your profile is being reviewed! During this brief period,
-                    visibility will be limited. We are just making sure
-                    everything is top-notch to ensure the best experience to all
-                    our members. You will be notified upon approval.
-                  </Text>
-                </View>
-              </AccordionItem>
-            ) : (
-              <AccordionItem
-                title="Your profile has been approved!"
-                count={
-                  <AntDesign name="check" size={wp(5)} color={Colors.color10} />
-                }
-                titleStyle={{ color: Colors.color10 }}
-                counterWrapperStyle={{ borderColor: Colors.color10 }}
-                counterTextStyle={{ color: Colors.color10 }}
-                accordionContainerStyle={{ marginBottom: 0 }}
-              >
-                <View style={Styles.completeProfileWrapper}>
-                  <Text style={Styles.completeProfileText}>
-                    Your profile is being reviewed! During this brief period,
-                    visibility will be limited. We are just making sure
-                    everything is top-notch to ensure the best experience to all
-                    our members. You will be notified upon approval.
-                  </Text>
-                </View>
-              </AccordionItem>
             )}
           </View>
+
+          {/* ---- Approval status ---- */}
+          {!currentUser?.is_approved ? (
+            <View
+              style={[
+                Styles.statusCard,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <View style={Styles.chip}>
+                <Ionicons
+                  name="time-outline"
+                  size={wp(4.6)}
+                  color={Colors.primaryMid}
+                />
+              </View>
+              <View style={Styles.statusCol}>
+                <Text
+                  style={[Styles.statusTitle, { color: Colors.primaryMid }]}
+                >
+                  {t(LanguageKeys.profileInReview)}
+                </Text>
+                <Text
+                  style={[
+                    Styles.statusDesc,
+                    { textAlign: Rtl ? 'right' : 'left' },
+                  ]}
+                >
+                  {t(LanguageKeys.profileInReviewDesc)}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View
+              style={[
+                Styles.statusCard,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <View style={Styles.chip}>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={wp(4.8)}
+                  color={Colors.verified}
+                />
+              </View>
+              <View style={Styles.statusCol}>
+                <Text style={[Styles.statusTitle, { color: Colors.verified }]}>
+                  {t(LanguageKeys.profileApprovedTitle)}
+                </Text>
+                <Text
+                  style={[
+                    Styles.statusDesc,
+                    { textAlign: Rtl ? 'right' : 'left' },
+                  ]}
+                >
+                  {t(LanguageKeys.profileApprovedDesc)}
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
     </Modal>
@@ -335,184 +381,232 @@ const Styles = StyleSheet.create({
     justifyContent: 'flex-end',
     margin: 0,
   },
-  modalContent: {
-    backgroundColor: Colors.color2,
-    borderTopLeftRadius: wp(5),
-    borderTopRightRadius: wp(5),
-    maxHeight: hp(90),
+  sheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    maxHeight: hp(88),
   },
-  modalHeader: {
+  dragHandle: {
+    width: wp(11),
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: Colors.hairline,
+    alignSelf: 'center',
+    marginTop: hp(1.2),
+  },
+  // header
+  header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
+    alignItems: 'center',
+    paddingHorizontal: wp(4.5),
+    paddingTop: hp(2),
+    paddingBottom: hp(1.8),
   },
-  profileCardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    flex: 1,
-    gap: wp(4),
-  },
-  profileImageContainer: {
-    width: wp(28),
-    height: wp(28),
-    borderRadius: wp(14),
+  avatarWrap: {
+    width: wp(18),
+    height: wp(18),
+    borderRadius: wp(9),
     overflow: 'hidden',
+    backgroundColor: Colors.lavender,
     borderWidth: 2,
-    borderColor: Colors.color8,
+    borderColor: Colors.lavender,
   },
-  profileImage: {
+  avatar: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  profileImagePlaceholder: {
+  avatarPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: Colors.themeLight,
+    backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  profileImageText: {
+  avatarInitial: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large3,
-    color: Colors.theme,
+    fontSize: Typography.large2,
+    color: Colors.primary,
   },
-  profileInfoColumn: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    gap: hp(1.2),
-    minWidth: 0,
-  },
-  profileInfoRow: {
-    flexDirection: 'row',
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: wp(6),
+    height: wp(6),
+    borderRadius: wp(3),
+    backgroundColor: Colors.primary,
     alignItems: 'center',
-    gap: wp(2),
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
   },
-  profileInfoRowFirst: {
-    gap: wp(3),
-  },
-  profileName: {
+  infoCol: {
     flex: 1,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.medium,
-    color: Colors.color1,
+    marginHorizontal: wp(3.5),
+    justifyContent: 'center',
+  },
+  name: {
+    fontSize: Typography.large,
+    color: Colors.ink,
     includeFontPadding: false,
   },
-  badgesRow: {
-    flexWrap: 'wrap',
-    minHeight: wp(8),
-  },
-  badgesPlaceholder: {
+  tagline: {
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small,
-    color: Colors.color4,
+    color: Colors.muted,
     includeFontPadding: false,
+    marginTop: hp(0.2),
   },
-  vipBadgeBelow: {
+  chipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: wp(3),
+    marginTop: hp(1),
   },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.theme,
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(0.5),
-    borderRadius: wp(2),
-    borderWidth: 1,
-    borderColor: Colors.theme,
-  },
-  creditText: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small1,
-    color: Colors.color1,
-    includeFontPadding: false,
-  },
-  creditsRow: {
-    alignSelf: 'flex-start',
-  },
-  modalCloseBtn: {
-    padding: wp(1),
-  },
-  modalHeaderIcon: {
+  iconChip: {
     width: wp(7),
     height: wp(7),
-  },
-  modalBody: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(2),
-  },
-  accordContainer: {
-    marginBottom: hp(2),
-    borderRadius: wp(2),
-    borderWidth: 1,
-    borderColor: Colors.themeLight,
-    overflow: 'hidden',
-  },
-  accordHeader: {
-    paddingVertical: hp(2),
-    paddingHorizontal: wp(4),
-    flexDirection: 'row',
+    borderRadius: wp(3.5),
+    backgroundColor: Colors.lavender,
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerListLeftWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerlistCounterWrapper: {
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    borderWidth: 1,
-    borderColor: Colors.color47,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: wp(3),
-  },
-  headerlistCounterText: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  accordTitle: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  accordBody: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(2),
-    gap: hp(1.2),
-  },
-  completeProfileWrapper: {
-    marginTop: hp(2),
-  },
-  infoItemCon: {
-    paddingVertical: hp(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.color46,
-    alignItems: 'center',
-  },
-  checkCircle: {
-    width: wp(3),
-    height: wp(3),
-    borderRadius: wp(1.5),
     marginRight: wp(2),
   },
-  infoItemText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    color: Colors.color1,
-    flex: 1,
+  creditsPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    paddingHorizontal: wp(2.6),
+    paddingVertical: hp(0.5),
   },
-  completeProfileText: {
+  creditsTxt: {
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small1,
+    color: Colors.ink,
+    includeFontPadding: false,
+    marginHorizontal: wp(1.4),
+  },
+  closeBtn: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.appBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  // body
+  body: {
+    paddingHorizontal: wp(4.5),
+    paddingTop: hp(0.5),
+    paddingBottom: hp(2),
+    gap: hp(1.4),
+  },
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: wp(4),
+    paddingTop: hp(1.8),
+    paddingBottom: hp(1.2),
+  },
+  chip: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: wp(0.5),
+  },
+  cardHeaderCol: {
+    flex: 1,
+    marginHorizontal: wp(3),
+  },
+  cardTitle: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    color: Colors.ink,
+    includeFontPadding: false,
+  },
+  cardSub: {
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.tiny2,
+    color: Colors.muted,
+    includeFontPadding: false,
+    marginTop: hp(0.2),
+  },
+  progressWrap: {
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(1.8),
+  },
+  progressTrack: {
+    height: wp(1.8),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.primary,
+  },
+  steps: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.hairline,
+    paddingHorizontal: wp(4),
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: hp(1.5),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+  },
+  stepRowLast: {
+    borderBottomWidth: 0,
+  },
+  stepTxt: {
+    flex: 1,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+    color: Colors.ink,
+    includeFontPadding: false,
+    marginHorizontal: wp(3),
+  },
+  // status
+  statusCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    padding: wp(4),
+  },
+  statusCol: {
+    flex: 1,
+    marginHorizontal: wp(3),
+  },
+  statusTitle: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+    marginBottom: hp(0.4),
+  },
+  statusDesc: {
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small,
-    color: Colors.color1,
+    color: Colors.muted,
     lineHeight: wp(5),
+    includeFontPadding: false,
   },
 });

@@ -1,6 +1,6 @@
 import moment from 'moment';
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { Switch } from 'react-native-switch';
 
 import { Container, Header, ModalLoader, Text } from '../../components';
@@ -131,18 +131,28 @@ const PrivacySettings = (props: any) => {
 
   const RenderField = ({
     heading,
-    // description,
+    description,
     switchEnabled,
     onChangeSwitch,
+    showDivider = false,
   }: any) => (
     <View
-      style={{ ...Styles.fieldCon, flexDirection: Rtl ? 'row-reverse' : 'row' }}
+      style={[
+        Styles.fieldCon,
+        showDivider && Styles.divider,
+        { flexDirection: Rtl ? 'row-reverse' : 'row' },
+      ]}
     >
-      <View style={Styles.fieldTxtCon}>
+      <View
+        style={[
+          Styles.fieldTxtCon,
+          { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+        ]}
+      >
         <Text style={Styles.fieldTxt}>{heading}</Text>
-        {/* <Text style={{ ...Styles.fieldTxt, fontFamily: Fonts.APPFONT_R }}>
-                    {description}
-                </Text> */}
+        {description ? (
+          <Text style={Styles.fieldDesc}>{description}</Text>
+        ) : null}
       </View>
       <Switch
         value={switchEnabled}
@@ -150,46 +160,61 @@ const PrivacySettings = (props: any) => {
         renderActiveText={false}
         renderInActiveText={false}
         circleSize={25}
-        backgroundActive={Colors.color1}
+        backgroundActive={Colors.primary}
         backgroundInactive={Colors.color18}
         innerCircleStyle={Styles.switchInner}
       />
     </View>
   );
   return (
-    <Container>
+    <Container style={Styles.screen}>
       <Header
         title={LanguageKeys.privacySettings}
         navigation={props.navigation}
+        titleVariant="display"
       />
       <ModalLoader visible={loader.visible} message={loader.message} />
 
-      <View style={Styles.innerCon}>
-        <RenderField
-          heading={LanguageKeys.searchVisibility}
-          // description={LanguageKeys.searchVisibilityDesc}
-          switchEnabled={searchVisibility}
-          onChangeSwitch={searchVisibilityToggle}
-        />
-        <RenderField
-          heading={LanguageKeys.inAppNotifications}
-          // description={LanguageKeys.inAppNotificationsDesc}
-          switchEnabled={inAppNotification}
-          onChangeSwitch={inAppNotificationToggle}
-        />
-        <RenderField
-          heading={'Email Notifications'}
-          // description={LanguageKeys.inAppNotificationsDesc}
-          switchEnabled={emailNotification}
-          onChangeSwitch={emailNotificationToggle}
-        />
-        <RenderField
-          heading={'SMS Notifications'}
-          // description={LanguageKeys.inAppNotificationsDesc}
-          switchEnabled={smsNotification}
-          onChangeSwitch={smsNotificationToggle}
-        />
-      </View>
+      <ScrollView
+        contentContainerStyle={Styles.innerCon}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={Styles.sectionLabel}>{LanguageKeys.discoverySection}</Text>
+        <View style={Styles.groupCard}>
+          <RenderField
+            heading={LanguageKeys.searchVisibility}
+            description={LanguageKeys.searchVisibilityDesc}
+            switchEnabled={searchVisibility}
+            onChangeSwitch={searchVisibilityToggle}
+          />
+        </View>
+
+        <Text style={[Styles.sectionLabel, Styles.sectionLabelSpaced]}>
+          {LanguageKeys.notificationsSection}
+        </Text>
+        <View style={Styles.groupCard}>
+          <RenderField
+            heading={LanguageKeys.inAppNotifications}
+            description={LanguageKeys.inAppNotificationsDesc}
+            switchEnabled={inAppNotification}
+            onChangeSwitch={inAppNotificationToggle}
+            showDivider
+          />
+          <RenderField
+            heading={LanguageKeys.emailNotifications}
+            description={LanguageKeys.emailNotificationsDesc}
+            switchEnabled={emailNotification}
+            onChangeSwitch={emailNotificationToggle}
+            showDivider
+          />
+          <RenderField
+            heading={LanguageKeys.smsNotifications}
+            description={LanguageKeys.smsNotificationsDesc}
+            switchEnabled={smsNotification}
+            onChangeSwitch={smsNotificationToggle}
+          />
+        </View>
+      </ScrollView>
     </Container>
   );
 };
@@ -197,27 +222,61 @@ const PrivacySettings = (props: any) => {
 export default PrivacySettings;
 
 const Styles = StyleSheet.create({
+  screen: {
+    backgroundColor: Colors.appBg,
+  },
   innerCon: {
-    paddingTop: hp(8),
+    paddingTop: hp(2),
     paddingHorizontal: wp(4),
+    paddingBottom: hp(3),
+  },
+  sectionLabel: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    marginBottom: hp(1),
+    marginLeft: wp(1),
+  },
+  sectionLabelSpaced: {
+    marginTop: hp(3),
+  },
+  groupCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
   },
   fieldCon: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: hp(3),
+    paddingVertical: hp(1.8),
+    paddingHorizontal: wp(4),
+  },
+  divider: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
   },
   fieldTxtCon: {
-    width: wp(70),
+    flex: 1,
+    paddingRight: wp(3),
   },
   fieldTxt: {
-    fontFamily: Fonts.APPFONT_B,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small2,
-    // lineHeight: wp(4.8),
-    color: Colors.color1,
+    color: Colors.ink,
+  },
+  fieldDesc: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.tiny2,
+    color: Colors.muted,
+    marginTop: hp(0.3),
   },
   switchInner: {
     borderWidth: 1.5,
-    borderColor: Colors.color1,
+    borderColor: Colors.primary,
   },
 });

@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Fonts } from '@/res';
+import { Colors, Fonts } from '@/res';
 
 type FooterProps = {
   onRestore: () => void;
@@ -27,7 +27,7 @@ const styles = StyleSheet.create({
   },
   linkBtn: { padding: 8 },
   linkText: {
-    color: 'rgba(255,255,255,0.75)',
+    color: Colors.primary,
     textDecorationLine: 'underline',
     fontFamily: Fonts.APPFONT_M,
     fontSize: 12,

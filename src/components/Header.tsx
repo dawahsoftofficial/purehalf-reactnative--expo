@@ -12,9 +12,11 @@ const Header = (props: any) => {
   const {
     navigation = null,
     title = '',
-    arrowColor = Colors.color1,
+    arrowColor = Colors.ink,
     containerStyle = {},
     customConponent = () => null,
+    // opt a screen title into the editorial serif face
+    titleVariant,
   } = props;
   const onArrowLeftPress = () => navigation.goBack();
   return (
@@ -35,6 +37,7 @@ const Header = (props: any) => {
         </TouchableOpacity>
       )}
       <Text
+        variant={titleVariant}
         style={{
           ...Styles.headerTxt,
           marginHorizontal: navigation ? wp(3) : 0,
@@ -56,10 +59,10 @@ const Styles = StyleSheet.create({
     paddingVertical: hp(1),
     paddingHorizontal: wp(4),
     borderBottomWidth: 0.7,
-    borderBottomColor: Colors.color7,
+    borderBottomColor: Colors.hairline,
   },
   headerTxt: {
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
     alignSelf: 'center',
     fontSize: Typography.medium,

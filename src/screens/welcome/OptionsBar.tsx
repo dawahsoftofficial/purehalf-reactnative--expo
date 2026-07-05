@@ -1,18 +1,13 @@
 import React from 'react';
-import {
-  Dimensions,
-  FlatList,
-  StyleSheet,
-  Text as ReactText,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, Text as ReactText, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { Animation } from '../../animations';
 import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
+import { usePremiumStore } from '../../stores';
 
 const OptionsBar = (props: any) => {
   const {
@@ -22,49 +17,78 @@ const OptionsBar = (props: any) => {
     onPress = () => null,
   } = props;
   const Rtl = CheckRtl();
-
-  const RenderCounter = (counter: any) => {
-    return (
-      counter > 0 && (
-        <View style={[Styles.counterCon, { right: Rtl ? 'auto' : 0 }]}>
-          <ReactText style={Styles.counterText} numberOfLines={1}>
-            {counter}
-          </ReactText>
-        </View>
-      )
-    );
-  };
+  const isPremium = usePremiumStore((state) => state.isPremium);
+  const premiumLoaded = usePremiumStore((state) => state.loaded);
+  const isPremiumUser = isPremium();
 
   const RenderBtn = ({ item }: any) => {
     const { name, value } = item;
+    const isActive = activeOptionButton.value === value;
+    // Liked-you ('1') and Visitors ('3') are premium-gated in Welcome.onOptionPress
+    const isPaid = value === '1' || value === '3';
+    const isLocked = isPaid && premiumLoaded && !isPremiumUser;
+    const counter =
+      value === '1'
+        ? userStats?.like_you_counter
+        : value === '3'
+          ? userStats?.visit_you_counter
+          : 0;
+    const showCounter = !isLocked && counter && counter > 0;
+
     return (
-      <Animation
-        animation={activeOptionButton.value === value ? 'zoomIn' : ''}
-        style={{
-          alignSelf: 'center',
-          borderBottomWidth: activeOptionButton.value === value ? 1 : 0.2,
-          marginRight: value === '3' ? 3 : 0,
-        }}
+      <Ripple
+        rippleColor={Colors.primary}
+        style={[
+          Styles.pill,
+          {
+            backgroundColor: isActive ? Colors.primary : Colors.lavender,
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+          },
+        ]}
+        onPress={onPress.bind(null, item)}
       >
-        <Ripple style={Styles.btn} onPress={onPress.bind(null, item)}>
-          <Text
+        <Text
+          style={{
+            ...Styles.pillTxt,
+            color: isActive ? Colors.surface : Colors.muted,
+            fontFamily: isActive ? Fonts.APPFONT_SB : Fonts.APPFONT_M,
+          }}
+        >
+          {name}
+        </Text>
+        {isLocked ? (
+          <Ionicons
+            name="lock-closed"
+            size={wp(3.1)}
+            color={isActive ? Colors.surface : Colors.primaryMid}
             style={{
-              ...Styles.btnTxt,
-              fontFamily:
-                activeOptionButton.value === value
-                  ? Fonts.APPFONT_SB
-                  : Fonts.APPFONT_R,
+              marginLeft: Rtl ? 0 : wp(1.1),
+              marginRight: Rtl ? wp(1.1) : 0,
             }}
+          />
+        ) : showCounter ? (
+          <View
+            style={[
+              Styles.countBubble,
+              {
+                backgroundColor: isActive ? Colors.surface : Colors.primary,
+                marginLeft: Rtl ? 0 : wp(1.2),
+                marginRight: Rtl ? wp(1.2) : 0,
+              },
+            ]}
           >
-            {name}
-          </Text>
-        </Ripple>
-        {value === '1' && userStats?.like_you_counter !== 0
-          ? RenderCounter(userStats?.like_you_counter)
-          : value === '3' && userStats?.visit_you_counter !== 0
-            ? RenderCounter(userStats?.visit_you_counter)
-            : null}
-      </Animation>
+            <ReactText
+              style={[
+                Styles.countTxt,
+                { color: isActive ? Colors.primary : Colors.surface },
+              ]}
+              numberOfLines={1}
+            >
+              {counter > 99 ? '99+' : counter}
+            </ReactText>
+          </View>
+        ) : null}
+      </Ripple>
     );
   };
 
@@ -77,6 +101,7 @@ const OptionsBar = (props: any) => {
         horizontal
         inverted={Rtl}
         showsHorizontalScrollIndicator={false}
+        contentContainerStyle={Styles.listContent}
       />
     </View>
   );
@@ -84,40 +109,38 @@ const OptionsBar = (props: any) => {
 
 export default OptionsBar;
 
-const { width } = Dimensions.get('window');
-
 const Styles = StyleSheet.create({
   container: {
-    height: 40,
-    marginTop: 10,
+    marginTop: hp(1.6),
+  },
+  listContent: {
+    paddingHorizontal: wp(3),
+    gap: wp(1.6),
+  },
+  pill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: hp(4.2),
+    paddingHorizontal: wp(2.8),
+    borderRadius: 999,
+  },
+  pillTxt: {
+    fontSize: Typography.small,
+    includeFontPadding: false,
     alignSelf: 'center',
+    textAlignVertical: 'center',
   },
-  btnTxt: {
-    color: Colors.color1,
-    fontSize: wp(2.8),
-    fontFamily: Fonts.APPFONT_R,
-    alignSelf: 'center',
-  },
-  btn: {
-    paddingHorizontal: wp(2.2),
-    paddingVertical: hp(0.3),
-    marginHorizontal: wp(2.3),
-    borderRadius: 30,
-  },
-  counterCon: {
-    width: width * 0.04,
-    height: width * 0.04,
-    borderRadius: 50,
+  countBubble: {
+    minWidth: wp(4.2),
+    height: wp(4.2),
+    borderRadius: wp(2.1),
+    paddingHorizontal: wp(1),
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    top: -6,
-    backgroundColor: Colors.color50,
   },
-  counterText: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.tiny,
-    top: 1,
+  countTxt: {
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.tiny1,
+    includeFontPadding: false,
   },
 });

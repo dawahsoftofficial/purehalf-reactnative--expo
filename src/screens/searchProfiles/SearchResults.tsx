@@ -1,17 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Text as ReactText,
+  View,
+} from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { Container, Header, Text } from '../../components';
+import { Container, Header } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { CheckRtl } from '../../languages';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
-import { ApiServices, flashErrorMessage } from '../../services';
-import { presentBoostProfilePaywall } from '../../services/paywall-service';
+import { ApiServices } from '../../services';
 import UsersList from '../welcome/UsersList';
 
 const SearchResults = (props: any) => {
-  const Rtl = CheckRtl();
+  const { t }: any = useTranslation();
   const [searchResults, setSearchResults] = useState(
     props?.route?.params?.searchResults?.results
   );
@@ -21,23 +26,8 @@ const SearchResults = (props: any) => {
   const urlParams = props?.route?.params?.urlParams;
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
   const [searchResultsPageNo, setsearchResultsPageNo] = useState(2);
-  const [isBoostLoading, setIsBoostLoading] = useState(false);
 
   const hideLoadMoreLoader = () => setLoadMoreLoader(false);
-
-  const onBoostPress = useCallback(async () => {
-    setIsBoostLoading(true);
-    try {
-      const result = await presentBoostProfilePaywall();
-      if (result.error && result.error !== 'Purchase cancelled by user') {
-        flashErrorMessage(result.error || 'Failed to open boost paywall');
-      }
-    } catch (error: any) {
-      flashErrorMessage(error.message || 'Failed to open boost paywall');
-    } finally {
-      setIsBoostLoading(false);
-    }
-  }, []);
 
   const onLoadMoreData = useCallback(() => {
     // M8 + M9 fix: prevent overlapping requests AND pass the next page number
@@ -63,39 +53,28 @@ const SearchResults = (props: any) => {
 
   useEffect(() => {
     // Defer state updates to avoid cascading renders
-    // Promise.resolve().then(() => {
     setTimeout(() => {
       onLoadMoreData();
     }, 0);
-    // });
   }, []);
 
   return (
-    <Container>
+    <Container style={Styles.screen}>
       <Header
         title={LanguageKeys.searchResults}
         navigation={props.navigation}
-        // customConponent={() => (
-        //   <View
-        //     style={[
-        //       Styles.headerRightContainer,
-        //       { flexDirection: Rtl ? 'row-reverse' : 'row' },
-        //     ]}
-        //   >
-        //     <BoostBadge onPress={onBoostPress} disabled={isBoostLoading} />
-        //   </View>
-        // )}
+        titleVariant="display"
       />
-      <View style={Styles.headerDesCon}>
-        <Text style={Styles.headerDes}>
-          {LanguageKeys.foundMatchingResultDes1}
-        </Text>
-        <Text style={Styles.headerDes}>
-          {JSON.stringify(totalSearchResults)}
-        </Text>
-        <Text style={Styles.headerDes}>
-          {LanguageKeys.foundMatchingResultDes2}
-        </Text>
+      <View style={Styles.summaryBanner}>
+        <View style={Styles.summaryIcon}>
+          <Ionicons name="people" color={Colors.primary} size={wp(5)} />
+        </View>
+        <ReactText style={Styles.summaryTxt}>
+          <ReactText style={Styles.summaryCount}>
+            {totalSearchResults ?? 0}{' '}
+          </ReactText>
+          {t(LanguageKeys.foundMatchingResultDes2)}
+        </ReactText>
       </View>
       <UsersList
         data={searchResults}
@@ -104,9 +83,9 @@ const SearchResults = (props: any) => {
       />
       {loadMoreLoader && (
         <ActivityIndicator
-          color={Colors.theme}
+          color={Colors.primary}
           size={'small'}
-          style={{ marginBottom: hp(5) }}
+          style={Styles.loadMore}
         />
       )}
     </Container>
@@ -116,28 +95,41 @@ const SearchResults = (props: any) => {
 export default SearchResults;
 
 const Styles = StyleSheet.create({
-  headerDesCon: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-    marginHorizontal: wp(4),
-    flexWrap: 'wrap',
-    width: wp(100),
-    marginVertical: hp(2),
+  screen: {
+    backgroundColor: Colors.appBg,
   },
-  headerDes: {
-    color: Colors.color1,
-    fontSize: Typography.small,
-    fontFamily: Fonts.APPFONT_R,
-    lineHeight: wp(5),
-    textAlign: 'left',
-    alignSelf: 'flex-start',
-    marginRight: wp(1),
-  },
-  headerRightContainer: {
+  summaryBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: 14,
+    paddingVertical: hp(1.4),
+    paddingHorizontal: wp(4),
+    marginHorizontal: wp(4),
+    marginTop: hp(1.5),
+  },
+  summaryIcon: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: wp(3),
+  },
+  summaryTxt: {
     flex: 1,
-    justifyContent: 'flex-end',
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  summaryCount: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium,
+  },
+  loadMore: {
+    marginBottom: hp(5),
   },
 });

@@ -2,14 +2,14 @@ import { useIsFocused } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import Ripple from 'react-native-material-ripple';
 import Purchases from 'react-native-purchases';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {
   AnimatedLoader,
+  Button,
   Container,
   Header,
-  LinearGradient,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -17,17 +17,37 @@ import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { ApiServices, StorageManager, useGlobalContext } from '../../services';
 
-type RenderFieldProps = {
-  heading: string;
-  description: string;
+type RenderRowProps = {
+  label: string;
+  value: string;
+  showDivider?: boolean;
 };
 
-const RenderField = ({ heading, description }: RenderFieldProps) => (
-  <View style={Styles.fieldCon}>
-    <Text style={Styles.heading}>{heading}</Text>
-    <Text style={Styles.description}>{description}</Text>
+const RenderRow = ({ label, value, showDivider = false }: RenderRowProps) => (
+  <View style={[Styles.row, showDivider && Styles.rowDivider]}>
+    <Text style={Styles.rowLabel}>{label}</Text>
+    <Text style={Styles.rowValue}>{value}</Text>
   </View>
 );
+
+type BenefitRowProps = {
+  label: string;
+  showDivider?: boolean;
+};
+
+const BenefitRow = ({ label, showDivider = false }: BenefitRowProps) => (
+  <View style={[Styles.benefitRow, showDivider && Styles.rowDivider]}>
+    <Ionicons name="checkmark-circle" size={wp(5)} color={Colors.primary} />
+    <Text style={Styles.benefitTxt}>{label}</Text>
+  </View>
+);
+
+const PRO_BENEFITS = [
+  LanguageKeys.proFeature1,
+  LanguageKeys.proFeature2,
+  LanguageKeys.proFeature3,
+  LanguageKeys.proFeature4,
+];
 
 const MembershipInfo = (props: any) => {
   const { setData, storageKeys } = StorageManager;
@@ -70,11 +90,22 @@ const MembershipInfo = (props: any) => {
     }
   }, [isFocused]);
 
+  const hasMembership = !(
+    user?.membership_status === 0 || !user?.membership_status
+  );
+
+  const renewalDate = currentUser.membership_status
+    ? moment(currentUser?.membership_expiry)?.format('DD MMM, YYYY hh:mm A')
+    : moment(
+        membershipInfo?.entitlements?.active['Premium bundles']?.expirationDate
+      )?.format('DD MMM, YYYY hh:mm A');
+
   return (
-    <Container>
+    <Container style={Styles.screen}>
       <Header
         title={LanguageKeys.membershipInformation}
         navigation={props.navigation}
+        titleVariant="display"
       />
       {loader ? (
         <AnimatedLoader
@@ -84,56 +115,84 @@ const MembershipInfo = (props: any) => {
         />
       ) : (
         <View style={Styles.innerCon}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            style={Styles.fieldsOuterCon}
-          >
-            {user?.membership_status === 0 || !user?.membership_status ? (
-              <Text style={Styles.noActiveMembership}>
-                {LanguageKeys.noActiveMembership}
-              </Text>
-            ) : (
-              <View>
-                <RenderField
-                  heading={LanguageKeys.premiumMembershipStatus}
-                  description={LanguageKeys.active}
+          {hasMembership ? (
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={Styles.fieldsOuterCon}
+            >
+              <View style={Styles.planCard}>
+                <View style={Styles.planIcon}>
+                  <Ionicons name="diamond" size={wp(6)} color={Colors.color2} />
+                </View>
+                <View style={Styles.planTextCon}>
+                  <Text style={Styles.planLabel}>{LanguageKeys.active}</Text>
+                  <Text
+                    variant="display"
+                    style={Styles.planTitle}
+                    numberOfLines={2}
+                  >
+                    {LanguageKeys.premiumMembershipStatus}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="checkmark-circle"
+                  size={wp(6)}
+                  color={Colors.color2}
                 />
-                <RenderField
-                  heading={LanguageKeys.proPackagePurchasedOn}
-                  description={moment(
+              </View>
+
+              <View style={Styles.groupCard}>
+                <RenderRow
+                  label={LanguageKeys.proPackagePurchasedOn}
+                  value={moment(
                     membershipInfo?.entitlements?.active['Premium bundles']
                       ?.latestPurchaseDate
                   )?.format('DD MMM, YYYY hh:mm A')}
+                  showDivider
                 />
-                {currentUser.membership_status ? (
-                  <RenderField
-                    heading={LanguageKeys.renewalDate}
-                    description={moment(currentUser?.membership_expiry)?.format(
-                      'DD MMM, YYYY hh:mm A'
-                    )}
-                  />
-                ) : (
-                  <RenderField
-                    heading={LanguageKeys.renewalDate}
-                    description={moment(
-                      membershipInfo?.entitlements?.active['Premium bundles']
-                        ?.expirationDate
-                    )?.format('DD MMM, YYYY hh:mm A')}
-                  />
-                )}
+                <RenderRow
+                  label={LanguageKeys.renewalDate}
+                  value={renewalDate}
+                />
               </View>
-            )}
-          </ScrollView>
-          {user?.membership_status === 0 || !user?.membership_status ? (
-            <LinearGradient
-              colors={[Colors.color19, Colors.color20]}
-              style={Styles.button}
-            >
-              <Ripple onPress={onUpdateToProPress} style={Styles.buttonInner}>
-                <Text style={Styles.btnTxt}>{LanguageKeys.upgradeToPro}</Text>
-              </Ripple>
-            </LinearGradient>
-          ) : null}
+            </ScrollView>
+          ) : (
+            <>
+              <ScrollView
+                style={Styles.emptyScrollView}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={Styles.emptyScroll}
+              >
+                <View style={Styles.emptyIconCircle}>
+                  <Ionicons
+                    name="diamond-outline"
+                    size={wp(10)}
+                    color={Colors.primary}
+                  />
+                </View>
+                <Text variant="display" style={Styles.emptyTitle}>
+                  {LanguageKeys.goProWithPureHalf}
+                </Text>
+                <Text style={Styles.emptySub}>
+                  {LanguageKeys.noActiveMembership}
+                </Text>
+                <View style={Styles.benefitsCard}>
+                  {PRO_BENEFITS.map((b, i) => (
+                    <BenefitRow
+                      key={b}
+                      label={b}
+                      showDivider={i < PRO_BENEFITS.length - 1}
+                    />
+                  ))}
+                </View>
+              </ScrollView>
+              <Button
+                text={LanguageKeys.upgradeToPro}
+                buttonStyle={Styles.button}
+                onPress={onUpdateToProPress}
+              />
+            </>
+          )}
         </View>
       )}
     </Container>
@@ -143,56 +202,132 @@ const MembershipInfo = (props: any) => {
 export default MembershipInfo;
 
 const Styles = StyleSheet.create({
-  container: {},
+  screen: {
+    backgroundColor: Colors.appBg,
+  },
   loader: {
     flex: 1,
   },
   innerCon: {
     paddingHorizontal: wp(4),
     flex: 1,
-    justifyContent: 'space-between',
   },
   fieldsOuterCon: {
-    paddingTop: hp(8),
+    paddingTop: hp(3),
     paddingBottom: hp(3),
   },
-  fieldCon: {
-    marginBottom: hp(4),
+  planCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    padding: wp(4),
+    marginBottom: hp(2),
   },
-  heading: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    color: Colors.color1,
-    lineHeight: wp(5),
+  planIcon: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.primaryRGBA12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  description: {
+  planTextCon: {
+    flex: 1,
+    marginHorizontal: wp(3),
+  },
+  planLabel: {
+    color: Colors.primaryLite,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: hp(0.3),
+  },
+  planTitle: {
+    color: Colors.color2,
+    fontSize: Typography.medium1,
+  },
+  groupCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
+  },
+  row: {
+    paddingVertical: hp(1.8),
+    paddingHorizontal: wp(4),
+  },
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+  },
+  rowLabel: {
     fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small1,
+    color: Colors.muted,
+  },
+  rowValue: {
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small3,
-    color: Colors.color1,
-    lineHeight: wp(5),
+    color: Colors.ink,
     marginTop: hp(0.4),
+  },
+  benefitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: hp(1.7),
+    paddingHorizontal: wp(4),
+    gap: wp(3),
+  },
+  benefitTxt: {
+    flex: 1,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+    color: Colors.ink,
   },
   button: {
     marginVertical: hp(2),
+  },
+  emptyScrollView: {
+    flex: 1,
+  },
+  emptyScroll: {
+    flexGrow: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: wp(1),
-    borderRadius: 30,
+    paddingVertical: hp(3),
   },
-  buttonInner: {
-    paddingVertical: hp(1.5),
-    borderRadius: 30,
+  emptyIconCircle: {
+    width: wp(22),
+    height: wp(22),
+    borderRadius: wp(11),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(2.5),
   },
-  btnTxt: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    color: Colors.color1,
-    alignSelf: 'center',
+  emptyTitle: {
+    color: Colors.ink,
+    fontSize: Typography.large,
+    textAlign: 'center',
+    marginHorizontal: wp(8),
   },
-  noActiveMembership: {
-    color: Colors.color1,
+  emptySub: {
     fontFamily: Fonts.APPFONT_R,
-    alignSelf: 'center',
-    fontSize: Typography.medium,
-    marginTop: hp(30),
+    fontSize: Typography.small2,
+    color: Colors.muted,
+    textAlign: 'center',
+    marginTop: hp(0.6),
+    marginBottom: hp(3),
+  },
+  benefitsCard: {
+    alignSelf: 'stretch',
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
   },
 });

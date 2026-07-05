@@ -21,6 +21,8 @@ import {
   ChooseLanguage,
   ContactSupport,
   DiscountProFeaturesPromotion,
+  EditInterests,
+  EditProfileGroup,
   GiftMembershipCongrats,
   GuardianChangePassword,
   GuardianEmailInput,
@@ -208,6 +210,8 @@ function App() {
           <Stack.Screen name="AccountSuspended" component={AccountSuspended} />
           <Stack.Screen name="SignupStepInput" component={SignupStepInput} />
           <Stack.Screen name="SignupStepRadio" component={SignupStepRadio} />
+          <Stack.Screen name="EditProfileGroup" component={EditProfileGroup} />
+          <Stack.Screen name="EditInterests" component={EditInterests} />
         </Stack.Navigator>
       )}
     </NavigationContainer>

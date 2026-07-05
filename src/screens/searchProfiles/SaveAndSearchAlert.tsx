@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { StyleSheet, TextInput, View } from 'react-native';
-import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { AlertContainer, Button, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -33,14 +33,14 @@ const SaveAndSearchAlert = (props: any) => {
   return (
     <AlertContainer visible={visible} onClose={onClose}>
       <View style={Styles.inputContainer}>
-        <Text style={Styles.inputOuterLabel}>
+        <Text variant="display" style={Styles.inputOuterLabel}>
           {LanguageKeys.nameYourSearch}
         </Text>
         <View style={Styles.inputOuterContainer}>
           <TextInput
             style={{ ...Styles.input, textAlign: Rtl ? 'right' : 'left' }}
             placeholder={t(LanguageKeys.nameYourSearch)}
-            placeholderTextColor={Colors.color1}
+            placeholderTextColor={Colors.muted}
             value={input}
             onChangeText={onChangeText}
             maxLength={100}
@@ -49,7 +49,7 @@ const SaveAndSearchAlert = (props: any) => {
       </View>
       <Button
         text={LanguageKeys.saveAndSearch}
-        icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
+        icon={<Ionicons name="search" color={Colors.color2} size={wp(5)} />}
         buttonStyle={Styles.searchBtn}
         onPress={onPress}
         disabled={!input.trim()}
@@ -66,10 +66,9 @@ const Styles = StyleSheet.create({
     marginBottom: hp(2),
   },
   inputOuterLabel: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    color: Colors.color1,
-    lineHeight: wp(5),
+    fontSize: Typography.medium1,
+    color: Colors.ink,
+    lineHeight: wp(6),
   },
   searchBtn: {
     marginHorizontal: wp(4),
@@ -77,18 +76,21 @@ const Styles = StyleSheet.create({
     marginBottom: hp(2),
   },
   inputOuterContainer: {
-    borderBottomWidth: 1,
-    marginTop: hp(2),
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
+    marginTop: hp(1.6),
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color3,
+    backgroundColor: Colors.surface,
     paddingHorizontal: wp(2),
   },
   input: {
     height: hp(6.3),
     paddingHorizontal: wp(3),
     fontSize: Typography.small3,
-    width: wp(80),
-    color: Colors.color1,
+    fontFamily: Fonts.APPFONT_R,
+    flex: 1,
+    color: Colors.ink,
   },
 });

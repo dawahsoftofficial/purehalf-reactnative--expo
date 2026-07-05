@@ -1,15 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View as RNView } from 'react-native';
-import { View } from 'react-native-animatable';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { isIOS } from '@/services';
-
-import { Button, Container, Text } from '../../components';
-import { hp, Typography, wp } from '../../global';
+import { Button, Container, Header } from '../../components';
+import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts } from '../../res';
+import { Colors } from '../../res';
 import { usePremiumStore } from '../../stores';
 import RefineSearch from './RefineSearch';
 import SavedSearches from './SavedSearches';
@@ -50,6 +47,7 @@ const SearchProfiles = () => {
 
   return (
     <Container style={Styles.container}>
+      <Header title={LanguageKeys.searchProfiles} titleVariant="display" />
       <RNView style={Styles.contentWrapper}>
         <ScrollView
           contentContainerStyle={Styles.innerContainer}
@@ -57,30 +55,30 @@ const SearchProfiles = () => {
           bounces={false}
           style={Styles.scrollView}
         >
-          <View style={Styles.headerCon}>
-            <Text style={Styles.headerTitle}>
-              {LanguageKeys.searchProfiles}
-            </Text>
-          </View>
-          <Text style={Styles.heading}>{LanguageKeys.savedSearches}</Text>
           <SavedSearches />
           <RefineSearch ref={refineSearchRef} premium={premium} />
         </ScrollView>
       </RNView>
-      <RNView
-        style={[Styles.buttonsContainer, isIOS && { marginBottom: -bottom }]}
-      >
-        <Button
-          text={LanguageKeys.saveAndSearch}
-          icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
-          buttonStyle={Styles.saveSearchBtn}
-          onPress={handleSaveAndSearch}
-          disabled={!hasFilters}
-        />
+      <RNView style={[Styles.buttonsContainer, { marginBottom: -bottom }]}>
+        {hasFilters && (
+          <Button
+            variant="outline"
+            text={LanguageKeys.saveAndSearch}
+            icon={
+              <Ionicons
+                name="bookmark-outline"
+                color={Colors.primary}
+                size={wp(5)}
+              />
+            }
+            buttonStyle={Styles.saveSearchBtn}
+            onPress={handleSaveAndSearch}
+          />
+        )}
         <Button
           text={LanguageKeys.search}
-          icon={<Feather name="search" color={Colors.color2} size={wp(5)} />}
-          buttonStyle={[Styles.searchBtn]}
+          icon={<Ionicons name="search" color={Colors.color2} size={wp(5)} />}
+          buttonStyle={Styles.searchBtn}
           onPress={handleSearch}
         />
       </RNView>
@@ -92,7 +90,7 @@ export default SearchProfiles;
 
 const Styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.color7,
+    backgroundColor: Colors.appBg,
     paddingTop: 0,
     flex: 1,
   },
@@ -104,7 +102,7 @@ const Styles = StyleSheet.create({
   },
   innerContainer: {
     paddingHorizontal: wp(4),
-    paddingBottom: hp(20),
+    paddingBottom: hp(22),
   },
   buttonsContainer: {
     position: 'absolute',
@@ -112,49 +110,26 @@ const Styles = StyleSheet.create({
     left: 0,
     right: 0,
     width: '100%',
-    backgroundColor: Colors.color7,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: wp(4),
     paddingTop: hp(1.5),
+    paddingBottom: hp(1.5),
     borderTopWidth: 1,
-    borderTopColor: Colors.color27,
+    borderTopColor: Colors.hairline,
     zIndex: 10,
-    shadowColor: Colors.color1,
+    shadowColor: Colors.ink,
     shadowOffset: {
       width: 0,
-      height: -2,
+      height: -3,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 5,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 8,
   },
   saveSearchBtn: {
-    marginHorizontal: wp(4),
-    marginBottom: hp(1.5),
-    backgroundColor: Colors.color37,
+    marginBottom: hp(1.2),
   },
   searchBtn: {
-    backgroundColor: Colors.color1,
-    marginHorizontal: wp(4),
-    marginBottom: hp(1.5),
-  },
-  heading: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small2,
-    includeFontPadding: false,
-    marginTop: hp(4),
-  },
-  headerCon: {
-    paddingBottom: hp(0.5),
-    paddingHorizontal: wp(4),
-    width: wp(100),
-    marginLeft: wp(-4),
-    backgroundColor: Colors.color2,
-  },
-  headerTitle: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_B,
-    color: Colors.color1,
-    includeFontPadding: false,
-    marginTop: hp(1),
+    backgroundColor: Colors.primary,
   },
 });

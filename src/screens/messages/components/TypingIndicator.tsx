@@ -99,16 +99,17 @@ const styles = StyleSheet.create({
   bubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color7,
-    borderRadius: wp(4),
-    paddingHorizontal: wp(3),
+    backgroundColor: Colors.lavender,
+    borderRadius: 18,
+    borderBottomLeftRadius: 6,
+    paddingHorizontal: wp(3.5),
     paddingVertical: hp(1),
     alignSelf: 'flex-start',
   },
   text: {
     fontSize: Typography.small,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color35,
+    fontFamily: Fonts.APPFONT_M,
+    color: Colors.muted,
     marginRight: wp(2),
   },
   dotsContainer: {
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: Colors.color35,
+    backgroundColor: Colors.primary,
     marginHorizontal: 2,
   },
 });

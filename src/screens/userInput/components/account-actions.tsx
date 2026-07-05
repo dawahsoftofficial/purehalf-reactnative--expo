@@ -1,9 +1,10 @@
 import React, { memo } from 'react';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
-import { Text } from '../../../components';
-import { Typography } from '../../../global';
+import { Button, Text } from '../../../components';
+import { hp, Typography, wp } from '../../../global';
+import { LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 
 type AccountActionsProps = {
@@ -16,26 +17,39 @@ function AccountActions({
   onDeleteAccountPress,
 }: AccountActionsProps) {
   return (
-    <>
-      <Ripple onPress={onLogoutPress}>
-        <Text style={Styles.actionText}>logOut</Text>
+    <View style={Styles.container}>
+      <Button
+        text={LanguageKeys.logOut}
+        variant="outline"
+        onPress={onLogoutPress}
+        buttonStyle={Styles.logoutBtn}
+      />
+      <Ripple style={Styles.deleteBtn} onPress={onDeleteAccountPress}>
+        <Text style={Styles.deleteText}>{LanguageKeys.deleteAccount}</Text>
       </Ripple>
-      <Ripple onPress={onDeleteAccountPress}>
-        <Text style={Styles.actionText}>deleteAccount</Text>
-      </Ripple>
-    </>
+    </View>
   );
 }
 
 export default memo(AccountActions);
 
 const Styles = StyleSheet.create({
-  actionText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.theme,
-    textDecorationLine: 'underline',
+  container: {
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(2),
+  },
+  logoutBtn: {
+    height: hp(6),
+  },
+  deleteBtn: {
     alignSelf: 'center',
-    marginTop: 10,
+    paddingVertical: hp(1.2),
+    marginTop: hp(0.5),
+  },
+  deleteText: {
+    fontSize: Typography.small2,
+    fontFamily: Fonts.APPFONT_M,
+    color: Colors.color24,
+    alignSelf: 'center',
   },
 });

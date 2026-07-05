@@ -3,16 +3,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { usePremiumStore, useSettingsStore, useUserStatsStore } from '@/stores';
 
@@ -23,11 +16,12 @@ import {
   ModalLoader,
   PurchaseSuccessModal,
   Swiper,
+  Text as AppText,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { LanguageKeys } from '../../languages';
+import { CheckRtl, LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -71,13 +65,12 @@ const sortByCompletion = (
   b: ProfileProgressItem
 ): number => Number(b.completed) - Number(a.completed);
 
-const { width } = Dimensions.get('window');
-
 // Module-level flag to prevent multiple initial fetches across remounts
 let hasInitializedUsers = false;
 
 const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const { t } = useTranslation();
+  const Rtl = CheckRtl();
   const optionBarList = useMemo<OptionButton[]>(
     () => [
       {
@@ -613,55 +606,46 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     // navigation.replace('ProFeaturesPromotion');
   }
   return (
-    <Container style={Styles.container}>
+    <Container style={Styles.container} barBg={Colors.appBg}>
       <View style={Styles.paddingH}>
         <CheckMembershipStatus />
         <ModalLoader visible={modalLoader} useModalLayout={true} />
         <CommonActions navigation={navigation} userId={currentUser?.id} />
-        <View style={Styles.headerWrapper}>
-          {!isPremiumUser ? (
-            // TODO: Premium Check
-            <PremiumButton />
-          ) : (
-            <TouchableOpacity
-              activeOpacity={0.6}
-              onPress={() => {
-                flashSuccessMessage('You are already a premium member');
-                // navigation.navigate('ProFeaturesPromotion', {
-                //   navigateTo: 'BottomTab',
-                // });
-              }}
-              style={Styles.headerIconWrapper}
-            >
-              <Image source={Images.membership} style={Styles.headerIcon} />
-            </TouchableOpacity>
-          )}
+        <View
+          style={[
+            Styles.headerWrapper,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+        >
+          <View style={Styles.greetingBlock}>
+            <AppText style={Styles.greetingEyebrow}>
+              {LanguageKeys.assalamuAlaikum}
+            </AppText>
+            {currentUser?.first_name ? (
+              <AppText variant="display" style={Styles.greetingName}>
+                {currentUser.first_name}
+              </AppText>
+            ) : null}
+          </View>
           <View style={Styles.headerRightWrapper}>
             {showRecommendationModal && (
               <Ripple
-                style={Styles.headerIconWrapper}
+                rippleColor={Colors.primary}
+                style={Styles.iconChip}
                 onPress={() => onRecommendationPress(true)}
               >
-                <Image
-                  source={Images.recommendationIcon}
-                  style={[Styles.headerIcon, { width: 25, height: 25 }]}
-                />
+                <Ionicons name="sparkles" size={wp(5)} color={Colors.primary} />
               </Ripple>
             )}
             <Ripple
-              style={[
-                Styles.headerIconWrapper,
-                { backgroundColor: Colors.color7 },
-              ]}
+              rippleColor={Colors.primary}
+              style={Styles.avatarBtn}
               onPress={() => setHeaderModal(!headerModal)}
             >
               {currentUser?.media?.un_blur_primary_image ? (
                 <Image
                   source={{ uri: currentUser?.media?.un_blur_primary_image }}
-                  style={[
-                    Styles.headerIcon,
-                    { width: 45, height: 45, borderRadius: 25 },
-                  ]}
+                  style={Styles.avatarImg}
                 />
               ) : (
                 <Text style={Styles.headerText}>
@@ -670,9 +654,10 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               )}
               {isPremiumUser ? (
                 <View style={Styles.premiumBadge}>
-                  <Image
-                    source={Images.membership}
-                    style={Styles.premiumBadgeIcon}
+                  <Ionicons
+                    name="diamond"
+                    size={wp(2.6)}
+                    color={Colors.surface}
                   />
                 </View>
               ) : null}
@@ -681,18 +666,30 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         </View>
         {!currentUser?.is_approved && (
           <Ripple
-            style={Styles.pendingApprovalBanner}
+            style={[
+              Styles.pendingApprovalBanner,
+              { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
             onPress={() => setHeaderModal(true)}
           >
-            <Image
-              source={Images.infoIcon}
-              style={Styles.pendingApprovalIcon}
-            />
+            <View style={Styles.pendingIconChip}>
+              <Ionicons
+                name="time-outline"
+                size={wp(4.5)}
+                color={Colors.primary}
+              />
+            </View>
             <Text style={Styles.pendingApprovalText}>
               {t(LanguageKeys.profileInReview)}
             </Text>
+            <Ionicons
+              name={Rtl ? 'chevron-back' : 'chevron-forward'}
+              size={wp(4.5)}
+              color={Colors.primaryMid}
+            />
           </Ripple>
         )}
+        {!isPremiumUser ? <PremiumButton /> : null}
       </View>
       <AccountModal
         visible={headerModal}
@@ -736,34 +733,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         />
       )}
       {loadMoreLoader && (
-        <ActivityIndicator color={Colors.theme} size="small" />
+        <ActivityIndicator color={Colors.primary} size="small" />
       )}
-      {/* {(activeOptionButton?.value === '-1' ||
-        activeOptionButton?.value === '1' ||
-        activeOptionButton?.value === '3') && (
-        <Ripple
-          onPress={onBoostProfilePress}
-          disabled={isBoostLoading}
-          style={Styles.fabContainer}
-        >
-          <LinearGradient
-            style={{ borderRadius: 100 }}
-            colors={[Colors.color47, Colors.color48]}
-          >
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: wp(2),
-                padding: hp(2),
-              }}
-            >
-              <PopularBadgeIcon width={wp(6)} height={wp(6)} />
-              <Text style={Styles.txtBoost}>Boost</Text>
-            </View>
-          </LinearGradient>
-        </Ripple>
-      )} */}
     </Container>
   );
 };
@@ -773,105 +744,101 @@ export default Welcome;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.appBg,
   },
   paddingH: {
     paddingHorizontal: wp(3),
   },
-  headerWrapper: { flexDirection: 'row', justifyContent: 'space-between' },
-  headerIconWrapper: {
-    width: 45,
-    height: 45,
-    borderWidth: 1,
-    borderColor: Colors.color47,
-    borderRadius: 25,
+  headerWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: hp(1),
+  },
+  greetingBlock: {
+    flex: 1,
+    paddingRight: wp(2),
+  },
+  greetingEyebrow: {
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+    color: Colors.muted,
+    includeFontPadding: false,
+  },
+  greetingName: {
+    fontSize: Typography.large1,
+    color: Colors.ink,
+    textTransform: 'capitalize',
+    marginTop: hp(0.2),
+    includeFontPadding: false,
+  },
+  headerRightWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
+  },
+  iconChip: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerIcon: {
-    width: 20,
-    height: 20,
+  avatarBtn: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(6),
+    backgroundColor: Colors.lavender,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerRightWrapper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  avatarImg: {
+    width: wp(12),
+    height: wp(12),
+    borderRadius: wp(6),
+  },
   headerText: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large3,
-    color: Colors.color1,
+    fontSize: Typography.large1,
+    color: Colors.primary,
     textTransform: 'capitalize',
-    top: 3,
   },
   premiumBadge: {
-    width: width * 0.05,
-    height: width * 0.05,
-    borderRadius: 50,
-    backgroundColor: Colors.color47,
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    top: -5,
-    left: -3,
-  },
-  premiumBadgeIcon: {
-    width: 10,
-    height: 10,
-    tintColor: Colors.color2,
-  },
-  headerCounterWrapper: {
-    width: width * 0.04,
-    height: width * 0.04,
-    borderRadius: 50,
-    backgroundColor: Colors.color50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'absolute',
-    top: -7,
-    right: -7,
-  },
-  headerCounterText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small1,
-    color: Colors.color2,
-  },
-  fabContainer: {
-    position: 'absolute',
-    bottom: hp(2),
-    right: wp(4),
-
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 8,
-    shadowColor: Colors.color1,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4.65,
-  },
-  txtBoost: {
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
-    color: Colors.color2,
+    bottom: -2,
+    right: -2,
+    borderWidth: 1.5,
+    borderColor: Colors.surface,
   },
   pendingApprovalBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color47,
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1.5),
-    borderRadius: wp(2),
-    marginTop: hp(1.5),
-    gap: wp(2.5),
+    backgroundColor: Colors.lavender,
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(1.3),
+    borderRadius: 14,
+    marginTop: hp(1.4),
+    gap: wp(3),
   },
-  pendingApprovalIcon: {
-    width: wp(5),
-    height: wp(5),
-    tintColor: Colors.color2,
+  pendingIconChip: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   pendingApprovalText: {
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small2,
-    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    color: Colors.ink,
     flex: 1,
   },
 });

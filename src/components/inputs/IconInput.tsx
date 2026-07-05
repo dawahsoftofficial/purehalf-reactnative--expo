@@ -22,7 +22,7 @@ const IconInput = React.memo((props: any) => {
     onFocus = () => null,
     onBlur = () => null,
     placeholder = '',
-    placeholderColor = Colors.color28,
+    placeholderColor = Colors.muted,
     secureTextEntry = false,
     disabled = false,
   } = props;
@@ -45,7 +45,7 @@ const IconInput = React.memo((props: any) => {
         <View
           style={[
             Styles.inputOuterContainer,
-            { backgroundColor: disabled ? Colors.color61 : Colors.color3 },
+            { backgroundColor: disabled ? Colors.lavender : Colors.surface },
           ]}
         >
           <TextInput
@@ -74,7 +74,7 @@ const IconInput = React.memo((props: any) => {
         <View
           style={[
             Styles.inputOuterContainer,
-            { backgroundColor: disabled ? Colors.color61 : Colors.color3 },
+            { backgroundColor: disabled ? Colors.lavender : Colors.surface },
           ]}
         >
           {iconElement}
@@ -113,14 +113,17 @@ const Styles = StyleSheet.create({
   inputLabel: {
     fontSize: Typography.medium,
     fontFamily: Fonts.APPFONT_M,
-    color: Colors.color1,
+    color: Colors.ink,
   },
   inputOuterContainer: {
-    borderBottomWidth: 1,
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
     marginTop: hp(0.8),
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color3,
+    paddingHorizontal: wp(2),
+    backgroundColor: Colors.surface,
   },
   input: {
     height: hp(6.3),
@@ -128,7 +131,7 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     width: wp(80),
-    color: Colors.color1,
+    color: Colors.ink,
   },
   inputIcon: {
     width: wp(4),

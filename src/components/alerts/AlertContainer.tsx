@@ -31,13 +31,13 @@ const AlertContainer = (props: any) => {
         >
           <Animation
             style={Styles.contentCon}
-            animation={'zoomIn'}
-            duration={500}
+            animation={'fadeInUp'}
+            duration={320}
           >
             <AntDesign
               name="close"
-              size={wp(7)}
-              color={Colors.color1}
+              size={wp(6)}
+              color={Colors.muted}
               style={Styles.closeIcon}
               onPress={onClose}
             />
@@ -60,14 +60,17 @@ const Styles = StyleSheet.create({
   },
   contentCon: {
     alignSelf: 'center',
-    width: wp(90),
-    backgroundColor: Colors.color2,
-    paddingVertical: hp(1),
-    borderRadius: 8,
+    width: wp(88),
+    backgroundColor: Colors.surface,
+    paddingTop: hp(1),
+    paddingBottom: hp(2),
+    paddingHorizontal: wp(2),
+    borderRadius: 24,
   },
   closeIcon: {
     alignSelf: 'flex-end',
     marginHorizontal: wp(1),
     paddingHorizontal: wp(2),
+    paddingVertical: hp(0.5),
   },
 });

@@ -108,13 +108,17 @@ const MessageBubble = ({
   const isLastSeenMessage = isCurrentUser && index === lastSeenMessageIndex;
 
   const backgroundColor = isCurrentUser
-    ? Colors.theme
+    ? Colors.primary
     : isGuardian
-      ? Colors.color53
-      : Colors.color31;
+      ? Colors.primaryMid
+      : Colors.lavender;
 
-  const textColour =
-    isGuardian || isCurrentUser ? Colors.color2 : Colors.color1;
+  const textColour = isGuardian || isCurrentUser ? Colors.color2 : Colors.ink;
+
+  // Asymmetric "tail" corner on the side the bubble is aligned to.
+  const tailStyle = isCurrentUser
+    ? { borderBottomRightRadius: 6 }
+    : { borderBottomLeftRadius: 6 };
 
   return (
     <View
@@ -125,7 +129,7 @@ const MessageBubble = ({
       }}
     >
       <TouchableOpacity
-        style={[Styles.messageCon, { backgroundColor }]}
+        style={[Styles.messageCon, tailStyle, { backgroundColor }]}
         onPress={() => onMessagePress(item?.id)}
         activeOpacity={0.9}
       >
@@ -139,7 +143,9 @@ const MessageBubble = ({
               Styles.messageTimeInline,
               {
                 color:
-                  isCurrentUser || isGuardian ? Colors.color2 : Colors.color34,
+                  isCurrentUser || isGuardian
+                    ? Colors.whiteRGBA90
+                    : Colors.muted,
               },
             ]}
           >
@@ -160,7 +166,7 @@ const MessageBubble = ({
       {isCurrentUser && item?.status === 'sending' && (
         <View style={Styles.messageSendingCon}>
           <ActivityIndicator
-            color={Colors.theme}
+            color={Colors.primary}
             size={wp(4)}
             style={{ marginHorizontal: wp(2) }}
           />

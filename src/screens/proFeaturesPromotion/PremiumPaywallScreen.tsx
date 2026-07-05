@@ -17,7 +17,6 @@ import {
   View,
   type ViewToken,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import Purchases, {
   type PurchasesPackage,
   type PurchasesStoreProduct,
@@ -584,39 +583,20 @@ export default function PremiumPaywallScreen({
     <SafeAreaView edges={['top', 'bottom']} style={styles.safe}>
       <StatusBar
         translucent={true}
-        barStyle={'light-content'}
+        barStyle={'dark-content'}
         backgroundColor={'transparent'}
       />
       <ModalLoader
         visible={loaderModal.visible}
         message={loaderModal.message}
       />
-      {/* Background with radial gradients matching HTML */}
       <View style={styles.bg} />
-      <LinearGradient
-        colors={['rgba(167,139,250,0.22)', 'transparent']}
-        start={{ x: 0.2, y: 0.1 }}
-        end={{ x: 0.2, y: 0.6 }}
-        style={[StyleSheet.absoluteFill, styles.gradient1]}
-      />
-      <LinearGradient
-        colors={['rgba(45,212,191,0.18)', 'transparent']}
-        start={{ x: 0.8, y: 0 }}
-        end={{ x: 0.8, y: 0.55 }}
-        style={[StyleSheet.absoluteFill, styles.gradient2]}
-      />
-      <LinearGradient
-        colors={['rgba(251,191,36,0.12)', 'transparent']}
-        start={{ x: 0.5, y: 1 }}
-        end={{ x: 0.5, y: 0.45 }}
-        style={[StyleSheet.absoluteFill, styles.gradient3]}
-      />
 
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.h1}>Find the Right Match Faster</Text>
+            <Text style={styles.h1}>Find the right match faster</Text>
             <Text style={styles.sub}>
               See who likes you, filter for serious matches, and get priority
               visibility.
@@ -625,25 +605,15 @@ export default function PremiumPaywallScreen({
 
           {handleClose && (
             <Pressable onPress={handleClose} style={styles.closeBtn}>
-              {/* <Text style={styles.closeText}>Close</Text> */}
-              <AntDesign name="close" size={wp(5)} color={Colors.color2} />
+              <AntDesign name="close" size={wp(5)} color={Colors.primary} />
             </Pressable>
           )}
         </View>
 
-        {/* Chips */}
-        {/* <View style={styles.chips}>
-          <Chip label="Bonus chats instantly" dot="pro" />
-          <Chip label="Daily chats included" dot="success" />
-          <Chip label="See Likes & Visits" dot="neutral" />
-          <Chip label="Premium filters" dot="warn" />
-          <Chip label="Priority in search" dot="neutral" />
-        </View> */}
-
         {/* Swipe Cards */}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#fff" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Loading packages...</Text>
           </View>
         ) : packages.length === 0 ? (
@@ -797,56 +767,44 @@ export default function PremiumPaywallScreen({
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#0b0b10' },
+  safe: { flex: 1, backgroundColor: Colors.appBg },
   bg: {
     ...StyleSheet.absoluteFill,
-    backgroundColor: '#0b0b10',
+    backgroundColor: Colors.appBg,
   },
-  gradient1: {
-    opacity: 1,
-  },
-  gradient2: {
-    opacity: 1,
-  },
-  gradient3: {
-    opacity: 1,
-  },
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 10 },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 18 },
 
-  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 18,
+  },
   h1: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.95)',
-    includeFontPadding: false,
+    fontFamily: Fonts.DISPLAY,
+    fontSize: 24,
+    lineHeight: 34,
+    paddingTop: 2,
+    color: Colors.ink,
   },
   sub: {
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.70)',
+    fontSize: 13,
+    lineHeight: 19,
+    color: Colors.muted,
+    marginTop: 6,
   },
 
   closeBtn: {
-    padding: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  closeText: {
-    color: 'rgba(255,255,255,0.90)',
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: 12,
-    includeFontPadding: false,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.lavender,
   },
 
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginVertical: 10,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -854,7 +812,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   loadingText: {
-    color: 'rgba(255,255,255,0.70)',
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: 14,
     marginTop: 12,

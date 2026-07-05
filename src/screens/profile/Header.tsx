@@ -10,17 +10,21 @@ import {
   ActivityIndicator,
   Dimensions,
   Image,
-  ImageBackground,
   Modal,
   StatusBar,
+  type StyleProp,
   StyleSheet,
   Text as ReactText,
+  TextInput,
+  type TextStyle,
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Svg, { Circle } from 'react-native-svg';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { type CurrentUserDetail } from '@/services/api/types/user-types';
 
@@ -100,6 +104,14 @@ type HeaderProps = {
   onBlockPress?: () => void;
   fromUserProfile?: boolean;
   isBlockedYou?: boolean;
+  profileStrength?: number;
+  tagline?: string;
+  taglineEditing?: boolean;
+  taglineInput?: string;
+  onTaglineChange?: (text: string) => void;
+  onTaglineSubmit?: () => void;
+  onTaglineEditPress?: () => void;
+  onTaglineCancel?: () => void;
 };
 
 type NameRowProps = {
@@ -121,7 +133,9 @@ const NameRow = React.memo(function NameRow({
     <View
       style={{ ...Styles.nameCon, flexDirection: rtl ? 'row-reverse' : 'row' }}
     >
-      <ReactText style={{ ...Styles.name }}>
+      <ReactText
+        style={[Styles.name, !rtl ? { fontFamily: Fonts.DISPLAY } : null]}
+      >
         {capitalize(firstName ?? '') + ' ' + capitalize(lastName ?? '')}
       </ReactText>
       {showStatus && (
@@ -136,41 +150,90 @@ const NameRow = React.memo(function NameRow({
   );
 });
 
-type LocationProps = {
+type MetaLineProps = {
+  age?: number;
   city?: string;
   country?: string;
+  style?: StyleProp<TextStyle>;
 };
 
-const LocationText = React.memo(function LocationText({
+const MetaLine = React.memo(function MetaLine({
+  age,
   city,
   country,
-}: LocationProps): ReactElement {
+  style,
+}: MetaLineProps): ReactElement {
+  const location = [city, country].filter(Boolean).join(', ');
+  const parts = [typeof age === 'number' ? `${age}` : '', location].filter(
+    Boolean
+  );
   return (
-    <ReactText style={Styles.location} numberOfLines={2}>
-      {city}
-      {city && ', '}
-      {country}
+    <ReactText style={[Styles.location, style]} numberOfLines={2}>
+      {parts.join('  ·  ')}
     </ReactText>
   );
 });
 
-type AgeProps = {
-  age?: number;
+type ProgressRingProps = {
+  size: number;
+  strokeWidth: number;
+  percent: number;
+  trackColor: string;
+  progressColor: string;
+  children?: React.ReactNode;
 };
 
-const AgeText = React.memo(function AgeText({ age }: AgeProps): ReactElement {
+const ProgressRing = React.memo(function ProgressRing({
+  size,
+  strokeWidth,
+  percent,
+  trackColor,
+  progressColor,
+  children,
+}: ProgressRingProps): ReactElement {
+  const center = size / 2;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.max(0, Math.min(100, percent));
+  const offset = circumference * (1 - clamped / 100);
   return (
-    <ReactText style={Styles.location} numberOfLines={2}>
-      {`Age: ${age}`}
-    </ReactText>
+    <View
+      style={{
+        width: size,
+        height: size,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={trackColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        <Circle
+          cx={center}
+          cy={center}
+          r={radius}
+          stroke={progressColor}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          transform={`rotate(-90 ${center} ${center})`}
+        />
+      </Svg>
+      {children}
+    </View>
   );
 });
 
 type ActionButtonsProps = {
   rtl: boolean;
-  isBlocked: boolean;
-  isBlockedByYou: boolean;
-  onBlockPress?: () => void;
   onMessagePress: () => void;
   onLikePress: () => void;
   messageButtonLoader: boolean;
@@ -179,17 +242,11 @@ type ActionButtonsProps = {
 
 const ActionButtons = React.memo(function ActionButtons({
   rtl,
-  isBlocked,
-  isBlockedByYou,
-  onBlockPress,
   onMessagePress,
   onLikePress,
   messageButtonLoader,
   liked,
 }: ActionButtonsProps): ReactElement {
-  const blockIconColor =
-    isBlocked || isBlockedByYou ? Colors.theme : Colors.color1;
-
   return (
     <View
       style={{
@@ -197,27 +254,55 @@ const ActionButtons = React.memo(function ActionButtons({
         flexDirection: rtl ? 'row-reverse' : 'row',
       }}
     >
-      <Ripple style={Styles.actionIcon} onPress={onBlockPress}>
-        <Entypo name="block" color={blockIconColor} size={wp(4.5)} />
-      </Ripple>
       <Ripple
-        style={[Styles.actionIcon, { backgroundColor: Colors.color47 }]}
+        style={[
+          Styles.actionPill,
+          Styles.messagePill,
+          { flexDirection: rtl ? 'row-reverse' : 'row' },
+        ]}
         onPress={onMessagePress}
         disabled={messageButtonLoader}
+        rippleColor={Colors.color2}
       >
         {messageButtonLoader ? (
-          <ActivityIndicator color={Colors.theme} size={'small'} />
+          <ActivityIndicator color={Colors.color2} size={'small'} />
         ) : (
-          <AntDesign name="mail" color={Colors.color2} size={wp(4.5)} />
+          <>
+            <Ionicons
+              name="chatbubble-ellipses"
+              color={Colors.color2}
+              size={wp(4.8)}
+            />
+            <Text
+              style={[Styles.actionPillTxt, Styles.messagePillTxt]}
+              numberOfLines={1}
+            >
+              {LanguageKeys.message}
+            </Text>
+          </>
         )}
       </Ripple>
 
-      <Ripple style={Styles.actionIcon} onPress={onLikePress}>
-        {liked ? (
-          <AntDesign name="heart" color={Colors.theme} size={wp(4.5)} />
-        ) : (
-          <AntDesign name="hearto" color={Colors.color1} size={wp(4.5)} />
-        )}
+      <Ripple
+        style={[
+          Styles.actionPill,
+          Styles.likePill,
+          { flexDirection: rtl ? 'row-reverse' : 'row' },
+        ]}
+        onPress={onLikePress}
+        rippleColor={Colors.primaryLite}
+      >
+        <Ionicons
+          name={liked ? 'heart' : 'heart-outline'}
+          color={Colors.primary}
+          size={wp(4.8)}
+        />
+        <Text
+          style={[Styles.actionPillTxt, Styles.likePillTxt]}
+          numberOfLines={1}
+        >
+          {LanguageKeys.like}
+        </Text>
       </Ripple>
     </View>
   );
@@ -313,6 +398,14 @@ const Header = ({
   isBlockedYou = false,
   userData: initialUserData,
   onLikeUnlikePress,
+  profileStrength,
+  tagline,
+  taglineEditing = false,
+  taglineInput = '',
+  onTaglineChange = () => null,
+  onTaglineSubmit = () => null,
+  onTaglineEditPress = () => null,
+  onTaglineCancel = () => null,
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const isPremium = usePremiumStore((state) => state.isPremium);
@@ -328,6 +421,7 @@ const Header = ({
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
   const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const chatUserData = useMemo(
     () => ({
@@ -610,6 +704,13 @@ const Header = ({
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
+  const openMenu = useCallback(() => setMenuVisible(true), []);
+  const closeMenu = useCallback(() => setMenuVisible(false), []);
+  const handleBlockFromMenu = useCallback(() => {
+    setMenuVisible(false);
+    onBlockPress();
+  }, [onBlockPress]);
+
   const onBlurButtonPress = useCallback(() => {
     setBlurModalVisible(true);
   }, []);
@@ -691,217 +792,388 @@ const Header = ({
     };
   }, [userData?.last_online_at]);
 
+  const renderSelfHeader = () => (
+    <LinearGradient
+      colors={[Colors.primary, Colors.primaryMid]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={Styles.selfHeader}
+    >
+      <View style={Styles.avatarBlock}>
+        <Ripple
+          style={Styles.avatarTap}
+          onPress={onEditPress}
+          rippleColor={Colors.color2}
+        >
+          <ProgressRing
+            size={wp(32)}
+            strokeWidth={wp(1.6)}
+            percent={typeof profileStrength === 'number' ? profileStrength : 0}
+            trackColor="rgba(255,255,255,0.28)"
+            progressColor={Colors.color2}
+          >
+            <View style={Styles.avatarInner}>
+              {profileImageUri &&
+              profileImageUri.length !== 0 &&
+              !profileImageError ? (
+                <Image
+                  source={{ uri: profileImageUri }}
+                  style={Styles.avatarImage}
+                  resizeMode="cover"
+                  onLoadStart={onProfileImageLoadStart}
+                  onLoadEnd={onProfileImageLoadEnd}
+                  onError={onProfileImageError}
+                />
+              ) : (
+                <View style={Styles.avatarFallback}>
+                  <FontAwesome5
+                    name="user-alt"
+                    color={Colors.primaryLite}
+                    size={wp(11)}
+                  />
+                </View>
+              )}
+              {profileImageLoader && !profileImageError && (
+                <View style={Styles.avatarLoader}>
+                  <ActivityIndicator color={Colors.primary} size="small" />
+                </View>
+              )}
+            </View>
+          </ProgressRing>
+        </Ripple>
+        {typeof profileStrength === 'number' ? (
+          <View style={Styles.strengthChip}>
+            <ReactText style={Styles.strengthChipTxt}>
+              {`${profileStrength}%`}
+            </ReactText>
+          </View>
+        ) : null}
+      </View>
+
+      <ReactText
+        style={[Styles.selfName, !Rtl ? { fontFamily: Fonts.DISPLAY } : null]}
+        numberOfLines={1}
+      >
+        {capitalize(userData?.first_name ?? '') +
+          ' ' +
+          capitalize(userData?.last_name ?? '')}
+      </ReactText>
+
+      <MetaLine
+        age={userData?.age}
+        city={userData?.city}
+        country={userData?.country}
+        style={Styles.selfMeta}
+      />
+
+      <View style={Styles.selfBadges}>
+        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
+      </View>
+
+      <Ripple
+        style={Styles.taglinePill}
+        onPress={onTaglineEditPress}
+        rippleColor={Colors.color2}
+      >
+        <Entypo name="pencil" size={wp(3.8)} color={Colors.whiteRGBA90} />
+        <ReactText style={Styles.taglineTxt} numberOfLines={1}>
+          {tagline && tagline.trim().length ? tagline : LanguageKeys.addTagline}
+        </ReactText>
+      </Ripple>
+
+      <View style={Styles.selfActions}>
+        <Ripple
+          style={[
+            Styles.selfBtn,
+            Styles.selfBtnSolid,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+          onPress={onEditPress}
+          rippleColor={Colors.primary}
+        >
+          <Entypo name="camera" size={wp(4.6)} color={Colors.primary} />
+          <Text
+            style={[Styles.selfBtnTxt, Styles.selfBtnTxtSolid]}
+            numberOfLines={1}
+          >
+            {LanguageKeys.myPhotos}
+          </Text>
+        </Ripple>
+        <Ripple
+          style={[
+            Styles.selfBtn,
+            Styles.selfBtnGlass,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+          onPress={onBlurButtonPress}
+          rippleColor={Colors.color2}
+        >
+          <Entypo
+            name={userData?.is_blur ? 'eye-with-line' : 'eye'}
+            size={wp(4.6)}
+            color={Colors.color2}
+          />
+          <Text
+            style={[Styles.selfBtnTxt, Styles.selfBtnTxtGlass]}
+            numberOfLines={1}
+          >
+            {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
+          </Text>
+        </Ripple>
+      </View>
+    </LinearGradient>
+  );
+
   return (
-    <View style={Styles.container}>
-      {isPremiumMember && <StatusBar backgroundColor={Colors.color47} />}
-      {fromUserProfile && <CheckMembershipStatus />}
+    <View style={fromUserProfile ? Styles.container : Styles.selfContainer}>
+      {isPremiumMember && <StatusBar backgroundColor={Colors.primary} />}
       <ModalLoader visible={modalLoader} useModalLayout={true} />
 
-      {profileImageUri && profileImageUri.length !== 0 && !profileImageError ? (
-        <View style={[StyleSheet.absoluteFill, { zIndex: -1 }]}>
-          {/* Blurred background image with cover */}
-          <ImageBackground
-            style={StyleSheet.absoluteFill}
-            source={{ uri: profileImageUri }}
-            resizeMode="cover"
-            blurRadius={5}
-          />
-          {/* Actual image on top with contain */}
-          <Image
-            style={[StyleSheet.absoluteFill, { zIndex: 10 }]}
-            source={{ uri: profileImageUri }}
-            resizeMode="contain"
-            onLoadStart={onProfileImageLoadStart}
-            onLoadEnd={onProfileImageLoadEnd}
-            onError={onProfileImageError}
-          />
-          {profileImageLoader && !profileImageError && (
-            <ActivityIndicator
+      {!fromUserProfile ? (
+        renderSelfHeader()
+      ) : (
+        <>
+          <CheckMembershipStatus />
+          {profileImageUri &&
+          profileImageUri.length !== 0 &&
+          !profileImageError ? (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { zIndex: -1, backgroundColor: Colors.lavender },
+              ]}
+            >
+              <Image
+                style={StyleSheet.absoluteFill}
+                source={{ uri: profileImageUri }}
+                resizeMode="cover"
+                onLoadStart={onProfileImageLoadStart}
+                onLoadEnd={onProfileImageLoadEnd}
+                onError={onProfileImageError}
+              />
+              {profileImageLoader && !profileImageError && (
+                <View style={Styles.imageLoader}>
+                  <ActivityIndicator color={Colors.primary} size={wp(8)} />
+                </View>
+              )}
+            </View>
+          ) : (
+            <View
               style={{
-                flex: 1,
+                ...StyleSheet.absoluteFill,
+                backgroundColor: Colors.primaryPress,
                 justifyContent: 'center',
                 alignItems: 'center',
               }}
-              color={Colors.theme}
-              size={wp(8)}
-            />
-          )}
-        </View>
-      ) : (
-        <View
-          style={{
-            ...StyleSheet.absoluteFill,
-            backgroundColor: Colors.color1,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <FontAwesome5 name="user-alt" color={Colors.color8} size={wp(24)} />
-        </View>
-      )}
-      {/* {!userData?.blur_allowed_you && userData?.is_blur ? <BlurView /> : null} */}
-
-      <LinearGradient
-        colors={['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.35)', 'rgba(0,0,0,0.65)']}
-        style={{ ...StyleSheet.absoluteFill }}
-      />
-      <View
-        style={[
-          Styles.badgesContainer,
-          {
-            left: Rtl ? wp(2) : undefined,
-            right: Rtl ? undefined : wp(2),
-          },
-        ]}
-      >
-        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
-        {/* {isSelf ? (
-          <Ripple
-            style={Styles.infoChip}
-            onPress={() => setToolTipVisible(true)}
-            hitSlop={20}
-            rippleColor={Colors.theme}
-          >
-            <Image source={Images.infoIcon} style={Styles.infoIconSmall} />
-          </Ripple>
-        ) : null} */}
-      </View>
-      {fromUserProfile && (
-        <Ripple
-          style={[
-            Styles.navButton,
-            {
-              left: Rtl ? undefined : wp(4),
-              right: Rtl ? wp(4) : undefined,
-            },
-          ]}
-          hitSlop={20}
-          rippleColor={Colors.theme}
-          onPress={onBackPress}
-        >
-          <AntDesign
-            name={Rtl ? 'arrowright' : 'arrowleft'}
-            color={Colors.color1}
-            size={wp(7)}
-          />
-        </Ripple>
-      )}
-
-      <View
-        style={[Styles.surface, fromUserProfile ? { paddingBottom: 0 } : {}]}
-      >
-        <View
-          style={[
-            Styles.profileRow,
-            { flexDirection: Rtl ? 'row-reverse' : 'row' },
-          ]}
-        >
-          <View
-            style={[
-              Styles.profileInfo,
-              { alignItems: Rtl ? 'flex-end' : 'flex-start' },
-            ]}
-          >
-            <View
-              style={[
-                Styles.nameWrapper,
-                { flexDirection: Rtl ? 'row-reverse' : 'row' },
-              ]}
             >
-              <NameRow
-                firstName={userData?.first_name}
-                lastName={userData?.last_name}
-                showStatus={fromUserProfile}
-                statusColor={onlineStatusColor}
-                rtl={Rtl}
+              <FontAwesome5
+                name="user-alt"
+                color={Colors.primaryLite}
+                size={wp(24)}
               />
             </View>
-            <AgeText age={userData?.age} />
-            <LocationText city={userData?.city} country={userData?.country} />
-            {!isBlockedYou && fromUserProfile && (
-              <View style={{ alignItems: Rtl ? 'flex-end' : 'flex-start' }}>
-                <Text style={Styles.lastOnlineAt}>
-                  {LanguageKeys.lastOnlineAt}
-                </Text>
-                <View style={Styles.lastOnlineAtInner}>
-                  {formattedLastOnlineDate.date ? (
-                    <ReactText
-                      style={{ ...Styles.lastOnlineAt, marginRight: wp(1) }}
-                    >
-                      {formattedLastOnlineDate.date}
-                    </ReactText>
-                  ) : null}
-                  <ReactText style={{ ...Styles.lastOnlineAt }}>
-                    {formattedLastOnlineDate.time}
-                  </ReactText>
-                </View>
-              </View>
+          )}
+
+          <LinearGradient
+            colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.42)', 'rgba(0,0,0,0.74)']}
+            style={{ ...StyleSheet.absoluteFill }}
+          />
+          <View
+            style={[
+              Styles.badgesContainer,
+              {
+                left: Rtl ? wp(2) : undefined,
+                right: Rtl ? undefined : wp(2),
+              },
+            ]}
+          >
+            <ProfileBadges
+              isSelf={isSelf}
+              showText={false}
+              userData={userData}
+            />
+            {fromUserProfile && !isSelf && !isBlockedYou && (
+              <Ripple
+                style={Styles.overflowBtn}
+                onPress={openMenu}
+                hitSlop={12}
+                rippleColor={Colors.color2}
+              >
+                <Ionicons
+                  name="ellipsis-vertical"
+                  color={Colors.color2}
+                  size={wp(5)}
+                />
+              </Ripple>
             )}
+          </View>
+          <Ripple
+            style={[
+              Styles.navButton,
+              {
+                left: Rtl ? undefined : wp(4),
+                right: Rtl ? wp(4) : undefined,
+              },
+            ]}
+            hitSlop={20}
+            rippleColor={Colors.theme}
+            onPress={onBackPress}
+          >
+            <AntDesign
+              name={Rtl ? 'arrowright' : 'arrowleft'}
+              color={Colors.color1}
+              size={wp(7)}
+            />
+          </Ripple>
+
+          <View style={[Styles.surface, { paddingBottom: 0 }]}>
             <View
               style={[
-                Styles.actionsWrapper,
+                Styles.profileRow,
                 { flexDirection: Rtl ? 'row-reverse' : 'row' },
               ]}
             >
-              {!isBlockedYou && fromUserProfile && (
-                <ActionButtons
-                  rtl={Rtl}
-                  isBlocked={userData?.blocked === 1}
-                  isBlockedByYou={userData?.block_by_you === 1}
-                  onBlockPress={onBlockPress}
-                  onMessagePress={onMessagePress}
-                  onLikePress={handleLikeToggle}
-                  messageButtonLoader={messageButtonLoader}
-                  liked={liked}
-                />
-              )}
-
-              {!isBlockedYou && (
-                <AllPicturesButton
-                  rtl={Rtl}
-                  fromUserProfile={fromUserProfile}
-                  hasPublicGallery={Boolean(
-                    userData?.media?.public_gallery?.length
-                  )}
-                  privatePhotoCount={userData?.media?.private_photo_count}
-                  onSeeAllPress={onSeeAllPicPress}
-                  onEditPress={onEditPress}
-                />
-              )}
-
-              {isSelf && (
-                <Ripple
-                  style={{
-                    ...Styles.myPhotosBtn,
-                    flexDirection: Rtl ? 'row-reverse' : 'row',
-                  }}
-                  onPress={onBlurButtonPress}
+              <View
+                style={[
+                  Styles.profileInfo,
+                  { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+                ]}
+              >
+                <View
+                  style={[
+                    Styles.nameWrapper,
+                    { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                  ]}
                 >
-                  <Entypo
-                    style={{
-                      marginRight: Rtl ? 0 : wp(1.6),
-                      marginLeft: Rtl ? wp(1.6) : 0,
-                    }}
-                    name={userData?.is_blur ? 'eye-with-line' : 'eye'}
-                    size={wp(5.5)}
-                    color={Colors.color2}
+                  <NameRow
+                    firstName={userData?.first_name}
+                    lastName={userData?.last_name}
+                    showStatus={fromUserProfile}
+                    statusColor={onlineStatusColor}
+                    rtl={Rtl}
                   />
+                </View>
+                <MetaLine
+                  age={userData?.age}
+                  city={userData?.city}
+                  country={userData?.country}
+                />
+                {!isBlockedYou &&
+                fromUserProfile &&
+                (formattedLastOnlineDate.date ||
+                  formattedLastOnlineDate.time) ? (
                   <View
                     style={{
-                      ...Styles.allPhotosBtnInner,
+                      ...Styles.lastSeenChip,
                       flexDirection: Rtl ? 'row-reverse' : 'row',
                     }}
                   >
-                    <Text style={Styles.allPhotosTxt}>
-                      {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
-                    </Text>
+                    <Ionicons
+                      name="time-outline"
+                      color={Colors.color2}
+                      size={wp(3.6)}
+                    />
+                    <ReactText style={Styles.lastSeenTxt} numberOfLines={1}>
+                      {[
+                        formattedLastOnlineDate.date,
+                        formattedLastOnlineDate.time,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </ReactText>
                   </View>
-                </Ripple>
-              )}
+                ) : null}
+                <View style={Styles.actionsWrapper}>
+                  {!isBlockedYou && fromUserProfile && (
+                    <ActionButtons
+                      rtl={Rtl}
+                      onMessagePress={onMessagePress}
+                      onLikePress={handleLikeToggle}
+                      messageButtonLoader={messageButtonLoader}
+                      liked={liked}
+                    />
+                  )}
+
+                  {!isBlockedYou && (
+                    <AllPicturesButton
+                      rtl={Rtl}
+                      fromUserProfile={fromUserProfile}
+                      hasPublicGallery={Boolean(
+                        userData?.media?.public_gallery?.length
+                      )}
+                      privatePhotoCount={userData?.media?.private_photo_count}
+                      onSeeAllPress={onSeeAllPicPress}
+                      onEditPress={onEditPress}
+                    />
+                  )}
+
+                  {isSelf && (
+                    <Ripple
+                      style={{
+                        ...Styles.myPhotosBtn,
+                        flexDirection: Rtl ? 'row-reverse' : 'row',
+                      }}
+                      onPress={onBlurButtonPress}
+                    >
+                      <Entypo
+                        style={{
+                          marginRight: Rtl ? 0 : wp(1.6),
+                          marginLeft: Rtl ? wp(1.6) : 0,
+                        }}
+                        name={userData?.is_blur ? 'eye-with-line' : 'eye'}
+                        size={wp(5.5)}
+                        color={Colors.color2}
+                      />
+                      <View
+                        style={{
+                          ...Styles.allPhotosBtnInner,
+                          flexDirection: Rtl ? 'row-reverse' : 'row',
+                        }}
+                      >
+                        <Text style={Styles.allPhotosTxt}>
+                          {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
+                        </Text>
+                      </View>
+                    </Ripple>
+                  )}
+                </View>
+              </View>
             </View>
           </View>
-        </View>
-      </View>
+        </>
+      )}
+
+      <Modal
+        transparent
+        visible={menuVisible}
+        animationType="fade"
+        onRequestClose={closeMenu}
+      >
+        <Ripple style={Styles.menuOverlay} onPress={closeMenu}>
+          <View
+            style={{
+              ...Styles.menuCard,
+              alignSelf: Rtl ? 'flex-start' : 'flex-end',
+            }}
+          >
+            <Ripple
+              style={{
+                ...Styles.menuItem,
+                flexDirection: Rtl ? 'row-reverse' : 'row',
+              }}
+              onPress={handleBlockFromMenu}
+              rippleColor={Colors.hairline}
+            >
+              <Ionicons name="ban" color={Colors.color24} size={wp(5)} />
+              <Text style={Styles.menuItemTxt}>
+                {userData?.block_by_you === 1
+                  ? LanguageKeys.unBlock
+                  : LanguageKeys.block}
+              </Text>
+            </Ripple>
+          </View>
+        </Ripple>
+      </Modal>
 
       <Modal transparent={true} visible={blurModalVisible}>
         <View style={Styles.blurModalWrapper}>
@@ -1016,6 +1288,51 @@ const Header = ({
           </View>
         </View>
       </Modal>
+
+      <Modal
+        transparent
+        visible={Boolean(taglineEditing)}
+        animationType="fade"
+        onRequestClose={onTaglineCancel}
+      >
+        <View style={Styles.taglineModalWrap}>
+          <View style={Styles.taglineModalCard}>
+            <Text style={Styles.taglineModalTitle}>{LanguageKeys.tagline}</Text>
+            <TextInput
+              style={Styles.taglineModalInput}
+              placeholder={LanguageKeys.enterTagline}
+              placeholderTextColor={Colors.muted}
+              value={taglineInput}
+              onChangeText={onTaglineChange}
+              multiline
+              maxLength={30}
+            />
+            <ReactText style={Styles.taglineCounter}>
+              {`${taglineInput.length}/30`}
+            </ReactText>
+            <View style={Styles.blurModalButtons}>
+              <Button
+                onPress={onTaglineCancel}
+                buttonStyle={[
+                  Styles.blurModalButton,
+                  Styles.blurModalButtonSecondary,
+                ]}
+                text={LanguageKeys.cancel}
+                textStyle={Styles.blurModalButtonTextSecondary}
+              />
+              <Button
+                onPress={onTaglineSubmit}
+                buttonStyle={[
+                  Styles.blurModalButton,
+                  Styles.blurModalButtonPrimary,
+                ]}
+                text={LanguageKeys.update}
+                textStyle={Styles.blurModalButtonTextPrimary}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -1027,6 +1344,181 @@ const Styles = StyleSheet.create({
     height: height * 0.45,
     // marginBottom: hp(3),
     justifyContent: 'flex-end',
+  },
+  selfContainer: {
+    backgroundColor: Colors.appBg,
+  },
+  selfHeader: {
+    paddingTop: hp(2.5),
+    paddingBottom: hp(3),
+    paddingHorizontal: wp(6),
+    alignItems: 'center',
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+  },
+  avatarBlock: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1.4),
+  },
+  avatarTap: {
+    borderRadius: wp(16),
+  },
+  avatarInner: {
+    width: wp(26),
+    height: wp(26),
+    borderRadius: wp(13),
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLoader: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  strengthChip: {
+    position: 'absolute',
+    bottom: -hp(1),
+    backgroundColor: Colors.surface,
+    borderRadius: 999,
+    paddingHorizontal: wp(2.6),
+    paddingVertical: hp(0.35),
+    shadowColor: Colors.color1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  strengthChipTxt: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.tiny1,
+    includeFontPadding: false,
+  },
+  taglinePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: wp(1.8),
+    marginTop: hp(1.4),
+    maxWidth: '92%',
+    backgroundColor: Colors.whiteRGBA18,
+    borderRadius: 999,
+    paddingVertical: hp(0.7),
+    paddingHorizontal: wp(3.5),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  taglineTxt: {
+    color: Colors.whiteRGBA90,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small1,
+    fontStyle: 'italic',
+    includeFontPadding: false,
+    flexShrink: 1,
+  },
+  taglineModalWrap: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(6),
+  },
+  taglineModalCard: {
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: wp(4),
+    padding: wp(5),
+  },
+  taglineModalTitle: {
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium1,
+    color: Colors.ink,
+    marginBottom: hp(1.5),
+  },
+  taglineModalInput: {
+    minHeight: hp(7),
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
+    padding: wp(3.5),
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    color: Colors.ink,
+    textAlignVertical: 'top',
+    marginBottom: hp(0.8),
+  },
+  taglineCounter: {
+    alignSelf: 'flex-end',
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.tiny1,
+    marginBottom: hp(1.6),
+  },
+  selfName: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.large1,
+    marginTop: hp(1.6),
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+  selfMeta: {
+    textAlign: 'center',
+    marginTop: hp(0.6),
+  },
+  selfBadges: {
+    marginTop: hp(1.2),
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  selfActions: {
+    flexDirection: 'row',
+    alignSelf: 'stretch',
+    marginTop: hp(2.4),
+    gap: wp(3),
+  },
+  selfBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(1.6),
+    paddingVertical: hp(1.15),
+    paddingHorizontal: wp(2),
+    borderRadius: 30,
+  },
+  selfBtnSolid: {
+    backgroundColor: Colors.surface,
+  },
+  selfBtnGlass: {
+    backgroundColor: Colors.whiteRGBA18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  selfBtnTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    alignSelf: 'center',
+    includeFontPadding: false,
+  },
+  selfBtnTxtSolid: {
+    color: Colors.primary,
+  },
+  selfBtnTxtGlass: {
+    color: Colors.color2,
   },
   topBar: {
     flexDirection: 'row',
@@ -1084,12 +1576,12 @@ const Styles = StyleSheet.create({
     height: 20,
   },
   actionsWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: hp(1),
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    marginTop: hp(1.2),
     marginBottom: hp(2),
     width: '100%',
+    gap: hp(1.2),
   },
   onlineStatus: {
     width: width * 0.04,
@@ -1142,32 +1634,42 @@ const Styles = StyleSheet.create({
   name: {
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium1,
+    fontSize: Typography.large,
     includeFontPadding: false,
   },
   location: {
-    color: Colors.color2,
+    color: Colors.whiteRGBA90,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: Typography.small2,
+    marginTop: hp(0.3),
+  },
+  imageLoader: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   allPhotosBtn: {
     justifyContent: 'space-between',
     borderRadius: 30,
-    paddingVertical: 5,
+    paddingVertical: hp(1),
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: wp(2.5),
-    backgroundColor: Colors.color47,
+    paddingHorizontal: wp(4),
+    backgroundColor: Colors.blackRGBA38,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   myPhotosBtn: {
     justifyContent: 'space-between',
     borderRadius: 30,
-    paddingVertical: 5,
+    paddingVertical: hp(1),
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: wp(2.5),
-    backgroundColor: Colors.color1,
+    paddingHorizontal: wp(4),
+    backgroundColor: Colors.blackRGBA38,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   allPhotosBtnInner: {
     flexDirection: 'row',
@@ -1187,22 +1689,97 @@ const Styles = StyleSheet.create({
   actionBtnCon: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp(1),
+    gap: wp(2.5),
+    width: '100%',
   },
-  actionIcon: {
-    width: width * 0.1,
-    height: width * 0.1 * 1,
-    borderRadius: (width * 0.08 * 1) / 2,
+  actionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(2),
+    paddingVertical: hp(1.15),
+    borderRadius: 16,
+  },
+  messagePill: {
+    flex: 2,
+    backgroundColor: Colors.primary,
+  },
+  likePill: {
+    flex: 1,
     backgroundColor: Colors.color2,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.hairline,
   },
-  actionIconInner: {
-    width: width * 0.1,
-    height: width * 0.1 * 1,
-    borderRadius: (width * 0.08 * 1) / 2,
-    justifyContent: 'center',
+  actionPillTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    alignSelf: 'center',
+    includeFontPadding: false,
+  },
+  messagePillTxt: {
+    color: Colors.color2,
+  },
+  likePillTxt: {
+    color: Colors.primary,
+  },
+  overflowBtn: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.blackRGBA38,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lastSeenChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.4),
+    marginTop: hp(0.8),
+    backgroundColor: Colors.whiteRGBA18,
+    borderRadius: 999,
+    paddingVertical: hp(0.5),
+    paddingHorizontal: wp(2.6),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  lastSeenTxt: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small3,
+    includeFontPadding: false,
+    alignSelf: 'center',
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.12)',
+  },
+  menuCard: {
+    marginTop: hp(7),
+    marginHorizontal: wp(4),
+    minWidth: wp(42),
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    paddingVertical: hp(0.4),
+    shadowColor: Colors.color1,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+    paddingVertical: hp(1.4),
+    paddingHorizontal: wp(4),
+  },
+  menuItemTxt: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+    alignSelf: 'center',
   },
   shadow: {
     shadowColor: Colors.color1,
@@ -1236,16 +1813,6 @@ const Styles = StyleSheet.create({
     alignSelf: 'flex-end',
     marginHorizontal: wp(5),
     marginBottom: hp(-0.6),
-  },
-  lastOnlineAt: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
-    includeFontPadding: false,
-    fontSize: Typography.small,
-  },
-  lastOnlineAtInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   gradientView: {
     position: 'absolute',

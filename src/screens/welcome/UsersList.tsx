@@ -9,15 +9,21 @@ import {
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Animation } from '../../animations';
-import { ProfileBadges, Text } from '../../components';
+import { LinearGradient, ProfileBadges, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { LanguageKeys } from '../../languages';
+import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
+
+const { width } = Dimensions.get('window');
+const CARD_W = (width - wp(6) - wp(3)) / 2;
+const CARD_H = CARD_W * 1.42;
 
 const UsersList = (props: any) => {
   const { data = [], onLoadMorePress = () => null, optionTab } = props;
+  const Rtl = CheckRtl();
 
   // M9 fix: FlatList's onEndReached fires on mount when the list doesn't fill
   // the viewport, then keeps firing on scroll. Guard against:
@@ -40,39 +46,71 @@ const UsersList = (props: any) => {
         .asHours()
         .toFixed()
     );
+    const isOnline = lastOnlineFromCurrentTime === 1;
+    const locationText = [item?.city, item?.country].filter(Boolean).join(', ');
 
     return (
-      <Animation animation="zoomIn">
+      <Animation animation="zoomIn" style={Styles.itemContainer}>
         <Ripple
-          style={Styles.itemContainer}
+          style={Styles.card}
+          rippleColor={Colors.primary}
           onPress={onUserPress.bind(null, item)}
         >
-          <View style={Styles.userImageView}>
-            {/* {item?.is_blur === 1 ? <BlurView /> : null} */}
-            <Image
-              source={
-                item?.primary_image_to_show
-                  ? { uri: item?.primary_image_to_show }
-                  : Images.userTwo
-              }
-              resizeMode="cover"
-              style={Styles.userImage}
-            />
-            {lastOnlineFromCurrentTime === 1 && (
-              <View style={Styles.onlineStatus} />
-            )}
-            <View style={Styles.badgesContainer}>
-              <ProfileBadges userData={item} iconOnly vertical />
+          <Image
+            source={
+              item?.primary_image_to_show
+                ? { uri: item?.primary_image_to_show }
+                : Images.userTwo
+            }
+            resizeMode="cover"
+            style={Styles.userImage}
+          />
+
+          {isOnline && (
+            <View style={Styles.onlinePill}>
+              <View style={Styles.onlineDot} />
             </View>
-          </View>
-          <ReactText style={Styles.name} numberOfLines={2}>
-            {item?.first_name} {item?.last_name}, {item?.age}
-          </ReactText>
-          {(item?.city || item?.country) && (
-            <ReactText style={Styles.location} numberOfLines={1}>
-              {item?.city && `${item.city},`} {item?.country}
-            </ReactText>
           )}
+
+          <View style={Styles.badgesContainer}>
+            <ProfileBadges userData={item} iconOnly vertical />
+          </View>
+
+          <LinearGradient
+            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.82)']}
+            style={Styles.scrim}
+          >
+            <ReactText
+              style={[Styles.name, { textAlign: Rtl ? 'right' : 'left' }]}
+              numberOfLines={1}
+            >
+              {item?.first_name} {item?.last_name}
+              {item?.age ? `, ${item.age}` : ''}
+            </ReactText>
+            {locationText ? (
+              <View
+                style={[
+                  Styles.locationRow,
+                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                ]}
+              >
+                <Ionicons
+                  name="location-sharp"
+                  size={wp(3.2)}
+                  color={Colors.whiteRGBA90}
+                />
+                <ReactText
+                  style={[
+                    Styles.location,
+                    { textAlign: Rtl ? 'right' : 'left' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {locationText}
+                </ReactText>
+              </View>
+            ) : null}
+          </LinearGradient>
         </Ripple>
       </Animation>
     );
@@ -99,10 +137,13 @@ const UsersList = (props: any) => {
     }
     return (
       <View style={Styles.emptyListCon}>
-        <Image
-          source={Images.logoWithoutTextBlack}
-          style={Styles.emptyListIcon}
-        />
+        <View style={Styles.emptyIconCircle}>
+          <Ionicons
+            name="sparkles-outline"
+            size={wp(9)}
+            color={Colors.primary}
+          />
+        </View>
         <Text style={Styles.emptyListText}>{emptyText}</Text>
       </View>
     );
@@ -119,6 +160,7 @@ const UsersList = (props: any) => {
       ListEmptyComponent={renderEmptyList}
       showsVerticalScrollIndicator={false}
       contentContainerStyle={Styles.container}
+      columnWrapperStyle={Styles.columnWrapper}
       keyExtractor={(item, index) => `${item?.id}-${index}`}
     />
   );
@@ -126,100 +168,104 @@ const UsersList = (props: any) => {
 
 export default UsersList;
 
-const { width } = Dimensions.get('window');
 const Styles = StyleSheet.create({
   container: {
-    paddingTop: hp(2),
-    alignItems: 'center',
+    paddingHorizontal: wp(3),
+    paddingTop: hp(1.2),
+    paddingBottom: hp(2),
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    marginBottom: hp(1.6),
   },
   itemContainer: {
-    width: wp(45),
-    marginHorizontal: 5.5,
-    marginBottom: hp(2),
-    alignItems: 'center',
-    overflow: 'hidden',
+    width: CARD_W,
   },
-  userImageView: {
-    borderRadius: 5,
-    width: '100%',
-    height: 190,
-    backgroundColor: Colors.color21,
-    justifyContent: 'center',
-    alignItems: 'center',
+  card: {
+    width: CARD_W,
+    height: CARD_H,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: Colors.lavender,
   },
   userImage: {
-    borderRadius: 5,
     width: '100%',
-    height: 190,
+    height: '100%',
   },
-  onlineStatus: {
-    width: width * 0.03,
-    height: width * 0.03 * 1,
-    borderRadius: (width * 0.03 * 1) / 2,
+  onlinePill: {
     position: 'absolute',
-    top: hp(0.5),
-    right: wp(1),
-    zIndex: 1,
-    backgroundColor: Colors.color52,
-  },
-  premiumBadge: {
-    width: width * 0.058,
-    height: width * 0.058 * 1,
-    borderRadius: (width * 0.058 * 1) / 2,
-    backgroundColor: Colors.color47,
+    top: hp(1),
+    right: wp(2.5),
+    width: wp(3.6),
+    height: wp(3.6),
+    borderRadius: wp(1.8),
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    bottom: hp(0.7),
-    right: wp(1.4),
+    zIndex: 2,
   },
-  premiumBadgeIcon: {
-    width: 14,
-    height: 14,
+  onlineDot: {
+    width: wp(2.2),
+    height: wp(2.2),
+    borderRadius: wp(1.1),
+    backgroundColor: Colors.verified,
   },
   badgesContainer: {
     position: 'absolute',
     top: hp(1),
-    right: wp(2),
-    zIndex: 1,
+    left: wp(2.5),
+    zIndex: 2,
+  },
+  scrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: wp(2.8),
+    paddingTop: hp(3),
+    paddingBottom: hp(1.4),
+    justifyContent: 'flex-end',
   },
   name: {
-    color: Colors.color1,
+    color: Colors.surface,
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: wp(3),
+    fontSize: Typography.small2,
     includeFontPadding: false,
-    alignSelf: 'center',
-    textAlign: 'center',
-    maxWidth: wp(43),
-    marginTop: 4,
     textTransform: 'capitalize',
   },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1),
+    marginTop: hp(0.3),
+  },
   location: {
-    color: Colors.color1,
+    flex: 1,
+    color: Colors.whiteRGBA90,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: wp(2.6),
+    fontSize: Typography.tiny1,
     includeFontPadding: false,
-    alignSelf: 'center',
-    textAlign: 'center',
-    maxWidth: wp(43),
   },
   emptyListCon: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: hp(20),
+    paddingTop: hp(16),
   },
-  emptyListIcon: {
-    width: 90,
-    height: 77,
-    opacity: 0.2,
+  emptyIconCircle: {
+    width: wp(20),
+    height: wp(20),
+    borderRadius: wp(10),
+    backgroundColor: Colors.lavender,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyListText: {
-    color: Colors.color22,
+    color: Colors.muted,
     includeFontPadding: false,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.medium,
+    fontSize: Typography.small3,
     textAlign: 'center',
-    marginTop: 30,
-    marginHorizontal: 30,
+    marginTop: hp(2.5),
+    marginHorizontal: wp(12),
   },
 });

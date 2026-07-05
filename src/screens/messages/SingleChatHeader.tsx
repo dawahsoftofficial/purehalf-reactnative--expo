@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  Dimensions,
-  Image,
-  Keyboard,
-  StyleSheet,
-  Text as ReactText,
-  View,
-} from 'react-native';
+import { Dimensions, Image, Keyboard, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import {
   Menu,
@@ -15,8 +8,9 @@ import {
   MenuTrigger,
 } from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { DeletePicker, ModalLoader } from '../../components';
+import { DeletePicker, ModalLoader, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
@@ -419,7 +413,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
       <View style={Styles.headerInnerCon}>
         <AntDesign
           name="arrowleft"
-          color={Colors.color1}
+          color={Colors.ink}
           size={wp(6)}
           onPress={onBackPress}
         />
@@ -446,17 +440,21 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
               />
             )}
           </View>
-          <ReactText style={Styles.userName}>{otherUserData?.name}</ReactText>
+          <Text variant="display" style={Styles.userName} numberOfLines={1}>
+            {otherUserData?.name}
+          </Text>
         </Ripple>
       </View>
       {currentUserId !== 'guardian' && (
         <Menu ref={menuRef}>
           <MenuTrigger>
-            <Image
-              source={Images.verticalDots}
-              style={Styles.menuBtn}
-              resizeMode="contain"
-            />
+            <View style={Styles.menuBtn}>
+              <Ionicons
+                name="ellipsis-vertical"
+                size={wp(5)}
+                color={Colors.ink}
+              />
+            </View>
           </MenuTrigger>
           <MenuOptions optionsContainerStyle={Styles.menuOptionsContainer}>
             {optionsArray.map((option, index) => {
@@ -483,7 +481,11 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
                     }
                   }}
                   text={option}
-                  style={isDestructive ? Styles.destructiveOption : undefined}
+                  customStyles={{
+                    optionText: isDestructive
+                      ? Styles.menuTextDestructive
+                      : Styles.menuText,
+                  }}
                 />
               );
             })}
@@ -520,11 +522,11 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.surface,
     paddingVertical: hp(1),
     paddingHorizontal: wp(3),
-    borderBottomWidth: 0.7,
-    borderBottomColor: Colors.color27,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
   },
   headerInnerCon: {
     flexDirection: 'row',
@@ -533,6 +535,7 @@ const Styles = StyleSheet.create({
   userIcon: {
     width: width * 0.05,
     height: width * 0.05 * 1,
+    opacity: 0.6,
   },
   userImage: {
     width: width * 0.1,
@@ -540,25 +543,43 @@ const Styles = StyleSheet.create({
     borderRadius: (width * 0.1 * 1) / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color8,
+    backgroundColor: Colors.lavender,
     marginHorizontal: wp(2),
+    overflow: 'hidden',
   },
   userName: {
     alignSelf: 'center',
     fontSize: Typography.medium,
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_M,
+    color: Colors.ink,
+    maxWidth: wp(52),
   },
   menuBtn: {
-    width: wp(8),
-    height: hp(3.5),
-    resizeMode: 'contain',
+    width: wp(9),
+    height: wp(9),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuOptionsContainer: {
-    borderRadius: wp(2),
-    paddingVertical: hp(0.5),
+    borderRadius: 14,
+    paddingVertical: hp(0.6),
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    marginTop: hp(1),
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  destructiveOption: {
-    backgroundColor: Colors.color2,
+  menuText: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+  },
+  menuTextDestructive: {
+    color: Colors.color24,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
   },
 });

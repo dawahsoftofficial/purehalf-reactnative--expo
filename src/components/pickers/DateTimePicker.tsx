@@ -98,14 +98,14 @@ const DateTimePickerFun = React.memo((props: any) => {
       Styles.btnOuterContainer,
       {
         flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
-        backgroundColor: disabled ? Colors.color54 : Colors.color3,
+        backgroundColor: disabled ? Colors.lavender : Colors.surface,
       },
     ],
     [Rtl, disabled]
   );
 
   const placeholderTextStyle = useMemo(
-    () => [Styles.btnTxt, { color: Colors.color28 }],
+    () => [Styles.btnTxt, { color: Colors.muted }],
     []
   );
 
@@ -249,14 +249,16 @@ const Styles = StyleSheet.create({
   inputLabel: {
     fontSize: Typography.medium,
     marginBottom: Constants.fontFamilyMarginBottom,
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
   },
   btnOuterContainer: {
-    borderBottomWidth: 1,
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
     marginTop: hp(1),
     alignItems: 'center',
-    backgroundColor: Colors.color3,
+    backgroundColor: Colors.surface,
     paddingHorizontal: wp(2),
   },
   btnIcon: {
@@ -267,7 +269,7 @@ const Styles = StyleSheet.create({
     height: hp(6.3),
     paddingHorizontal: wp(3),
     justifyContent: 'center',
-    width: wp(85),
+    flex: 1,
   },
   pickerContainer: {
     flex: 1,
@@ -296,6 +298,6 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small3,
     fontFamily: Fonts.APPFONT_R,
     marginBottom: Constants.fontFamilyMarginBottom,
-    color: Colors.color1,
+    color: Colors.ink,
   },
 });

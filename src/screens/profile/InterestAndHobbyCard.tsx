@@ -55,10 +55,12 @@ const InterestAndHobbyCard = ({
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
       >
-        <Text style={Styles.headerTxt}>{headerHeading}</Text>
+        <Text variant="display" style={Styles.headerTxt}>
+          {headerHeading}
+        </Text>
         {!fromUserProfile ? (
           <View style={Styles.editButton}>
-            <Feather name="edit-2" color={Colors.color1} size={wp(4)} />
+            <Feather name="edit-2" color={Colors.primary} size={wp(4)} />
           </View>
         ) : null}
       </View>
@@ -82,7 +84,15 @@ const InterestAndHobbyCard = ({
                 </View>
               ))
             ) : (
-              <View>
+              <View
+                style={{
+                  ...Styles.emptyRow,
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
+                }}
+              >
+                <View style={Styles.emptyChip}>
+                  <Feather name="sun" color={Colors.primary} size={wp(4)} />
+                </View>
                 <Text style={Styles.passInfoDes}>
                   {!fromUserProfile
                     ? LanguageKeys.noInterestAndHobbiesSelected
@@ -104,26 +114,25 @@ export default React.memo(InterestAndHobbyCard);
 const Styles = StyleSheet.create({
   container: {
     marginHorizontal: wp(4),
-    backgroundColor: Colors.color2,
-    paddingTop: hp(1.5),
-    borderRadius: 10,
-    marginBottom: hp(4.5),
-    borderWidth: 0.5,
-    borderColor: Colors.color27,
+    backgroundColor: Colors.surface,
+    paddingTop: hp(1.8),
+    borderRadius: 16,
+    marginBottom: hp(2),
+    borderWidth: 1,
+    borderColor: Colors.hairline,
     overflow: 'hidden',
-    paddingBottom: hp(2),
+    paddingBottom: hp(1.5),
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: wp(4),
-    paddingBottom: hp(1),
+    paddingBottom: hp(1.2),
   },
   headerTxt: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
+    color: Colors.ink,
+    fontSize: Typography.medium1,
     marginBottom: Constants.fontFamilyMarginBottom,
   },
   editButton: {
@@ -141,29 +150,43 @@ const Styles = StyleSheet.create({
     marginHorizontal: wp(4),
   },
   passInfoDes: {
-    color: Colors.color11,
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small3,
     includeFontPadding: false,
+    paddingHorizontal: wp(1),
+    alignSelf: 'center',
+  },
+  emptyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+    paddingHorizontal: wp(2.5),
+  },
+  emptyChip: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listItemContainer: {
     paddingHorizontal: wp(3.5),
     flexWrap: 'wrap',
   },
   item: {
-    backgroundColor: Colors.color3,
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(0.5),
+    backgroundColor: Colors.lavender,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.9),
     margin: hp(0.5),
     marginTop: 0,
     marginBottom: hp(1),
-    borderRadius: 50,
-    borderColor: Colors.color8,
-    borderWidth: 1,
+    borderRadius: 999,
   },
   itemValue: {
-    color: Colors.color11,
-    fontFamily: Fonts.APPFONT_R,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
     marginBottom: Constants.fontFamilyMarginBottom,
     alignSelf: 'flex-start',

@@ -1,9 +1,8 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import { type PurchasesPackage } from 'react-native-purchases';
 
-import { Fonts } from '@/res';
+import { Colors, Fonts } from '@/res';
 
 type PlanUI = {
   badge: string;
@@ -71,6 +70,45 @@ export function PackageCard({
     return 'Select Plan';
   };
 
+  // Emphasized (Pro) card = solid violet with light text; neutral cards =
+  // white surface with ink text. All colors resolve from this one map so the
+  // JSX below stays presentation-agnostic.
+  const c = isProEmphasis
+    ? {
+        name: Colors.surface,
+        badgeBg: 'rgba(255,255,255,0.16)',
+        badgeText: Colors.lavender,
+        tagline: '#C9BEE6',
+        price: Colors.surface,
+        per: '#C9BEE6',
+        was: '#A99BCF',
+        savePillBg: Colors.surface,
+        savePillText: Colors.primary,
+        tickBg: 'rgba(255,255,255,0.16)',
+        tickText: Colors.surface,
+        bullet: '#EDE9F6',
+        ctaBg: Colors.surface,
+        ctaText: Colors.primary,
+        ctaBorder: Colors.surface,
+      }
+    : {
+        name: Colors.ink,
+        badgeBg: Colors.lavender,
+        badgeText: Colors.primary,
+        tagline: Colors.muted,
+        price: Colors.ink,
+        per: Colors.muted,
+        was: Colors.muted,
+        savePillBg: Colors.lavender,
+        savePillText: Colors.primary,
+        tickBg: Colors.lavender,
+        tickText: Colors.primary,
+        bullet: Colors.ink,
+        ctaBg: 'transparent',
+        ctaText: Colors.primary,
+        ctaBorder: Colors.primary,
+      };
+
   return (
     <View
       style={{
@@ -83,45 +121,20 @@ export function PackageCard({
         onPress={() => onSelect(index)}
         style={[
           styles.card,
-          {
-            width: cardWidth,
-          },
-          isProEmphasis && styles.cardEmphasis,
-          isSelected && styles.cardSelected,
+          { width: cardWidth },
+          isProEmphasis ? styles.cardEmphasis : styles.cardNeutral,
+          isSelected && !isProEmphasis && styles.cardSelected,
         ]}
       >
-        {/* Pro card glow effect */}
-        {isProEmphasis && <View style={styles.proGlow} pointerEvents="none" />}
-        <LinearGradient
-          colors={
-            isProEmphasis
-              ? ['rgba(167,139,250,0.16)', 'rgba(255,255,255,0.05)']
-              : ['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.04)']
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={StyleSheet.absoluteFill}
-          pointerEvents="none"
-        />
         {/* Badge Row */}
         <View style={styles.badgeRow}>
-          <Text style={styles.planName}>{item.identifier?.split('(')[0]}</Text>
+          <Text style={[styles.planName, { color: c.name }]}>
+            {item.identifier?.split('(')[0]}
+          </Text>
 
-          <View
-            style={[
-              styles.badge,
-              plan?.badgeVariant === 'recommended'
-                ? styles.badgeReco
-                : styles.badgeNeutral,
-            ]}
-          >
+          <View style={[styles.badge, { backgroundColor: c.badgeBg }]}>
             <Text
-              style={[
-                styles.badgeText,
-                plan?.badgeVariant === 'recommended'
-                  ? styles.badgeTextReco
-                  : null,
-              ]}
+              style={[styles.badgeText, { color: c.badgeText }]}
               numberOfLines={1}
             >
               {plan?.badge || 'Plan'}
@@ -129,30 +142,30 @@ export function PackageCard({
           </View>
         </View>
 
-        <Text style={styles.tagline}>
+        <Text style={[styles.tagline, { color: c.tagline }]}>
           {plan?.tagline || item.product.description || ''}
         </Text>
 
         {/* Price */}
         <View style={styles.priceRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.now}>{price}</Text>
-            <Text style={styles.per}>
+            <Text style={[styles.now, { color: c.price }]}>{price}</Text>
+            <Text style={[styles.per, { color: c.per }]}>
               per month {perDay ? `· ~${perDay}` : ''}{' '}
               {weekly ? `· ${weekly}/wk` : ''}
             </Text>
 
             {!!compareAtString && (
-              <Text style={styles.was}>
+              <Text style={[styles.was, { color: c.was }]}>
                 <Text style={styles.strike}>{compareAtString}</Text> original
               </Text>
             )}
           </View>
 
           {!!savePct && (
-            <View style={styles.savePill}>
-              <Text style={styles.saveText}>
-                Save {savePct}%{'\n'}Launch Offer
+            <View style={[styles.savePill, { backgroundColor: c.savePillBg }]}>
+              <Text style={[styles.saveText, { color: c.savePillText }]}>
+                Save {savePct}%
               </Text>
             </View>
           )}
@@ -162,10 +175,10 @@ export function PackageCard({
         <View style={styles.bullets}>
           {(plan?.bullets || []).map((b, bi) => (
             <View key={`${item.identifier}-${bi}`} style={styles.bulletRow}>
-              <View style={styles.tick}>
-                <Text style={styles.tickText}>✓</Text>
+              <View style={[styles.tick, { backgroundColor: c.tickBg }]}>
+                <Text style={[styles.tickText, { color: c.tickText }]}>✓</Text>
               </View>
-              <Text style={styles.bulletText}>{b}</Text>
+              <Text style={[styles.bulletText, { color: c.bullet }]}>{b}</Text>
             </View>
           ))}
         </View>
@@ -176,17 +189,14 @@ export function PackageCard({
             onSelect(index);
             onSubscribe(item);
           }}
-          style={[styles.cardCta, isProEmphasis ? styles.cardCtaPro : null]}
+          style={[
+            styles.cardCta,
+            { backgroundColor: c.ctaBg, borderColor: c.ctaBorder },
+          ]}
         >
-          {isProEmphasis ? (
-            <LinearGradient
-              colors={['rgba(167,139,250,0.42)', 'rgba(45,212,191,0.20)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : null}
-          <Text style={styles.cardCtaText}>{getButtonText()}</Text>
+          <Text style={[styles.cardCtaText, { color: c.ctaText }]}>
+            {getButtonText()}
+          </Text>
         </Pressable>
       </Pressable>
     </View>
@@ -198,28 +208,23 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 16,
     paddingBottom: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.10)',
     overflow: 'hidden',
     marginBottom: 14,
     minHeight: 345,
   },
+  cardNeutral: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
   cardEmphasis: {
-    borderColor: 'rgba(167,139,250,0.55)',
+    backgroundColor: Colors.primary,
+    borderWidth: 1,
+    borderColor: Colors.primary,
     transform: [{ translateY: -2 }],
   },
-  proGlow: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    right: -140,
-    top: -120,
-    borderRadius: 140,
-    backgroundColor: 'rgba(167,139,250,0.35)',
-    transform: [{ rotate: '20deg' }],
-  },
   cardSelected: {
-    borderColor: 'rgba(255,255,255,0.22)',
+    borderColor: Colors.primaryLite,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -229,7 +234,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   planName: {
-    color: 'rgba(255,255,255,0.95)',
     fontFamily: Fonts.APPFONT_B,
     includeFontPadding: false,
     fontSize: 18,
@@ -238,31 +242,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    borderWidth: 1,
-  },
-  badgeNeutral: {
-    borderColor: 'rgba(255,255,255,0.14)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
-  },
-  badgeReco: {
-    borderColor: 'rgba(251,191,36,0.35)',
-    backgroundColor: 'rgba(251,191,36,0.12)',
   },
   badgeText: {
     fontSize: 11,
     fontFamily: Fonts.APPFONT_B,
     includeFontPadding: false,
-    color: 'rgba(255,255,255,0.82)',
   },
-  badgeTextReco: { color: 'rgba(255,239,190,0.95)' },
   tagline: {
     marginTop: 0,
     marginBottom: 6,
-    color: 'rgba(255,255,255,0.84)',
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: 12,
-    // backgroundColor: 'blue',
   },
   priceRow: {
     flexDirection: 'row',
@@ -270,10 +261,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     marginVertical: 6,
-    // backgroundColor: 'red',
   },
   now: {
-    color: 'rgba(255,255,255,0.95)',
     fontFamily: Fonts.APPFONT_B,
     includeFontPadding: false,
     fontSize: 26,
@@ -281,33 +270,26 @@ const styles = StyleSheet.create({
   },
   per: {
     marginTop: 2,
-    color: 'rgba(255,255,255,0.68)',
-    fontFamily: Fonts.APPFONT_B,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: 12,
     includeFontPadding: false,
   },
   was: {
     marginTop: 6,
-    color: 'rgba(255,255,255,0.55)',
-    fontFamily: Fonts.APPFONT_B,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: 12,
     includeFontPadding: false,
   },
   strike: {
     textDecorationLine: 'line-through',
-    color: 'rgba(255,255,255,0.45)',
     includeFontPadding: false,
   },
   savePill: {
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(45,212,191,0.28)',
-    backgroundColor: 'rgba(45,212,191,0.10)',
   },
   saveText: {
-    color: 'rgba(186,255,245,0.95)',
     fontFamily: Fonts.APPFONT_B,
     fontSize: 12,
     textAlign: 'center',
@@ -316,30 +298,25 @@ const styles = StyleSheet.create({
   bullets: { marginVertical: 10 },
   bulletRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 8,
   },
   tick: {
-    width: 18,
-    height: 18,
+    width: 20,
+    height: 20,
     borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.18)',
-    backgroundColor: 'rgba(255,255,255,0.06)',
     marginRight: 10,
     flexShrink: 0,
   },
   tickText: {
-    color: 'rgba(255,255,255,0.90)',
     fontSize: 12,
     fontFamily: Fonts.APPFONT_B,
     includeFontPadding: false,
   },
   bulletText: {
     flex: 1,
-    color: 'rgba(255,255,255,0.78)',
     fontSize: 13,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
@@ -347,24 +324,16 @@ const styles = StyleSheet.create({
   cardCta: {
     marginTop: 10,
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     paddingHorizontal: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.16)',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1.5,
     overflow: 'hidden',
-    includeFontPadding: false,
-  },
-  cardCtaPro: {
-    borderColor: 'rgba(167,139,250,0.45)',
   },
   cardCtaText: {
-    color: 'rgba(255,255,255,0.92)',
     fontFamily: Fonts.APPFONT_B,
     fontSize: 14,
-    zIndex: 1,
     includeFontPadding: false,
   },
 });
