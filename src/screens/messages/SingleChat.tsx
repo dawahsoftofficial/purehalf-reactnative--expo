@@ -16,6 +16,7 @@ import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import pusherService from '@/services/pusher';
+import { evaluateAndMaybeShowRatingPrompt } from '@/services/rating/ratingEngagement';
 
 import { Container } from '../../components';
 import { wp } from '../../global';
@@ -776,6 +777,16 @@ const SingleChat = (props: any) => {
     isBlockedByYou,
     setInputMessage,
   });
+
+  useEffect(() => {
+    const unsubscribe = props.navigation.addListener('blur', () => {
+      evaluateAndMaybeShowRatingPrompt(
+        'chat_activity',
+        currentUser?.created_at
+      );
+    });
+    return unsubscribe;
+  }, [props.navigation, currentUser?.created_at]);
 
   useEffect(() => {
     const quotes = [
