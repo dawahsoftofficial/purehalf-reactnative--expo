@@ -70,6 +70,13 @@ const EndPoints = {
   markMessageDelivered: (messageId: number) =>
     `/auth/conversations/messages/${messageId}/delivered`,
   collectChatCredit: '/auth/collect/chat-credit',
+
+  // Notification center endpoints
+  notifications: '/auth/notifications',
+  notificationMarkRead: (id: number) => `/auth/notifications/${id}/read`,
+  notificationsMarkAllRead: '/auth/notifications/mark-all-read',
+  notificationDelete: (id: number) => `/auth/notifications/${id}`,
+  notificationsClearAll: '/auth/notifications/clear-all',
 };
 
 export default EndPoints;
