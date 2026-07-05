@@ -511,6 +511,78 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       );
     };
 
+    // Renders just the Near Me / By Country chips (no title / no clear link) —
+    // the group header "Location" names it, and a mode toggle is never cleared.
+    const renderLocationToggle = (item: any) => {
+      const data = item?.data || [];
+      const selected = item?.selected || {};
+      return (
+        <View style={Styles.locToggleRow}>
+          <View
+            style={{
+              ...Styles.locChipsWrap,
+              flexDirection: Rtl ? 'row-reverse' : 'row',
+            }}
+          >
+            {data.map((element: any, index: any) => {
+              const active = element?.id === selected?.id;
+              return (
+                <Ripple
+                  style={{
+                    ...Styles.chip,
+                    backgroundColor: active ? Colors.primary : Colors.lavender,
+                    borderColor: active ? Colors.primary : Colors.hairline,
+                  }}
+                  onPress={onRadioPress.bind(null, data, element, item)}
+                  key={index}
+                  hitSlop={6}
+                  rippleColor={active ? Colors.color2 : Colors.primary}
+                >
+                  <Text
+                    style={{
+                      ...Styles.chipTxt,
+                      color: active ? Colors.color2 : Colors.ink,
+                    }}
+                  >
+                    {element.value}
+                  </Text>
+                </Ripple>
+              );
+            })}
+          </View>
+        </View>
+      );
+    };
+
+    // Binds the mode toggle and its dependent field (distance OR country) into
+    // one card so the relationship reads as a single "Location" setting.
+    const renderLocationCard = () => {
+      const toggleItem = filtersDataList.find(
+        (f: any) => f.id === 'search_for_people'
+      );
+      const dependentItem = filtersDataList.find(
+        (f: any) =>
+          f.id === (peopleSearch === 'country' ? 'country' : 'distance')
+      );
+      if (!toggleItem || !dependentItem) return null;
+      return (
+        <View style={Styles.locationSection}>
+          <Text
+            style={{
+              ...Styles.groupLabel,
+              textAlign: Rtl ? 'right' : 'left',
+            }}
+          >
+            {LanguageKeys.location}
+          </Text>
+          <View style={Styles.card}>
+            {renderLocationToggle(toggleItem)}
+            {renderDropDownList({ item: dependentItem })}
+          </View>
+        </View>
+      );
+    };
+
     const setDropDownData = () => {
       getData(storageKeys.ATTRIBUTE)
         .then(async (attributeRes: any) => {
@@ -679,8 +751,11 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
     const premiumIds = isMale
       ? MALE_PREMIUM_FILTER_IDS
       : FEMALE_PREMIUM_FILTER_IDS;
+    // Location items are lifted into their own grouped card, so keep them out
+    // of the flat basic list.
+    const LOCATION_IDS = ['search_for_people', 'distance', 'country'];
     const basicData = filtersDataList.filter(
-      (f: any) => !premiumIds.includes(f.id)
+      (f: any) => !premiumIds.includes(f.id) && !LOCATION_IDS.includes(f.id)
     );
     const premiumData = filtersDataList.filter((f: any) =>
       premiumIds.includes(f.id)
@@ -709,24 +784,27 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
         )}
 
         {activeTab === 'basic' ? (
-          <View style={Styles.card}>
-            <AgeRange
-              minAge={minAge}
-              maxAge={maxAge}
-              onMinAgeChange={onMinAgeChange}
-              onMaxAgeChange={onMaxAgeChange}
-              onClearPress={onAgeClearPress}
-            />
-            {listLoader ? (
-              <Loader />
-            ) : (
-              <FlatList
-                data={basicData}
-                renderItem={renderList}
-                scrollEnabled={false}
+          <>
+            {renderLocationCard()}
+            <View style={Styles.card}>
+              <AgeRange
+                minAge={minAge}
+                maxAge={maxAge}
+                onMinAgeChange={onMinAgeChange}
+                onMaxAgeChange={onMaxAgeChange}
+                onClearPress={onAgeClearPress}
               />
-            )}
-          </View>
+              {listLoader ? (
+                <Loader />
+              ) : (
+                <FlatList
+                  data={basicData}
+                  renderItem={renderList}
+                  scrollEnabled={false}
+                />
+              )}
+            </View>
+          </>
         ) : (
           <>
             {!premium && renderPremiumUpsell()}
@@ -777,6 +855,28 @@ export default RefineSearch;
 const Styles = StyleSheet.create({
   container: {
     marginTop: hp(2.4),
+  },
+  locationSection: {
+    marginBottom: hp(1.6),
+  },
+  groupLabel: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    includeFontPadding: false,
+    marginBottom: hp(0.8),
+  },
+  locToggleRow: {
+    paddingVertical: hp(1.8),
+    paddingHorizontal: wp(4),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+  },
+  locChipsWrap: {
+    flexWrap: 'wrap',
+    gap: wp(2),
   },
   tabsRow: {
     flexDirection: 'row',
