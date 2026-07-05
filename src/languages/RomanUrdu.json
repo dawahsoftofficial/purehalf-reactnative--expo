@@ -113,6 +113,7 @@
     "selectGender": "apna gender sellect karyn",
     "male": "male",
     "female": "khatoon",
+    "location": "Location",
     "searchForPeople": "logon ko talash karyn",
     "nearMe": "Mery kareeb",
     "byCountry": "Mulk kay zaryee",
@@ -530,6 +531,12 @@
     "goPremiumButtonDescriptionTwo": "Behtar visibility aur is say ziada!",
     "searchMoreProfiles": "Mazeed profiles talash karain",
     "restoreSubscription": "Subscription bahal karain",
-    "restoreSubscriptionErrorMessage": "Ap kay pass koi bhi subscription nahi hai"
+    "restoreSubscriptionErrorMessage": "Ap kay pass koi bhi subscription nahi hai",
+    "ratingPromptTitle": "Kya aap ko Pure Half pasand hai?",
+    "ratingPromptSubtitle": "Hum aap ki raye jan-na chahenge. Aap ki feedback humein behtar banane mein madad deti hai.",
+    "ratingCommentPlaceholder": "Comment likhein (optional)",
+    "ratingSubmit": "Submit",
+    "ratingNotNow": "Abhi nahi",
+    "ratingThankYou": "Aap ki feedback ka shukriya!"
   }
 }

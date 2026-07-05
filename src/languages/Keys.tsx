@@ -26,6 +26,7 @@ const Keys = {
   gender: 'gender',
   male: 'male',
   female: 'female',
+  location: 'location',
   searchForPeople: 'searchForPeople',
   nearMe: 'nearMe',
   byCountry: 'byCountry',
@@ -526,6 +527,12 @@ const Keys = {
   updateLocation: 'updateLocation',
   locationConsentHeading: 'locationConsentHeading',
   locationConsentDescription: 'locationConsentDescription',
+  ratingPromptTitle: 'ratingPromptTitle',
+  ratingPromptSubtitle: 'ratingPromptSubtitle',
+  ratingCommentPlaceholder: 'ratingCommentPlaceholder',
+  ratingSubmit: 'ratingSubmit',
+  ratingNotNow: 'ratingNotNow',
+  ratingThankYou: 'ratingThankYou',
 };
 
 export default Keys;

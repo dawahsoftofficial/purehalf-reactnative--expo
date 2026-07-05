@@ -106,6 +106,7 @@
     "selectGender": "صنف منتخب کریں۔",
     "male": "مرد",
     "female": "عورت",
+    "location": "مقام",
     "searchForPeople": "not available",
     "nearMe": "not available",
     "byCountry": "not available",
@@ -536,6 +537,12 @@
     "goPremiumButtonDescriptionTwo": "بہتر وزیبلٹی اور مزید!",
     "searchMoreProfiles": "مزید پروفائلز تلاش کریں۔",
     "restoreSubscription": "رکنیت بحال کریں۔",
-    "restoreSubscriptionErrorMessage": "آپ کے پاس کوئی زیر التواء رکنیت نہیں ہے۔"
+    "restoreSubscriptionErrorMessage": "آپ کے پاس کوئی زیر التواء رکنیت نہیں ہے۔",
+    "ratingPromptTitle": "کیا آپ کو پیور ہاف پسند ہے؟",
+    "ratingPromptSubtitle": "ہم آپ کی رائے جاننا چاہیں گے۔ آپ کی رائے ہمیں بہتر بننے میں مدد دیتی ہے۔",
+    "ratingCommentPlaceholder": "تبصرہ شامل کریں (اختیاری)",
+    "ratingSubmit": "جمع کرائیں",
+    "ratingNotNow": "ابھی نہیں",
+    "ratingThankYou": "آپ کی رائے کا شکریہ!"
   }
 }

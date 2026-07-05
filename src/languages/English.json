@@ -116,6 +116,7 @@
     "selectGender": "Select Gender",
     "male": "Male",
     "female": "Female",
+    "location": "Location",
     "searchForPeople": "Search For People",
     "nearMe": "Near Me",
     "byCountry": "By Country",
@@ -551,6 +552,12 @@
     "restoreSubscription": "Restore Subscription",
     "restoreSubscriptionErrorMessage": "You dont have any pending subscription",
     "locationConsentHeading": "Location Access Required",
-    "locationConsentDescription": "We need your location to help you find matches nearby and improve your matchmaking experience. Your location data is used only for matching purposes and is kept secure."
+    "locationConsentDescription": "We need your location to help you find matches nearby and improve your matchmaking experience. Your location data is used only for matching purposes and is kept secure.",
+    "ratingPromptTitle": "Enjoying Pure Half?",
+    "ratingPromptSubtitle": "We'd love to hear how it's going. Your feedback helps us improve.",
+    "ratingCommentPlaceholder": "Add a comment (optional)",
+    "ratingSubmit": "Submit",
+    "ratingNotNow": "Not now",
+    "ratingThankYou": "Thank you for your feedback!"
   }
 }
