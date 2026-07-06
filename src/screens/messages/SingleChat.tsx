@@ -91,6 +91,16 @@ const SingleChat = (props: any) => {
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Clear the voice-recording interval if the screen unmounts mid-recording.
+  useEffect(() => {
+    return () => {
+      if (voiceTimerRef.current) {
+        clearInterval(voiceTimerRef.current);
+        voiceTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const getOtherUserData = async () => {
     if (currentUser?.id === 'guardian') {
       const response = await ApiServices.getUserDetailGuardian(

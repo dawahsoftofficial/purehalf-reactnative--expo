@@ -38,16 +38,22 @@ const AudioMessageBubble = ({
   const [isPlaying, setIsPlaying] = useState(false);
 
   const onPlayPress = async () => {
-    if (isPlaying) {
-      await chatAudioService.stopPlayback();
-      setIsPlaying(false);
-      return;
-    }
+    try {
+      if (isPlaying) {
+        await chatAudioService.stopPlayback();
+        setIsPlaying(false);
+        return;
+      }
 
-    const sourceUrl =
-      item.local_uri || (await messageServices.getMessageAudioUrl(item.id)).url;
-    await chatAudioService.play(sourceUrl);
-    setIsPlaying(true);
+      const sourceUrl =
+        item.local_uri ||
+        (await messageServices.getMessageAudioUrl(item.id)).url;
+      setIsPlaying(true);
+      await chatAudioService.play(sourceUrl, () => setIsPlaying(false));
+    } catch (error) {
+      // Reset UI if fetching the URL or starting playback fails.
+      setIsPlaying(false);
+    }
   };
 
   return (

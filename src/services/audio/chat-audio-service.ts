@@ -36,11 +36,21 @@ class ChatAudioService {
     this.activeRecordingUri = null;
   };
 
-  play = async (url: string): Promise<void> => {
+  play = async (url: string, onPlaybackEnd?: () => void): Promise<void> => {
+    // Clear any stale listener before starting a fresh playback.
+    Sound.removePlayBackListener();
     await Sound.startPlayer(url);
+    Sound.addPlayBackListener((meta) => {
+      // currentPosition/duration are in ms; reset once playback reaches the end.
+      if (meta.duration > 0 && meta.currentPosition >= meta.duration) {
+        this.stopPlayback();
+        onPlaybackEnd?.();
+      }
+    });
   };
 
   stopPlayback = async (): Promise<void> => {
+    Sound.removePlayBackListener();
     await Sound.stopPlayer();
   };
 }
