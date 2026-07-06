@@ -182,6 +182,39 @@ const Styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.surface,
   },
+  audioBubbleContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: wp(48),
+    maxWidth: wp(68),
+  },
+  audioPlayButton: {
+    width: wp(8),
+    height: wp(8),
+    borderRadius: wp(4),
+    backgroundColor: Colors.whiteRGBA90,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: wp(2),
+  },
+  audioWaveTrack: {
+    flex: 1,
+    minHeight: wp(8),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    opacity: 0.86,
+  },
+  audioWaveBar: {
+    width: wp(0.7),
+    borderRadius: wp(0.4),
+  },
+  audioDuration: {
+    marginLeft: wp(2),
+    fontSize: Typography.tiny1,
+    fontFamily: Fonts.APPFONT_R,
+    includeFontPadding: false,
+  },
 });
 
 export default Styles;

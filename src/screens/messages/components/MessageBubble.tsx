@@ -14,6 +14,7 @@ import {
   getMessageTime,
   getTimeAgo,
 } from '../SingleChat.utils';
+import AudioMessageBubble from './AudioMessageBubble';
 import MessageStatusIcon from './MessageStatusIcon';
 
 type Props = {
@@ -133,34 +134,48 @@ const MessageBubble = ({
         onPress={() => onMessagePress(item?.id)}
         activeOpacity={0.9}
       >
-        <Text style={[Styles.messageTxt, { color: textColour }]}>
-          {item?.body}
-        </Text>
+        {item?.type === 'audio' ? (
+          <AudioMessageBubble
+            item={item}
+            isCurrentUser={isCurrentUser}
+            textColour={textColour}
+            isRead={isRead}
+            messageStatus={messageStatus}
+            isBlockedYou={isBlockedYou}
+            Styles={Styles}
+          />
+        ) : (
+          <>
+            <Text style={[Styles.messageTxt, { color: textColour }]}>
+              {item?.body}
+            </Text>
 
-        <View style={Styles.messageTimeAndStatusWrapper}>
-          <Text
-            style={[
-              Styles.messageTimeInline,
-              {
-                color:
-                  isCurrentUser || isGuardian
-                    ? Colors.whiteRGBA90
-                    : Colors.muted,
-              },
-            ]}
-          >
-            {getMessageTime(item?.created_at)}
-          </Text>
+            <View style={Styles.messageTimeAndStatusWrapper}>
+              <Text
+                style={[
+                  Styles.messageTimeInline,
+                  {
+                    color:
+                      isCurrentUser || isGuardian
+                        ? Colors.whiteRGBA90
+                        : Colors.muted,
+                  },
+                ]}
+              >
+                {getMessageTime(item?.created_at)}
+              </Text>
 
-          {isCurrentUser && (
-            <MessageStatusIcon
-              status={messageStatus}
-              isSeen={isRead}
-              isBlocked={isBlockedYou}
-              wasSentWhileBlocked={false}
-            />
-          )}
-        </View>
+              {isCurrentUser && (
+                <MessageStatusIcon
+                  status={messageStatus}
+                  isSeen={isRead}
+                  isBlocked={isBlockedYou}
+                  wasSentWhileBlocked={false}
+                />
+              )}
+            </View>
+          </>
+        )}
       </TouchableOpacity>
 
       {isCurrentUser && item?.status === 'sending' && (
