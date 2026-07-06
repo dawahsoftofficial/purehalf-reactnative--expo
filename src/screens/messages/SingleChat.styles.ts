@@ -215,6 +215,53 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
   },
+  voiceRecorderOuter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    marginTop: hp(1),
+    marginBottom: hp(1.5),
+    marginHorizontal: wp(4),
+    borderRadius: 26,
+    paddingVertical: hp(0.7),
+    paddingHorizontal: wp(2),
+  },
+  voiceCancelBtn: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.whiteRGBA18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  voiceTimer: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+    marginHorizontal: wp(3),
+  },
+  voiceWaveTrack: {
+    flex: 1,
+    minHeight: wp(9),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  voiceWaveBar: {
+    width: wp(0.75),
+    borderRadius: wp(0.4),
+    backgroundColor: Colors.whiteRGBA90,
+  },
+  voiceSendBtn: {
+    width: wp(10.5),
+    height: wp(10.5),
+    borderRadius: wp(5.25),
+    backgroundColor: Colors.color2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: wp(2),
+  },
 });
 
 export default Styles;

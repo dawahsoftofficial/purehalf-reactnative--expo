@@ -533,6 +533,9 @@ const Keys = {
   ratingSubmit: 'ratingSubmit',
   ratingNotNow: 'ratingNotNow',
   ratingThankYou: 'ratingThankYou',
+  microphonePermissionDenied: 'microphonePermissionDenied',
+  voiceMessage: 'voiceMessage',
+  recordingVoice: 'recordingVoice',
 };
 
 export default Keys;

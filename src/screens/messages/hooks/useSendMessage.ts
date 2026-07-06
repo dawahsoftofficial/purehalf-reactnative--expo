@@ -29,8 +29,16 @@ type UseSendMessageParams = {
 
 type SendMessageResult = { type: 'blockedByYou' } | { type: 'sent' };
 
+export type AudioSendInput = {
+  type: 'audio';
+  audio: { uri: string; name: string; type: string };
+  duration_seconds: number;
+};
+
+export type SendMessageInput = string | AudioSendInput;
+
 type UseSendMessageReturn = {
-  onSendPress: (inputMessage: string) => Promise<SendMessageResult>;
+  onSendPress: (input: SendMessageInput) => Promise<SendMessageResult>;
 };
 
 export function useSendMessage({
@@ -44,16 +52,21 @@ export function useSendMessage({
   isBlockedByYou,
   setInputMessage,
 }: UseSendMessageParams): UseSendMessageReturn {
-  const sendMessage = async (inputMessage: string): Promise<boolean> => {
+  const sendMessage = async (input: SendMessageInput): Promise<boolean> => {
     setInputMessage('');
 
     // New conversation - check if conversationData is null/undefined or doesn't have an id
     if (!conversationData || !conversationData.id) {
+      if (typeof input !== 'string') {
+        flashErrorMessage('Please send a text message before voice notes.');
+        return false;
+      }
+
       try {
         const createdConversation: Conversation =
           await messageServices.startConversation({
             receiver_id: otherUserData?.id,
-            body: inputMessage,
+            body: input,
           });
 
         setConversationId(createdConversation.id.toString());
@@ -103,10 +116,12 @@ export function useSendMessage({
         return false;
       }
 
+      const payload = typeof input === 'string' ? { body: input } : input;
       const sentMessage: Message =
-        await messageServices.sendConversationMessage(conversationIdNum, {
-          body: inputMessage,
-        });
+        await messageServices.sendConversationMessage(
+          conversationIdNum,
+          payload
+        );
 
       // Add the new message and sort by created_at (newest first)
       // Use functional update to avoid race conditions
@@ -136,13 +151,13 @@ export function useSendMessage({
   };
 
   const onSendPress = async (
-    inputMessage: string
+    input: SendMessageInput
   ): Promise<SendMessageResult> => {
     if (isBlockedByYou) {
       return { type: 'blockedByYou' };
     }
 
-    const didSend = await sendMessage(inputMessage);
+    const didSend = await sendMessage(input);
     if (didSend) {
       recordSentMessage();
     }

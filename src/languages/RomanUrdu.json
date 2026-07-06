@@ -537,6 +537,9 @@
     "ratingCommentPlaceholder": "Comment likhein (optional)",
     "ratingSubmit": "Submit",
     "ratingNotNow": "Abhi nahi",
-    "ratingThankYou": "Aap ki feedback ka shukriya!"
+    "ratingThankYou": "Aap ki feedback ka shukriya!",
+    "microphonePermissionDenied": "Voice message record karne ke liye microphone ki ijazat chahiye.",
+    "voiceMessage": "Voice message",
+    "recordingVoice": "Voice message record ho raha hai"
   }
 }

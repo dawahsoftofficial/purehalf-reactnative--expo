@@ -543,6 +543,9 @@
     "ratingCommentPlaceholder": "تبصرہ شامل کریں (اختیاری)",
     "ratingSubmit": "جمع کرائیں",
     "ratingNotNow": "ابھی نہیں",
-    "ratingThankYou": "آپ کی رائے کا شکریہ!"
+    "ratingThankYou": "آپ کی رائے کا شکریہ!",
+    "microphonePermissionDenied": "صوتی پیغام ریکارڈ کرنے کے لیے مائیکروفون کی اجازت درکار ہے۔",
+    "voiceMessage": "صوتی پیغام",
+    "recordingVoice": "صوتی پیغام ریکارڈ ہو رہا ہے"
   }
 }

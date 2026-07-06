@@ -558,6 +558,9 @@
     "ratingCommentPlaceholder": "Add a comment (optional)",
     "ratingSubmit": "Submit",
     "ratingNotNow": "Not now",
-    "ratingThankYou": "Thank you for your feedback!"
+    "ratingThankYou": "Thank you for your feedback!",
+    "microphonePermissionDenied": "Microphone permission is needed to record voice messages.",
+    "voiceMessage": "Voice message",
+    "recordingVoice": "Recording voice message"
   }
 }

@@ -24,6 +24,7 @@ import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Images } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
   flashInfoMessage,
   useGlobalContext,
 } from '../../services';
@@ -35,8 +36,10 @@ import type {
   MessageSentEventData,
   ParticipantBlockedEventData,
 } from '../../services/api/types/message-types';
+import chatAudioService from '../../services/audio/chat-audio-service';
 import MessageBubble from './components/MessageBubble';
 import TypingIndicator from './components/TypingIndicator';
+import VoiceRecorderBar from './components/VoiceRecorderBar';
 import { useSendMessage } from './hooks/useSendMessage';
 import Styles from './SingleChat.styles';
 import SingleChatHeader from './SingleChatHeader';
@@ -82,6 +85,11 @@ const SingleChat = (props: any) => {
     setInputMessage(text);
     // TODO: Send typing indicator when user types
   };
+
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const [voiceElapsedSeconds, setVoiceElapsedSeconds] = useState(0);
+  const [isSendingVoice, setIsSendingVoice] = useState(false);
+  const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const getOtherUserData = async () => {
     if (currentUser?.id === 'guardian') {
@@ -847,6 +855,63 @@ const SingleChat = (props: any) => {
     }
   };
 
+  const clearVoiceTimer = () => {
+    if (voiceTimerRef.current) {
+      clearInterval(voiceTimerRef.current);
+      voiceTimerRef.current = null;
+    }
+  };
+
+  const startVoiceRecording = async () => {
+    try {
+      setVoiceElapsedSeconds(0);
+      await chatAudioService.startRecording();
+      setIsRecordingVoice(true);
+      voiceTimerRef.current = setInterval(() => {
+        setVoiceElapsedSeconds((seconds) => {
+          if (seconds >= 60) {
+            clearVoiceTimer();
+            return 60;
+          }
+          return seconds + 1;
+        });
+      }, 1000);
+    } catch (error) {
+      flashErrorMessage(LanguageKeys.microphonePermissionDenied);
+    }
+  };
+
+  const cancelVoiceRecording = async () => {
+    clearVoiceTimer();
+    await chatAudioService.cancelRecording();
+    setIsRecordingVoice(false);
+    setVoiceElapsedSeconds(0);
+  };
+
+  const sendVoiceRecording = async () => {
+    if (isSendingVoice) return;
+    setIsSendingVoice(true);
+    clearVoiceTimer();
+    try {
+      const recording = await chatAudioService.stopRecording(
+        Math.max(1, voiceElapsedSeconds)
+      );
+      await onSendPress({
+        type: 'audio',
+        audio: {
+          uri: recording.uri,
+          name: recording.name,
+          type: recording.type,
+        },
+        duration_seconds: recording.duration_seconds,
+      });
+      setIsRecordingVoice(false);
+      setVoiceElapsedSeconds(0);
+    } finally {
+      setIsSendingVoice(false);
+    }
+  };
+
   return (
     <Container>
       {/* {(currentUser?.membership_status === 0 ||
@@ -949,59 +1014,71 @@ const SingleChat = (props: any) => {
             </View>
           )}
         </ScrollView>
-        <View
-          style={{
-            ...Styles.messageInputOuter,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-          }}
-        >
-          <TextInput
-            ref={inputRef}
-            style={{
-              ...Styles.messageInput,
-              textAlign: Rtl ? 'right' : 'left',
-            }}
-            placeholder={t('message')}
-            placeholderTextColor={Colors.muted}
-            value={inputMessage}
-            onChangeText={onChangeInputMessage}
-            onFocus={onInputFocus}
-            onSubmitEditing={handleSubmitEditing}
-            maxLength={350}
-            submitBehavior="blurAndSubmit"
-            returnKeyType="send"
+        {isRecordingVoice ? (
+          <VoiceRecorderBar
+            elapsedSeconds={voiceElapsedSeconds}
+            isSending={isSendingVoice}
+            onCancel={cancelVoiceRecording}
+            onSend={sendVoiceRecording}
           />
-          <TouchableOpacity
+        ) : (
+          <View
             style={{
-              ...Styles.sendBtn,
-              backgroundColor:
-                inputMessage.trim().length === 0
-                  ? Colors.primaryLite
-                  : Colors.primary,
+              ...Styles.messageInputOuter,
+              flexDirection: Rtl ? 'row-reverse' : 'row',
             }}
-            onPress={async () => {
-              const res = await onSendPress(inputMessage);
-
-              if (res?.type === 'blockedByYou') {
-                Alert.alert(
-                  `You have blocked ${otherUserData?.name} please unblock first to send message`
-                );
-              }
-            }}
-            disabled={inputMessage.trim().length === 0 ? true : false}
           >
-            <Ionicons
-              name="send"
-              size={wp(4.6)}
-              color={Colors.color2}
+            <TextInput
+              ref={inputRef}
               style={{
-                marginLeft: Rtl ? 0 : wp(0.5),
-                marginRight: Rtl ? wp(0.5) : 0,
-                transform: Rtl ? [{ scaleX: -1 }] : [],
+                ...Styles.messageInput,
+                textAlign: Rtl ? 'right' : 'left',
               }}
+              placeholder={t('message')}
+              placeholderTextColor={Colors.muted}
+              value={inputMessage}
+              onChangeText={onChangeInputMessage}
+              onFocus={onInputFocus}
+              onSubmitEditing={handleSubmitEditing}
+              maxLength={350}
+              submitBehavior="blurAndSubmit"
+              returnKeyType="send"
             />
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              style={{
+                ...Styles.sendBtn,
+                backgroundColor:
+                  inputMessage.trim().length === 0
+                    ? Colors.primaryLite
+                    : Colors.primary,
+              }}
+              onPress={async () => {
+                if (inputMessage.trim().length === 0) {
+                  await startVoiceRecording();
+                  return;
+                }
+                const res = await onSendPress(inputMessage);
+
+                if (res?.type === 'blockedByYou') {
+                  Alert.alert(
+                    `You have blocked ${otherUserData?.name} please unblock first to send message`
+                  );
+                }
+              }}
+            >
+              <Ionicons
+                name={inputMessage.trim().length === 0 ? 'mic' : 'send'}
+                size={wp(4.6)}
+                color={Colors.color2}
+                style={{
+                  marginLeft: Rtl ? 0 : wp(0.5),
+                  marginRight: Rtl ? wp(0.5) : 0,
+                  transform: Rtl ? [{ scaleX: -1 }] : [],
+                }}
+              />
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </Container>
   );
