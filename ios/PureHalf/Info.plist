@@ -54,6 +54,8 @@
 	<string>Location Required for Sign-Up: To ensure relevant matchmaking, we need your city location during sign-up to connect you with nearby potential matches.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location Required for Sign-Up: To ensure relevant matchmaking, we need your city location during sign-up to connect you with nearby potential matches.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>PureHalf needs microphone access so you can record voice messages in chat.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>PureHalf needs to access photo library for uploading profile pictures</string>
 	<key>GoogleMapsAPIKey</key>
