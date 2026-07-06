@@ -563,8 +563,12 @@ const Messages = (props: MessagesProps) => {
     const unReadCount = currentUserParticipant?.unread_count || 0;
     const isBlockedYou = otherParticipant.is_blocked;
 
-    const hasLastMessage =
-      !!item.last_message && item.last_message.trim() !== '';
+    const previewText =
+      item.last_message_detail?.type === 'audio'
+        ? t(LanguageKeys.voiceMessage)
+        : item.last_message;
+
+    const hasLastMessage = !!previewText && previewText.trim() !== '';
 
     // Check if last message was sent by current user and seen by receiver
     let isLastMessageSeen = false;
@@ -618,7 +622,7 @@ const Messages = (props: MessagesProps) => {
               style={[Styles.itemMessage, isUnread && Styles.itemMessageUnread]}
               numberOfLines={1}
             >
-              {item.last_message}
+              {previewText}
             </Text>
           )}
         </View>
