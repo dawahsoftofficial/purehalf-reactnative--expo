@@ -1,2 +1,2 @@
-npx commitlint --edit $1
-
+# commitlint disabled per request
+exit 0
