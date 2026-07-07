@@ -1,3 +1,4 @@
+import { PermissionsAndroid, Platform } from 'react-native';
 import { Sound } from 'react-native-nitro-sound';
 
 export type RecordedChatAudio = {
@@ -9,6 +10,23 @@ export type RecordedChatAudio = {
 
 class ChatAudioService {
   private activeRecordingUri: string | null = null;
+
+  /**
+   * Ensures the microphone runtime permission is granted before recording.
+   * Android needs an explicit request (RECORD_AUDIO is a dangerous permission);
+   * iOS prompts automatically on first record via NSMicrophoneUsageDescription.
+   */
+  requestRecordPermission = async (): Promise<boolean> => {
+    if (Platform.OS !== 'android') return true;
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch {
+      return false;
+    }
+  };
 
   startRecording = async (): Promise<string> => {
     const uri = await Sound.startRecorder();

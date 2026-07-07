@@ -873,6 +873,12 @@ const SingleChat = (props: any) => {
   };
 
   const startVoiceRecording = async () => {
+    const hasPermission = await chatAudioService.requestRecordPermission();
+    if (!hasPermission) {
+      flashErrorMessage(LanguageKeys.microphonePermissionDenied);
+      return;
+    }
+
     try {
       setVoiceElapsedSeconds(0);
       await chatAudioService.startRecording();
