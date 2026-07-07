@@ -17,7 +17,11 @@ import {
 } from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { DeletePicker, ModalLoader } from '../../components';
+import {
+  DeletePicker,
+  ModalLoader,
+  ProfilePhotoPlaceholder,
+} from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
@@ -395,10 +399,9 @@ const SingleChatHeader = (props: any) => {
                 style={Styles.userImage}
               />
             ) : (
-              <Image
-                source={Images.user}
-                resizeMode="cover"
-                style={Styles.userIcon}
+              <ProfilePhotoPlaceholder
+                name={otherUserData?.name}
+                size={width * 0.05}
               />
             )}
           </View>
@@ -484,10 +487,6 @@ const Styles = StyleSheet.create({
   headerInnerCon: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  userIcon: {
-    width: width * 0.05,
-    height: width * 0.05 * 1,
   },
   userImage: {
     width: width * 0.1,

@@ -12,7 +12,7 @@ import { useSettingsStore } from '@/stores';
 
 import { hp, Typography } from '../global';
 import { CheckRtl, LanguageKeys } from '../languages';
-import { Colors, Fonts, Images } from '../res';
+import { Colors, Fonts } from '../res';
 import {
   ApiServices,
   Firebase,
@@ -21,12 +21,21 @@ import {
   useGlobalContext,
 } from '../services';
 import { Button } from './buttons';
+import ProfilePhotoPlaceholder from './ProfilePhotoPlaceholder';
 
 const { width: viewportWidth } = Dimensions.get('window');
 
 const wp = (percentage: any) => {
   const value = (percentage * viewportWidth) / 100;
   return Math.round(value);
+};
+
+// Crisp tactile "pop" for action-button icons — a quick scale up and settle.
+// Replaces the old full-button bounce, which read as janky.
+const POP = {
+  0: { transform: [{ scale: 1 }] },
+  0.4: { transform: [{ scale: 1.35 }] },
+  1: { transform: [{ scale: 1 }] },
 };
 
 export const sliderWidth = viewportWidth;
@@ -87,6 +96,7 @@ const SliderEntry = ({
   const [matchingData, setMatchingData] = useState<any>([]);
   const likeIconRef = useRef<any>(null);
   const unLikeIconRef = useRef<any>(null);
+  const messageIconRef = useRef<any>(null);
 
   const chatUserData = {
     id: data?.id,
@@ -168,6 +178,7 @@ const SliderEntry = ({
   };
 
   const onMessagePress = () => {
+    messageIconRef.current?.animate(POP, 320);
     const userConversationDetail: any = userConversation;
     if (
       // userConversation?.messages?.length === 0 &&
@@ -227,12 +238,12 @@ const SliderEntry = ({
 
     if (type === 'like') {
       setProfileImageError(false);
-      likeIconRef.current?.bounce(500);
+      likeIconRef.current?.animate(POP, 380);
       onLikePress(data?.id);
     } else {
       onPassPress(data?.id);
       setProfileImageError(false);
-      unLikeIconRef.current?.bounce(500);
+      unLikeIconRef.current?.animate(POP, 380);
     }
   };
 
@@ -255,11 +266,7 @@ const SliderEntry = ({
     >
       {!profileImageError && data?.primary_image_to_show ? (
         <Image
-          source={
-            data?.primary_image_to_show
-              ? { uri: data?.primary_image_to_show }
-              : Images.userPlaceholderVertical
-          }
+          source={{ uri: data?.primary_image_to_show }}
           onLoadStart={onProfileImageLoadStart}
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
@@ -267,11 +274,7 @@ const SliderEntry = ({
           resizeMode="cover"
         />
       ) : (
-        <Image
-          source={Images.userPlaceholderVertical}
-          style={{ ...Styles.image, height: '100%', width: '100%' }}
-          resizeMode="cover"
-        />
+        <ProfilePhotoPlaceholder name={chatUserData?.name} />
       )}
       {/* {profileImageLoader && (
         <ActivityIndicator
@@ -358,47 +361,50 @@ const SliderEntry = ({
           </View>
         ) : null}
         <View style={Styles.textContainer}>
-          <Animatable.View
-            ref={likeIconRef}
-            style={[Styles.actionBtn, Styles.likeBtn]}
+          <Ripple
+            style={[Styles.actionBtn, Styles.likeBtn, Styles.lightShadow]}
+            rippleColor={Colors.primary}
+            rippleContainerBorderRadius={wp(4.5)}
+            onPress={() => onLikeUnlike('like')}
           >
-            <Ripple
-              style={Styles.btnWrapper}
-              rippleColor={Colors.primary}
-              onPress={() => onLikeUnlike('like')}
-            >
-              <Ionicons name="heart" size={wp(5)} color={Colors.primary} />
+            <View style={Styles.btnWrapper}>
+              <Animatable.View ref={likeIconRef}>
+                <Ionicons name="heart" size={wp(5.2)} color={Colors.primary} />
+              </Animatable.View>
               <Text style={[Styles.btnTxt, { color: Colors.primary }]}>
                 Like
               </Text>
-            </Ripple>
-          </Animatable.View>
-          <Animatable.View
-            ref={unLikeIconRef}
+            </View>
+          </Ripple>
+          <Ripple
             style={[Styles.actionBtn, Styles.passBtn]}
+            rippleColor={Colors.surface}
+            rippleContainerBorderRadius={wp(4.5)}
+            onPress={() => onLikeUnlike('unlike')}
           >
-            <Ripple
-              style={Styles.btnWrapper}
-              rippleColor={Colors.surface}
-              onPress={() => onLikeUnlike('unlike')}
-            >
-              <Ionicons name="close" size={wp(5.4)} color={Colors.surface} />
+            <View style={Styles.btnWrapper}>
+              <Animatable.View ref={unLikeIconRef}>
+                <Ionicons name="close" size={wp(5.6)} color={Colors.surface} />
+              </Animatable.View>
               <Text style={[Styles.btnTxt, { color: Colors.surface }]}>
                 Pass
               </Text>
-            </Ripple>
-          </Animatable.View>
+            </View>
+          </Ripple>
           <Ripple
-            style={[Styles.actionBtn, Styles.messageBtn]}
-            rippleColor={Colors.surface}
+            style={[Styles.actionBtn, Styles.messageBtn, Styles.messageShadow]}
+            rippleColor={Colors.whiteRGBA30}
+            rippleContainerBorderRadius={wp(4.5)}
             onPress={onMessagePress}
           >
             <View style={Styles.btnWrapper}>
-              <Ionicons
-                name="chatbubble-ellipses"
-                size={wp(4.6)}
-                color={Colors.surface}
-              />
+              <Animatable.View ref={messageIconRef}>
+                <Ionicons
+                  name="chatbubble-ellipses"
+                  size={wp(4.8)}
+                  color={Colors.surface}
+                />
+              </Animatable.View>
               <Text style={[Styles.btnTxt, { color: Colors.surface }]}>
                 Message
               </Text>
@@ -504,7 +510,7 @@ const Styles = StyleSheet.create({
   },
   userDataContainer: {
     position: 'absolute',
-    bottom: 10,
+    bottom: hp(2.5),
     left: 0,
     right: 0,
     zIndex: 9,
@@ -555,27 +561,40 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: wp(2.5),
-    marginTop: hp(1.4),
+    marginTop: hp(2),
   },
   actionBtn: {
     flex: 1,
-    height: hp(6.4),
-    borderRadius: 16,
+    height: hp(7),
+    borderRadius: wp(4.5),
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   likeBtn: {
     backgroundColor: Colors.surface,
   },
   passBtn: {
     backgroundColor: Colors.whiteRGBA18,
-    borderWidth: 1,
-    borderColor: Colors.whiteRGBA18,
+    borderWidth: 1.5,
+    borderColor: Colors.whiteRGBA30,
   },
   messageBtn: {
     flex: 1.6,
     backgroundColor: Colors.primary,
+  },
+  lightShadow: {
+    shadowColor: Colors.blackRGBA50,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  messageShadow: {
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 10,
   },
   btnWrapper: {
     width: '100%',
@@ -583,11 +602,12 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: wp(1.6),
+    gap: wp(1.8),
   },
   btnTxt: {
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
+    fontSize: Typography.small3,
+    letterSpacing: 0.2,
   },
 });

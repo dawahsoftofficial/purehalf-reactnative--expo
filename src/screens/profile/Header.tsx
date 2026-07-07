@@ -6,6 +6,7 @@ import {
 import moment from 'moment';
 import type { ReactElement } from 'react';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Dimensions,
@@ -20,7 +21,6 @@ import {
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Svg, { Circle } from 'react-native-svg';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
@@ -174,64 +174,6 @@ const MetaLine = React.memo(function MetaLine({
   );
 });
 
-type ProgressRingProps = {
-  size: number;
-  strokeWidth: number;
-  percent: number;
-  trackColor: string;
-  progressColor: string;
-  children?: React.ReactNode;
-};
-
-const ProgressRing = React.memo(function ProgressRing({
-  size,
-  strokeWidth,
-  percent,
-  trackColor,
-  progressColor,
-  children,
-}: ProgressRingProps): ReactElement {
-  const center = size / 2;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.max(0, Math.min(100, percent));
-  const offset = circumference * (1 - clamped / 100);
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-        <Circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke={trackColor}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <Circle
-          cx={center}
-          cy={center}
-          r={radius}
-          stroke={progressColor}
-          strokeWidth={strokeWidth}
-          fill="none"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          strokeLinecap="round"
-          transform={`rotate(-90 ${center} ${center})`}
-        />
-      </Svg>
-      {children}
-    </View>
-  );
-});
-
 type ActionButtonsProps = {
   rtl: boolean;
   onMessagePress: () => void;
@@ -308,89 +250,6 @@ const ActionButtons = React.memo(function ActionButtons({
   );
 });
 
-type AllPicturesButtonProps = {
-  rtl: boolean;
-  fromUserProfile: boolean;
-  hasPublicGallery: boolean;
-  privatePhotoCount?: number;
-  onSeeAllPress: () => void;
-  onEditPress: () => void;
-};
-
-const AllPicturesButton = React.memo(function AllPicturesButton({
-  rtl,
-  fromUserProfile,
-  hasPublicGallery,
-  privatePhotoCount,
-  onSeeAllPress,
-  onEditPress,
-}: AllPicturesButtonProps): ReactElement | null {
-  if (!fromUserProfile) {
-    return (
-      <Ripple
-        style={{
-          ...Styles.myPhotosBtn,
-          flexDirection: rtl ? 'row-reverse' : 'row',
-        }}
-        onPress={onEditPress}
-      >
-        <Entypo
-          style={{
-            marginRight: rtl ? 0 : wp(1.6),
-            marginLeft: rtl ? wp(1.6) : 0,
-          }}
-          name={'camera'}
-          size={wp(5.5)}
-          color={Colors.color2}
-        />
-        <View
-          style={{
-            ...Styles.allPhotosBtnInner,
-            flexDirection: rtl ? 'row-reverse' : 'row',
-          }}
-        >
-          <Text style={Styles.allPhotosTxt}>{LanguageKeys.myPhotos}</Text>
-        </View>
-      </Ripple>
-    );
-  }
-
-  const showGallery = hasPublicGallery || (privatePhotoCount ?? 0) > 0;
-  if (!showGallery) {
-    return null;
-  }
-
-  return (
-    <Ripple
-      style={{
-        ...Styles.allPhotosBtn,
-        flexDirection: rtl ? 'row-reverse' : 'row',
-      }}
-      onPress={onSeeAllPress}
-    >
-      <Image
-        source={Images.gallery}
-        resizeMode="contain"
-        style={[
-          Styles.galleryIcon,
-          {
-            marginRight: rtl ? 0 : wp(1.6),
-            marginLeft: rtl ? wp(1.6) : 0,
-          },
-        ]}
-      />
-      <View
-        style={{
-          ...Styles.allPhotosBtnInner,
-          flexDirection: rtl ? 'row-reverse' : 'row',
-        }}
-      >
-        <Text style={Styles.allPhotosTxt}>{LanguageKeys.seeAllPictures}</Text>
-      </View>
-    </Ripple>
-  );
-});
-
 const Header = ({
   navigation,
   fromUserProfile = false,
@@ -408,6 +267,7 @@ const Header = ({
   onTaglineCancel = () => null,
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
+  const { t } = useTranslation();
   const isPremium = usePremiumStore((state) => state.isPremium);
   const [userConversation, setUserConversation] = useState<Conversation | null>(
     null
@@ -779,149 +639,219 @@ const Header = ({
     setProfileImageError(false);
   }, [profileImageUri]);
 
-  const formattedLastOnlineDate = useMemo(() => {
+  // A friendly relative "last seen" line — "Online now" when very recent,
+  // otherwise "Active 5 hours ago". Clearer than a full date + time stamp.
+  const relativeLastSeen = useMemo(() => {
     if (!userData?.last_online_at) {
-      return { date: '', time: '' };
+      return '';
     }
-    const lastOnline = moment(userData.last_online_at);
-    return {
-      date: lastOnline.isSame(new Date(), 'day')
-        ? ''
-        : lastOnline.format('Do MMM, YYYY'),
-      time: lastOnline.format('(hh:mm a)'),
-    };
-  }, [userData?.last_online_at]);
+    const minutesAgo = moment().diff(
+      moment(userData.last_online_at),
+      'minutes'
+    );
+    if (minutesAgo < 5) {
+      return t(LanguageKeys.onlineNow);
+    }
+    return `${t(LanguageKeys.active)} ${moment(userData.last_online_at).fromNow()}`;
+  }, [userData?.last_online_at, t]);
+
+  // Full-bleed photo hero shared by both the self and other-user headers.
+  // The info card is rendered as a sibling below it and pulled up to overlap.
+  const renderHeroPhoto = (showBack: boolean, showMenu: boolean) => (
+    <View style={Styles.heroWrap}>
+      {profileImageUri && profileImageUri.length !== 0 && !profileImageError ? (
+        <Image
+          style={StyleSheet.absoluteFill}
+          source={{ uri: profileImageUri }}
+          resizeMode="cover"
+          onLoadStart={onProfileImageLoadStart}
+          onLoadEnd={onProfileImageLoadEnd}
+          onError={onProfileImageError}
+        />
+      ) : (
+        <View style={Styles.heroFallback}>
+          <FontAwesome5
+            name="user-alt"
+            color={Colors.primaryLite}
+            size={wp(24)}
+          />
+        </View>
+      )}
+      {profileImageLoader && !profileImageError && (
+        <View style={Styles.imageLoader}>
+          <ActivityIndicator color={Colors.color2} size={wp(8)} />
+        </View>
+      )}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.42)', 'rgba(0,0,0,0.0)', 'rgba(0,0,0,0.16)']}
+        style={StyleSheet.absoluteFill}
+      />
+      {showBack && (
+        <Ripple
+          style={[
+            Styles.navButton,
+            {
+              left: Rtl ? undefined : wp(4),
+              right: Rtl ? wp(4) : undefined,
+            },
+          ]}
+          hitSlop={20}
+          rippleColor={Colors.theme}
+          onPress={onBackPress}
+        >
+          <AntDesign
+            name={Rtl ? 'arrowright' : 'arrowleft'}
+            color={Colors.color1}
+            size={wp(7)}
+          />
+        </Ripple>
+      )}
+      <View
+        style={[
+          Styles.badgesContainer,
+          {
+            left: Rtl ? wp(2) : undefined,
+            right: Rtl ? undefined : wp(2),
+          },
+        ]}
+      >
+        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
+        {showMenu && (
+          <Ripple
+            style={Styles.overflowBtn}
+            onPress={openMenu}
+            hitSlop={12}
+            rippleColor={Colors.color2}
+          >
+            <Ionicons
+              name="ellipsis-vertical"
+              color={Colors.color2}
+              size={wp(5)}
+            />
+          </Ripple>
+        )}
+      </View>
+    </View>
+  );
 
   const renderSelfHeader = () => (
-    <LinearGradient
-      colors={[Colors.primary, Colors.primaryMid]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={Styles.selfHeader}
-    >
-      <View style={Styles.avatarBlock}>
+    <>
+      {renderHeroPhoto(false, false)}
+      <View style={Styles.infoCard}>
+        <NameRow
+          firstName={userData?.first_name}
+          lastName={userData?.last_name}
+          showStatus={false}
+          statusColor={onlineStatusColor}
+          rtl={Rtl}
+        />
+        <MetaLine
+          age={userData?.age}
+          city={userData?.city}
+          country={userData?.country}
+        />
         <Ripple
-          style={Styles.avatarTap}
-          onPress={onEditPress}
-          rippleColor={Colors.color2}
+          style={[
+            Styles.taglineEditRow,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+          onPress={onTaglineEditPress}
+          rippleColor={Colors.lavender}
         >
-          <ProgressRing
-            size={wp(32)}
-            strokeWidth={wp(1.6)}
-            percent={typeof profileStrength === 'number' ? profileStrength : 0}
-            trackColor="rgba(255,255,255,0.28)"
-            progressColor={Colors.color2}
-          >
-            <View style={Styles.avatarInner}>
-              {profileImageUri &&
-              profileImageUri.length !== 0 &&
-              !profileImageError ? (
-                <Image
-                  source={{ uri: profileImageUri }}
-                  style={Styles.avatarImage}
-                  resizeMode="cover"
-                  onLoadStart={onProfileImageLoadStart}
-                  onLoadEnd={onProfileImageLoadEnd}
-                  onError={onProfileImageError}
-                />
-              ) : (
-                <View style={Styles.avatarFallback}>
-                  <FontAwesome5
-                    name="user-alt"
-                    color={Colors.primaryLite}
-                    size={wp(11)}
-                  />
-                </View>
-              )}
-              {profileImageLoader && !profileImageError && (
-                <View style={Styles.avatarLoader}>
-                  <ActivityIndicator color={Colors.primary} size="small" />
-                </View>
-              )}
-            </View>
-          </ProgressRing>
+          {tagline && tagline.trim().length ? (
+            <ReactText
+              style={[
+                Styles.cardTagline,
+                { textAlign: Rtl ? 'right' : 'left', flex: 1 },
+              ]}
+              numberOfLines={2}
+            >
+              {`“${tagline}”`}
+            </ReactText>
+          ) : (
+            <Text
+              style={[Styles.cardTagline, Styles.cardTaglineMuted, { flex: 1 }]}
+              numberOfLines={2}
+            >
+              {LanguageKeys.addTagline}
+            </Text>
+          )}
+          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
         </Ripple>
         {typeof profileStrength === 'number' ? (
-          <View style={Styles.strengthChip}>
-            <ReactText style={Styles.strengthChipTxt}>
-              {`${profileStrength}%`}
-            </ReactText>
+          <View style={Styles.strengthWrap}>
+            <View
+              style={[
+                Styles.strengthRow,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <Text style={Styles.strengthLabel}>
+                {LanguageKeys.profileStrength}
+              </Text>
+              <ReactText style={Styles.strengthPct}>
+                {`${profileStrength}%`}
+              </ReactText>
+            </View>
+            <View style={Styles.strengthTrack}>
+              <View
+                style={[
+                  Styles.strengthFill,
+                  {
+                    width: `${Math.max(0, Math.min(100, profileStrength))}%`,
+                  },
+                ]}
+              />
+            </View>
           </View>
         ) : null}
-      </View>
-
-      <ReactText
-        style={[Styles.selfName, !Rtl ? { fontFamily: Fonts.DISPLAY } : null]}
-        numberOfLines={1}
-      >
-        {capitalize(userData?.first_name ?? '') +
-          ' ' +
-          capitalize(userData?.last_name ?? '')}
-      </ReactText>
-
-      <MetaLine
-        age={userData?.age}
-        city={userData?.city}
-        country={userData?.country}
-        style={Styles.selfMeta}
-      />
-
-      <View style={Styles.selfBadges}>
-        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
-      </View>
-
-      <Ripple
-        style={Styles.taglinePill}
-        onPress={onTaglineEditPress}
-        rippleColor={Colors.color2}
-      >
-        <Entypo name="pencil" size={wp(3.8)} color={Colors.whiteRGBA90} />
-        <ReactText style={Styles.taglineTxt} numberOfLines={1}>
-          {tagline && tagline.trim().length ? tagline : LanguageKeys.addTagline}
-        </ReactText>
-      </Ripple>
-
-      <View style={Styles.selfActions}>
-        <Ripple
+        <View
           style={[
-            Styles.selfBtn,
-            Styles.selfBtnSolid,
+            Styles.cardBtnRow,
             { flexDirection: Rtl ? 'row-reverse' : 'row' },
           ]}
-          onPress={onEditPress}
-          rippleColor={Colors.primary}
         >
-          <Entypo name="camera" size={wp(4.6)} color={Colors.primary} />
-          <Text
-            style={[Styles.selfBtnTxt, Styles.selfBtnTxtSolid]}
-            numberOfLines={1}
+          <Ripple
+            style={[
+              Styles.cardBtn,
+              Styles.cardBtnPrimary,
+              { flex: 1, flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
+            onPress={onEditPress}
+            rippleColor={Colors.primaryPress}
           >
-            {LanguageKeys.myPhotos}
-          </Text>
-        </Ripple>
-        <Ripple
-          style={[
-            Styles.selfBtn,
-            Styles.selfBtnGlass,
-            { flexDirection: Rtl ? 'row-reverse' : 'row' },
-          ]}
-          onPress={onBlurButtonPress}
-          rippleColor={Colors.color2}
-        >
-          <Entypo
-            name={userData?.is_blur ? 'eye-with-line' : 'eye'}
-            size={wp(4.6)}
-            color={Colors.color2}
-          />
-          <Text
-            style={[Styles.selfBtnTxt, Styles.selfBtnTxtGlass]}
-            numberOfLines={1}
+            <Entypo name="camera" size={wp(4.6)} color={Colors.color2} />
+            <Text
+              style={[Styles.cardBtnTxt, Styles.cardBtnTxtPrimary]}
+              numberOfLines={1}
+            >
+              {LanguageKeys.myPhotos}
+            </Text>
+          </Ripple>
+          <Ripple
+            style={[
+              Styles.cardBtn,
+              Styles.cardBtnGhost,
+              { flex: 1, flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
+            onPress={onBlurButtonPress}
+            rippleColor={Colors.lavender}
           >
-            {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
-          </Text>
-        </Ripple>
+            <Entypo
+              name={userData?.is_blur ? 'eye-with-line' : 'eye'}
+              size={wp(4.6)}
+              color={Colors.primary}
+            />
+            <Text
+              style={[Styles.cardBtnTxt, Styles.cardBtnTxtGhost]}
+              numberOfLines={1}
+            >
+              {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
+            </Text>
+          </Ripple>
+        </View>
       </View>
-    </LinearGradient>
+    </>
   );
 
   return (
@@ -934,211 +864,110 @@ const Header = ({
       ) : (
         <>
           <CheckMembershipStatus />
-          {profileImageUri &&
-          profileImageUri.length !== 0 &&
-          !profileImageError ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { zIndex: -1, backgroundColor: Colors.lavender },
-              ]}
-            >
-              <Image
-                style={StyleSheet.absoluteFill}
-                source={{ uri: profileImageUri }}
-                resizeMode="cover"
-                onLoadStart={onProfileImageLoadStart}
-                onLoadEnd={onProfileImageLoadEnd}
-                onError={onProfileImageError}
-              />
-              {profileImageLoader && !profileImageError && (
-                <View style={Styles.imageLoader}>
-                  <ActivityIndicator color={Colors.primary} size={wp(8)} />
-                </View>
-              )}
-            </View>
-          ) : (
-            <View
-              style={{
-                ...StyleSheet.absoluteFill,
-                backgroundColor: Colors.primaryPress,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <FontAwesome5
-                name="user-alt"
-                color={Colors.primaryLite}
-                size={wp(24)}
-              />
-            </View>
-          )}
-
-          <LinearGradient
-            colors={['rgba(0,0,0,0.0)', 'rgba(0,0,0,0.42)', 'rgba(0,0,0,0.74)']}
-            style={{ ...StyleSheet.absoluteFill }}
-          />
-          <View
-            style={[
-              Styles.badgesContainer,
-              {
-                left: Rtl ? wp(2) : undefined,
-                right: Rtl ? undefined : wp(2),
-              },
-            ]}
-          >
-            <ProfileBadges
-              isSelf={isSelf}
-              showText={false}
-              userData={userData}
+          {renderHeroPhoto(true, !isSelf && !isBlockedYou)}
+          <View style={Styles.infoCard}>
+            <NameRow
+              firstName={userData?.first_name}
+              lastName={userData?.last_name}
+              showStatus={!isBlockedYou}
+              statusColor={onlineStatusColor}
+              rtl={Rtl}
             />
-            {fromUserProfile && !isSelf && !isBlockedYou && (
-              <Ripple
-                style={Styles.overflowBtn}
-                onPress={openMenu}
-                hitSlop={12}
-                rippleColor={Colors.color2}
+            <MetaLine
+              age={userData?.age}
+              city={userData?.city}
+              country={userData?.country}
+            />
+            {!isBlockedYou && tagline && tagline.trim().length ? (
+              <ReactText
+                style={[
+                  Styles.cardTagline,
+                  { marginTop: hp(1), textAlign: Rtl ? 'right' : 'left' },
+                ]}
+                numberOfLines={2}
               >
-                <Ionicons
-                  name="ellipsis-vertical"
-                  color={Colors.color2}
-                  size={wp(5)}
-                />
-              </Ripple>
-            )}
-          </View>
-          <Ripple
-            style={[
-              Styles.navButton,
-              {
-                left: Rtl ? undefined : wp(4),
-                right: Rtl ? wp(4) : undefined,
-              },
-            ]}
-            hitSlop={20}
-            rippleColor={Colors.theme}
-            onPress={onBackPress}
-          >
-            <AntDesign
-              name={Rtl ? 'arrowright' : 'arrowleft'}
-              color={Colors.color1}
-              size={wp(7)}
-            />
-          </Ripple>
-
-          <View style={[Styles.surface, { paddingBottom: 0 }]}>
-            <View
-              style={[
-                Styles.profileRow,
-                { flexDirection: Rtl ? 'row-reverse' : 'row' },
-              ]}
-            >
+                {`“${tagline}”`}
+              </ReactText>
+            ) : null}
+            {!isBlockedYou && relativeLastSeen ? (
               <View
                 style={[
-                  Styles.profileInfo,
-                  { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+                  Styles.lastSeenRow,
+                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
                 ]}
               >
-                <View
-                  style={[
-                    Styles.nameWrapper,
-                    { flexDirection: Rtl ? 'row-reverse' : 'row' },
-                  ]}
-                >
-                  <NameRow
-                    firstName={userData?.first_name}
-                    lastName={userData?.last_name}
-                    showStatus={fromUserProfile}
-                    statusColor={onlineStatusColor}
+                <Ionicons
+                  name="time-outline"
+                  color={Colors.primaryMid}
+                  size={wp(3.8)}
+                />
+                <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
+                  {relativeLastSeen}
+                </ReactText>
+              </View>
+            ) : null}
+            {!isBlockedYou && (
+              <>
+                <View style={Styles.cardActions}>
+                  <ActionButtons
                     rtl={Rtl}
+                    onMessagePress={onMessagePress}
+                    onLikePress={handleLikeToggle}
+                    messageButtonLoader={messageButtonLoader}
+                    liked={liked}
                   />
                 </View>
-                <MetaLine
-                  age={userData?.age}
-                  city={userData?.city}
-                  country={userData?.country}
-                />
-                {!isBlockedYou &&
-                fromUserProfile &&
-                (formattedLastOnlineDate.date ||
-                  formattedLastOnlineDate.time) ? (
-                  <View
-                    style={{
-                      ...Styles.lastSeenChip,
-                      flexDirection: Rtl ? 'row-reverse' : 'row',
-                    }}
+                {(Boolean(userData?.media?.public_gallery?.length) ||
+                  (userData?.media?.private_photo_count ?? 0) > 0) && (
+                  <Ripple
+                    style={[
+                      Styles.seeAllRow,
+                      { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                    ]}
+                    onPress={onSeeAllPicPress}
+                    rippleColor={Colors.primaryLite}
                   >
-                    <Ionicons
-                      name="time-outline"
-                      color={Colors.color2}
-                      size={wp(3.6)}
-                    />
-                    <ReactText style={Styles.lastSeenTxt} numberOfLines={1}>
-                      {[
-                        formattedLastOnlineDate.date,
-                        formattedLastOnlineDate.time,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </ReactText>
-                  </View>
-                ) : null}
-                <View style={Styles.actionsWrapper}>
-                  {!isBlockedYou && fromUserProfile && (
-                    <ActionButtons
-                      rtl={Rtl}
-                      onMessagePress={onMessagePress}
-                      onLikePress={handleLikeToggle}
-                      messageButtonLoader={messageButtonLoader}
-                      liked={liked}
-                    />
-                  )}
-
-                  {!isBlockedYou && (
-                    <AllPicturesButton
-                      rtl={Rtl}
-                      fromUserProfile={fromUserProfile}
-                      hasPublicGallery={Boolean(
-                        userData?.media?.public_gallery?.length
-                      )}
-                      privatePhotoCount={userData?.media?.private_photo_count}
-                      onSeeAllPress={onSeeAllPicPress}
-                      onEditPress={onEditPress}
-                    />
-                  )}
-
-                  {isSelf && (
-                    <Ripple
-                      style={{
-                        ...Styles.myPhotosBtn,
-                        flexDirection: Rtl ? 'row-reverse' : 'row',
-                      }}
-                      onPress={onBlurButtonPress}
-                    >
-                      <Entypo
-                        style={{
+                    <Image
+                      source={Images.gallery}
+                      resizeMode="contain"
+                      style={[
+                        Styles.seeAllIcon,
+                        {
                           marginRight: Rtl ? 0 : wp(1.6),
                           marginLeft: Rtl ? wp(1.6) : 0,
-                        }}
-                        name={userData?.is_blur ? 'eye-with-line' : 'eye'}
-                        size={wp(5.5)}
-                        color={Colors.color2}
-                      />
-                      <View
-                        style={{
-                          ...Styles.allPhotosBtnInner,
-                          flexDirection: Rtl ? 'row-reverse' : 'row',
-                        }}
-                      >
-                        <Text style={Styles.allPhotosTxt}>
-                          {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
-                        </Text>
-                      </View>
-                    </Ripple>
-                  )}
-                </View>
-              </View>
-            </View>
+                        },
+                      ]}
+                    />
+                    <Text style={Styles.seeAllTxt}>
+                      {LanguageKeys.seeAllPictures}
+                    </Text>
+                  </Ripple>
+                )}
+              </>
+            )}
+            {isSelf && (
+              <Ripple
+                style={[
+                  Styles.cardBtn,
+                  Styles.cardBtnGhost,
+                  {
+                    marginTop: hp(1.2),
+                    flexDirection: Rtl ? 'row-reverse' : 'row',
+                  },
+                ]}
+                onPress={onBlurButtonPress}
+                rippleColor={Colors.lavender}
+              >
+                <Entypo
+                  name={userData?.is_blur ? 'eye-with-line' : 'eye'}
+                  size={wp(4.6)}
+                  color={Colors.primary}
+                />
+                <Text style={[Styles.cardBtnTxt, Styles.cardBtnTxtGhost]}>
+                  {userData?.is_blur ? 'Blur is ON' : 'Blur My Photos'}
+                </Text>
+              </Ripple>
+            )}
           </View>
         </>
       )}
@@ -1175,19 +1004,36 @@ const Header = ({
         </Ripple>
       </Modal>
 
-      <Modal transparent={true} visible={blurModalVisible}>
+      <Modal
+        transparent
+        visible={blurModalVisible}
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={closeBlurModal}
+      >
         <View style={Styles.blurModalWrapper}>
           <View style={Styles.blurModalContent}>
             <Ripple
               style={Styles.blurModalCloseWrapper}
               onPress={closeBlurModal}
+              rippleColor={Colors.primary}
+              hitSlop={10}
             >
-              <AntDesign name="close" size={wp(6)} color={Colors.color1} />
+              <AntDesign name="close" size={wp(4.6)} color={Colors.ink} />
             </Ripple>
 
-            <Text style={Styles.blurModalTitle}>
-              {LanguageKeys.blurYourPhotoForPrivacy}
-            </Text>
+            <View style={Styles.blurModalHeader}>
+              <View style={Styles.blurModalIconChip}>
+                <Ionicons
+                  name="eye-off"
+                  size={wp(6.4)}
+                  color={Colors.primary}
+                />
+              </View>
+              <Text variant="display" style={Styles.blurModalTitle}>
+                {LanguageKeys.blurYourPhotoForPrivacy}
+              </Text>
+            </View>
 
             <View style={Styles.blurImageComparison}>
               <View style={Styles.blurImageContainer}>
@@ -1205,15 +1051,21 @@ const Header = ({
                 </Text>
               </View>
 
-              <AntDesign
-                name="arrowright"
-                size={wp(6)}
-                color={Colors.color1}
-                style={Styles.blurArrow}
-              />
+              <View style={Styles.blurArrowChip}>
+                <AntDesign
+                  name={Rtl ? 'arrowleft' : 'arrowright'}
+                  size={wp(4.2)}
+                  color={Colors.primary}
+                />
+              </View>
 
               <View style={Styles.blurImageContainer}>
-                <View style={Styles.blurImageWrapper}>
+                <View
+                  style={[
+                    Styles.blurImageWrapper,
+                    Styles.blurImageWrapperActive,
+                  ]}
+                >
                   <Image
                     source={{
                       uri: userData?.media?.primary_image,
@@ -1223,7 +1075,9 @@ const Header = ({
                   />
                   {/* <BlurView style={StyleSheet.absoluteFill} blurAmount={10} /> */}
                 </View>
-                <Text style={Styles.blurImageLabel}>
+                <Text
+                  style={[Styles.blurImageLabel, Styles.blurImageLabelActive]}
+                >
                   {LanguageKeys.visibleToOthersBlurred}
                 </Text>
               </View>
@@ -1234,52 +1088,62 @@ const Header = ({
             </Text>
 
             <View style={Styles.blurBenefitsList}>
-              <View style={Styles.blurBenefitItem}>
-                <AntDesign name="check" size={wp(4)} color={Colors.theme} />
-                <Text style={Styles.blurBenefitText}>
-                  {LanguageKeys.helpsKeepIdentityPrivate}
-                </Text>
-              </View>
-              <View style={Styles.blurBenefitItem}>
-                <AntDesign name="check" size={wp(4)} color={Colors.theme} />
-                <Text style={Styles.blurBenefitText}>
-                  {LanguageKeys.recommendedForIslamicModesty}
-                </Text>
-              </View>
-              <View style={Styles.blurBenefitItem}>
-                <AntDesign name="check" size={wp(4)} color={Colors.theme} />
-                <Text style={Styles.blurBenefitText}>
-                  {LanguageKeys.youStayInControl}
-                </Text>
-              </View>
+              {[
+                LanguageKeys.helpsKeepIdentityPrivate,
+                LanguageKeys.recommendedForIslamicModesty,
+                LanguageKeys.youStayInControl,
+              ].map((benefitKey) => (
+                <View
+                  key={benefitKey}
+                  style={[
+                    Styles.blurBenefitItem,
+                    { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                  ]}
+                >
+                  <View style={Styles.blurBenefitCheck}>
+                    <AntDesign
+                      name="check"
+                      size={wp(3.4)}
+                      color={Colors.primary}
+                    />
+                  </View>
+                  <Text style={Styles.blurBenefitText}>{benefitKey}</Text>
+                </View>
+              ))}
             </View>
 
-            <Text style={Styles.blurSecurityNote}>
-              {LanguageKeys.originalPhotoStoredSecurely}
-            </Text>
+            <View
+              style={[
+                Styles.blurSecurityNote,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <Ionicons
+                name="lock-closed"
+                size={wp(4)}
+                color={Colors.primaryMid}
+                style={Styles.blurSecurityIcon}
+              />
+              <Text style={Styles.blurSecurityText}>
+                {LanguageKeys.originalPhotoStoredSecurely}
+              </Text>
+            </View>
 
             <View style={Styles.blurModalButtons}>
               <Button
+                variant="outline"
                 onPress={closeBlurModal}
-                buttonStyle={[
-                  Styles.blurModalButton,
-                  Styles.blurModalButtonSecondary,
-                ]}
+                buttonStyle={Styles.blurCtaButton}
                 text={LanguageKeys.gotIt}
-                textStyle={Styles.blurModalButtonTextSecondary}
               />
               <Button
                 onPress={onToggleBlur}
-                buttonStyle={[
-                  Styles.blurModalButton,
-                  Styles.blurModalButtonPrimary,
-                ]}
+                buttonStyle={Styles.blurCtaButton}
                 text={
                   userData?.is_blur
                     ? LanguageKeys.blurIsOn
                     : LanguageKeys.blurForOthers
                 }
-                textStyle={Styles.blurModalButtonTextPrimary}
                 disabled={isUpdatingBlur}
                 loading={isUpdatingBlur}
                 loadingMessage={LanguageKeys.updating}
@@ -1341,12 +1205,157 @@ export default Header;
 
 const Styles = StyleSheet.create({
   container: {
-    height: height * 0.45,
-    // marginBottom: hp(3),
-    justifyContent: 'flex-end',
+    backgroundColor: Colors.appBg,
   },
   selfContainer: {
     backgroundColor: Colors.appBg,
+  },
+  heroWrap: {
+    height: height * 0.42,
+    backgroundColor: Colors.primaryPress,
+    overflow: 'hidden',
+  },
+  heroFallback: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoCard: {
+    marginTop: -hp(4.5),
+    marginHorizontal: wp(4),
+    marginBottom: hp(1.5),
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    paddingHorizontal: wp(4.5),
+    paddingTop: hp(2),
+    paddingBottom: hp(2.2),
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
+  },
+  cardTagline: {
+    color: Colors.primaryPress,
+    fontFamily: Fonts.APPFONT_R,
+    fontStyle: 'italic',
+    fontSize: Typography.small1,
+    lineHeight: wp(5.4),
+    includeFontPadding: false,
+  },
+  cardTaglineMuted: {
+    color: Colors.muted,
+  },
+  taglineEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+    marginTop: hp(1),
+  },
+  lastSeenRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.4),
+    marginTop: hp(1),
+  },
+  cardLastSeenTxt: {
+    color: Colors.primaryMid,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small3,
+    includeFontPadding: false,
+    alignSelf: 'center',
+  },
+  strengthWrap: {
+    marginTop: hp(1.6),
+  },
+  strengthRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: hp(0.7),
+  },
+  strengthLabel: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small3,
+    includeFontPadding: false,
+  },
+  strengthPct: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  strengthTrack: {
+    height: hp(0.85),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
+  },
+  strengthFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: Colors.primary,
+  },
+  cardActions: {
+    marginTop: hp(1.8),
+  },
+  cardBtnRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
+    marginTop: hp(1.8),
+  },
+  cardBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(2),
+    paddingVertical: hp(1.3),
+    borderRadius: 14,
+  },
+  cardBtnPrimary: {
+    backgroundColor: Colors.primary,
+  },
+  cardBtnGhost: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
+  cardBtnTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    alignSelf: 'center',
+    includeFontPadding: false,
+  },
+  cardBtnTxtPrimary: {
+    color: Colors.color2,
+  },
+  cardBtnTxtGhost: {
+    color: Colors.primary,
+  },
+  seeAllRow: {
+    marginTop: hp(1.2),
+    backgroundColor: Colors.lavender,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(2),
+    paddingVertical: hp(1.25),
+  },
+  seeAllIcon: {
+    width: wp(4),
+    height: hp(2.4),
+  },
+  seeAllTxt: {
+    color: Colors.primaryPress,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+    marginBottom: Constants.fontFamilyMarginBottom,
   },
   selfHeader: {
     paddingTop: hp(2.5),
@@ -1632,13 +1641,13 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   name: {
-    color: Colors.color2,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.large,
     includeFontPadding: false,
   },
   location: {
-    color: Colors.whiteRGBA90,
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     includeFontPadding: false,
     fontSize: Typography.small2,
@@ -1923,92 +1932,169 @@ const Styles = StyleSheet.create({
   },
   blurModalWrapper: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: Colors.blackRGBA50,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: wp(6),
   },
   blurModalContent: {
-    backgroundColor: Colors.color2,
-    borderRadius: wp(4),
-    padding: wp(5),
-    width: '95%',
+    width: '100%',
+    backgroundColor: Colors.surface,
+    borderRadius: wp(6),
+    paddingHorizontal: wp(5.5),
+    paddingTop: hp(2.6),
+    paddingBottom: hp(2.4),
     maxHeight: hp(90),
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 12,
   },
   blurModalCloseWrapper: {
-    alignSelf: 'flex-end',
-    padding: wp(2),
-    marginTop: -wp(2),
-    marginRight: -wp(2),
+    position: 'absolute',
+    top: hp(1.4),
+    right: wp(3.5),
+    zIndex: 5,
+    width: wp(8.5),
+    height: wp(8.5),
+    borderRadius: wp(4.25),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blurModalHeader: {
+    alignItems: 'center',
+    marginBottom: hp(2.2),
+    paddingHorizontal: wp(6),
+  },
+  blurModalIconChip: {
+    width: wp(14),
+    height: wp(14),
+    borderRadius: wp(7),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1.2),
   },
   blurModalTitle: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium1,
-    color: Colors.color1,
-    marginBottom: hp(2),
+    fontSize: Typography.large,
+    color: Colors.ink,
+    textAlign: 'center',
     alignSelf: 'center',
+    includeFontPadding: false,
   },
   blurImageComparison: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: hp(2),
+    marginBottom: hp(2.4),
   },
   blurImageContainer: {
     flex: 1,
     alignItems: 'center',
   },
   blurImageWrapper: {
-    width: wp(35),
-    height: wp(35),
-    borderRadius: wp(2),
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: wp(3.5),
     overflow: 'hidden',
-    marginBottom: hp(1),
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.lavender,
+  },
+  blurImageWrapperActive: {
+    borderWidth: 2,
+    borderColor: Colors.primary,
   },
   blurComparisonImage: {
     width: '100%',
     height: '100%',
   },
   blurImageLabel: {
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
-    color: Colors.color1,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    color: Colors.muted,
     textAlign: 'center',
-    marginTop: hp(0.5),
+    alignSelf: 'center',
+    marginTop: hp(1),
+    includeFontPadding: false,
   },
-  blurArrow: {
+  blurImageLabelActive: {
+    fontFamily: Fonts.APPFONT_SB,
+    color: Colors.primary,
+  },
+  blurArrowChip: {
+    width: wp(8),
+    height: wp(8),
+    borderRadius: wp(4),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginHorizontal: wp(2),
   },
   blurDescription: {
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
-    color: Colors.color1,
-    marginBottom: hp(2),
+    color: Colors.muted,
+    textAlign: 'center',
+    alignSelf: 'center',
+    lineHeight: wp(5.6),
+    marginBottom: hp(2.2),
   },
   blurBenefitsList: {
-    marginBottom: hp(2),
+    gap: hp(1.2),
+    marginBottom: hp(2.2),
   },
   blurBenefitItem: {
-    flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: hp(1),
+    gap: wp(2.5),
+  },
+  blurBenefitCheck: {
+    width: wp(5.5),
+    height: wp(5.5),
+    borderRadius: wp(2.75),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: hp(0.15),
   },
   blurBenefitText: {
+    flex: 1,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
-    color: Colors.color1,
-    marginLeft: wp(2),
-    flex: 1,
+    color: Colors.ink,
+    alignSelf: 'flex-start',
+    lineHeight: wp(5.4),
     includeFontPadding: false,
   },
   blurSecurityNote: {
+    alignItems: 'flex-start',
+    gap: wp(2.5),
+    backgroundColor: Colors.lavender,
+    borderRadius: wp(3.5),
+    paddingVertical: hp(1.4),
+    paddingHorizontal: wp(3.5),
+    marginBottom: hp(2.4),
+  },
+  blurSecurityIcon: {
+    marginTop: hp(0.2),
+  },
+  blurSecurityText: {
+    flex: 1,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small2,
-    color: Colors.color1,
-    marginBottom: hp(2),
+    fontSize: Typography.small,
+    color: Colors.muted,
+    alignSelf: 'flex-start',
+    lineHeight: wp(4.9),
+    includeFontPadding: false,
   },
   blurModalButtons: {
     flexDirection: 'row',
-    gap: wp(2),
+    gap: wp(3),
+  },
+  blurCtaButton: {
+    flex: 1,
   },
   blurModalButton: {
     flex: 1,

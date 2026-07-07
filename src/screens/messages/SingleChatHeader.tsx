@@ -10,10 +10,15 @@ import {
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { DeletePicker, ModalLoader, Text } from '../../components';
+import {
+  DeletePicker,
+  ModalLoader,
+  ProfilePhotoPlaceholder,
+  Text,
+} from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -433,10 +438,9 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
                 style={Styles.userImage}
               />
             ) : (
-              <Image
-                source={Images.user}
-                resizeMode="cover"
-                style={Styles.userIcon}
+              <ProfilePhotoPlaceholder
+                name={otherUserData?.name}
+                size={width * 0.05}
               />
             )}
           </View>
@@ -531,11 +535,6 @@ const Styles = StyleSheet.create({
   headerInnerCon: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  userIcon: {
-    width: width * 0.05,
-    height: width * 0.05 * 1,
-    opacity: 0.6,
   },
   userImage: {
     width: width * 0.1,

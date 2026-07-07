@@ -2,6 +2,7 @@ import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Feather from 'react-native-vector-icons/Feather';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Animation } from '../../animations';
 import { Text } from '../../components';
@@ -55,9 +56,23 @@ const InterestAndHobbyCard = ({
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
       >
-        <Text variant="display" style={Styles.headerTxt}>
-          {headerHeading}
-        </Text>
+        <View
+          style={[
+            Styles.headerLeft,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+        >
+          <View style={Styles.headerIconChip}>
+            <Ionicons
+              name="color-palette-outline"
+              size={wp(4.6)}
+              color={Colors.primary}
+            />
+          </View>
+          <Text variant="display" style={Styles.headerTxt}>
+            {headerHeading}
+          </Text>
+        </View>
         {!fromUserProfile ? (
           <View style={Styles.editButton}>
             <Feather name="edit-2" color={Colors.primary} size={wp(4)} />
@@ -84,21 +99,11 @@ const InterestAndHobbyCard = ({
                 </View>
               ))
             ) : (
-              <View
-                style={{
-                  ...Styles.emptyRow,
-                  flexDirection: Rtl ? 'row-reverse' : 'row',
-                }}
-              >
-                <View style={Styles.emptyChip}>
-                  <Feather name="sun" color={Colors.primary} size={wp(4)} />
-                </View>
-                <Text style={Styles.passInfoDes}>
-                  {!fromUserProfile
-                    ? LanguageKeys.noInterestAndHobbiesSelected
-                    : LanguageKeys.noInterestAndHobbiesAvailable}
-                </Text>
-              </View>
+              <Text style={Styles.emptyTxt}>
+                {!fromUserProfile
+                  ? LanguageKeys.noInterestAndHobbiesSelected
+                  : LanguageKeys.noInterestAndHobbiesAvailable}
+              </Text>
             )}
           </View>
         )}
@@ -130,10 +135,25 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
     paddingBottom: hp(1.2),
   },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
+    flexShrink: 1,
+  },
+  headerIconChip: {
+    width: wp(8.5),
+    height: wp(8.5),
+    borderRadius: wp(4.25),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerTxt: {
     color: Colors.ink,
     fontSize: Typography.medium1,
     marginBottom: Constants.fontFamilyMarginBottom,
+    flexShrink: 1,
   },
   editButton: {
     paddingVertical: hp(1),
@@ -149,39 +169,26 @@ const Styles = StyleSheet.create({
     marginBottom: hp(2),
     marginHorizontal: wp(4),
   },
-  passInfoDes: {
+  emptyTxt: {
+    flex: 1,
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small3,
+    fontSize: Typography.small2,
     includeFontPadding: false,
-    paddingHorizontal: wp(1),
-    alignSelf: 'center',
-  },
-  emptyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(3),
-    paddingHorizontal: wp(2.5),
-  },
-  emptyChip: {
-    width: wp(9),
-    height: wp(9),
-    borderRadius: wp(4.5),
-    backgroundColor: Colors.lavender,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   listItemContainer: {
-    paddingHorizontal: wp(3.5),
+    paddingHorizontal: wp(4),
+    paddingBottom: hp(0.5),
     flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: wp(2),
   },
   item: {
     backgroundColor: Colors.lavender,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
     paddingHorizontal: wp(3),
-    paddingVertical: hp(0.9),
-    margin: hp(0.5),
-    marginTop: 0,
-    marginBottom: hp(1),
+    paddingVertical: hp(0.7),
     borderRadius: 999,
   },
   itemValue: {

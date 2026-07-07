@@ -97,9 +97,11 @@ const SwiperComponent = ({
       <SafeAreaView style={Styles.container}>
         <Ripple
           style={[Styles.closeWrapper, { top: top + hp(2) }]}
+          rippleColor={Colors.surface}
+          rippleContainerBorderRadius={wp(5.5)}
           onPress={() => onPress()}
         >
-          <AntDesign name="close" size={wp(6)} color={Colors.ink} />
+          <AntDesign name="close" size={wp(5)} color={Colors.surface} />
         </Ripple>
         {users?.length ? (
           <Carousel
@@ -109,6 +111,11 @@ const SwiperComponent = ({
             enabled={false}
             width={screenWidth}
             style={Styles.slider}
+            scrollAnimationDuration={480}
+            withAnimation={{
+              type: 'spring',
+              config: { damping: 20, stiffness: 120, mass: 0.6 },
+            }}
             height={Dimensions.get('window').height - bottom - top}
             onSnapToItem={(index) => setCurrentIndex(index)}
             renderItem={({ item, index }) =>
@@ -143,16 +150,19 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     right: wp(4),
     zIndex: 10,
-    backgroundColor: Colors.surface,
-    borderRadius: 100,
-    padding: wp(2.5),
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.blackRGBA38,
+    borderWidth: 1,
+    borderColor: Colors.whiteRGBA30,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: Colors.blackRGBA50,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
   },
   slider: {
     // marginTop: 50,

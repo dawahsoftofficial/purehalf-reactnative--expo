@@ -16,6 +16,7 @@ import {
   Container,
   Header,
   ModalLoader,
+  ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -177,11 +178,7 @@ const BlockedList = (props: any) => {
               )}
             </>
           ) : (
-            <Image
-              source={Images.user}
-              resizeMode="contain"
-              style={Styles.avatarPlaceholder}
-            />
+            <ProfilePhotoPlaceholder name={full_name} size={AVATAR * 0.5} />
           )}
         </View>
         <View
@@ -305,11 +302,6 @@ const Styles = StyleSheet.create({
   avatarImg: {
     width: '100%',
     height: '100%',
-  },
-  avatarPlaceholder: {
-    width: AVATAR * 0.5,
-    height: AVATAR * 0.5,
-    opacity: 0.5,
   },
   avatarLoader: {
     position: 'absolute',

@@ -13,7 +13,7 @@ import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Loader, Text } from '../../components';
-import { CheckRtl, LanguageKeys } from '../../languages';
+import { LanguageKeys } from '../../languages';
 import {
   ApiServices,
   Firebase,
@@ -31,7 +31,6 @@ import {
   ContentScroll,
   ErrorRetry,
   ScreenLoader,
-  TaglineSection,
 } from './profile-components';
 import {
   computeCompletion,
@@ -96,8 +95,8 @@ const Profile = ({
 }: ProfileProps) => {
   const { currentUser, updateCurrentUser, conversations } = useGlobalContext();
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const Rtl = CheckRtl();
   const isFocused = useIsFocused();
+  const scrollToTarget = route?.params?.scrollTo;
   const [tagLineInputVisible, setTagLineInputVisible] = useState(false);
   const [tagLineInput, setTagLineInput] = useState('');
   const [error, setError] = useState<boolean>(false);
@@ -123,6 +122,7 @@ const Profile = ({
   const [userData, setUserData] = useState<User>(
     propUserData ? propUserData : currentUser
   );
+  const profileUserId = userData?.id;
   const [interestAndHobbies, setIinterestAndHobbies] = useState<any[]>([]);
   const [isBlockedByYou, setIsBlockedByYou] = useState(false);
   const [isBlockedYou, setIsBlockedYou] = useState(false);
@@ -146,20 +146,20 @@ const Profile = ({
   );
 
   const scrollToSection = useCallback(() => {
-    if (route?.params?.scrollTo && scrollViewRef.current) {
+    if (scrollToTarget && scrollViewRef.current) {
       scrollViewRef.current.scrollTo({
-        y: route.params.scrollTo,
+        y: scrollToTarget,
         animated: true,
       });
     }
-  }, [route?.params?.scrollTo]);
+  }, [scrollToTarget]);
 
   const getUserConversation = useCallback(() => {
     const conversationData = conversations.filter((element: Conversation) => {
       const deleteFlag = element.convDetails?.participantsDeleteFlag ?? {};
       return Object.prototype.hasOwnProperty.call(
         deleteFlag,
-        JSON.stringify(userData?.id)
+        JSON.stringify(profileUserId)
       );
     });
     if (conversationData && conversationData.length !== 0) {
@@ -171,7 +171,7 @@ const Profile = ({
       }
       return;
     }
-    Firebase.getSingleConversation(currentUser?.id, userData?.id).then(
+    Firebase.getSingleConversation(currentUser?.id, profileUserId).then(
       (data: unknown) => {
         const conversationList = data as Conversation[];
         if (conversationList && conversationList.length !== 0) {
@@ -184,7 +184,7 @@ const Profile = ({
         }
       }
     );
-  }, [conversations, currentUser?.id, userData?.id]);
+  }, [conversations, currentUser?.id, profileUserId]);
 
   useEffect(() => {
     scrollToSection();
@@ -192,12 +192,12 @@ const Profile = ({
 
   useFocusEffect(
     React.useCallback(() => {
-      if (userData?.id !== currentUser?.id) {
-        ApiServices.getUserDetail(userData?.id).then((res) => {
+      if (profileUserId !== currentUser?.id) {
+        ApiServices.getUserDetail(profileUserId).then((res) => {
           setUserData(res as User);
         });
       }
-    }, [currentUser?.id, userData?.id])
+    }, [currentUser?.id, profileUserId])
   );
 
   useFocusEffect(
@@ -212,24 +212,29 @@ const Profile = ({
   useEffect(() => {
     if (
       !fromUserProfile &&
-      currentUser?.id === userData?.id &&
+      currentUser?.id === profileUserId &&
       currentUser?.detail
     ) {
-      setUserData((prevUserData) => ({
-        ...prevUserData,
-        detail: currentUser.detail,
-        is_blur: currentUser.is_blur,
-      }));
-      if (currentUser?.detail?.tagline) {
-        setTagLineInput(currentUser.detail.tagline);
-      }
+      const timeout = setTimeout(() => {
+        setUserData((prevUserData) => ({
+          ...prevUserData,
+          detail: currentUser.detail,
+          is_blur: currentUser.is_blur,
+        }));
+        if (currentUser?.detail?.tagline) {
+          setTagLineInput(currentUser.detail.tagline);
+        }
+      }, 0);
+
+      return () => clearTimeout(timeout);
     }
+    return undefined;
   }, [
     currentUser?.detail,
     currentUser?.id,
     currentUser?.is_blur,
     fromUserProfile,
-    userData?.id,
+    profileUserId,
   ]);
 
   const hideButtonPicker = useCallback(() => {
@@ -336,6 +341,13 @@ const Profile = ({
     [getData, storageKeys.ATTRIBUTE]
   );
 
+  const hideLoader = useCallback(() => {
+    setLoader({
+      visible: false,
+      message: '',
+    });
+  }, []);
+
   const fetchData = useCallback(async () => {
     const data = await getData(storageKeys.PROFILE_DETAIL_LOCAL);
     setError(false);
@@ -346,7 +358,7 @@ const Profile = ({
             visible: true,
             message: LanguageKeys.loading,
           });
-          const user = (await ApiServices.getUserDetail(userData?.id)) as User;
+          const user = (await ApiServices.getUserDetail(profileUserId)) as User;
           setUserData(user);
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
@@ -395,12 +407,17 @@ const Profile = ({
     fromUserProfile,
     getAttribute,
     getData,
+    hideLoader,
+    profileUserId,
     storageKeys.PROFILE_DETAIL_LOCAL,
-    userData?.id,
   ]);
 
   useEffect(() => {
-    fetchData();
+    const timeout = setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [fetchData, isFocused]);
 
   const onBlockPress = useCallback(() => {
@@ -424,13 +441,6 @@ const Profile = ({
     };
     ApiServices.interactionAction(params).then(() => {
       flashSuccessMessage(value ? LanguageKeys.liked : LanguageKeys.unLiked);
-    });
-  };
-
-  const hideLoader = () => {
-    setLoader({
-      visible: false,
-      message: '',
     });
   };
 
@@ -565,19 +575,6 @@ const Profile = ({
             </Text>
           ) : (
             <>
-              {!isOwnProfile && (
-                <TaglineSection
-                  rtl={Rtl}
-                  tagline={userData?.detail?.tagline}
-                  isEditing={tagLineInputVisible}
-                  inputValue={tagLineInput}
-                  onChange={onChangeTagLine}
-                  onSubmit={onTagLineSubmit}
-                  onEditPress={showTagLineInput}
-                  onCancel={hideTagLineInput}
-                  isOwnProfile={isOwnProfile}
-                />
-              )}
               {dataLoader ? (
                 <Loader />
               ) : (

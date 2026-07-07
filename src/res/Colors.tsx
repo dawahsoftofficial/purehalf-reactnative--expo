@@ -65,6 +65,7 @@ const Colors = {
 
   whiteRGBA18: 'rgba(255,255,255,0.18)',
   whiteRGBA10: 'rgba(255,255,255,0.1)',
+  whiteRGBA30: 'rgba(255,255,255,0.30)',
   whiteRGBA90: 'rgba(255,255,255,0.9)',
   blackRGBA25: 'rgba(0,0,0,0.25)',
   blackRGBA38: 'rgba(0,0,0,0.38)',

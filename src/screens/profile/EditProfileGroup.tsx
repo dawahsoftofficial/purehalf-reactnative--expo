@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
+import Ripple from 'react-native-material-ripple';
 
 import {
   Button,
@@ -10,10 +11,11 @@ import {
   IconInput,
   Picker,
   PickerButton,
+  Text,
 } from '../../components';
-import { hp, wp } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
   flashSuccessMessage,
@@ -34,6 +36,38 @@ type FocusedInputState = {
   value: any;
   item: any;
 };
+
+const isOptionSelected = (item: any, opt: any) =>
+  item?.type === 'dropDownBinary'
+    ? item?.selected?.value === opt?.value
+    : item?.selected?.id === opt?.id;
+
+// Inline single-select pill group for option fields with only 2-3 choices
+// (e.g. Yes/No, Future Plans). Larger option lists keep the modal PickerButton.
+const OptionTags = ({ label, item, options, onSelect, rtl }: any) => (
+  <View>
+    <Text style={Styles.tagLabel}>{label}</Text>
+    <View
+      style={[Styles.tagRow, { flexDirection: rtl ? 'row-reverse' : 'row' }]}
+    >
+      {options.map((opt: any) => {
+        const on = isOptionSelected(item, opt);
+        const optLabel = item?.type === 'dropDownBinary' ? opt?.id : opt?.value;
+        return (
+          <Ripple
+            key={`${opt?.id}-${opt?.value}`}
+            onPress={() => onSelect(item, opt)}
+            style={[Styles.tag, on && Styles.tagOn]}
+          >
+            <Text style={[Styles.tagTxt, on && Styles.tagTxtOn]}>
+              {String(optLabel)}
+            </Text>
+          </Ripple>
+        );
+      })}
+    </View>
+  </View>
+);
 
 const EditProfileGroup = ({ navigation, route }: any) => {
   const { title = '', data: initialData = [] } = route?.params ?? {};
@@ -201,6 +235,15 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     [onClosePicker, picker.activePicker]
   );
 
+  // Select-only (no clear): tapping an inline tag sets that field's value.
+  const onSelectOption = useCallback((tappedItem: any, opt: any) => {
+    setFormData((prev: any[]) =>
+      prev.map((element: any) =>
+        element.id === tappedItem.id ? { ...element, selected: opt } : element
+      )
+    );
+  }, []);
+
   const onHeightWeightPickerItemPress = useCallback(
     (item: any) => {
       setFormData((prev: any[]) =>
@@ -314,6 +357,18 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       const hideItem =
         (id === 'doYouHaveABeard' && !isMale) || (id === 'hijab-0' && isMale);
       if (hideItem) return null;
+
+      // Option fields with only 2-3 choices render as inline pills instead of
+      // opening the modal picker. Language/nationality load options lazily
+      // (empty here), so they stay on the PickerButton.
+      const isOptionType = type === 'dropDown' || type === 'dropDownBinary';
+      let tagOptions: any[] = isOptionType && Array.isArray(iData) ? iData : [];
+      if (currentUser?.gender === 'male' && id === 'martial-0') {
+        tagOptions = tagOptions.filter((v: any) => v?.value !== 'Widowed');
+      }
+      const useTags =
+        isOptionType && tagOptions.length >= 2 && tagOptions.length <= 3;
+
       return (
         <View style={Styles.itemContainer}>
           {type === 'input' ? (
@@ -330,6 +385,14 @@ const EditProfileGroup = ({ navigation, route }: any) => {
             />
           ) : type === 'scalling' ? (
             <ScallingButton item={item} />
+          ) : useTags ? (
+            <OptionTags
+              label={iTitle}
+              item={item}
+              options={tagOptions}
+              onSelect={onSelectOption}
+              rtl={Rtl}
+            />
           ) : (
             <PickerButton
               outerLabel={iTitle}
@@ -357,6 +420,8 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       onChangeInput,
       onInputFocus,
       openPicker,
+      onSelectOption,
+      Rtl,
       ScallingButton,
     ]
   );
@@ -423,6 +488,34 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  tagLabel: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small2,
+    lineHeight: wp(4.5),
+  },
+  tagRow: {
+    flexWrap: 'wrap',
+    gap: wp(2),
+    marginTop: hp(1),
+  },
+  tag: {
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.1),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
+  },
+  tagOn: {
+    backgroundColor: Colors.primary,
+  },
+  tagTxt: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+  },
+  tagTxtOn: {
+    color: Colors.color2,
   },
   footer: {
     paddingHorizontal: wp(4),

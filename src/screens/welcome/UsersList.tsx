@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -12,14 +12,103 @@ import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Animation } from '../../animations';
-import { LinearGradient, ProfileBadges, Text } from '../../components';
+import {
+  LinearGradient,
+  ProfileBadges,
+  ProfilePhotoPlaceholder,
+  Text,
+} from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 
 const { width } = Dimensions.get('window');
 const CARD_W = (width - wp(6) - wp(3)) / 2;
 const CARD_H = CARD_W * 1.42;
+
+// Single grid card. Kept as its own component (not an inline renderItem) so it
+// can hold per-card image-error state: a missing OR broken photo falls back to
+// the on-brand monogram placeholder instead of a grey stock silhouette.
+const UserCard = ({ item, rtl, onPress }: any) => {
+  const [imageError, setImageError] = useState(false);
+
+  const lastOnlineFromCurrentTime = parseInt(
+    moment
+      .duration(moment(new Date()).diff(moment(item?.last_online_at)))
+      .asHours()
+      .toFixed()
+  );
+  const isOnline = lastOnlineFromCurrentTime === 1;
+  const locationText = [item?.city, item?.country].filter(Boolean).join(', ');
+  const fullName = [item?.first_name, item?.last_name]
+    .filter(Boolean)
+    .join(' ');
+  const showImage = Boolean(item?.primary_image_to_show) && !imageError;
+
+  return (
+    <Animation animation="zoomIn" style={Styles.itemContainer}>
+      <Ripple
+        style={Styles.card}
+        rippleColor={Colors.primary}
+        onPress={() => onPress(item)}
+      >
+        {showImage ? (
+          <Image
+            source={{ uri: item?.primary_image_to_show }}
+            resizeMode="cover"
+            style={Styles.userImage}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <ProfilePhotoPlaceholder name={fullName} size={wp(16)} rounded />
+        )}
+
+        {isOnline && (
+          <View style={Styles.onlinePill}>
+            <View style={Styles.onlineDot} />
+          </View>
+        )}
+
+        <View style={Styles.badgesContainer}>
+          <ProfileBadges userData={item} iconOnly vertical />
+        </View>
+
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.82)']}
+          style={Styles.scrim}
+        >
+          <ReactText
+            style={[Styles.name, { textAlign: rtl ? 'right' : 'left' }]}
+            numberOfLines={1}
+          >
+            {item?.first_name} {item?.last_name}
+            {item?.age ? `, ${item.age}` : ''}
+          </ReactText>
+          {locationText ? (
+            <View
+              style={[
+                Styles.locationRow,
+                { flexDirection: rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <Ionicons
+                name="location-sharp"
+                size={wp(3.2)}
+                color={Colors.whiteRGBA90}
+              />
+              <ReactText
+                style={[Styles.location, { textAlign: rtl ? 'right' : 'left' }]}
+                numberOfLines={1}
+              >
+                {locationText}
+              </ReactText>
+            </View>
+          ) : null}
+        </LinearGradient>
+      </Ripple>
+    </Animation>
+  );
+};
 
 const UsersList = (props: any) => {
   const { data = [], onLoadMorePress = () => null, optionTab } = props;
@@ -38,83 +127,6 @@ const UsersList = (props: any) => {
     props.navigation.navigate('UserProfile', {
       userData: item,
     });
-
-  const RenderUsers = ({ item }: any) => {
-    const lastOnlineFromCurrentTime = parseInt(
-      moment
-        .duration(moment(new Date()).diff(moment(item?.last_online_at)))
-        .asHours()
-        .toFixed()
-    );
-    const isOnline = lastOnlineFromCurrentTime === 1;
-    const locationText = [item?.city, item?.country].filter(Boolean).join(', ');
-
-    return (
-      <Animation animation="zoomIn" style={Styles.itemContainer}>
-        <Ripple
-          style={Styles.card}
-          rippleColor={Colors.primary}
-          onPress={onUserPress.bind(null, item)}
-        >
-          <Image
-            source={
-              item?.primary_image_to_show
-                ? { uri: item?.primary_image_to_show }
-                : Images.userTwo
-            }
-            resizeMode="cover"
-            style={Styles.userImage}
-          />
-
-          {isOnline && (
-            <View style={Styles.onlinePill}>
-              <View style={Styles.onlineDot} />
-            </View>
-          )}
-
-          <View style={Styles.badgesContainer}>
-            <ProfileBadges userData={item} iconOnly vertical />
-          </View>
-
-          <LinearGradient
-            colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.82)']}
-            style={Styles.scrim}
-          >
-            <ReactText
-              style={[Styles.name, { textAlign: Rtl ? 'right' : 'left' }]}
-              numberOfLines={1}
-            >
-              {item?.first_name} {item?.last_name}
-              {item?.age ? `, ${item.age}` : ''}
-            </ReactText>
-            {locationText ? (
-              <View
-                style={[
-                  Styles.locationRow,
-                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
-                ]}
-              >
-                <Ionicons
-                  name="location-sharp"
-                  size={wp(3.2)}
-                  color={Colors.whiteRGBA90}
-                />
-                <ReactText
-                  style={[
-                    Styles.location,
-                    { textAlign: Rtl ? 'right' : 'left' },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {locationText}
-                </ReactText>
-              </View>
-            ) : null}
-          </LinearGradient>
-        </Ripple>
-      </Animation>
-    );
-  };
 
   const renderEmptyList = () => {
     let emptyText = '';
@@ -154,7 +166,9 @@ const UsersList = (props: any) => {
       data={data}
       numColumns={2}
       extraData={data}
-      renderItem={RenderUsers}
+      renderItem={({ item }) => (
+        <UserCard item={item} rtl={Rtl} onPress={onUserPress} />
+      )}
       onEndReachedThreshold={0.5}
       onEndReached={handleEndReached}
       ListEmptyComponent={renderEmptyList}

@@ -14,7 +14,13 @@ import {
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { Button, ButtonPicker, ModalLoader, Text } from '../../components';
+import {
+  Button,
+  ButtonPicker,
+  ModalLoader,
+  ProfilePhotoPlaceholder,
+  Text,
+} from '../../components';
 import { Constants, hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
@@ -192,10 +198,9 @@ const RequestedList = (props: any) => {
               )}
             </>
           ) : (
-            <Image
-              source={Images.user}
-              resizeMode="contain"
-              style={Styles.avatarPlaceholder}
+            <ProfilePhotoPlaceholder
+              name={item?.full_name}
+              size={AVATAR * 0.5}
             />
           )}
         </View>
@@ -361,11 +366,6 @@ const Styles = StyleSheet.create({
   avatarImg: {
     width: '100%',
     height: '100%',
-  },
-  avatarPlaceholder: {
-    width: AVATAR * 0.5,
-    height: AVATAR * 0.5,
-    opacity: 0.5,
   },
   avatarLoader: {
     position: 'absolute',

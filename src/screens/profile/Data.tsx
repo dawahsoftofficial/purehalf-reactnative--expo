@@ -190,6 +190,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.haveChildren,
+      viewTitle: LanguageKeys.children,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -202,6 +203,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouSmoke,
+      viewTitle: LanguageKeys.smokingLabel,
       data: [],
       type: 'dropDown',
       id: 'smoke-0',
@@ -211,6 +213,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouDrink,
+      viewTitle: LanguageKeys.drinking,
       data: [],
       type: 'dropDown',
       id: 'drink-0',
@@ -220,6 +223,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouOwnACar,
+      viewTitle: LanguageKeys.car,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -232,6 +236,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouOwnABusiness,
+      viewTitle: LanguageKeys.business,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -244,6 +249,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouKeepPets,
+      viewTitle: LanguageKeys.pets,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -256,6 +262,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouOwnAHouse,
+      viewTitle: LanguageKeys.house,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -312,6 +319,7 @@ const Data: any = {
   islamicValues: [
     {
       title: LanguageKeys.howMuchDoYouPray,
+      viewTitle: LanguageKeys.prayerLabel,
       data: [],
       type: 'dropDown',
       id: 'pray-0',
@@ -321,6 +329,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouCoverYourself,
+      viewTitle: LanguageKeys.hijabLabel,
       data: [],
       type: 'dropDown',
       id: 'hijab-0',
@@ -330,6 +339,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouHaveABeard,
+      viewTitle: LanguageKeys.beard,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -374,6 +384,7 @@ const Data: any = {
   personalityRequirements: [
     {
       title: LanguageKeys.aboutYourself,
+      viewTitle: LanguageKeys.aboutView,
       placeholder: LanguageKeys.notYetProvided,
       data: [],
       type: 'input',
@@ -384,6 +395,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.aboutPartner,
+      viewTitle: LanguageKeys.lookingFor,
       placeholder: LanguageKeys.notYetProvided,
       data: [],
       type: 'input',
@@ -428,6 +440,7 @@ const Data: any = {
   futurePlan: [
     {
       title: 'What are your plans for having children?',
+      viewTitle: LanguageKeys.familyPlans,
       data: [],
       type: 'dropDown',
       id: 'familyplan-0',
@@ -437,6 +450,7 @@ const Data: any = {
     },
     {
       title: 'When do you plan to get married?',
+      viewTitle: LanguageKeys.marriageTimeline,
       data: [],
       type: 'dropDown',
       id: 'marriageplan-0',
@@ -446,6 +460,7 @@ const Data: any = {
     },
     {
       title: 'Are you open to relocating?',
+      viewTitle: LanguageKeys.openToRelocating,
       data: [],
       type: 'dropDown',
       id: 'relocationplan-0',
