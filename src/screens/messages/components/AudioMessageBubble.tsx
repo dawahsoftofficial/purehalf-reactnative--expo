@@ -63,7 +63,7 @@ const AudioMessageBubble = ({
           <Ionicons
             name={isPlaying ? 'pause' : 'play'}
             size={wp(4)}
-            color={isCurrentUser ? Colors.primary : Colors.color2}
+            color={Colors.primary}
           />
         </TouchableOpacity>
         <View style={Styles.audioWaveTrack}>

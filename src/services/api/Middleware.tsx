@@ -43,11 +43,13 @@ Api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    // Android: FormData uploads require no Content-Type so the runtime sets
-    // multipart/form-data with the correct boundary (iOS/Android native layer).
+    // FormData uploads: if the Content-Type is left unset, axios falls back to
+    // its default POST type (application/x-www-form-urlencoded), which makes
+    // React Native's OkHttp multipart builder throw
+    // "multipart != application/x-www-form-urlencoded" and fail instantly.
+    // Set multipart/form-data explicitly; RN/OkHttp appends the boundary.
     if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
-      delete config.headers['content-type'];
+      config.headers['Content-Type'] = 'multipart/form-data';
     }
 
     if (__DEV__) {
