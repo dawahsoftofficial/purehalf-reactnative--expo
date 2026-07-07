@@ -12,6 +12,16 @@ class ChatAudioService {
   private activeRecordingUri: string | null = null;
 
   /**
+   * Android's recorder returns a bare absolute path (no scheme). React Native's
+   * multipart uploader needs a file:// (or content://) URI to read the file, or
+   * the upload fails at the network layer (ERR_NETWORK) before it is sent.
+   */
+  private toFileUri = (uri: string): string => {
+    if (/^(file|content|https?):\/\//i.test(uri)) return uri;
+    return `file://${uri}`;
+  };
+
+  /**
    * Ensures the microphone runtime permission is granted before recording.
    * Android needs an explicit request (RECORD_AUDIO is a dangerous permission);
    * iOS prompts automatically on first record via NSMicrophoneUsageDescription.
@@ -41,7 +51,7 @@ class ChatAudioService {
     this.activeRecordingUri = null;
 
     return {
-      uri,
+      uri: this.toFileUri(uri),
       name: 'voice.m4a',
       type: 'audio/mp4',
       duration_seconds: durationSeconds,
