@@ -38,7 +38,7 @@ const toImageItems = (
 
   return uris.filter(Boolean).map((uri, index) => ({
     id: `${idPrefix}-${index}`,
-    private: isPrivate || undefined,
+    ...(isPrivate ? { private: true } : {}),
     type: 'image',
     uri,
   }));

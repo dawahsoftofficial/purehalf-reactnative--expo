@@ -11,7 +11,7 @@ describe('buildGalleryItems', () => {
         isCurrentUser: false,
         photoAccessAction: null,
       })
-    ).toEqual([
+    ).toStrictEqual([
       { id: 'public-0', type: 'image', uri: 'public-1.jpg' },
       { id: 'public-1', type: 'image', uri: 'public-2.jpg' },
     ]);
@@ -27,7 +27,7 @@ describe('buildGalleryItems', () => {
         isCurrentUser: false,
         photoAccessAction: 0,
       })
-    ).toEqual([
+    ).toStrictEqual([
       { id: 'public-0', type: 'image', uri: 'public-1.jpg' },
       { id: 'locked-private', type: 'locked-private' },
     ]);
@@ -43,7 +43,7 @@ describe('buildGalleryItems', () => {
         isCurrentUser: false,
         photoAccessAction: 1,
       })
-    ).toEqual([{ id: 'locked-private', type: 'locked-private' }]);
+    ).toStrictEqual([{ id: 'locked-private', type: 'locked-private' }]);
   });
 
   it('includes own private gallery images for the current user', () => {
@@ -57,7 +57,7 @@ describe('buildGalleryItems', () => {
         isCurrentUser: true,
         photoAccessAction: null,
       })
-    ).toEqual([
+    ).toStrictEqual([
       { id: 'public-0', type: 'image', uri: 'public-1.jpg' },
       {
         id: 'private-0',
@@ -85,7 +85,7 @@ describe('buildGalleryItems', () => {
         isCurrentUser: false,
         photoAccessAction: 2,
       })
-    ).toEqual([
+    ).toStrictEqual([
       { id: 'public-0', type: 'image', uri: 'public-1.jpg' },
       {
         id: 'private-0',
@@ -103,6 +103,6 @@ describe('buildGalleryItems', () => {
         isCurrentUser: false,
         photoAccessAction: null,
       })
-    ).toEqual([]);
+    ).toStrictEqual([]);
   });
 });
