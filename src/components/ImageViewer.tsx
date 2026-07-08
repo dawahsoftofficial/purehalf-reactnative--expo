@@ -70,6 +70,7 @@ const ImageViewer = (props: ImageViewerProps) => {
   const [privacyProtectedAlertVisible, setPrivacyProtectedAlertVisible] =
     useState(false);
   const [requestSentAlertVisible, setRequestSentAlertVisible] = useState(false);
+  const [hasLoadedGallery, setHasLoadedGallery] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadingImageIds, setLoadingImageIds] = useState<
     Record<string, boolean>
@@ -84,11 +85,7 @@ const ImageViewer = (props: ImageViewerProps) => {
 
   const activeItem = galleryItems[activeIndex];
   const currentPosition = galleryItems.length === 0 ? 0 : activeIndex + 1;
-  const userFirstName =
-    userData?.first_name || userData?.full_name?.split(' ')?.[0] || '';
-  const galleryTitle = userFirstName
-    ? `${userFirstName}'s photos`
-    : LanguageKeys.photosAndVideos;
+  const galleryTitle = LanguageKeys.photosAndVideos;
   const galleryContext =
     activeItem?.type === 'locked-private'
       ? LanguageKeys.privatePhotoDes
@@ -119,8 +116,8 @@ const ImageViewer = (props: ImageViewerProps) => {
   }, []);
 
   const scrollThumbnailsToIndex = useCallback(
-    (index: number) => {
-      if (index < 0 || index >= galleryItems.length) {
+    (index: number, itemCount: number) => {
+      if (itemCount === 0 || index < 0 || index >= itemCount) {
         return;
       }
 
@@ -130,7 +127,46 @@ const ImageViewer = (props: ImageViewerProps) => {
         viewPosition: 0.5,
       });
     },
-    [galleryItems.length]
+    []
+  );
+
+  const syncGalleryIndex = useCallback(
+    (index: number, itemCount: number, animated = true) => {
+      if (itemCount === 0) {
+        setActiveIndex(0);
+        return;
+      }
+
+      const nextIndex = Math.min(Math.max(index, 0), itemCount - 1);
+      setActiveIndex(nextIndex);
+      try {
+        sliderRef.current?.scrollToIndex({ animated, index: nextIndex });
+        scrollThumbnailsToIndex(nextIndex, itemCount);
+      } catch {
+        setTimeout(() => {
+          try {
+            sliderRef.current?.scrollToIndex({
+              animated,
+              index: nextIndex,
+            });
+            scrollThumbnailsToIndex(nextIndex, itemCount);
+          } catch {
+            // The next user scroll or thumbnail tap will resync once measured.
+          }
+        }, 100);
+      }
+    },
+    [scrollThumbnailsToIndex]
+  );
+
+  const applyGalleryItems = useCallback(
+    (items: GalleryItem[]) => {
+      setGalleryItems(items);
+      setHasLoadedGallery(true);
+      syncGalleryIndex(0, items.length, false);
+      setTimeout(() => syncGalleryIndex(0, items.length, false), 0);
+    },
+    [syncGalleryIndex]
   );
 
   const getPhotos = useCallback(async () => {
@@ -139,8 +175,7 @@ const ImageViewer = (props: ImageViewerProps) => {
     const isCurrentUser = userData?.id === currentUser?.id;
 
     if (!media) {
-      setGalleryItems([]);
-      setActiveIndex(0);
+      applyGalleryItems([]);
       hideLoader();
       return;
     }
@@ -150,7 +185,7 @@ const ImageViewer = (props: ImageViewerProps) => {
         const res = (await ApiServices.viewPrivateMedia(
           userData?.id
         )) as PrivateMediaResponse;
-        setGalleryItems(
+        applyGalleryItems(
           buildGalleryItems({
             grantedPrivateGallery: res?.private_gallery,
             isCurrentUser,
@@ -159,7 +194,7 @@ const ImageViewer = (props: ImageViewerProps) => {
           })
         );
       } catch {
-        setGalleryItems(
+        applyGalleryItems(
           buildGalleryItems({
             isCurrentUser,
             media,
@@ -167,22 +202,20 @@ const ImageViewer = (props: ImageViewerProps) => {
           })
         );
       } finally {
-        setActiveIndex(0);
         hideLoader();
       }
       return;
     }
 
-    setGalleryItems(
+    applyGalleryItems(
       buildGalleryItems({
         isCurrentUser,
         media,
         photoAccessAction,
       })
     );
-    setActiveIndex(0);
     hideLoader();
-  }, [currentUser?.id, hideLoader, userData]);
+  }, [applyGalleryItems, currentUser?.id, hideLoader, userData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -239,10 +272,9 @@ const ImageViewer = (props: ImageViewerProps) => {
         return;
       }
 
-      setActiveIndex(index);
-      scrollThumbnailsToIndex(index);
+      syncGalleryIndex(index, galleryItems.length);
     },
-    [galleryItems.length, scrollThumbnailsToIndex]
+    [galleryItems.length, syncGalleryIndex]
   );
 
   const onThumbnailPress = useCallback(
@@ -251,11 +283,9 @@ const ImageViewer = (props: ImageViewerProps) => {
         return;
       }
 
-      setActiveIndex(index);
-      sliderRef.current?.scrollToIndex({ animated: true, index });
-      scrollThumbnailsToIndex(index);
+      syncGalleryIndex(index, galleryItems.length);
     },
-    [galleryItems.length, scrollThumbnailsToIndex]
+    [galleryItems.length, syncGalleryIndex]
   );
 
   const renderImageFallback = () => (
@@ -449,7 +479,10 @@ const ImageViewer = (props: ImageViewerProps) => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={Styles.thumbnailList}
           onScrollToIndexFailed={({ index }) => {
-            setTimeout(() => scrollThumbnailsToIndex(index), 100);
+            setTimeout(
+              () => scrollThumbnailsToIndex(index, galleryItems.length),
+              100
+            );
           }}
         />
       </View>
@@ -498,8 +531,10 @@ const ImageViewer = (props: ImageViewerProps) => {
           {renderTopBar()}
           {renderThumbnailRail()}
         </>
-      ) : (
+      ) : hasLoadedGallery && !loader.visible ? (
         renderEmptyList()
+      ) : (
+        <View style={Styles.loadingBackground} />
       )}
       <PrivacyProtectedAlert
         visible={privacyProtectedAlertVisible}
@@ -606,6 +641,10 @@ const Styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loadingBackground: {
+    backgroundColor: Colors.color1,
+    flex: 1,
   },
   lockedDescription: {
     color: Colors.whiteRGBA90,
