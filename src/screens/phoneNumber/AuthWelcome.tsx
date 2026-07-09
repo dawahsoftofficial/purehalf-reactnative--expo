@@ -8,6 +8,7 @@ import { Animation } from '../../animations';
 import { SlideShowContainer, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
+import { postSignupMembershipRoute } from '../../navigation/resolve-post-signup-route';
 import { Colors, Fonts } from '../../res';
 import { Firebase, setRevenueCat } from '../../services';
 import { StorageManager, useGlobalContext } from '../../services';
@@ -53,10 +54,12 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
   >(null);
   const {
     getAuthenticationMethod,
+    getSkipSignupMembershipPaywall,
     loaded: settingsLoaded,
     setSettings,
   } = useSettingsStore();
   const buttonStatus = getAuthenticationMethod();
+  const skipPaywall = getSkipSignupMembershipPaywall();
 
   // Logout wipes the settings store (cleanupSession), and Initialization only
   // fetches settings on app boot — reload them here or the auth buttons
@@ -140,24 +143,17 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
       }
 
       if (user?.membership_status === null || user?.membership_status === 0) {
-        navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'ProFeaturesPromotion',
-              params: {
-                navigateTo: 'BottomTab',
-                from: 'SignUp',
-              },
-            },
-          ],
+        const route = postSignupMembershipRoute({
+          membershipStatus: user?.membership_status,
+          skipPaywall,
         });
+        navigation.reset({ index: 0, routes: [route] });
         return;
       }
 
       navigation.navigate('BottomTab');
     },
-    [navigation]
+    [navigation, skipPaywall]
   );
 
   const onVerified = useCallback(

@@ -5,52 +5,22 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
+import { postSignupMembershipRoute } from '../../navigation/resolve-post-signup-route';
 import { Colors, Fonts, Images } from '../../res';
 import { useGlobalContext } from '../../services';
+import { useSettingsStore } from '../../stores';
 
 const WelcomeUser = (props: any) => {
   const { currentUser } = useGlobalContext();
+  const skipPaywall = useSettingsStore().getSkipSignupMembershipPaywall();
 
   const onGetStartedPress = () => {
-    if (
-      currentUser?.membership_status === null ||
-      currentUser?.membership_status === 0
-    ) {
-      props.navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'ProFeaturesPromotion',
-            params: {
-              navigateTo: 'BottomTab',
-              from: 'SignUp',
-            },
-          },
-        ],
-      });
-    } else if (currentUser?.membership_status) {
-      props.navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'GiftMembershipCongrats',
-            params: {
-              navigateTo: 'BottomTab',
-              from: 'SignUp',
-            },
-          },
-        ],
-      });
-    } else {
-      props.navigation.reset({
-        index: 0,
-        routes: [
-          {
-            name: 'BottomTab',
-          },
-        ],
-      });
-    }
+    const route = postSignupMembershipRoute({
+      membershipStatus: currentUser?.membership_status,
+      skipPaywall,
+      hasMembershipGift: !!currentUser?.membership_status,
+    });
+    props.navigation.reset({ index: 0, routes: [route] });
   };
 
   return (

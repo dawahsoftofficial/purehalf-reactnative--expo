@@ -14,6 +14,7 @@ import { SlideShowContainer } from '../../components';
 import { Button } from '../../components/buttons';
 import { hp, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
+import { postSignupMembershipRoute } from '../../navigation/resolve-post-signup-route';
 import { Colors } from '../../res';
 import {
   ApiServices,
@@ -26,6 +27,7 @@ import {
   useGlobalContext,
 } from '../../services';
 import FirebaseServices from '../../services/firebase/Firebase';
+import { useSettingsStore } from '../../stores';
 import OtpHeader from './components/otp-header';
 import OtpInput from './components/otp-input';
 import ResendTimer from './components/resend-timer';
@@ -93,6 +95,8 @@ const Otp = (props: OtpProps) => {
   const [seconds, setSeconds] = useState(30);
   const [timerActive, setTimerActive] = useState(true);
 
+  const skipPaywall = useSettingsStore().getSkipSignupMembershipPaywall();
+
   const navigateTo = useCallback(
     (route: string) => {
       props.navigation.reset({
@@ -125,24 +129,17 @@ const Otp = (props: OtpProps) => {
         userData?.membership_status === null ||
         userData?.membership_status === 0
       ) {
-        props.navigation.reset({
-          index: 0,
-          routes: [
-            {
-              name: 'ProFeaturesPromotion',
-              params: {
-                navigateTo: 'BottomTab',
-                from: 'SignUp',
-              },
-            },
-          ],
+        const route = postSignupMembershipRoute({
+          membershipStatus: userData?.membership_status,
+          skipPaywall,
         });
+        props.navigation.reset({ index: 0, routes: [route] });
         return;
       }
 
       navigateTo('BottomTab');
     },
-    [navigateTo, props.navigation]
+    [navigateTo, props.navigation, skipPaywall]
   );
 
   const onLoggedIn = useCallback(

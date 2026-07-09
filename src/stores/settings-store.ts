@@ -177,6 +177,7 @@ type SettingsState = {
   getAuthenticationMethod: () => AuthenticationMethod | null;
   getChatCredits: () => ChatCredits | null;
   getForceUpdate: () => boolean;
+  getSkipSignupMembershipPaywall: () => boolean;
   getMaxChatsPerDay: () => MaxChatsPerDay | null;
   getBadgesAndPayments: () => BadgesAndPayments | null;
   getDailyRecommendations: () => DailyRecommendations | null;
@@ -211,6 +212,13 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   getForceUpdate: () => {
     const state = get();
     return state.getSettingByKey<boolean>('forceUpdate') ?? false;
+  },
+
+  getSkipSignupMembershipPaywall: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<boolean>('skip_signup_membership_paywall') ?? true
+    );
   },
 
   getMaxChatsPerDay: () => {
