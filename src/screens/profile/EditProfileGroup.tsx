@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
 import {
@@ -23,6 +24,14 @@ import {
   useGlobalContext,
 } from '../../services';
 import { updateDetails } from './Funtions';
+import {
+  getOptionKey,
+  getOptionLabel,
+  getProgressLabel,
+  getVisibleProfileFields,
+  isOptionSelected,
+  shouldUseTagOptions,
+} from './profile-editor-flow';
 
 type PickerState = {
   visible: boolean;
@@ -37,12 +46,7 @@ type FocusedInputState = {
   item: any;
 };
 
-const isOptionSelected = (item: any, opt: any) =>
-  item?.type === 'dropDownBinary'
-    ? item?.selected?.value === opt?.value
-    : item?.selected?.id === opt?.id;
-
-// Inline single-select pill group for option fields with only 2-3 choices
+// Inline single-select pill group for option fields with only a few choices
 // (e.g. Yes/No, Future Plans). Larger option lists keep the modal PickerButton.
 const OptionTags = ({ label, item, options, onSelect, rtl }: any) => (
   <View>
@@ -52,15 +56,15 @@ const OptionTags = ({ label, item, options, onSelect, rtl }: any) => (
     >
       {options.map((opt: any) => {
         const on = isOptionSelected(item, opt);
-        const optLabel = item?.type === 'dropDownBinary' ? opt?.id : opt?.value;
+        const optLabel = getOptionLabel(item, opt);
         return (
           <Ripple
-            key={`${opt?.id}-${opt?.value}`}
+            key={getOptionKey(opt)}
             onPress={() => onSelect(item, opt)}
             style={[Styles.tag, on && Styles.tagOn]}
           >
             <Text style={[Styles.tagTxt, on && Styles.tagTxtOn]}>
-              {String(optLabel)}
+              {optLabel}
             </Text>
           </Ripple>
         );
@@ -73,12 +77,14 @@ const EditProfileGroup = ({ navigation, route }: any) => {
   const { title = '', data: initialData = [] } = route?.params ?? {};
 
   const Rtl = CheckRtl();
+  const { t } = useTranslation();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
 
   const [formData, setFormData] = useState<any[]>(() =>
     JSON.parse(JSON.stringify(initialData))
   );
+  const [activeIndex, setActiveIndex] = useState(0);
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
   const [updateLoader, setUpdateLoader] = useState(false);
   const [focusedInput, setFocusedInput] = useState<FocusedInputState>({
@@ -98,6 +104,26 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     headerTitle: '',
     activePicker: '',
   });
+  const visibleFields = useMemo(
+    () => getVisibleProfileFields(formData, currentUser?.gender),
+    [currentUser?.gender, formData]
+  );
+
+  const activeItem = visibleFields[activeIndex];
+  const progressLabel = getProgressLabel(
+    t(title),
+    activeIndex,
+    visibleFields.length
+  );
+  const isFirstStep = activeIndex === 0;
+  const isLastStep =
+    visibleFields.length > 0 && activeIndex === visibleFields.length - 1;
+
+  useEffect(() => {
+    if (activeIndex > 0 && activeIndex >= visibleFields.length) {
+      setActiveIndex(Math.max(visibleFields.length - 1, 0));
+    }
+  }, [activeIndex, visibleFields.length]);
 
   const onClosePicker = useCallback(
     () =>
@@ -300,6 +326,32 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     updateCurrentUser,
   ]);
 
+  const goBackStep = useCallback(() => {
+    setActiveIndex((prev) => Math.max(prev - 1, 0));
+  }, []);
+
+  const goNextStep = useCallback(() => {
+    setActiveIndex((prev) =>
+      visibleFields.length ? Math.min(prev + 1, visibleFields.length - 1) : 0
+    );
+  }, [visibleFields.length]);
+
+  const onPrimaryPress = useCallback(() => {
+    if (isLastStep) {
+      void onSavePress();
+      return;
+    }
+    goNextStep();
+  }, [goNextStep, isLastStep, onSavePress]);
+
+  const onSkipPress = useCallback(() => {
+    if (isLastStep) {
+      void onSavePress();
+      return;
+    }
+    goNextStep();
+  }, [goNextStep, isLastStep, onSavePress]);
+
   const ScallingButton = useCallback(
     ({ item }: any) => {
       const { data: sData, title: sTitle, selected } = item;
@@ -342,8 +394,10 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     [openHeightWeightPicker]
   );
 
-  const renderItem = useCallback(
-    ({ item }: any) => {
+  const renderActiveControl = useCallback(
+    (item: any) => {
+      if (!item) return null;
+
       const {
         data: iData,
         title: iTitle,
@@ -352,13 +406,9 @@ const EditProfileGroup = ({ navigation, route }: any) => {
         placeholder,
         id,
       } = item;
-      const { value } = selected;
-      const isMale = currentUser?.gender === 'female' ? false : true;
-      const hideItem =
-        (id === 'doYouHaveABeard' && !isMale) || (id === 'hijab-0' && isMale);
-      if (hideItem) return null;
+      const { value } = selected ?? {};
 
-      // Option fields with only 2-3 choices render as inline pills instead of
+      // Option fields with only a few choices render as inline pills instead of
       // opening the modal picker. Language/nationality load options lazily
       // (empty here), so they stay on the PickerButton.
       const isOptionType = type === 'dropDown' || type === 'dropDownBinary';
@@ -366,50 +416,68 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       if (currentUser?.gender === 'male' && id === 'martial-0') {
         tagOptions = tagOptions.filter((v: any) => v?.value !== 'Widowed');
       }
-      const useTags =
-        isOptionType && tagOptions.length >= 2 && tagOptions.length <= 3;
+      const useTags = shouldUseTagOptions(item, tagOptions);
 
       return (
-        <View style={Styles.itemContainer}>
-          {type === 'input' ? (
-            <IconInput
-              label={iTitle}
-              placeholder={placeholder}
-              inputStyle={Styles.input}
-              value={
-                focusedInput.activeInputId === id ? focusedInput.value : value
-              }
-              onChangeText={onChangeInput}
-              onFocus={onInputFocus.bind(null, id, value, item)}
-              onBlur={onBlurInput}
+        <View style={Styles.questionCard}>
+          <Text style={Styles.questionEyebrow}>{progressLabel}</Text>
+          <View style={Styles.progressTrack}>
+            <View
+              style={[
+                Styles.progressFill,
+                {
+                  width: `${
+                    visibleFields.length
+                      ? ((activeIndex + 1) / visibleFields.length) * 100
+                      : 0
+                  }%`,
+                },
+              ]}
             />
-          ) : type === 'scalling' ? (
-            <ScallingButton item={item} />
-          ) : useTags ? (
-            <OptionTags
-              label={iTitle}
-              item={item}
-              options={tagOptions}
-              onSelect={onSelectOption}
-              rtl={Rtl}
-            />
-          ) : (
-            <PickerButton
-              outerLabel={iTitle}
-              buttonText={
-                typeof value === 'number'
-                  ? value === 1
-                    ? 'Yes'
-                    : value === 0
-                      ? 'No'
-                      : JSON.stringify(value)
-                  : value && value.length !== 0
-                    ? value
-                    : LanguageKeys.notYetProvided
-              }
-              onPress={openPicker.bind(null, iData, iTitle, id)}
-            />
-          )}
+          </View>
+          <Text style={Styles.questionTitle}>{iTitle}</Text>
+
+          <View style={Styles.controlWrap}>
+            {type === 'input' ? (
+              <IconInput
+                label={iTitle}
+                placeholder={placeholder}
+                inputStyle={Styles.input}
+                value={
+                  focusedInput.activeInputId === id ? focusedInput.value : value
+                }
+                onChangeText={onChangeInput}
+                onFocus={onInputFocus.bind(null, id, value, item)}
+                onBlur={onBlurInput}
+              />
+            ) : type === 'scalling' ? (
+              <ScallingButton item={item} />
+            ) : useTags ? (
+              <OptionTags
+                label={iTitle}
+                item={item}
+                options={tagOptions}
+                onSelect={onSelectOption}
+                rtl={Rtl}
+              />
+            ) : (
+              <PickerButton
+                outerLabel={iTitle}
+                buttonText={
+                  typeof value === 'number'
+                    ? value === 1
+                      ? 'Yes'
+                      : value === 0
+                        ? 'No'
+                        : JSON.stringify(value)
+                    : value && value.length !== 0
+                      ? value
+                      : LanguageKeys.notYetProvided
+                }
+                onPress={openPicker.bind(null, iData, iTitle, id)}
+              />
+            )}
+          </View>
         </View>
       );
     },
@@ -423,29 +491,64 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       onSelectOption,
       Rtl,
       ScallingButton,
+      progressLabel,
+      activeIndex,
+      visibleFields.length,
     ]
   );
 
   return (
     <Container style={Styles.screen}>
       <Header title={title} navigation={navigation} titleVariant="display" />
-      <FlatList
-        data={formData}
-        renderItem={renderItem}
-        keyExtractor={(item: any, index: number) => `${item?.id ?? index}`}
-        contentContainerStyle={Styles.listContent}
-        showsVerticalScrollIndicator={false}
-        keyboardDismissMode="none"
-        keyboardShouldPersistTaps="handled"
-      />
+      <View style={Styles.content}>
+        {visibleFields.length > 0 ? (
+          renderActiveControl(activeItem)
+        ) : (
+          <View style={Styles.emptyCard}>
+            <Text style={Styles.emptyText}>{LanguageKeys.notYetProvided}</Text>
+          </View>
+        )}
+      </View>
       <View style={Styles.footer}>
-        <Button
-          text={LanguageKeys.update}
-          onPress={updateLoader ? undefined : onSavePress}
-          disabled={updateLoader}
-          loading={updateLoader}
-          loadingMessage={LanguageKeys.updating}
-        />
+        <View style={Styles.footerRow}>
+          {!isFirstStep ? (
+            <Ripple
+              onPress={updateLoader ? undefined : goBackStep}
+              style={[Styles.secondaryBtn, updateLoader && Styles.disabledBtn]}
+              disabled={updateLoader}
+            >
+              <Text style={Styles.secondaryBtnText}>{LanguageKeys.back}</Text>
+            </Ripple>
+          ) : null}
+          <Ripple
+            onPress={
+              updateLoader || visibleFields.length === 0
+                ? undefined
+                : onSkipPress
+            }
+            style={[
+              Styles.secondaryBtn,
+              (updateLoader || visibleFields.length === 0) &&
+                Styles.disabledBtn,
+            ]}
+            disabled={updateLoader || visibleFields.length === 0}
+          >
+            <Text style={Styles.secondaryBtnText}>{LanguageKeys.skip}</Text>
+          </Ripple>
+          <View style={Styles.primaryBtnWrap}>
+            <Button
+              text={isLastStep ? LanguageKeys.update : LanguageKeys.next}
+              onPress={
+                updateLoader || visibleFields.length === 0
+                  ? undefined
+                  : onPrimaryPress
+              }
+              disabled={updateLoader || visibleFields.length === 0}
+              loading={updateLoader}
+              loadingMessage={LanguageKeys.updating}
+            />
+          </View>
+        </View>
       </View>
 
       <Picker
@@ -473,13 +576,58 @@ const Styles = StyleSheet.create({
   screen: {
     backgroundColor: Colors.appBg,
   },
-  listContent: {
+  content: {
+    flex: 1,
     paddingHorizontal: wp(4),
-    paddingTop: hp(1),
-    paddingBottom: hp(3),
+    paddingTop: hp(2),
   },
-  itemContainer: {
-    marginTop: hp(2.4),
+  questionCard: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(2.2),
+  },
+  questionEyebrow: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+  },
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
+    marginTop: hp(1),
+    marginBottom: hp(2),
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+  questionTitle: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small3,
+    lineHeight: wp(6.2),
+  },
+  controlWrap: {
+    marginTop: hp(2),
+  },
+  emptyCard: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    padding: wp(5),
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
   },
   input: {
     width: wp(80),
@@ -524,5 +672,29 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.appBg,
     borderTopWidth: 1,
     borderTopColor: Colors.hairline,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+  },
+  secondaryBtn: {
+    minHeight: hp(5.5),
+    paddingHorizontal: wp(4),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+  },
+  disabledBtn: {
+    opacity: 0.45,
+  },
+  primaryBtnWrap: {
+    flex: 1,
   },
 });
