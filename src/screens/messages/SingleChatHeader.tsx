@@ -13,6 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import {
   DeletePicker,
   ModalLoader,
+  PopupMenuRenderer,
   ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
@@ -441,6 +442,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
               <ProfilePhotoPlaceholder
                 name={otherUserData?.name}
                 size={width * 0.05}
+                centeredInitials
               />
             )}
           </View>
@@ -450,7 +452,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         </Ripple>
       </View>
       {currentUserId !== 'guardian' && (
-        <Menu ref={menuRef}>
+        <Menu ref={menuRef} renderer={PopupMenuRenderer}>
           <MenuTrigger>
             <View style={Styles.menuBtn}>
               <Ionicons

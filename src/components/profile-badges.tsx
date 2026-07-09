@@ -1,5 +1,6 @@
 import moment from 'moment';
 import React, { useMemo } from 'react';
+import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -36,6 +37,7 @@ type ProfileBadgesProps = {
   vertical?: boolean;
   iconOnly?: boolean;
   variant?: 'default' | 'pill';
+  containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function ProfileBadges({
@@ -45,6 +47,7 @@ export function ProfileBadges({
   vertical = false,
   iconOnly = false,
   variant = 'default',
+  containerStyle,
 }: ProfileBadgesProps) {
   const { currentUser } = useGlobalContext();
   const { getData, storageKeys } = StorageManager;
@@ -134,7 +137,7 @@ export function ProfileBadges({
     return (
       <View
         testID="profile-badges-pill"
-        style={[Styles.container, Styles.pillContainer]}
+        style={[Styles.container, Styles.pillContainer, containerStyle]}
       >
         {badges.map((badge, index) => (
           <View key={index} style={Styles.pillBadge}>

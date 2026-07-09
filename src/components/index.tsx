@@ -9,6 +9,7 @@ export * from './inputs';
 export { default as LinearGradient } from './LinearGradient';
 export * from './loaders';
 export * from './pickers';
+export { default as PopupMenuRenderer } from './PopupMenuRenderer';
 export { ProfileBadges } from './profile-badges';
 export { default as ProfilePhotoPlaceholder } from './ProfilePhotoPlaceholder';
 export { PurchaseSuccessModal } from './purchase-success-modal';

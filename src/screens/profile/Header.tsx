@@ -749,23 +749,26 @@ const Header = ({
       <View style={Styles.infoCard}>
         <View style={Styles.profileSummaryRow}>
           <View style={Styles.profileIdentity}>
-            <NameRow
-              firstName={userData?.first_name}
-              lastName={userData?.last_name}
-              showStatus={false}
-              statusColor={onlineStatusColor}
-              rtl={Rtl}
-            />
             <View
               style={[
-                Styles.cardBadgeRow,
-                { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+                Styles.nameBadgeRow,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
               ]}
             >
+              <View style={Styles.nameShrink}>
+                <NameRow
+                  firstName={userData?.first_name}
+                  lastName={userData?.last_name}
+                  showStatus={false}
+                  statusColor={onlineStatusColor}
+                  rtl={Rtl}
+                />
+              </View>
               <ProfileBadges
                 isSelf={isSelf}
                 variant="pill"
                 userData={userData}
+                containerStyle={Styles.inlineBadges}
               />
             </View>
             <MetaLine
@@ -1298,6 +1301,19 @@ const Styles = StyleSheet.create({
   },
   cardBadgeRow: {
     width: '100%',
+  },
+  nameBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+  },
+  nameShrink: {
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  inlineBadges: {
+    marginTop: 0,
+    flexShrink: 1,
   },
   matchScoreWrap: {
     width: wp(17),

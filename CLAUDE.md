@@ -62,14 +62,9 @@ Node ≥20. Yarn (not npm) is canonical — `yarn.lock` is committed.
 - **Scaling**: use `wp()` / `hp()` from `src/global/Scalling.tsx` for sizes, not raw pixel values.
 - **Husky + lint-staged** are wired — commits run lint on staged files. Don't bypass with `--no-verify` unless explicitly told to.
 
-## Known issues (as of 2026-05-27 audit)
+## Known issues
 
-- **Jest broken**: `jest-setup.ts` imports `@testing-library/react-native/extend-expect`, but `@testing-library/react-native` v13+ removed that subpath. Built-in matchers are now bundled — the import should be removed or replaced with `'@testing-library/react-native'`.
-- **20 ESLint errors**, concentrated in:
-  - `src/screens/messages/components/TypingIndicator.tsx` — 19× `react-hooks/refs` ("Cannot access refs during render"). Real React 19 violation — `Animated.Value` refs are being read during render via `.interpolate()`. Needs refactor to read refs only inside effects / event handlers.
-  - `src/screens/Map/Location.tsx` — unused import `isIOS`.
-- **853 ESLint warnings**, mostly `@typescript-eslint/no-explicit-any` across `services/api/Services.tsx` (1400+ lines, ~60 `any`s), `services/firebase/Firebase.tsx`, and the welcome flow. Not breaking, but reduces type safety.
-- **`App.tsx` mixes concerns**: Pusher init, RevenueCat init, and notification-permission request all happen inline. Manageable but worth extracting if it grows.
+Point-in-time audit (jest setup, ESLint errors/warnings, `App.tsx` coupling) lives in [AUDIT-2026-05-27.md](AUDIT-2026-05-27.md). Re-run `yarn check-all` for the current state rather than trusting a snapshot.
 
 ## Things to be careful with
 

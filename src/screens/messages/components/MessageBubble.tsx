@@ -11,8 +11,11 @@ import { hp, wp } from '../../../global';
 import { Colors } from '../../../res';
 import {
   getLastSeenMessageIndex,
+  getMessageParticipantStatus,
   getMessageTime,
   getTimeAgo,
+  hasDeliveredOrReadAt,
+  hasReadAt,
 } from '../SingleChat.utils';
 import AudioMessageBubble, {
   type AudioBubblePlayback,
@@ -63,10 +66,7 @@ const MessageBubble = ({
   const currentUserIdStr = currentUserId != null ? String(currentUserId) : null;
 
   // Get status for the other user (recipient) from statuses array
-  const statuses = item?.statuses || [];
-  const otherUserStatus = statuses.find(
-    (status: any) => status.participant_id === otherUserId
-  );
+  const otherUserStatus = getMessageParticipantStatus(item, otherUserId);
 
   const isCurrentUser = itemSender === currentUserIdStr;
   const isGuardian = itemSender === 'guardian' || itemSender === guardianUserId;
@@ -78,10 +78,7 @@ const MessageBubble = ({
     // For messages from current user, check the other user's status
     if (isCurrentUser && otherUserStatus) {
       // If delivered or read, show as 'sent' (MessageStatusIcon will show appropriate icon based on isSeen)
-      if (
-        otherUserStatus.delivered_at !== null ||
-        otherUserStatus.read_at !== null
-      ) {
+      if (hasDeliveredOrReadAt(otherUserStatus)) {
         return 'sent';
       }
       // If status exists but both delivered_at and read_at are null, show as 'sending' (single tick)
@@ -93,11 +90,7 @@ const MessageBubble = ({
 
   const messageStatus = getMessageStatus();
   // isRead should only be true if read_at is explicitly not null
-  const isRead =
-    otherUserStatus !== undefined &&
-    otherUserStatus !== null &&
-    otherUserStatus.read_at !== null &&
-    otherUserStatus.read_at !== undefined;
+  const isRead = hasReadAt(otherUserStatus);
 
   const otherUserReadBy = otherUserStatus
     ? {

@@ -1,9 +1,15 @@
 import {
+  buildScalingSelected,
+  convertScaleValue,
+  formatScaleValue,
   getOptionKey,
   getOptionLabel,
   getProgressLabel,
+  getScalingDisplay,
   getVisibleProfileFields,
+  inchesFromLegacyFeet,
   isOptionSelected,
+  normalizeScalingSelected,
   shouldUseTagOptions,
 } from './profile-editor-flow';
 
@@ -122,5 +128,171 @@ describe('option helpers', () => {
     });
 
     expect(shouldUseTagOptions(item, item.data)).toBe(false);
+  });
+});
+
+describe('inchesFromLegacyFeet', () => {
+  it('parses feet.inches decimals digit-wise, not numerically', () => {
+    expect(inchesFromLegacyFeet(5.11)).toBe(71);
+    expect(inchesFromLegacyFeet('5.11')).toBe(71);
+    expect(inchesFromLegacyFeet(4.0)).toBe(48);
+    expect(inchesFromLegacyFeet(5)).toBe(60);
+  });
+
+  it('reads the ambiguous x.1 legacy value as x feet 1 inch', () => {
+    expect(inchesFromLegacyFeet(5.1)).toBe(61);
+  });
+
+  it('clamps impossible legacy inch parts like 7.12', () => {
+    expect(inchesFromLegacyFeet(7.12)).toBe(7 * 12 + 11);
+  });
+
+  it('returns null for empty or unparsable values', () => {
+    expect(inchesFromLegacyFeet(null)).toBeNull();
+    expect(inchesFromLegacyFeet(undefined)).toBeNull();
+    expect(inchesFromLegacyFeet('')).toBeNull();
+    expect(inchesFromLegacyFeet('abc')).toBeNull();
+  });
+});
+
+describe('convertScaleValue', () => {
+  it('round-trips common heights between cm and inches', () => {
+    expect(convertScaleValue(178, 'cm', 'ft')).toBe(70);
+    expect(convertScaleValue(70, 'ft', 'cm')).toBe(178);
+    expect(convertScaleValue(165, 'cm', 'cm')).toBe(165);
+  });
+
+  it('converts weight between kg and lbs', () => {
+    expect(convertScaleValue(70, 'kg', 'lbs')).toBe(154);
+    expect(convertScaleValue(154, 'lbs', 'kg')).toBe(70);
+  });
+});
+
+describe('formatScaleValue', () => {
+  it('formats total inches as feet and inches', () => {
+    expect(formatScaleValue('ft', 70)).toBe('5′10″');
+    expect(formatScaleValue('ft', 48)).toBe('4′0″');
+  });
+
+  it('formats plain units with a suffix', () => {
+    expect(formatScaleValue('cm', 178)).toBe('178 cm');
+    expect(formatScaleValue('kg', 70)).toBe('70 kg');
+  });
+});
+
+describe('buildScalingSelected', () => {
+  it('always commits height as cm, keeping the display unit separately', () => {
+    const height = field({ id: 'height', type: 'scalling' });
+    expect(buildScalingSelected(height, 'ft', 70)).toEqual({
+      value: 178,
+      scale: 'cm',
+      displayScale: 'ft',
+    });
+    expect(buildScalingSelected(height, 'cm', 165)).toEqual({
+      value: 165,
+      scale: 'cm',
+      displayScale: 'cm',
+    });
+  });
+
+  it('commits weight in the chosen unit', () => {
+    const weight = field({ id: 'weight', type: 'scalling' });
+    expect(buildScalingSelected(weight, 'lbs', 154)).toEqual({
+      value: 154,
+      scale: 'lbs',
+    });
+  });
+});
+
+describe('normalizeScalingSelected', () => {
+  it('converts a legacy feet.inches height to cm on load', () => {
+    const item = normalizeScalingSelected(
+      field({
+        id: 'height',
+        type: 'scalling',
+        selected: { value: 5.9, scale: 'ft' },
+      })
+    );
+    expect(item.selected).toEqual({
+      value: convertScaleValue(5 * 12 + 9, 'ft', 'cm'),
+      scale: 'cm',
+      displayScale: 'ft',
+    });
+  });
+
+  it('keeps a cm height and defaults the display unit to cm', () => {
+    const item = normalizeScalingSelected(
+      field({
+        id: 'height',
+        type: 'scalling',
+        selected: { value: 178, scale: 'cm' },
+      })
+    );
+    expect(item.selected).toEqual({
+      value: 178,
+      scale: 'cm',
+      displayScale: 'cm',
+    });
+  });
+
+  it('preserves the preferred unit when no value is set', () => {
+    const item = normalizeScalingSelected(
+      field({ id: 'height', type: 'scalling', selected: { scale: 'ft' } })
+    );
+    expect(item.selected).toEqual({ scale: 'cm', displayScale: 'ft' });
+  });
+
+  it('rounds weight and keeps its unit', () => {
+    const item = normalizeScalingSelected(
+      field({
+        id: 'weight',
+        type: 'scalling',
+        selected: { value: '154', scale: 'lbs' },
+      })
+    );
+    expect(item.selected).toEqual({ value: 154, scale: 'lbs' });
+  });
+
+  it('leaves non-scalling items untouched', () => {
+    const item = field({ id: 'caste', type: 'input' });
+    expect(normalizeScalingSelected(item)).toBe(item);
+  });
+});
+
+describe('getScalingDisplay', () => {
+  it('presents height in the display unit from the canonical cm value', () => {
+    expect(
+      getScalingDisplay(
+        field({
+          id: 'height',
+          type: 'scalling',
+          selected: { value: 178, scale: 'cm', displayScale: 'ft' },
+        })
+      )
+    ).toEqual({ scale: 'ft', value: 70 });
+  });
+
+  it('returns a null value when height is unset', () => {
+    expect(
+      getScalingDisplay(
+        field({
+          id: 'height',
+          type: 'scalling',
+          selected: { scale: 'cm', displayScale: 'cm' },
+        })
+      )
+    ).toEqual({ scale: 'cm', value: null });
+  });
+
+  it('presents weight in its own unit', () => {
+    expect(
+      getScalingDisplay(
+        field({
+          id: 'weight',
+          type: 'scalling',
+          selected: { value: 154, scale: 'lbs' },
+        })
+      )
+    ).toEqual({ scale: 'lbs', value: 154 });
   });
 });

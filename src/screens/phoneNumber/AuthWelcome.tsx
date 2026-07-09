@@ -13,6 +13,7 @@ import { Firebase, setRevenueCat } from '../../services';
 import { StorageManager, useGlobalContext } from '../../services';
 import { ApiServices } from '../../services/api';
 import { useSettingsStore } from '../../stores';
+import type { SettingsResponse } from '../../stores/settings-store';
 import Data from '../profile/Data';
 import AuthButtons from './components/auth-buttons';
 import LogoSection from './components/logo-section';
@@ -50,8 +51,29 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
   const [loadingMethod, setLoadingMethod] = useState<
     'phone' | 'google' | 'apple' | null
   >(null);
-  const { getAuthenticationMethod } = useSettingsStore();
+  const {
+    getAuthenticationMethod,
+    loaded: settingsLoaded,
+    setSettings,
+  } = useSettingsStore();
   const buttonStatus = getAuthenticationMethod();
+
+  // Logout wipes the settings store (cleanupSession), and Initialization only
+  // fetches settings on app boot — reload them here or the auth buttons
+  // (driven by `authentication_method`) never appear until an app restart.
+  useEffect(() => {
+    if (settingsLoaded) return;
+
+    ApiServices.getAppSettings()
+      .then((response) => {
+        if (response) {
+          setSettings(response as SettingsResponse);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching app settings:', error);
+      });
+  }, [settingsLoaded, setSettings]);
 
   const saveDataLocal = useCallback(async () => {
     try {

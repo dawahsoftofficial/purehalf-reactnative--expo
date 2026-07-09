@@ -32,7 +32,7 @@ import {
 } from '../../services';
 import { presentBoostProfilePaywall } from '../../services/paywall-service';
 import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
-import { AccountModal } from './components';
+import { AccountModal, RecommendationHeart } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
@@ -629,13 +629,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           </View>
           <View style={Styles.headerRightWrapper}>
             {showRecommendationModal && (
-              <Ripple
-                rippleColor={Colors.primary}
-                style={Styles.iconChip}
+              <RecommendationHeart
                 onPress={() => onRecommendationPress(true)}
-              >
-                <Ionicons name="sparkles" size={wp(5)} color={Colors.primary} />
-              </Ripple>
+              />
             )}
             <Ripple
               rippleColor={Colors.primary}
@@ -776,14 +772,6 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2.5),
-  },
-  iconChip: {
-    width: wp(11),
-    height: wp(11),
-    borderRadius: wp(5.5),
-    backgroundColor: Colors.lavender,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   avatarBtn: {
     width: wp(12),

@@ -37,6 +37,61 @@ export const getMessageTime = (timestamp: any) => {
   return moment.utc(timestamp).local().format('hh:mm A');
 };
 
+const idsMatch = (left: any, right: any) => {
+  if (
+    left === null ||
+    left === undefined ||
+    right === null ||
+    right === undefined
+  ) {
+    return false;
+  }
+
+  return String(left) === String(right);
+};
+
+export const getMessageParticipantStatus = (
+  message: any,
+  participantId: any
+) => {
+  const statuses = message?.statuses || [];
+
+  return statuses.find((status: any) =>
+    idsMatch(status.participant_id, participantId)
+  );
+};
+
+export const hasReadAt = (status: any) =>
+  status?.read_at !== null && status?.read_at !== undefined;
+
+export const hasDeliveredOrReadAt = (status: any) =>
+  (status?.delivered_at !== null && status?.delivered_at !== undefined) ||
+  hasReadAt(status);
+
+export const isLastMessageReadByParticipant = (
+  lastMessage: any,
+  participant: any,
+  currentUserId: any
+) => {
+  if (!lastMessage || !participant) return false;
+
+  if (!idsMatch(lastMessage.sender_id, currentUserId)) {
+    return false;
+  }
+
+  const status = getMessageParticipantStatus(lastMessage, participant.id);
+  if (hasReadAt(status)) {
+    return true;
+  }
+
+  const lastReadMessageId = participant.last_read_message_id;
+  if (lastReadMessageId === null || lastReadMessageId === undefined) {
+    return false;
+  }
+
+  return Number(lastReadMessageId) >= Number(lastMessage.id);
+};
+
 /**
  * Finds the last message sent by current user that was seen by other user.
  * Returns the index in the *original* `messages` array (not the sorted one).
@@ -62,11 +117,8 @@ export const getLastSeenMessageIndex = (
       message?.sender_id != null ? String(message.sender_id) : null;
     if (messageSenderId === currentUserIDStr) {
       // Check statuses array for read status from other user
-      const statuses = message?.statuses || [];
-      const otherUserStatus = statuses.find(
-        (status: any) => status.participant_id === otherUserId
-      );
-      if (otherUserStatus?.read_at !== null) {
+      const otherUserStatus = getMessageParticipantStatus(message, otherUserId);
+      if (hasReadAt(otherUserStatus)) {
         lastSeenMessage = message;
         break;
       }

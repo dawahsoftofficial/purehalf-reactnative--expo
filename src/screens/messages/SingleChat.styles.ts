@@ -29,6 +29,11 @@ const Styles = StyleSheet.create({
     paddingTop: hp(3),
     paddingHorizontal: wp(3),
   },
+  threadIntroEmptyWrapper: {
+    flex: 1,
+    paddingTop: hp(3),
+    paddingHorizontal: wp(3),
+  },
   textContainer: {
     width: wp(100),
     justifyContent: 'center',
@@ -68,8 +73,6 @@ const Styles = StyleSheet.create({
   messageInputOuter: {
     flexDirection: 'row',
     backgroundColor: Colors.surface,
-    borderWidth: 1.4,
-    borderColor: Colors.hairline,
     marginTop: hp(1),
     marginBottom: hp(1.5),
     marginHorizontal: wp(4),

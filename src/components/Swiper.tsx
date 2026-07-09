@@ -96,7 +96,7 @@ const SwiperComponent = ({
     <Modal visible={true} transparent={true}>
       <SafeAreaView style={Styles.container}>
         <Ripple
-          style={[Styles.closeWrapper, { top: top + hp(2) }]}
+          style={[Styles.closeWrapper, { top: hp(1) + 12 }]}
           rippleColor={Colors.surface}
           rippleContainerBorderRadius={wp(5.5)}
           onPress={() => onPress()}

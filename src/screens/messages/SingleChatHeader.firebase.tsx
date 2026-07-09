@@ -16,12 +16,9 @@ import {
   MenuTrigger,
 } from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 
-import {
-  DeletePicker,
-  ModalLoader,
-  ProfilePhotoPlaceholder,
-} from '../../components';
+import { DeletePicker, ModalLoader } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
@@ -399,9 +396,10 @@ const SingleChatHeader = (props: any) => {
                 style={Styles.userImage}
               />
             ) : (
-              <ProfilePhotoPlaceholder
-                name={otherUserData?.name}
-                size={width * 0.05}
+              <FontAwesome5
+                name="user-alt"
+                size={wp(4)}
+                color={Colors.primaryLite}
               />
             )}
           </View>

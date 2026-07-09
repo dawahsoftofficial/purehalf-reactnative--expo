@@ -1,14 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 
 import {
   Button,
   Container,
   Header,
-  HeightWeightPicker,
   IconInput,
   Picker,
   PickerButton,
@@ -25,13 +30,20 @@ import {
 } from '../../services';
 import { updateDetails } from './Funtions';
 import {
+  buildScalingSelected,
+  convertScaleValue,
+  formatScaleValue,
   getOptionKey,
   getOptionLabel,
   getProgressLabel,
+  getScalingDisplay,
   getVisibleProfileFields,
   isOptionSelected,
+  normalizeScalingSelected,
   shouldUseTagOptions,
 } from './profile-editor-flow';
+
+const RULER_TICK_WIDTH = Math.round(wp(2.5));
 
 type PickerState = {
   visible: boolean;
@@ -46,36 +58,211 @@ type FocusedInputState = {
   item: any;
 };
 
-// Inline single-select pill group for option fields with only a few choices
-// (e.g. Yes/No, Future Plans). Larger option lists keep the modal PickerButton.
+// Inline single-select option list for fields with only a few choices
+// (e.g. Yes/No, Future Plans). Each option is a full-width row. Larger option
+// lists keep the modal PickerButton.
 const OptionTags = ({ item, options, onSelect, rtl }: any) => (
-  <View>
-    <View
-      style={[
-        Styles.tagRow,
-        {
-          flexDirection: rtl ? 'row-reverse' : 'row',
-        },
-      ]}
-    >
-      {options.map((opt: any) => {
-        const on = isOptionSelected(item, opt);
-        const optLabel = getOptionLabel(item, opt);
-        return (
-          <Ripple
-            key={getOptionKey(opt)}
-            onPress={() => onSelect(item, opt)}
-            style={[Styles.tag, on && Styles.tagOn]}
+  <View style={Styles.optionList}>
+    {options.map((opt: any) => {
+      const on = isOptionSelected(item, opt);
+      const optLabel = getOptionLabel(item, opt);
+      return (
+        <Ripple
+          key={getOptionKey(opt)}
+          onPress={() => onSelect(item, opt)}
+          style={[Styles.optionRow, on && Styles.optionRowOn]}
+        >
+          <Text
+            style={[
+              Styles.optionRowTxt,
+              { textAlign: rtl ? 'right' : 'left' },
+              on && Styles.optionRowTxtOn,
+            ]}
           >
-            <Text style={[Styles.tagTxt, on && Styles.tagTxtOn]}>
-              {optLabel}
-            </Text>
-          </Ripple>
-        );
-      })}
-    </View>
+            {optLabel}
+          </Text>
+        </Ripple>
+      );
+    })}
   </View>
 );
+
+// Memoized so per-frame readout updates while dragging don't re-render the
+// full tick strip (up to ~350 views for lbs).
+const RulerTicks = React.memo(function RulerTicks({ values, scale }: any) {
+  return (
+    <>
+      {values.map((v: number) => {
+        const major = scale === 'ft' ? v % 12 === 0 : v % 10 === 0;
+        const mid = !major && (scale === 'ft' ? v % 6 === 0 : v % 5 === 0);
+        return (
+          <View key={v} style={Styles.rulerTickSlot}>
+            <View
+              style={[
+                Styles.rulerTick,
+                mid && Styles.rulerTickMid,
+                major && Styles.rulerTickMajor,
+              ]}
+            />
+            {major ? (
+              <Text style={Styles.rulerTickLabel}>
+                {scale === 'ft' ? `${Math.floor(v / 12)}′` : String(v)}
+              </Text>
+            ) : null}
+          </View>
+        );
+      })}
+    </>
+  );
+});
+
+// Inline unit toggle + ruler slider for height/weight. The ruler snaps to the
+// integer steps of the active scale's values list; switching scale converts
+// the current value instead of clearing it. Height commits as cm regardless
+// of the display unit (see profile-editor-flow).
+const ScaleRuler = ({ item, onSelect }: any) => {
+  const scaleEntries: any[] = Array.isArray(item?.data) ? item.data : [];
+  const display = getScalingDisplay(item);
+  const activeEntry =
+    scaleEntries.find((entry: any) => entry?.scale === display.scale) ??
+    scaleEntries[0];
+  const activeScale = activeEntry?.scale ?? display.scale;
+  const values: number[] = activeEntry?.values ?? [];
+  const minValue = values[0] ?? 0;
+  const maxValue = values.length ? values[values.length - 1] : 0;
+  const otherEntry = scaleEntries.find(
+    (entry: any) => entry?.scale !== activeScale
+  );
+
+  const scrollRef = useRef<ScrollView>(null);
+  const [rulerWidth, setRulerWidth] = useState(0);
+  const [live, setLive] = useState<{ scale: string; value: number } | null>(
+    null
+  );
+
+  const clampValue = (v: number) => Math.min(Math.max(v, minValue), maxValue);
+  const committedValue =
+    display.value === null
+      ? (values[Math.floor(values.length / 2)] ?? minValue)
+      : clampValue(display.value);
+  const shownValue =
+    live && live.scale === activeScale ? live.value : committedValue;
+
+  const valueForOffset = (x: number) =>
+    clampValue(minValue + Math.round(x / RULER_TICK_WIDTH));
+
+  const onRulerScroll = (event: any) => {
+    setLive({
+      scale: activeScale,
+      value: valueForOffset(event.nativeEvent.contentOffset.x),
+    });
+  };
+
+  const onRulerRest = (event: any) => {
+    onSelect(
+      item,
+      buildScalingSelected(
+        item,
+        activeScale,
+        valueForOffset(event.nativeEvent.contentOffset.x)
+      )
+    );
+  };
+
+  // Fires on mount, when the side spacers get their measured width, and when
+  // the tick strip changes after a unit switch — exactly the moments the
+  // scroll position must be re-derived from the committed value.
+  const positionRuler = () => {
+    scrollRef.current?.scrollTo({
+      x: (committedValue - minValue) * RULER_TICK_WIDTH,
+      animated: false,
+    });
+  };
+
+  const onScalePress = (nextScale: string) => {
+    if (!nextScale || nextScale === activeScale) return;
+    const nextEntry = scaleEntries.find(
+      (entry: any) => entry?.scale === nextScale
+    );
+    const nextValues: number[] = nextEntry?.values ?? [];
+    const nextMin = nextValues[0] ?? 0;
+    const nextMax = nextValues.length ? nextValues[nextValues.length - 1] : 0;
+    const converted = Math.min(
+      Math.max(convertScaleValue(shownValue, activeScale, nextScale), nextMin),
+      nextMax
+    );
+    onSelect(item, buildScalingSelected(item, nextScale, converted));
+  };
+
+  const sideSpacer = rulerWidth
+    ? Math.max((rulerWidth - RULER_TICK_WIDTH) / 2, 0)
+    : 0;
+
+  return (
+    <View>
+      <View style={Styles.scaleToggleRow}>
+        {scaleEntries.map((entry: any) => {
+          const on = entry?.scale === activeScale;
+          return (
+            <Ripple
+              key={entry?.scale}
+              onPress={() => onScalePress(entry?.scale)}
+              style={[Styles.scaleToggleBtn, on && Styles.scaleToggleBtnOn]}
+            >
+              <Text
+                style={[Styles.scaleToggleTxt, on && Styles.scaleToggleTxtOn]}
+              >
+                {entry?.scale}
+              </Text>
+            </Ripple>
+          );
+        })}
+      </View>
+      <Text style={Styles.rulerReadout}>
+        {formatScaleValue(activeScale, shownValue)}
+      </Text>
+      <Text style={Styles.rulerReadoutAlt}>
+        {otherEntry
+          ? formatScaleValue(
+              otherEntry.scale,
+              convertScaleValue(shownValue, activeScale, otherEntry.scale)
+            )
+          : ''}
+        {display.value === null ? ` · ${LanguageKeys.notYetProvided}` : ''}
+      </Text>
+      <View
+        style={Styles.rulerWrap}
+        onLayout={(event: any) => setRulerWidth(event.nativeEvent.layout.width)}
+      >
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={RULER_TICK_WIDTH}
+          decelerationRate="fast"
+          scrollEventThrottle={16}
+          onScroll={onRulerScroll}
+          onScrollEndDrag={onRulerRest}
+          onMomentumScrollEnd={onRulerRest}
+          onContentSizeChange={positionRuler}
+        >
+          <View style={{ width: sideSpacer }} />
+          <RulerTicks values={values} scale={activeScale} />
+          <View style={{ width: sideSpacer }} />
+        </ScrollView>
+        <View pointerEvents="none" style={Styles.rulerCenterLine} />
+      </View>
+      <View style={Styles.rulerEndsRow}>
+        <Text style={Styles.rulerEndTxt}>
+          {formatScaleValue(activeScale, minValue)}
+        </Text>
+        <Text style={Styles.rulerEndTxt}>
+          {formatScaleValue(activeScale, maxValue)}
+        </Text>
+      </View>
+    </View>
+  );
+};
 
 const EditProfileGroup = ({ navigation, route }: any) => {
   const { title = '', data: initialData = [] } = route?.params ?? {};
@@ -86,7 +273,7 @@ const EditProfileGroup = ({ navigation, route }: any) => {
   const { setData, storageKeys } = StorageManager;
 
   const [formData, setFormData] = useState<any[]>(() =>
-    JSON.parse(JSON.stringify(initialData))
+    JSON.parse(JSON.stringify(initialData)).map(normalizeScalingSelected)
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
@@ -97,12 +284,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     item: {},
   });
   const [picker, setPicker] = useState<PickerState>({
-    visible: false,
-    data: [],
-    headerTitle: '',
-    activePicker: '',
-  });
-  const [heightWeightPicker, setHeightWeightPicker] = useState<PickerState>({
     visible: false,
     data: [],
     headerTitle: '',
@@ -137,29 +318,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
         data: [],
         activePicker: '',
       }),
-    []
-  );
-
-  const onCloseHeightWeightPicker = useCallback(
-    () =>
-      setHeightWeightPicker({
-        activePicker: '',
-        headerTitle: '',
-        visible: false,
-        data: [],
-      }),
-    []
-  );
-
-  const openHeightWeightPicker = useCallback(
-    (pData: any, headerTitle: any, activePicker: any) => {
-      setHeightWeightPicker({
-        visible: true,
-        headerTitle,
-        data: pData,
-        activePicker,
-      });
-    },
     []
   );
 
@@ -265,7 +423,8 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     [onClosePicker, picker.activePicker]
   );
 
-  // Select-only (no clear): tapping an inline tag sets that field's value.
+  // Select-only (no clear): tapping an inline option row or committing a
+  // ruler value sets that field's selected value.
   const onSelectOption = useCallback((tappedItem: any, opt: any) => {
     setFormData((prev: any[]) =>
       prev.map((element: any) =>
@@ -273,39 +432,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       )
     );
   }, []);
-
-  const onHeightWeightPickerItemPress = useCallback(
-    (item: any) => {
-      setFormData((prev: any[]) =>
-        prev.map((element: any) => {
-          if (element.type === 'scalling') {
-            if (heightWeightPicker.activePicker === element.title) {
-              return {
-                ...element,
-                selected: { ...element.selected, value: item },
-              };
-            } else if (
-              heightWeightPicker.activePicker === `${element.title}Scale`
-            ) {
-              return {
-                ...element,
-                selected: {
-                  value:
-                    element?.selected?.scale === item
-                      ? element?.selected?.value
-                      : null,
-                  scale: item,
-                },
-              };
-            }
-          }
-          return element;
-        })
-      );
-      onCloseHeightWeightPicker();
-    },
-    [heightWeightPicker.activePicker, onCloseHeightWeightPicker]
-  );
 
   const onSavePress = useCallback(async () => {
     setUpdateLoader(true);
@@ -355,47 +481,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
     }
     goNextStep();
   }, [goNextStep, isLastStep, onSavePress]);
-
-  const ScallingButton = useCallback(
-    ({ item }: any) => {
-      const { data: sData, title: sTitle, selected } = item;
-      const { scale, value } = selected;
-      const scallingKeys: any[] = [];
-      sData.forEach((el: any) => scallingKeys.push(el?.scale));
-      let values = sData[0]?.values;
-      if (scale && scale.length !== 0) {
-        sData.forEach((el: any) => {
-          if (el?.scale === scale) values = el?.values;
-        });
-      }
-      return (
-        <View style={Styles.scallingRow}>
-          <PickerButton
-            outerLabel={'Scale'}
-            buttonText={scale && scale.length !== 0 ? scale : LanguageKeys.none}
-            onPress={openHeightWeightPicker.bind(
-              null,
-              scallingKeys,
-              sTitle,
-              `${sTitle}Scale`
-            )}
-            buttonContainer={{ width: wp(30) }}
-            outerLabelStyle={{ alignSelf: 'flex-start' }}
-          />
-          <PickerButton
-            buttonText={
-              value && value.length !== 0
-                ? JSON.stringify(value)
-                : LanguageKeys.none
-            }
-            onPress={openHeightWeightPicker.bind(null, values, sTitle, sTitle)}
-            buttonContainer={{ width: wp(45), marginTop: 0 }}
-          />
-        </View>
-      );
-    },
-    [openHeightWeightPicker]
-  );
 
   const renderActiveControl = useCallback(
     (item: any) => {
@@ -455,7 +540,7 @@ const EditProfileGroup = ({ navigation, route }: any) => {
                 onBlur={onBlurInput}
               />
             ) : type === 'scalling' ? (
-              <ScallingButton item={item} />
+              <ScaleRuler item={item} onSelect={onSelectOption} />
             ) : useTags ? (
               <OptionTags
                 item={item}
@@ -493,7 +578,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       openPicker,
       onSelectOption,
       Rtl,
-      ScallingButton,
       progressLabel,
       activeIndex,
       visibleFields.length,
@@ -572,13 +656,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
         headerTitle={picker.headerTitle}
         loader={pickerDataLoader}
       />
-      <HeightWeightPicker
-        visible={heightWeightPicker.visible}
-        onClose={onCloseHeightWeightPicker}
-        onPress={onHeightWeightPickerItemPress}
-        data={heightWeightPicker.data}
-        headerTitle={heightWeightPicker.headerTitle}
-      />
     </Container>
   );
 };
@@ -656,30 +733,118 @@ const Styles = StyleSheet.create({
   labelLessPickerButton: {
     marginTop: 0,
   },
-  scallingRow: {
+  scaleToggleRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  tagRow: {
-    flexWrap: 'wrap',
-    gap: wp(2),
-  },
-  tag: {
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1.1),
-    borderRadius: 999,
+    alignSelf: 'flex-start',
     backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    padding: 3,
   },
-  tagOn: {
+  scaleToggleBtn: {
+    paddingHorizontal: wp(5),
+    paddingVertical: hp(0.8),
+    borderRadius: 999,
+  },
+  scaleToggleBtnOn: {
     backgroundColor: Colors.primary,
   },
-  tagTxt: {
+  scaleToggleTxt: {
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
   },
-  tagTxtOn: {
+  scaleToggleTxtOn: {
+    color: Colors.color2,
+  },
+  rulerReadout: {
+    textAlign: 'center',
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: wp(8),
+    marginTop: hp(2),
+  },
+  rulerReadoutAlt: {
+    textAlign: 'center',
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+    marginTop: 2,
+  },
+  rulerWrap: {
+    height: 64,
+    marginTop: hp(1.5),
+  },
+  rulerCenterLine: {
+    position: 'absolute',
+    left: '50%',
+    marginLeft: -1,
+    top: 0,
+    width: 2,
+    height: 36,
+    borderRadius: 1,
+    backgroundColor: Colors.primary,
+  },
+  rulerTickSlot: {
+    width: RULER_TICK_WIDTH,
+    height: 64,
+    alignItems: 'center',
+  },
+  rulerTick: {
+    width: 1,
+    height: 12,
+    marginTop: 16,
+    backgroundColor: Colors.hairline,
+  },
+  rulerTickMid: {
+    height: 20,
+    marginTop: 8,
+    backgroundColor: Colors.primaryLite,
+  },
+  rulerTickMajor: {
+    width: 2,
+    height: 28,
+    marginTop: 0,
+    backgroundColor: Colors.primaryMid,
+  },
+  rulerTickLabel: {
+    position: 'absolute',
+    top: 36,
+    width: 40,
+    left: RULER_TICK_WIDTH / 2 - 20,
+    textAlign: 'center',
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+  },
+  rulerEndsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: hp(0.5),
+  },
+  rulerEndTxt: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+  },
+  optionList: {
+    gap: hp(1.2),
+  },
+  optionRow: {
+    width: '100%',
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.6),
+    borderRadius: 12,
+    backgroundColor: Colors.lavender,
+  },
+  optionRowOn: {
+    backgroundColor: Colors.primary,
+  },
+  optionRowTxt: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+  },
+  optionRowTxtOn: {
     color: Colors.color2,
   },
   footer: {
@@ -713,9 +878,9 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small1,
   },
   secondaryBtn: {
-    minHeight: hp(5.5),
+    height: hp(6.5),
     paddingHorizontal: wp(4),
-    borderRadius: 999,
+    borderRadius: 16,
     backgroundColor: Colors.lavender,
     alignItems: 'center',
     justifyContent: 'center',

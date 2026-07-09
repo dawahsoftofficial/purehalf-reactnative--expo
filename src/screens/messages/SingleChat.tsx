@@ -6,7 +6,6 @@ import {
   Alert,
   AppState,
   type AppStateStatus,
-  Image,
   ScrollView,
   Text,
   TextInput,
@@ -23,7 +22,7 @@ import { evaluateAndMaybeShowRatingPrompt } from '@/services/rating/ratingEngage
 import { Container } from '../../components';
 import { wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Images } from '../../res';
+import { Colors } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -40,6 +39,9 @@ import type {
 } from '../../services/api/types/message-types';
 import chatAudioService from '../../services/audio/chat-audio-service';
 import type { AudioBubblePlayback } from './components/AudioMessageBubble';
+import ChatBackgroundPattern from './components/ChatBackgroundPattern';
+import IcebreakerChips from './components/IcebreakerChips';
+import MatchIntroCard from './components/MatchIntroCard';
 import MessageBubble from './components/MessageBubble';
 import TypingIndicator from './components/TypingIndicator';
 import VoiceRecorderBar from './components/VoiceRecorderBar';
@@ -1146,7 +1148,12 @@ const SingleChat = (props: any) => {
       t('adviceTwelveText'),
       t('adviceThirteenText'),
     ];
-    setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
+    // Some locales have untranslated ("not available") advice entries —
+    // never surface those as the rotating quote.
+    const availableQuotes = quotes.filter(
+      (candidate) => candidate && candidate !== 'not available'
+    );
+    setQuote([...availableQuotes].sort(() => Math.random() - 0.5)[0] ?? '');
   }, []);
 
   const onMessagePress = (messageId: number) => {
@@ -1176,6 +1183,29 @@ const SingleChat = (props: any) => {
   const onWaliPress = () => {
     props.navigation.navigate('AddWali', { fromSettings: true });
   };
+
+  const onViewProfilePress = () => {
+    props.navigation.navigate('UserProfile', { userData: otherUserData });
+  };
+
+  const onIcebreakerSelect = (text: string) => {
+    setInputMessage(text);
+    inputRef.current?.focus();
+  };
+
+  // Offer greeting suggestions only before the very first message — never
+  // once any chat history exists. The intro panel follows the same rule.
+  const showIcebreakers =
+    !loader && messages.length === 0 && !isBlockedYou && !isBlockedByYou;
+
+  const renderThreadIntro = () => (
+    <MatchIntroCard
+      otherUserData={otherUserData}
+      isBlockedYou={isBlockedYou}
+      onViewProfilePress={onViewProfilePress}
+      quote={quote || undefined}
+    />
+  );
 
   const handleSubmitEditing = async () => {
     if (inputMessage.trim().length > 0) {
@@ -1292,6 +1322,7 @@ const SingleChat = (props: any) => {
         keyboardShouldPersistTaps={'handled'}
         scrollEnabled={false}
       >
+        <ChatBackgroundPattern />
         {guardian ? (
           <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
             <Text style={Styles.guardianText}>{t('monitoredByWali')}</Text>
@@ -1356,85 +1387,82 @@ const SingleChat = (props: any) => {
               keyExtractor={(item: any) => String(item.id)}
             />
           ) : (
-            <View style={Styles.textContainer}>
-              <Image
-                source={Images.quotesIcon}
-                resizeMode="contain"
-                style={Styles.logo}
-              />
-              <Text style={Styles.subText}>{quote?.split('|')[0]}</Text>
-              <Text style={[Styles.subText, { fontWeight: 'bold' }]}>
-                {quote?.split('|')[1]}
-              </Text>
+            <View style={Styles.threadIntroEmptyWrapper}>
+              {renderThreadIntro()}
             </View>
           )}
         </ScrollView>
-        {isRecordingVoice ? (
-          <VoiceRecorderBar
-            elapsedSeconds={voiceElapsedSeconds}
-            isSending={isSendingVoice}
-            waveformPeaks={voiceWaveformPeaks}
-            onCancel={cancelVoiceRecording}
-            onSend={sendVoiceRecording}
-          />
-        ) : (
-          <View
-            style={{
-              ...Styles.messageInputOuter,
-              flexDirection: Rtl ? 'row-reverse' : 'row',
-            }}
-          >
-            <TextInput
-              ref={inputRef}
-              style={{
-                ...Styles.messageInput,
-                textAlign: Rtl ? 'right' : 'left',
-              }}
-              placeholder={t('message')}
-              placeholderTextColor={Colors.muted}
-              value={inputMessage}
-              onChangeText={onChangeInputMessage}
-              onFocus={onInputFocus}
-              onSubmitEditing={handleSubmitEditing}
-              maxLength={350}
-              submitBehavior="blurAndSubmit"
-              returnKeyType="send"
+        <View>
+          {showIcebreakers && !isRecordingVoice && (
+            <IcebreakerChips onSelect={onIcebreakerSelect} rtl={Rtl} />
+          )}
+          {isRecordingVoice ? (
+            <VoiceRecorderBar
+              elapsedSeconds={voiceElapsedSeconds}
+              isSending={isSendingVoice}
+              waveformPeaks={voiceWaveformPeaks}
+              onCancel={cancelVoiceRecording}
+              onSend={sendVoiceRecording}
             />
-            <TouchableOpacity
+          ) : (
+            <View
               style={{
-                ...Styles.sendBtn,
-                backgroundColor:
-                  inputMessage.trim().length === 0
-                    ? Colors.primaryLite
-                    : Colors.primary,
-              }}
-              onPress={async () => {
-                if (inputMessage.trim().length === 0) {
-                  await startVoiceRecording();
-                  return;
-                }
-                const res = await onSendPress(inputMessage);
-
-                if (res?.type === 'blockedByYou') {
-                  Alert.alert(
-                    `You have blocked ${otherUserData?.name} please unblock first to send message`
-                  );
-                }
+                ...Styles.messageInputOuter,
+                flexDirection: Rtl ? 'row-reverse' : 'row',
               }}
             >
-              <Ionicons
-                name={inputMessage.trim().length === 0 ? 'mic' : 'send'}
-                size={wp(4.6)}
-                color={Colors.color2}
+              <TextInput
+                ref={inputRef}
                 style={{
-                  marginLeft: Rtl ? 0 : wp(0.5),
-                  marginRight: Rtl ? wp(0.5) : 0,
-                  transform: Rtl ? [{ scaleX: -1 }] : [],
+                  ...Styles.messageInput,
+                  textAlign: Rtl ? 'right' : 'left',
                 }}
+                placeholder={t('message')}
+                placeholderTextColor={Colors.muted}
+                value={inputMessage}
+                onChangeText={onChangeInputMessage}
+                onFocus={onInputFocus}
+                onSubmitEditing={handleSubmitEditing}
+                maxLength={350}
+                submitBehavior="blurAndSubmit"
+                returnKeyType="send"
               />
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={{
+                  ...Styles.sendBtn,
+                  backgroundColor:
+                    inputMessage.trim().length === 0
+                      ? Colors.primaryLite
+                      : Colors.primary,
+                }}
+                onPress={async () => {
+                  if (inputMessage.trim().length === 0) {
+                    await startVoiceRecording();
+                    return;
+                  }
+                  const res = await onSendPress(inputMessage);
+
+                  if (res?.type === 'blockedByYou') {
+                    Alert.alert(
+                      `You have blocked ${otherUserData?.name} please unblock first to send message`
+                    );
+                  }
+                }}
+              >
+                <Ionicons
+                  name={inputMessage.trim().length === 0 ? 'mic' : 'send'}
+                  size={wp(4.6)}
+                  color={Colors.color2}
+                  style={{
+                    marginLeft: Rtl ? 0 : wp(0.5),
+                    marginRight: Rtl ? wp(0.5) : 0,
+                    transform: Rtl ? [{ scaleX: -1 }] : [],
+                  }}
+                />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </ScrollView>
     </Container>
   );

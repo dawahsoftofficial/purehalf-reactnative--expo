@@ -1,5 +1,11 @@
 import Geolocation from '@react-native-community/geolocation';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   AppState,
   type AppStateStatus,
@@ -74,6 +80,9 @@ function Location({ navigation }: LocationProps) {
   const [report, setReport] = useState<boolean>(false);
   const [isReported, setIsReported] = useState<boolean>(false);
   const [failed, setFailed] = useState<boolean>(false);
+  // Guards against overlapping location requests (each has a 30s timeout).
+  // Without it, repeatedly returning to the foreground would stack requests.
+  const isFetchingRef = useRef<boolean>(false);
 
   const navigateToNextScreen = useCallback(
     (user: User) => {
@@ -178,49 +187,71 @@ function Location({ navigation }: LocationProps) {
     [extractLocationInfo, onTagLineSubmit]
   );
 
-  const getOneTimeLocation = useCallback(() => {
-    setLoading(true);
-    Geolocation.getCurrentPosition(
-      (position: GeolocationPosition) => {
-        const currentLatitude = position.coords.latitude;
-        const currentLongitude = position.coords.longitude;
-        getCountryAndCity(currentLatitude, currentLongitude);
-      },
-      (error: GeolocationError) => {
-        console.error('Geolocation error:', error);
-        flashErrorMessage('Please enable location from settings');
-        setLoading(false);
-        setFailed(true);
-      },
-      {
-        enableHighAccuracy: false,
-        timeout: 30000,
-        maximumAge: 1000,
+  const getOneTimeLocation = useCallback(
+    ({ silent = false }: { silent?: boolean } = {}) => {
+      // Don't stack automatic retries on top of an in-flight request.
+      if (silent && isFetchingRef.current) {
+        return;
       }
-    );
-  }, [getCountryAndCity]);
-
-  const requestLocationPermission = useCallback(async () => {
-    if (isIOS) {
-      getOneTimeLocation();
-      return;
-    }
-
-    try {
-      const granted = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      isFetchingRef.current = true;
+      setLoading(true);
+      Geolocation.getCurrentPosition(
+        (position: GeolocationPosition) => {
+          isFetchingRef.current = false;
+          const currentLatitude = position.coords.latitude;
+          const currentLongitude = position.coords.longitude;
+          getCountryAndCity(currentLatitude, currentLongitude);
+        },
+        (error: GeolocationError) => {
+          isFetchingRef.current = false;
+          console.error('Geolocation error:', error);
+          setLoading(false);
+          setFailed(true);
+          // Only surface a flash for explicit user attempts. Automatic retries
+          // triggered by returning to the foreground stay silent, otherwise the
+          // same "enable location" message loops every time the user comes back
+          // from the settings screen while the GPS has no fix yet (a transient
+          // timeout is misreported as location being off).
+          if (!silent) {
+            flashErrorMessage('Please enable location from settings');
+          }
+        },
+        {
+          enableHighAccuracy: false,
+          timeout: 30000,
+          maximumAge: 1000,
+        }
       );
-      if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-        getOneTimeLocation();
-      } else {
-        flashErrorMessage('Allow Permission to access your location');
+    },
+    [getCountryAndCity]
+  );
+
+  const requestLocationPermission = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (isIOS) {
+        getOneTimeLocation({ silent });
+        return;
+      }
+
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          getOneTimeLocation({ silent });
+        } else {
+          setFailed(true);
+          if (!silent) {
+            flashErrorMessage('Allow Permission to access your location');
+          }
+        }
+      } catch (error) {
+        console.error('Permission request error:', error);
         setFailed(true);
       }
-    } catch (error) {
-      console.error('Permission request error:', error);
-      setFailed(true);
-    }
-  }, [getOneTimeLocation]);
+    },
+    [getOneTimeLocation]
+  );
 
   useEffect(() => {
     const permissionTimer = setTimeout(() => {
@@ -243,7 +274,9 @@ function Location({ navigation }: LocationProps) {
       'change',
       (nextState: AppStateStatus) => {
         if (nextState === 'active' && failed) {
-          requestLocationPermission();
+          // Silent: auto-retry to proceed if the user just enabled location,
+          // without re-flashing an error on every return to the foreground.
+          requestLocationPermission({ silent: true });
         }
       }
     );
@@ -284,7 +317,9 @@ function Location({ navigation }: LocationProps) {
         {failed && (
           <TryAgainLink
             onPress={
-              isIOS ? () => Linking.openSettings() : requestLocationPermission
+              isIOS
+                ? () => Linking.openSettings()
+                : () => requestLocationPermission()
             }
           />
         )}

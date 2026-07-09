@@ -24,7 +24,6 @@ import {
   MenuTrigger,
 } from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import ChatCreditsBadge from '@/components/badges/chat-credits-badge';
@@ -35,6 +34,7 @@ import {
   Container,
   Header,
   ModalLoader,
+  ProfilePhotoPlaceholder,
   PurchaseSuccessModal,
   Text,
 } from '../../components';
@@ -64,6 +64,8 @@ import {
   usePremiumStore,
   useUserStatsStore,
 } from '../../stores';
+import ChatBackgroundPattern from './components/ChatBackgroundPattern';
+import { isLastMessageReadByParticipant } from './SingleChat.utils';
 
 type MessagesProps = {
   navigation: {
@@ -570,18 +572,11 @@ const Messages = (props: MessagesProps) => {
 
     const hasLastMessage = !!previewText && previewText.trim() !== '';
 
-    // Check if last message was sent by current user and seen by receiver
-    let isLastMessageSeen = false;
-    if (
-      item.last_message_detail &&
-      String(item.last_message_detail.sender_id) === currentUserIdStr &&
-      otherParticipant?.last_read_message_id !== null
-    ) {
-      // Check if receiver's last_read_message_id is >= last message id
-      // This means the receiver has read up to or past the last message
-      isLastMessageSeen =
-        otherParticipant.last_read_message_id >= item.last_message_detail.id;
-    }
+    const isLastMessageSeen = isLastMessageReadByParticipant(
+      item.last_message_detail,
+      otherParticipant,
+      currentUserId
+    );
 
     const isUnread = unReadCount > 0;
     return (
@@ -594,17 +589,17 @@ const Messages = (props: MessagesProps) => {
         rippleColor={Colors.primary}
       >
         <View style={Styles.profilePictureCon}>
-          {otherParticipant?.name && !isBlockedYou ? (
+          {otherParticipant?.image && !isBlockedYou ? (
             <Image
               source={{ uri: otherParticipant.image }}
               resizeMode="cover"
               style={Styles.image}
             />
           ) : (
-            <FontAwesome5
-              name="user-alt"
-              size={wp(5.5)}
-              color={Colors.primaryLite}
+            <ProfilePhotoPlaceholder
+              name={otherParticipant?.name}
+              size={AVATAR / 2}
+              centeredInitials
             />
           )}
         </View>
@@ -778,6 +773,7 @@ const Messages = (props: MessagesProps) => {
         message="Your chat credits have been added successfully."
       />
       <View style={Styles.contentContainer}>
+        <ChatBackgroundPattern />
         {isLoading ? (
           <AnimatedLoader
             text={LanguageKeys.loading}
