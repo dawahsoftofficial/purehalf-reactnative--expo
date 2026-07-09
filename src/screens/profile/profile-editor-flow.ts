@@ -25,7 +25,7 @@ export const getVisibleProfileFields = (
 ) => fields.filter((item) => !isFieldHiddenForGender(item, gender));
 
 export const getProgressLabel = (
-  title: string,
+  _title: string,
   activeIndex: number,
   total: number
 ) => {
@@ -33,7 +33,7 @@ export const getProgressLabel = (
   const safeIndex = safeTotal
     ? Math.min(Math.max(activeIndex, 0), safeTotal - 1)
     : 0;
-  return `${title} - ${safeTotal ? safeIndex + 1 : 0} of ${safeTotal}`;
+  return `${safeTotal ? safeIndex + 1 : 0} of ${safeTotal}`;
 };
 
 export const getOptionKey = (option: any) =>

@@ -145,6 +145,126 @@ jest.mock('./Funtions', () => ({
 }));
 
 describe('EditProfileGroup', () => {
+  it('does not repeat the section title in the progress label', () => {
+    render(
+      <EditProfileGroup
+        navigation={{ goBack: jest.fn() }}
+        route={{
+          params: {
+            title: 'Family Background',
+            data: [
+              {
+                title: 'Ethnicity',
+                data: [
+                  { id: 1, value: 'A' },
+                  { id: 2, value: 'B' },
+                  { id: 3, value: 'C' },
+                  { id: 4, value: 'D' },
+                  { id: 5, value: 'E' },
+                  { id: 6, value: 'F' },
+                ],
+                type: 'dropDown',
+                id: 'ethnicity-0',
+                selected: {},
+                category: 'family-0',
+                apiKey: 'ethnicity_id',
+              },
+              { title: 'Language', type: 'dropDown', id: 'language' },
+              { title: 'Nationality', type: 'dropDown', id: 'nationality' },
+              { title: 'Caste', type: 'input', id: 'caste-0' },
+            ],
+          },
+        }}
+      />
+    );
+
+    expect(screen.queryByText('Family Background - 1 of 4')).toBeNull();
+  });
+
+  it('shows a picker question title only once', () => {
+    render(
+      <EditProfileGroup
+        navigation={{ goBack: jest.fn() }}
+        route={{
+          params: {
+            title: 'Family Background',
+            data: [
+              {
+                title: 'Ethnicity',
+                data: [
+                  { id: 1, value: 'A' },
+                  { id: 2, value: 'B' },
+                  { id: 3, value: 'C' },
+                  { id: 4, value: 'D' },
+                  { id: 5, value: 'E' },
+                  { id: 6, value: 'F' },
+                ],
+                type: 'dropDown',
+                id: 'ethnicity-0',
+                selected: {},
+                category: 'family-0',
+                apiKey: 'ethnicity_id',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    expect(screen.getAllByText('Ethnicity')).toHaveLength(1);
+  });
+
+  it('shows an input question title only once', () => {
+    render(
+      <EditProfileGroup
+        navigation={{ goBack: jest.fn() }}
+        route={{
+          params: {
+            title: 'Lifestyle',
+            data: [
+              {
+                title: 'Profession',
+                type: 'input',
+                id: 'profession-0',
+                selected: {},
+                category: 'lifestyle-0',
+                apiKey: 'profession',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    expect(screen.getAllByText('Profession')).toHaveLength(1);
+  });
+
+  it('shows a scale question title only once', () => {
+    render(
+      <EditProfileGroup
+        navigation={{ goBack: jest.fn() }}
+        route={{
+          params: {
+            title: 'Appearance & Health',
+            data: [
+              {
+                title: 'Height',
+                data: [{ scale: 'cm', values: [160, 170] }],
+                type: 'scalling',
+                id: 'height-0',
+                selected: {},
+                category: 'appearance-0',
+                apiKey: 'height',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    expect(screen.getAllByText('Height')).toHaveLength(1);
+  });
+
   it('shows a tag question title only once', () => {
     render(
       <EditProfileGroup

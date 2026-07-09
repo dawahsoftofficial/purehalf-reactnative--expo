@@ -383,14 +383,13 @@ const EditProfileGroup = ({ navigation, route }: any) => {
             outerLabelStyle={{ alignSelf: 'flex-start' }}
           />
           <PickerButton
-            outerLabel={sTitle}
             buttonText={
               value && value.length !== 0
                 ? JSON.stringify(value)
                 : LanguageKeys.none
             }
             onPress={openHeightWeightPicker.bind(null, values, sTitle, sTitle)}
-            buttonContainer={{ width: wp(45) }}
+            buttonContainer={{ width: wp(45), marginTop: 0 }}
           />
         </View>
       );
@@ -444,8 +443,9 @@ const EditProfileGroup = ({ navigation, route }: any) => {
           <View style={Styles.controlWrap}>
             {type === 'input' ? (
               <IconInput
-                label={iTitle}
                 placeholder={placeholder}
+                outerLabelStyle={Styles.hiddenControlLabel}
+                containerStyle={Styles.labelLessControl}
                 inputStyle={Styles.input}
                 value={
                   focusedInput.activeInputId === id ? focusedInput.value : value
@@ -465,7 +465,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
               />
             ) : (
               <PickerButton
-                outerLabel={iTitle}
                 buttonText={
                   typeof value === 'number'
                     ? value === 1
@@ -478,6 +477,7 @@ const EditProfileGroup = ({ navigation, route }: any) => {
                       : LanguageKeys.notYetProvided
                 }
                 onPress={openPicker.bind(null, iData, iTitle, id)}
+                buttonContainer={Styles.labelLessPickerButton}
               />
             )}
           </View>
@@ -644,6 +644,17 @@ const Styles = StyleSheet.create({
   },
   input: {
     width: wp(80),
+  },
+  hiddenControlLabel: {
+    height: 0,
+    lineHeight: 0,
+    opacity: 0,
+  },
+  labelLessControl: {
+    marginTop: 0,
+  },
+  labelLessPickerButton: {
+    marginTop: 0,
   },
   scallingRow: {
     flexDirection: 'row',

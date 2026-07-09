@@ -43,12 +43,12 @@ describe('getVisibleProfileFields', () => {
 });
 
 describe('getProgressLabel', () => {
-  it('formats the group title and one-based progress', () => {
-    expect(getProgressLabel('Lifestyle', 0, 11)).toBe('Lifestyle - 1 of 11');
+  it('formats one-based progress without repeating the group title', () => {
+    expect(getProgressLabel('Lifestyle', 0, 11)).toBe('1 of 11');
   });
 
   it('keeps progress inside range', () => {
-    expect(getProgressLabel('Lifestyle', 20, 11)).toBe('Lifestyle - 11 of 11');
+    expect(getProgressLabel('Lifestyle', 20, 11)).toBe('11 of 11');
   });
 });
 
