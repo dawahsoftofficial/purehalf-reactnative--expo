@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import React, { type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 
 import EditProfileGroup from './EditProfileGroup';
+import { updateDetails } from './Funtions';
 
 type ChildrenProps = {
   children?: ReactNode;
@@ -20,6 +21,13 @@ type TextProps = {
   text?: ReactNode;
 };
 
+type ButtonProps = TextProps & {
+  disabled?: boolean;
+  loading?: boolean;
+  loadingMessage?: ReactNode;
+  onPress?: () => void;
+};
+
 type TitleProps = {
   title?: ReactNode;
 };
@@ -30,7 +38,9 @@ type RippleProps = ChildrenProps & {
   style?: StyleProp<ViewStyle>;
 };
 
-type MockTextComponent = React.ComponentType<ChildrenProps>;
+type MockTextComponent = React.ComponentType<
+  ChildrenProps & { onPress?: () => void }
+>;
 type MockViewComponent = React.ComponentType<
   ChildrenProps & { style?: StyleProp<ViewStyle> }
 >;
@@ -54,8 +64,25 @@ jest.mock('../../components', () => {
     View: MockViewComponent;
   };
 
-  const mockButton = ({ text }: TextProps) =>
-    ReactActual.createElement(MockText, null, text);
+  const mockButton = ({
+    disabled,
+    loading,
+    loadingMessage,
+    onPress,
+    text,
+  }: ButtonProps) =>
+    ReactActual.createElement(
+      MockView,
+      null,
+      loading
+        ? ReactActual.createElement(MockText, null, 'button-loader')
+        : null,
+      ReactActual.createElement(
+        MockText,
+        { onPress: disabled ? undefined : onPress },
+        loading && loadingMessage ? loadingMessage : text
+      )
+    );
   const mockContainer = ({ children }: ChildrenProps) =>
     ReactActual.createElement(MockView, null, children);
   const mockHeader = ({ title }: TitleProps) =>
@@ -145,5 +172,39 @@ describe('EditProfileGroup', () => {
     );
 
     expect(screen.getAllByText('Disabilities')).toHaveLength(1);
+  });
+
+  it('shows a save status without using the button spinner', async () => {
+    (updateDetails as jest.Mock).mockReturnValue(new Promise(() => undefined));
+
+    render(
+      <EditProfileGroup
+        navigation={{ goBack: jest.fn() }}
+        route={{
+          params: {
+            title: 'Appearance & Health',
+            data: [
+              {
+                title: 'Disabilities',
+                data: [
+                  { id: 1, value: 'None' },
+                  { id: 2, value: 'Deaf' },
+                ],
+                type: 'dropDown',
+                id: 'dis-0',
+                selected: {},
+                category: 'appearance-0',
+                apiKey: 'disability_id',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    fireEvent.press(screen.getByText('Update'));
+
+    expect((await screen.findAllByText('Updating')).length).toBeGreaterThan(0);
+    expect(screen.queryByText('button-loader')).toBeNull();
   });
 });

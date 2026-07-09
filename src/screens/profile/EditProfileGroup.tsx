@@ -513,6 +513,12 @@ const EditProfileGroup = ({ navigation, route }: any) => {
         )}
       </View>
       <View style={Styles.footer}>
+        {updateLoader ? (
+          <View style={Styles.savingStatus}>
+            <View style={Styles.savingAccent} />
+            <Text style={Styles.savingStatusText}>{LanguageKeys.updating}</Text>
+          </View>
+        ) : null}
         <View style={Styles.footerRow}>
           {!isFirstStep ? (
             <Ripple
@@ -540,15 +546,19 @@ const EditProfileGroup = ({ navigation, route }: any) => {
           </Ripple>
           <View style={Styles.primaryBtnWrap}>
             <Button
-              text={isLastStep ? LanguageKeys.update : LanguageKeys.next}
+              text={
+                updateLoader
+                  ? LanguageKeys.updating
+                  : isLastStep
+                    ? LanguageKeys.update
+                    : LanguageKeys.next
+              }
               onPress={
                 updateLoader || visibleFields.length === 0
                   ? undefined
                   : onPrimaryPress
               }
               disabled={updateLoader || visibleFields.length === 0}
-              loading={updateLoader}
-              loadingMessage={LanguageKeys.updating}
             />
           </View>
         </View>
@@ -673,6 +683,23 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2),
+  },
+  savingStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: hp(1.2),
+    gap: wp(2),
+  },
+  savingAccent: {
+    flex: 1,
+    height: 3,
+    borderRadius: 999,
+    backgroundColor: Colors.primary,
+  },
+  savingStatusText: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
   },
   secondaryBtn: {
     minHeight: hp(5.5),
