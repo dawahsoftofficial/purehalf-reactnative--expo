@@ -1,5 +1,6 @@
 import { getApp } from '@react-native-firebase/app';
 import { getAuth, signOut } from '@react-native-firebase/auth';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Purchases from 'react-native-purchases';
 
 import {
@@ -66,7 +67,14 @@ export async function cleanupSession(
     console.log('[cleanupSession] firebase signOut failed:', error);
   }
 
-  // 2. Firestore / RTDB conversation listener.
+  // 2. Google Sign-In provider state.
+  try {
+    await GoogleSignin.signOut();
+  } catch (error) {
+    console.log('[cleanupSession] GoogleSignin.signOut failed:', error);
+  }
+
+  // 3. Firestore / RTDB conversation listener.
   try {
     await stopConversationsListener();
   } catch (error) {

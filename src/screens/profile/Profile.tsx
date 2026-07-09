@@ -24,7 +24,6 @@ import {
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
-import InterestAndHobbyCardStatic from './InterestAndHobbyCardStatic';
 import {
   type BlockPickerOption,
   BlockPickerSheet,
@@ -58,7 +57,6 @@ type UserDetail = {
   height?: number;
   weight_scale?: string;
   weight?: number;
-  personality_id_value?: unknown;
   gender?: string;
 };
 
@@ -127,7 +125,6 @@ const Profile = ({
   const [isBlockedByYou, setIsBlockedByYou] = useState(false);
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
-  const [matchingData, setMatchingData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
 
   const blockPickerData: BlockPickerOption[] = useMemo(
@@ -365,7 +362,6 @@ const Profile = ({
           }
           setIsBlockedByYou(user?.blocked === 1);
           setIsBlockedYou(user?.blocked_you === 1);
-          setMatchingData(user?.detail?.personality_id_value);
           if (user?.blocked_you !== 1) {
             getAttribute(data, user);
           } else {
@@ -598,12 +594,6 @@ const Profile = ({
                     </>
                   ) : (
                     <>
-                      <InterestAndHobbyCardStatic
-                        data={matchingData}
-                        headerHeading={LanguageKeys.matching}
-                        fromUserProfile={fromUserProfile}
-                        matchPercentage={userData?.match_percentage}
-                      />
                       <InterestAndHobbyCard
                         data={interestAndHobbies}
                         headerHeading={LanguageKeys.myInterestAndHobbies}

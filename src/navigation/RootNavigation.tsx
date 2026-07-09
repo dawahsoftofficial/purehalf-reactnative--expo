@@ -18,6 +18,7 @@ import {
   AuthWelcome,
   BankTransfer,
   BlockedList,
+  ChatCreditsPaywall,
   ChooseLanguage,
   ContactSupport,
   DiscountProFeaturesPromotion,
@@ -152,6 +153,13 @@ function App() {
           <Stack.Screen
             name="ProFeaturesPromotion"
             component={PremiumPaywallScreen}
+            options={{
+              animation: 'fade',
+            }}
+          />
+          <Stack.Screen
+            name="ChatCreditsPaywall"
+            component={ChatCreditsPaywall}
             options={{
               animation: 'fade',
             }}

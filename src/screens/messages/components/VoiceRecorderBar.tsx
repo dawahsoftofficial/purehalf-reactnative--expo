@@ -9,6 +9,7 @@ import Styles from '../SingleChat.styles';
 type Props = {
   elapsedSeconds: number;
   isSending: boolean;
+  waveformPeaks?: number[];
   onCancel: () => void;
   onSend: () => void;
 };
@@ -22,9 +23,17 @@ const formatDuration = (seconds: number) => {
 const VoiceRecorderBar = ({
   elapsedSeconds,
   isSending,
+  waveformPeaks,
   onCancel,
   onSend,
 }: Props) => {
+  const peaks =
+    waveformPeaks && waveformPeaks.length > 0
+      ? waveformPeaks
+      : Array.from({ length: 16 }).map((_, index) =>
+          Number((0.03 + ((index % 5) + 1) * 0.13).toFixed(2))
+        );
+
   return (
     <View style={Styles.voiceRecorderOuter}>
       <TouchableOpacity
@@ -36,12 +45,13 @@ const VoiceRecorderBar = ({
       </TouchableOpacity>
       <Text style={Styles.voiceTimer}>{formatDuration(elapsedSeconds)}</Text>
       <View style={Styles.voiceWaveTrack}>
-        {Array.from({ length: 16 }).map((_, index) => (
+        {peaks.map((peak, index) => (
           <View
             key={index}
+            testID={`voice-wave-bar-${index}`}
             style={[
               Styles.voiceWaveBar,
-              { height: wp(1.2 + (index % 5) * 0.8) },
+              { height: wp(1 + Math.min(1, Math.max(0.05, peak)) * 6) },
             ]}
           />
         ))}

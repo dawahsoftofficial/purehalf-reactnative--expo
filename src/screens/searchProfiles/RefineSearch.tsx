@@ -6,7 +6,7 @@ import React, {
   useReducer,
   useState,
 } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { Alert, FlatList, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -39,11 +39,20 @@ type RefineSearchProps = {
   premium?: boolean;
 };
 
+const hasCoordinate = (value: unknown): boolean =>
+  value !== null &&
+  value !== undefined &&
+  value !== '' &&
+  Number.isFinite(Number(value));
+
 const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
   ({ premium = false }, ref) => {
     const Rtl = CheckRtl();
     const { currentUser } = useGlobalContext();
     const navigation: any = useNavigation();
+    const hasUserCoordinates =
+      hasCoordinate(currentUser?.latitude) &&
+      hasCoordinate(currentUser?.longitude);
 
     // Premium filter IDs for male users
     const MALE_PREMIUM_FILTER_IDS = [
@@ -103,6 +112,20 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       item: {},
     });
 
+    const showMissingLocationAlert = () => {
+      Alert.alert(
+        'Add your location',
+        'Near Me search needs your location. Add your location to use nearby filters.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Add Location',
+            onPress: () => navigation.navigate('UserLocation'),
+          },
+        ]
+      );
+    };
+
     const onClosePicker = () =>
       setPicker({
         visible: false,
@@ -113,6 +136,11 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       });
 
     const onRadioPress = (data: any, selectedElement: any, item: any) => {
+      if (selectedElement?.id === 'location' && !hasUserCoordinates) {
+        showMissingLocationAlert();
+        return;
+      }
+
       data.forEach((element: any) => {
         if (element.value === selectedElement.value) {
           if (element.id === 'location' || element.id === 'country') {
@@ -126,6 +154,32 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
       });
       forceUpdate();
     };
+
+    useEffect(() => {
+      if (hasUserCoordinates) return;
+
+      setPeopleSearch('country');
+      setFiltersDataList((prevFilters: any[]) =>
+        prevFilters.map((filterItem: any) => {
+          if (filterItem?.id !== 'search_for_people') {
+            return filterItem;
+          }
+
+          return {
+            ...filterItem,
+            data: filterItem.data.map((option: any) => ({
+              ...option,
+              selected: option.id === 'country',
+            })),
+            selected: {
+              id: 'country',
+              selected: true,
+              value: LanguageKeys.byCountry,
+            },
+          };
+        })
+      );
+    }, [hasUserCoordinates]);
 
     const onRadioClearPress = (item: any) => {
       filtersDataList?.forEach((element: any) => {
@@ -526,12 +580,15 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
           >
             {data.map((element: any, index: any) => {
               const active = element?.id === selected?.id;
+              const disabledNearMe =
+                element?.id === 'location' && !hasUserCoordinates;
               return (
                 <Ripple
                   style={{
                     ...Styles.chip,
                     backgroundColor: active ? Colors.primary : Colors.lavender,
                     borderColor: active ? Colors.primary : Colors.hairline,
+                    opacity: disabledNearMe ? 0.45 : 1,
                   }}
                   onPress={onRadioPress.bind(null, data, element, item)}
                   key={index}

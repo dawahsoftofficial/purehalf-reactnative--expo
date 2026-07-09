@@ -1,7 +1,9 @@
 import Purchases, { type CustomerInfo } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
-type PaywallResult = {
+import { navigationRef } from '../navigation/RootNavigation';
+
+export type PaywallResult = {
   success: boolean;
   customerInfo?: CustomerInfo;
   error?: string;
@@ -112,5 +114,29 @@ export async function presentBoostProfilePaywall(): Promise<PaywallResult> {
  * Present Chat Credits Paywall
  */
 export async function presentChatCreditsPaywall(): Promise<PaywallResult> {
-  return presentPaywall('chat-credits');
+  if (!navigationRef.isReady()) {
+    return {
+      success: false,
+      error: 'Navigation is not ready',
+    };
+  }
+
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const onComplete = (result: PaywallResult) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+
+    const navigate = navigationRef.navigate as (
+      name: string,
+      params: { onComplete: (result: PaywallResult) => void }
+    ) => void;
+
+    navigate('ChatCreditsPaywall', {
+      onComplete,
+    });
+  });
 }

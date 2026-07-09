@@ -27,12 +27,16 @@ type UseSendMessageParams = {
   setInputMessage: (message: string) => void;
 };
 
-type SendMessageResult = { type: 'blockedByYou' } | { type: 'sent' };
+type SendMessageResult =
+  | { type: 'blockedByYou' }
+  | { type: 'sent' }
+  | { type: 'failed' };
 
 export type AudioSendInput = {
   type: 'audio';
   audio: { uri: string; name: string; type: string };
   duration_seconds: number;
+  waveform_peaks?: number[];
 };
 
 export type SendMessageInput = string | AudioSendInput;
@@ -160,8 +164,9 @@ export function useSendMessage({
     const didSend = await sendMessage(input);
     if (didSend) {
       recordSentMessage();
+      return { type: 'sent' };
     }
-    return { type: 'sent' };
+    return { type: 'failed' };
   };
 
   return { onSendPress };

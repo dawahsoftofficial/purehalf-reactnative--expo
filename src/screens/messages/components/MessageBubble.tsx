@@ -14,7 +14,9 @@ import {
   getMessageTime,
   getTimeAgo,
 } from '../SingleChat.utils';
-import AudioMessageBubble from './AudioMessageBubble';
+import AudioMessageBubble, {
+  type AudioBubblePlayback,
+} from './AudioMessageBubble';
 import MessageStatusIcon from './MessageStatusIcon';
 
 type Props = {
@@ -33,6 +35,8 @@ type Props = {
 
   messagePressedId: any;
   onMessagePress: (messageId: any) => void;
+  getAudioPlayback: (messageId: number) => AudioBubblePlayback;
+  onToggleAudioPlayback: (item: any) => void;
 
   Styles: any;
   forceUpdate?: () => void; // optional; not used here but kept for flexibility
@@ -49,6 +53,8 @@ const MessageBubble = ({
   messages,
   messagePressedId,
   onMessagePress,
+  getAudioPlayback,
+  onToggleAudioPlayback,
   Styles,
 }: Props) => {
   // Use sender_id from API response (new structure)
@@ -142,6 +148,8 @@ const MessageBubble = ({
             isRead={isRead}
             messageStatus={messageStatus}
             isBlockedYou={isBlockedYou}
+            playback={getAudioPlayback(item.id)}
+            onTogglePlayback={onToggleAudioPlayback}
             Styles={Styles}
           />
         ) : (

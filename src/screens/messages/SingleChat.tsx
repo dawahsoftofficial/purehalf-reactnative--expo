@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
+  AppState,
+  type AppStateStatus,
   Image,
   ScrollView,
   Text,
@@ -37,12 +39,33 @@ import type {
   ParticipantBlockedEventData,
 } from '../../services/api/types/message-types';
 import chatAudioService from '../../services/audio/chat-audio-service';
+import type { AudioBubblePlayback } from './components/AudioMessageBubble';
 import MessageBubble from './components/MessageBubble';
 import TypingIndicator from './components/TypingIndicator';
 import VoiceRecorderBar from './components/VoiceRecorderBar';
 import { useSendMessage } from './hooks/useSendMessage';
 import Styles from './SingleChat.styles';
 import SingleChatHeader from './SingleChatHeader';
+
+type ChatAudioPlaybackState = {
+  messageId: number | null;
+  status: 'idle' | 'loading' | 'playing' | 'paused';
+  positionMillis: number;
+  durationMillis: number;
+};
+
+const isRateLimitError = (error: unknown): boolean => {
+  if (typeof error === 'string') {
+    return error.toLowerCase().includes('too many attempts');
+  }
+
+  if (error && typeof error === 'object') {
+    const maybeError = error as { response?: { status?: number } };
+    return maybeError.response?.status === 429;
+  }
+
+  return false;
+};
 
 const SingleChat = (props: any) => {
   const Rtl = CheckRtl();
@@ -66,6 +89,12 @@ const SingleChat = (props: any) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationData, setConversationData] = useState<any>({});
   const [conversationId, setConversationId] = useState('');
+  const [audioPlayback, setAudioPlayback] = useState<ChatAudioPlaybackState>({
+    messageId: null,
+    status: 'idle',
+    positionMillis: 0,
+    durationMillis: 0,
+  });
 
   // Pusher real-time features
   const [isOtherUserTyping, setIsOtherUserTyping] = useState(false);
@@ -79,6 +108,8 @@ const SingleChat = (props: any) => {
   // Track messages to avoid race conditions between fetchMessages and Pusher events
   const messagesRef = useRef<Message[]>([]);
   const isFetchingMessagesRef = useRef<boolean>(false);
+  const audioPlaybackRef = useRef<ChatAudioPlaybackState>(audioPlayback);
+  const audioSourceCacheRef = useRef<Map<number, string>>(new Map());
 
   const [inputMessage, setInputMessage] = useState('');
   const onChangeInputMessage = (text: string) => {
@@ -88,6 +119,7 @@ const SingleChat = (props: any) => {
 
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
   const [voiceElapsedSeconds, setVoiceElapsedSeconds] = useState(0);
+  const [voiceWaveformPeaks, setVoiceWaveformPeaks] = useState<number[]>([]);
   const [isSendingVoice, setIsSendingVoice] = useState(false);
   const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -391,7 +423,12 @@ const SingleChat = (props: any) => {
         const currentUserParticipant = conversationData.participants.find(
           (p: any) => String(p.id) === currentUserIdStr
         );
-        const unReadCount = currentUserParticipant?.unread_count || 0;
+        // Focus handling batches existing unread messages; avoid a second
+        // mark-all-read request during subscription setup.
+        const unReadCount = Math.min(
+          0,
+          currentUserParticipant?.unread_count || 0
+        );
 
         if (unReadCount > 0) {
           console.log(
@@ -446,6 +483,7 @@ const SingleChat = (props: any) => {
         sender_id: messageData.sender_id,
         created_at: messageData.created_at,
         statuses: messageData.statuses || [],
+        audio: messageData.audio || null,
       };
 
       // Add new message to list
@@ -491,8 +529,10 @@ const SingleChat = (props: any) => {
               '[SingleChat] ❌ Error marking message as read:',
               error
             );
-            // Remove from set on error so we can retry if needed
-            markedAsReadRef.current.delete(message.id);
+            if (!isRateLimitError(error)) {
+              // Remove from set on non-throttle errors so we can retry later.
+              markedAsReadRef.current.delete(message.id);
+            }
           });
       }
 
@@ -514,8 +554,10 @@ const SingleChat = (props: any) => {
               '[SingleChat] ❌ Error marking message as delivered:',
               error
             );
-            // Remove from set on error so we can retry if needed
-            markedAsDeliveredRef.current.delete(message.id);
+            if (!isRateLimitError(error)) {
+              // Remove from set on non-throttle errors so we can retry later.
+              markedAsDeliveredRef.current.delete(message.id);
+            }
           });
       }
 
@@ -673,6 +715,246 @@ const SingleChat = (props: any) => {
     messagesRef.current = messages;
   }, [messages]);
 
+  useEffect(() => {
+    audioPlaybackRef.current = audioPlayback;
+  }, [audioPlayback]);
+
+  const resetAudioPlayback = useCallback(() => {
+    setAudioPlayback({
+      messageId: null,
+      status: 'idle',
+      positionMillis: 0,
+      durationMillis: 0,
+    });
+  }, []);
+
+  const getAudioDurationMillis = useCallback((message: any): number => {
+    const seconds =
+      message?.audio?.duration_seconds || message?.duration_seconds || 0;
+    return Math.max(0, seconds * 1000);
+  }, []);
+
+  const getAudioPlayback = useCallback(
+    (messageId: number): AudioBubblePlayback => {
+      const isActive = audioPlayback.messageId === messageId;
+      return {
+        status: isActive ? audioPlayback.status : 'idle',
+        positionMillis: isActive ? audioPlayback.positionMillis : 0,
+        durationMillis: isActive ? audioPlayback.durationMillis : 0,
+        isActive,
+      };
+    },
+    [audioPlayback]
+  );
+
+  const findNextSeriesAudioMessage = useCallback((message: any) => {
+    const currentMessages = messagesRef.current;
+    const currentIndex = currentMessages.findIndex(
+      (candidate) => candidate.id === message?.id
+    );
+    if (currentIndex <= 0) return null;
+
+    const nextMessage = currentMessages[currentIndex - 1];
+    const sameSender =
+      String(nextMessage?.sender_id) === String(message?.sender_id) &&
+      String(nextMessage?.sender_type) === String(message?.sender_type);
+
+    return sameSender && nextMessage?.type === 'audio' ? nextMessage : null;
+  }, []);
+
+  const stopAudioPlayback = useCallback(async () => {
+    try {
+      await chatAudioService.stopPlayback();
+    } catch (error) {
+      console.error('[SingleChat] Error stopping audio playback:', error);
+    } finally {
+      resetAudioPlayback();
+    }
+  }, [resetAudioPlayback]);
+
+  const pauseAudioPlayback = useCallback(async () => {
+    if (audioPlaybackRef.current.status !== 'playing') return;
+    try {
+      await chatAudioService.pausePlayback();
+      setAudioPlayback((previous) =>
+        previous.status === 'playing'
+          ? { ...previous, status: 'paused' }
+          : previous
+      );
+    } catch (error) {
+      console.error('[SingleChat] Error pausing audio playback:', error);
+    }
+  }, []);
+
+  const resumeAudioPlayback = useCallback(async () => {
+    if (audioPlaybackRef.current.status !== 'paused') return;
+    try {
+      await chatAudioService.resumePlayback();
+      setAudioPlayback((previous) =>
+        previous.status === 'paused'
+          ? { ...previous, status: 'playing' }
+          : previous
+      );
+    } catch (error) {
+      console.error('[SingleChat] Error resuming audio playback:', error);
+    }
+  }, []);
+
+  const getPreparedAudioSource = useCallback(async (message: any) => {
+    if (message.local_uri) return message.local_uri;
+
+    const cachedSource = audioSourceCacheRef.current.get(message.id);
+    if (cachedSource) return cachedSource;
+
+    const sourceUrl = (await messageServices.getMessageAudioUrl(message.id))
+      .url;
+    audioSourceCacheRef.current.set(message.id, sourceUrl);
+    return sourceUrl;
+  }, []);
+
+  const prepareAudioMessageSource = useCallback(
+    async (message: any): Promise<void> => {
+      if (!message?.id) return;
+
+      const fallbackDurationMillis = getAudioDurationMillis(message);
+      setAudioPlayback({
+        messageId: message.id,
+        status: 'loading',
+        positionMillis: 0,
+        durationMillis: fallbackDurationMillis,
+      });
+
+      try {
+        await getPreparedAudioSource(message);
+      } catch (error) {
+        console.error('[SingleChat] Error preparing audio:', error);
+        flashErrorMessage('Unable to load this voice message.');
+      } finally {
+        resetAudioPlayback();
+      }
+    },
+    [getAudioDurationMillis, getPreparedAudioSource, resetAudioPlayback]
+  );
+
+  const playAudioMessage = useCallback(
+    async (message: any): Promise<void> => {
+      if (!message?.id) return;
+
+      const previousMessageId = audioPlaybackRef.current.messageId;
+      if (previousMessageId && previousMessageId !== message.id) {
+        try {
+          await chatAudioService.stopPlayback();
+        } catch (error) {
+          console.error('[SingleChat] Error stopping previous audio:', error);
+        }
+      }
+
+      const fallbackDurationMillis = getAudioDurationMillis(message);
+      setAudioPlayback({
+        messageId: message.id,
+        status: 'loading',
+        positionMillis: 0,
+        durationMillis: fallbackDurationMillis,
+      });
+
+      try {
+        const sourceUrl = await getPreparedAudioSource(message);
+
+        await chatAudioService.play(sourceUrl, {
+          onProgress: ({ currentPosition, duration }) => {
+            setAudioPlayback((previous) => {
+              if (previous.messageId !== message.id) return previous;
+              return {
+                ...previous,
+                status: 'playing',
+                positionMillis: Math.max(0, currentPosition),
+                durationMillis:
+                  duration > 0 ? duration : fallbackDurationMillis,
+              };
+            });
+          },
+          onPlaybackEnd: () => {
+            const nextMessage = findNextSeriesAudioMessage(message);
+            if (nextMessage) {
+              void playAudioMessage(nextMessage);
+              return;
+            }
+            resetAudioPlayback();
+          },
+        });
+
+        setAudioPlayback((previous) =>
+          previous.messageId === message.id
+            ? { ...previous, status: 'playing' }
+            : previous
+        );
+      } catch (error) {
+        console.error('[SingleChat] Error playing audio:', error);
+        resetAudioPlayback();
+        flashErrorMessage('Unable to play this voice message.');
+      }
+    },
+    [
+      findNextSeriesAudioMessage,
+      getAudioDurationMillis,
+      getPreparedAudioSource,
+      resetAudioPlayback,
+    ]
+  );
+
+  const onToggleAudioPlayback = useCallback(
+    (message: any) => {
+      const currentPlayback = audioPlaybackRef.current;
+      if (currentPlayback.messageId === message?.id) {
+        if (currentPlayback.status === 'playing') {
+          void pauseAudioPlayback();
+          return;
+        }
+        if (currentPlayback.status === 'paused') {
+          void resumeAudioPlayback();
+          return;
+        }
+      }
+
+      if (
+        !message?.local_uri &&
+        !audioSourceCacheRef.current.has(message?.id)
+      ) {
+        void prepareAudioMessageSource(message);
+        return;
+      }
+
+      void playAudioMessage(message);
+    },
+    [
+      pauseAudioPlayback,
+      playAudioMessage,
+      prepareAudioMessageSource,
+      resumeAudioPlayback,
+    ]
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener(
+      'change',
+      (nextState: AppStateStatus) => {
+        if (nextState !== 'active') {
+          void pauseAudioPlayback();
+        }
+      }
+    );
+
+    return () => {
+      subscription.remove();
+    };
+  }, [pauseAudioPlayback]);
+
+  useEffect(() => {
+    return () => {
+      void chatAudioService.stopPlayback();
+    };
+  }, []);
+
   // Initial fetch and setup Pusher
   // Only run when conversationId changes, not when callbacks are recreated
   useEffect(() => {
@@ -710,6 +992,43 @@ const SingleChat = (props: any) => {
 
       if (!currentUserId) return;
 
+      const unreadMessages = messages.filter((message) => {
+        if (message.sender_id === currentUserId || !message.id) return false;
+        if (markedAsReadRef.current.has(message.id)) return false;
+
+        return !message.statuses?.some(
+          (status) =>
+            status.participant_id === currentUserId && status.read_at !== null
+        );
+      });
+
+      if (unreadMessages.length > 0) {
+        unreadMessages.forEach((message) =>
+          markedAsReadRef.current.add(message.id)
+        );
+
+        messageServices
+          .markAllMessagesAsRead(parseInt(conversationId, 10))
+          .then(() => {
+            console.log(
+              '[SingleChat] Marked unread messages as read on focus:',
+              unreadMessages.length
+            );
+          })
+          .catch((error) => {
+            console.error(
+              '[SingleChat] Error marking all messages as read on focus:',
+              error
+            );
+
+            if (!isRateLimitError(error)) {
+              unreadMessages.forEach((message) =>
+                markedAsReadRef.current.delete(message.id)
+              );
+            }
+          });
+      }
+
       // Mark each unread message from other users as read and delivered individually
       messages.forEach((message) => {
         // Only mark messages from other users
@@ -738,8 +1057,10 @@ const SingleChat = (props: any) => {
                     '[SingleChat] Error marking message as read on focus:',
                     error
                   );
-                  // Remove from set on error so we can retry
-                  markedAsReadRef.current.delete(message.id);
+                  if (!isRateLimitError(error)) {
+                    // Remove from set on non-throttle errors so we can retry later.
+                    markedAsReadRef.current.delete(message.id);
+                  }
                 });
             } else {
               // Mark as processed even if already read to avoid duplicate checks
@@ -771,8 +1092,10 @@ const SingleChat = (props: any) => {
                     '[SingleChat] Error marking message as delivered on focus:',
                     error
                   );
-                  // Remove from set on error so we can retry
-                  markedAsDeliveredRef.current.delete(message.id);
+                  if (!isRateLimitError(error)) {
+                    // Remove from set on non-throttle errors so we can retry later.
+                    markedAsDeliveredRef.current.delete(message.id);
+                  }
                 });
             } else {
               // Mark as processed even if already delivered to avoid duplicate checks
@@ -798,13 +1121,14 @@ const SingleChat = (props: any) => {
 
   useEffect(() => {
     const unsubscribe = props.navigation.addListener('blur', () => {
+      void stopAudioPlayback();
       evaluateAndMaybeShowRatingPrompt(
         'chat_activity',
         currentUser?.created_at
       );
     });
     return unsubscribe;
-  }, [props.navigation, currentUser?.created_at]);
+  }, [props.navigation, currentUser?.created_at, stopAudioPlayback]);
 
   useEffect(() => {
     const quotes = [
@@ -873,6 +1197,8 @@ const SingleChat = (props: any) => {
   };
 
   const startVoiceRecording = async () => {
+    await stopAudioPlayback();
+
     const hasPermission = await chatAudioService.requestRecordPermission();
     if (!hasPermission) {
       flashErrorMessage(LanguageKeys.microphonePermissionDenied);
@@ -881,7 +1207,15 @@ const SingleChat = (props: any) => {
 
     try {
       setVoiceElapsedSeconds(0);
-      await chatAudioService.startRecording();
+      setVoiceWaveformPeaks([]);
+      await chatAudioService.startRecording({
+        onWaveformPeak: (peak) => {
+          setVoiceWaveformPeaks((previous) => {
+            const next = [...previous, peak];
+            return next.slice(-24);
+          });
+        },
+      });
       setIsRecordingVoice(true);
       voiceTimerRef.current = setInterval(() => {
         setVoiceElapsedSeconds((seconds) => {
@@ -902,6 +1236,7 @@ const SingleChat = (props: any) => {
     await chatAudioService.cancelRecording();
     setIsRecordingVoice(false);
     setVoiceElapsedSeconds(0);
+    setVoiceWaveformPeaks([]);
   };
 
   const sendVoiceRecording = async () => {
@@ -920,9 +1255,11 @@ const SingleChat = (props: any) => {
           type: recording.type,
         },
         duration_seconds: recording.duration_seconds,
+        waveform_peaks: recording.waveform_peaks,
       });
       setIsRecordingVoice(false);
       setVoiceElapsedSeconds(0);
+      setVoiceWaveformPeaks([]);
     } finally {
       setIsSendingVoice(false);
     }
@@ -1007,6 +1344,8 @@ const SingleChat = (props: any) => {
                     messages={messages}
                     messagePressedId={messagePressedId}
                     onMessagePress={onMessagePress}
+                    getAudioPlayback={getAudioPlayback}
+                    onToggleAudioPlayback={onToggleAudioPlayback}
                     Styles={Styles}
                   />
                 );
@@ -1014,7 +1353,7 @@ const SingleChat = (props: any) => {
               contentContainerStyle={Styles.messagesListContainer}
               getItem={(data, index) => data[index]}
               getItemCount={(data) => data.length}
-              keyExtractor={(item: any, index: any) => index}
+              keyExtractor={(item: any) => String(item.id)}
             />
           ) : (
             <View style={Styles.textContainer}>
@@ -1034,6 +1373,7 @@ const SingleChat = (props: any) => {
           <VoiceRecorderBar
             elapsedSeconds={voiceElapsedSeconds}
             isSending={isSendingVoice}
+            waveformPeaks={voiceWaveformPeaks}
             onCancel={cancelVoiceRecording}
             onSend={sendVoiceRecording}
           />

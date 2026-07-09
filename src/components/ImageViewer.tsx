@@ -9,7 +9,10 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { SwiperFlatList } from 'react-native-swiper-flatlist';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -82,8 +85,10 @@ const ImageViewer = (props: ImageViewerProps) => {
   const sliderRef = useRef<SliderRef>(null);
   const thumbnailRef = useRef<FlatList<GalleryItem>>(null);
   const rtl = CheckRtl();
+  const insets = useSafeAreaInsets();
 
   const activeItem = galleryItems[activeIndex];
+  const hasSingleGalleryItem = galleryItems.length === 1;
   const currentPosition = galleryItems.length === 0 ? 0 : activeIndex + 1;
   const galleryTitle = LanguageKeys.photosAndVideos;
   const galleryContext =
@@ -299,7 +304,16 @@ const ImageViewer = (props: ImageViewerProps) => {
     const alreadyRequested = userData?.photo_access_action === 1;
 
     return (
-      <View style={Styles.lockedSlide}>
+      <View
+        testID="locked-private-panel"
+        style={[
+          Styles.lockedSlide,
+          {
+            paddingBottom: insets.bottom + hp(18),
+            paddingTop: insets.top + hp(12),
+          },
+        ]}
+      >
         <View style={Styles.lockedIconWrap}>
           <Ionicons
             name="lock-closed-outline"
@@ -307,7 +321,9 @@ const ImageViewer = (props: ImageViewerProps) => {
             size={wp(10)}
           />
         </View>
-        <Text style={Styles.lockedTitle}>{LanguageKeys.privacyProtected}</Text>
+        <Text testID="locked-private-title" style={Styles.lockedTitle}>
+          {LanguageKeys.privacyProtected}
+        </Text>
         <Text style={Styles.lockedDescription}>
           {LanguageKeys.privatePhotoDesTwo}
         </Text>
@@ -386,7 +402,12 @@ const ImageViewer = (props: ImageViewerProps) => {
   };
 
   const renderTopBar = () => (
-    <View style={Styles.topOverlay}>
+    <View
+      style={[
+        Styles.topOverlay,
+        { top: Math.max(insets.top + hp(1), hp(3.2)) },
+      ]}
+    >
       <Ripple
         style={Styles.iconButton}
         onPress={onBackPress}
@@ -428,6 +449,7 @@ const ImageViewer = (props: ImageViewerProps) => {
     const thumbnailStyle = [
       Styles.thumbnailButton,
       isActive && Styles.thumbnailButtonActive,
+      index === galleryItems.length - 1 && Styles.thumbnailButtonLast,
     ];
 
     return (
@@ -469,15 +491,28 @@ const ImageViewer = (props: ImageViewerProps) => {
     }
 
     return (
-      <View style={Styles.bottomOverlay}>
+      <View
+        testID="thumbnail-rail"
+        style={[
+          Styles.bottomOverlay,
+          {
+            bottom: Math.max(insets.bottom + hp(1.2), hp(2)),
+          },
+          hasSingleGalleryItem && Styles.bottomOverlaySingle,
+        ]}
+      >
         <FlatList
+          testID="thumbnail-list"
           ref={thumbnailRef}
           data={galleryItems}
           horizontal
           keyExtractor={(item) => item.id}
           renderItem={renderThumbnail}
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={Styles.thumbnailList}
+          contentContainerStyle={[
+            Styles.thumbnailList,
+            hasSingleGalleryItem && Styles.thumbnailListSingle,
+          ]}
           onScrollToIndexFailed={({ index }) => {
             setTimeout(
               () => scrollThumbnailsToIndex(index, galleryItems.length),
@@ -564,6 +599,12 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     right: wp(3),
   },
+  bottomOverlaySingle: {
+    alignSelf: 'center',
+    left: undefined,
+    right: undefined,
+    width: wp(22),
+  },
   container: {
     backgroundColor: Colors.color1,
     flex: 1,
@@ -647,6 +688,7 @@ const Styles = StyleSheet.create({
     flex: 1,
   },
   lockedDescription: {
+    alignSelf: 'center',
     color: Colors.whiteRGBA90,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
@@ -654,6 +696,7 @@ const Styles = StyleSheet.create({
     marginTop: hp(1.2),
     paddingHorizontal: wp(8),
     textAlign: 'center',
+    width: '100%',
   },
   lockedIconWrap: {
     alignItems: 'center',
@@ -679,11 +722,13 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
   },
   lockedTitle: {
+    alignSelf: 'center',
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium,
     marginTop: hp(2),
     textAlign: 'center',
+    width: '100%',
   },
   requestAccessButton: {
     alignItems: 'center',
@@ -735,12 +780,19 @@ const Styles = StyleSheet.create({
     borderColor: Colors.color2,
     borderWidth: 2,
   },
+  thumbnailButtonLast: {
+    marginRight: 0,
+  },
   thumbnailImage: {
     height: '100%',
     width: '100%',
   },
   thumbnailList: {
     paddingHorizontal: wp(3),
+  },
+  thumbnailListSingle: {
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   titleWrap: {
     alignItems: 'center',
@@ -754,7 +806,7 @@ const Styles = StyleSheet.create({
     left: wp(4),
     position: 'absolute',
     right: wp(4),
-    top: hp(2),
+    top: hp(3.2),
   },
   viewerSubtitle: {
     color: Colors.whiteRGBA90,

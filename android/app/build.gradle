@@ -75,6 +75,16 @@ def enableProguardInReleaseBuilds = false
  * this variant is about 6MiB larger per architecture than default.
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
+def releaseKeystoreFile = project.hasProperty('MYAPP_UPLOAD_STORE_FILE') ? file(MYAPP_UPLOAD_STORE_FILE) : null
+def releaseSigningConfigured = releaseKeystoreFile != null &&
+        releaseKeystoreFile.exists() &&
+        project.hasProperty('MYAPP_UPLOAD_STORE_PASSWORD') &&
+        project.hasProperty('MYAPP_UPLOAD_KEY_ALIAS') &&
+        project.hasProperty('MYAPP_UPLOAD_KEY_PASSWORD')
+
+if (!releaseSigningConfigured) {
+    logger.warn("Release signing is not configured; assembleRelease will use the debug keystore for local install testing.")
+}
 
 android {
     ndkVersion rootProject.ext.ndkVersion
@@ -105,8 +115,8 @@ android {
             keyPassword 'android'
         }
         release {
-            if (project.hasProperty('MYAPP_UPLOAD_STORE_FILE')) {
-                storeFile file(MYAPP_UPLOAD_STORE_FILE)
+            if (releaseSigningConfigured) {
+                storeFile releaseKeystoreFile
                 storePassword MYAPP_UPLOAD_STORE_PASSWORD
                 keyAlias MYAPP_UPLOAD_KEY_ALIAS
                 keyPassword MYAPP_UPLOAD_KEY_PASSWORD
@@ -125,9 +135,7 @@ android {
                 nativeSymbolUploadEnabled true
                 unstrippedNativeLibsDir 'build/intermediates/merged_native_libs/release/out/lib'
             }
-            
-            // Signing with release keystore
-            signingConfig signingConfigs.release
+            signingConfig releaseSigningConfigured ? signingConfigs.release : signingConfigs.debug
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }

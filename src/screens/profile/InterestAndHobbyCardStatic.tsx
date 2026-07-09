@@ -23,7 +23,7 @@ const InterestAndHobbyCardStatic = ({
   data = [],
   headerHeading = '',
   fromUserProfile = false,
-  matchPercentage = 0,
+  matchPercentage,
 }: InterestAndHobbyCardStaticProps) => {
   const Rtl = CheckRtl();
   const { currentUser } = useGlobalContext();
@@ -37,7 +37,11 @@ const InterestAndHobbyCardStatic = ({
     );
   }, [currentUser?.detail?.personality_id, data]);
 
-  if (!fromUserProfile || !matchPercentage) {
+  if (
+    !fromUserProfile ||
+    matchPercentage === null ||
+    matchPercentage === undefined
+  ) {
     return null;
   }
 

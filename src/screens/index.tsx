@@ -3,6 +3,7 @@ export * from './accountSuspended';
 export * from './addWali';
 export * from './bankTransfer';
 export * from './blockedList';
+export * from './chatCreditsPaywall';
 export * from './chooseLanguage';
 export * from './contactSupport';
 export * from './giftMembershipCongrats';

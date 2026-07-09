@@ -1,5 +1,3 @@
-import { getApp } from '@react-native-firebase/app';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -10,18 +8,9 @@ import { Button, Container, ModalLoader, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
-import {
-  ApiServices,
-  stopConversationsListener,
-  StorageManager,
-  useGlobalContext,
-} from '../../services';
-
-const firebaseApp = getApp();
-const auth = getAuth(firebaseApp);
+import { ApiServices, cleanupSession, useGlobalContext } from '../../services';
 
 const AccountSuspended = (props: any) => {
-  const { deleteAll, getData, setData, storageKeys } = StorageManager;
   const [loading, setLoading] = useState(false);
   const { updateCurrentUser, language } = useGlobalContext();
 
@@ -33,28 +22,20 @@ const AccountSuspended = (props: any) => {
 
   const onLogoutPress = async () => {
     setLoading(true);
-    const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
-    StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
-    await ApiServices.logout().catch();
-    await signOut(auth).catch();
-    await deleteAll()
-      .then(async () => {
-        updateCurrentUser(null);
-        await setData(storageKeys.LANGUAGE, language);
-        await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
-        await stopConversationsListener();
-        props.navigation.dispatch(
-          CommonActionsNav.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
-      })
-      .catch((err) => {
-        console.log({ err });
-
-        hideLoader();
-      });
+    try {
+      await ApiServices.logout().catch(() => {});
+      await cleanupSession({ language });
+      updateCurrentUser(null);
+      props.navigation.dispatch(
+        CommonActionsNav.reset({
+          index: 1,
+          routes: [{ name: 'AuthWelcome' }],
+        })
+      );
+    } catch (err) {
+      console.log({ err });
+      hideLoader();
+    }
   };
 
   return (

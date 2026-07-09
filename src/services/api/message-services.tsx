@@ -40,6 +40,9 @@ class MessageServices {
     const formData = new FormData();
     formData.append('type', 'audio');
     formData.append('duration_seconds', String(payload.duration_seconds));
+    if (payload.waveform_peaks && payload.waveform_peaks.length > 0) {
+      formData.append('waveform_peaks', JSON.stringify(payload.waveform_peaks));
+    }
     formData.append('audio', payload.audio as unknown as Blob);
 
     return formData;

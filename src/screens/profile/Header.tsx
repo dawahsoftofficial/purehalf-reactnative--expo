@@ -20,20 +20,18 @@ import {
   type TextStyle,
   View,
 } from 'react-native';
+import CircularProgress from 'react-native-circular-progress-indicator';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-import { type CurrentUserDetail } from '@/services/api/types/user-types';
 
 import {
   Button,
   CheckMembershipStatus,
   LinearGradient,
-  ModalLoader,
   ProfileBadges,
+  ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -81,6 +79,7 @@ type User = {
   membership_expiry?: string | null;
   media?: UserMedia;
   primary_image_to_show?: string;
+  match_percentage?: number | null;
   fcm_token?: FcmToken[];
   gender?: string;
   is_blur?: boolean;
@@ -135,6 +134,7 @@ const NameRow = React.memo(function NameRow({
     >
       <ReactText
         style={[Styles.name, !rtl ? { fontFamily: Fonts.DISPLAY } : null]}
+        numberOfLines={1}
       >
         {capitalize(firstName ?? '') + ' ' + capitalize(lastName ?? '')}
       </ReactText>
@@ -171,6 +171,47 @@ const MetaLine = React.memo(function MetaLine({
     <ReactText style={[Styles.location, style]} numberOfLines={2}>
       {parts.join('  ·  ')}
     </ReactText>
+  );
+});
+
+type MatchScoreBadgeProps = {
+  score?: number | null;
+};
+
+const MatchScoreBadge = React.memo(function MatchScoreBadge({
+  score,
+}: MatchScoreBadgeProps): ReactElement | null {
+  if (score === null || score === undefined) {
+    return null;
+  }
+
+  const normalizedScore = Math.max(0, Math.min(100, Math.round(score)));
+  const activeColor =
+    normalizedScore === 0 ? Colors.primaryMid : Colors.primary;
+
+  return (
+    <View style={Styles.matchScoreWrap}>
+      <CircularProgress
+        key={`match-score-${normalizedScore}`}
+        initialValue={0}
+        value={normalizedScore}
+        maxValue={100}
+        radius={wp(7)}
+        duration={900}
+        activeStrokeWidth={wp(1)}
+        inActiveStrokeWidth={wp(1)}
+        activeStrokeColor={activeColor}
+        inActiveStrokeColor={Colors.lavender}
+        progressValueColor={Colors.primary}
+        progressValueStyle={Styles.matchScoreValue}
+        valueSuffix="%"
+        valueSuffixStyle={Styles.matchScoreSuffix}
+        showProgressValue
+      />
+      <ReactText style={Styles.matchScoreLabel} numberOfLines={1}>
+        Common
+      </ReactText>
+    </View>
   );
 });
 
@@ -277,7 +318,6 @@ const Header = ({
   const [profileImageError, setProfileImageError] = useState(false);
   const [userData, setUserData] = useState<User>(initialUserData);
   const [isPremiumMember, setIsPremiumMember] = useState<boolean>(false);
-  const [modalLoader, setModalLoader] = useState(false);
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
   const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
@@ -373,41 +413,6 @@ const Header = ({
       fromProfile: true,
     });
   }, [chatUserData, navigation, userConversation]);
-
-  const isPremiumUser = useCallback(() => {
-    return new Promise((resolve) => {
-      const now = moment();
-      const membershipExpiry = currentUser?.membership_expiry;
-      if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
-        resolve('premiumUser');
-      } else if (
-        membershipExpiry === null ||
-        moment(membershipExpiry).isBefore(now)
-      ) {
-        setModalLoader(true);
-        ApiServices.getCurrentUserDetail()
-          .then((response: CurrentUserDetail) => {
-            const userResponse = response as CurrentUserDetail;
-            const membershipExpiry = userResponse?.membership_expiry;
-            updateCurrentUser(userResponse);
-            setModalLoader(false);
-            if (
-              membershipExpiry === null ||
-              moment(membershipExpiry).isBefore(now)
-            ) {
-              navigation.navigate('ProFeaturesPromotion', {
-                navigateTo: 'goBack',
-              });
-            } else {
-              resolve('premiumUser');
-            }
-          })
-          .catch(() => {
-            setModalLoader(false);
-          });
-      }
-    });
-  }, [currentUser?.membership_expiry, navigation, updateCurrentUser]);
 
   const onMessagePress = useCallback(async () => {
     // Collect chat credits for premium members (once per 24 hours)
@@ -537,6 +542,14 @@ const Header = ({
   }, [lastOnlineFromCurrentTime]);
 
   const isSelf = currentUser?.id === userData?.id;
+  const profileDisplayName =
+    userData?.full_name ||
+    [userData?.first_name, userData?.last_name].filter(Boolean).join(' ');
+  const showMatchScore =
+    fromUserProfile &&
+    !isBlockedYou &&
+    userData?.match_percentage !== null &&
+    userData?.match_percentage !== undefined;
 
   const onEditPress = useCallback(() => {
     navigation.navigate('PhotosAndVideos');
@@ -557,10 +570,8 @@ const Header = ({
       navigation.navigate('PhotosAndVideos');
       return;
     }
-    // isPremiumUser().then(() => {
     navigation.navigate('ImageViewer', { userData });
-    // });
-  }, [fromUserProfile, isPremiumUser, navigation, userData]);
+  }, [fromUserProfile, navigation, userData]);
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
@@ -669,13 +680,12 @@ const Header = ({
           onError={onProfileImageError}
         />
       ) : (
-        <View style={Styles.heroFallback}>
-          <FontAwesome5
-            name="user-alt"
-            color={Colors.primaryLite}
-            size={wp(24)}
-          />
-        </View>
+        <ProfilePhotoPlaceholder
+          name={profileDisplayName}
+          size={wp(24)}
+          centeredInitials
+          style={Styles.heroFallback}
+        />
       )}
       {profileImageLoader && !profileImageError && (
         <View style={Styles.imageLoader}>
@@ -706,17 +716,16 @@ const Header = ({
           />
         </Ripple>
       )}
-      <View
-        style={[
-          Styles.badgesContainer,
-          {
-            left: Rtl ? wp(2) : undefined,
-            right: Rtl ? undefined : wp(2),
-          },
-        ]}
-      >
-        <ProfileBadges isSelf={isSelf} showText={false} userData={userData} />
-        {showMenu && (
+      {showMenu && (
+        <View
+          style={[
+            Styles.heroMenuContainer,
+            {
+              left: Rtl ? wp(2) : undefined,
+              right: Rtl ? undefined : wp(2),
+            },
+          ]}
+        >
           <Ripple
             style={Styles.overflowBtn}
             onPress={openMenu}
@@ -729,8 +738,8 @@ const Header = ({
               size={wp(5)}
             />
           </Ripple>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   );
 
@@ -738,18 +747,34 @@ const Header = ({
     <>
       {renderHeroPhoto(false, false)}
       <View style={Styles.infoCard}>
-        <NameRow
-          firstName={userData?.first_name}
-          lastName={userData?.last_name}
-          showStatus={false}
-          statusColor={onlineStatusColor}
-          rtl={Rtl}
-        />
-        <MetaLine
-          age={userData?.age}
-          city={userData?.city}
-          country={userData?.country}
-        />
+        <View style={Styles.profileSummaryRow}>
+          <View style={Styles.profileIdentity}>
+            <NameRow
+              firstName={userData?.first_name}
+              lastName={userData?.last_name}
+              showStatus={false}
+              statusColor={onlineStatusColor}
+              rtl={Rtl}
+            />
+            <View
+              style={[
+                Styles.cardBadgeRow,
+                { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+              ]}
+            >
+              <ProfileBadges
+                isSelf={isSelf}
+                variant="pill"
+                userData={userData}
+              />
+            </View>
+            <MetaLine
+              age={userData?.age}
+              city={userData?.city}
+              country={userData?.country}
+            />
+          </View>
+        </View>
         <Ripple
           style={[
             Styles.taglineEditRow,
@@ -857,7 +882,6 @@ const Header = ({
   return (
     <View style={fromUserProfile ? Styles.container : Styles.selfContainer}>
       {isPremiumMember && <StatusBar backgroundColor={Colors.primary} />}
-      <ModalLoader visible={modalLoader} useModalLayout={true} />
 
       {!fromUserProfile ? (
         renderSelfHeader()
@@ -866,18 +890,42 @@ const Header = ({
           <CheckMembershipStatus />
           {renderHeroPhoto(true, !isSelf && !isBlockedYou)}
           <View style={Styles.infoCard}>
-            <NameRow
-              firstName={userData?.first_name}
-              lastName={userData?.last_name}
-              showStatus={!isBlockedYou}
-              statusColor={onlineStatusColor}
-              rtl={Rtl}
-            />
-            <MetaLine
-              age={userData?.age}
-              city={userData?.city}
-              country={userData?.country}
-            />
+            <View
+              style={[
+                Styles.profileSummaryRow,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <View style={Styles.profileIdentity}>
+                <NameRow
+                  firstName={userData?.first_name}
+                  lastName={userData?.last_name}
+                  showStatus={!isBlockedYou}
+                  statusColor={onlineStatusColor}
+                  rtl={Rtl}
+                />
+                <View
+                  style={[
+                    Styles.cardBadgeRow,
+                    { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+                  ]}
+                >
+                  <ProfileBadges
+                    isSelf={isSelf}
+                    variant="pill"
+                    userData={userData}
+                  />
+                </View>
+                <MetaLine
+                  age={userData?.age}
+                  city={userData?.city}
+                  country={userData?.country}
+                />
+              </View>
+              {showMatchScore ? (
+                <MatchScoreBadge score={userData?.match_percentage} />
+              ) : null}
+            </View>
             {!isBlockedYou && tagline && tagline.trim().length ? (
               <ReactText
                 style={[
@@ -1237,6 +1285,46 @@ const Styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 6,
   },
+  profileSummaryRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: wp(3),
+  },
+  profileIdentity: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cardBadgeRow: {
+    width: '100%',
+  },
+  matchScoreWrap: {
+    width: wp(17),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: hp(-0.2),
+  },
+  matchScoreValue: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.tiny1,
+    includeFontPadding: false,
+  },
+  matchScoreSuffix: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.tiny2,
+    includeFontPadding: false,
+  },
+  matchScoreLabel: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.tiny2,
+    includeFontPadding: false,
+    marginTop: hp(0.25),
+    textAlign: 'center',
+  },
   cardTagline: {
     color: Colors.primaryPress,
     fontFamily: Fonts.APPFONT_R,
@@ -1565,7 +1653,7 @@ const Styles = StyleSheet.create({
     width: '100%',
     marginBottom: hp(0.5),
   },
-  badgesContainer: {
+  heroMenuContainer: {
     position: 'absolute',
     top: wp(2),
     zIndex: 10,
@@ -1639,8 +1727,10 @@ const Styles = StyleSheet.create({
   nameCon: {
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: '100%',
   },
   name: {
+    flexShrink: 1,
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.large,

@@ -74,10 +74,18 @@ describe('messageServices audio messages', () => {
         type: 'audio/mp4',
       },
       duration_seconds: 12,
+      waveform_peaks: [0.1, 0.5, 0.9],
     });
 
     const [, payload] = (Api.post as jest.Mock).mock.calls[0];
     expect(payload).toBeInstanceOf(FormData);
+    const payloadEntries = (payload as any)._parts
+      ? (payload as any)._parts
+      : Array.from((payload as any).entries());
+    expect(payloadEntries).toContainEqual([
+      'waveform_peaks',
+      JSON.stringify([0.1, 0.5, 0.9]),
+    ]);
   });
 
   it('fetches a temporary audio playback url', async () => {

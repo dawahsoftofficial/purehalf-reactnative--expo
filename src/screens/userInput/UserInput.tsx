@@ -1,5 +1,3 @@
-import { getApp } from '@react-native-firebase/app';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
 import _ from 'lodash';
 import moment from 'moment';
@@ -24,19 +22,16 @@ import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   checkEmpty,
+  cleanupSession,
   flashErrorMessage,
   flashSuccessMessage,
   isIOS,
-  stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../../services';
 import AccountActions from './components/account-actions';
 import NameInputFields from './components/name-input-fields';
 import UserInputHeader from './components/user-input-header';
-
-const firebaseApp = getApp();
-const auth = getAuth(firebaseApp);
 
 type Language = {
   id: number | string;
@@ -82,7 +77,7 @@ function UserInput(props: UserInputProps) {
   const fromSettings = props?.route?.params?.fromSettings ?? false;
 
   const { updateCurrentUser, currentUser, language } = useGlobalContext();
-  const { getData, deleteAll, storageKeys } = StorageManager;
+  const { getData, storageKeys } = StorageManager;
   const [languageId, setLanguageId] = useState<number | null>(null);
   const [submitLoader, setSubmitLoader] = useState(false);
   const [loaderMessage, setLoaderMessage] = useState('Submitting...');
@@ -241,18 +236,9 @@ function UserInput(props: UserInputProps) {
 
   const onLogoutPress = useCallback(async () => {
     try {
-      const verificationId = await getData(
-        storageKeys.FIREBASE_VERIFICATION_ID
-      );
-      StorageManager.setString(storageKeys.IS_RECOMMENDED, 'false');
       await ApiServices.logout().catch(() => {});
-      await signOut(auth).catch(() => {});
-      await deleteAll();
+      await cleanupSession({ language });
       updateCurrentUser(null);
-      const { setData } = StorageManager;
-      await setData(storageKeys.LANGUAGE, language);
-      await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
-      await stopConversationsListener();
       hideLoader();
       props.navigation.dispatch(
         CommonActionsNav.reset({
@@ -264,17 +250,7 @@ function UserInput(props: UserInputProps) {
       console.error('Error during logout:', error);
       hideLoader();
     }
-  }, [
-    getData,
-    storageKeys.FIREBASE_VERIFICATION_ID,
-    storageKeys.IS_RECOMMENDED,
-    storageKeys.LANGUAGE,
-    language,
-    deleteAll,
-    updateCurrentUser,
-    hideLoader,
-    props.navigation,
-  ]);
+  }, [language, updateCurrentUser, hideLoader, props.navigation]);
 
   const onDeleteAccountPress = useCallback(() => {
     props.navigation.navigate('AccountDeletion');

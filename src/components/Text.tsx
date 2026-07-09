@@ -14,6 +14,7 @@ import { Fonts } from '../res';
 type TextProps = {
   style?: StyleProp<TextStyle>;
   numberOfLines?: number;
+  testID?: string;
   containerStyle?: StyleProp<ViewStyle>;
   /**
    * 'display' applies the editorial serif face. Serif is Latin/LTR only —
@@ -26,7 +27,8 @@ type TextProps = {
 const Text = React.memo((props: TextProps) => {
   const { t } = useTranslation();
   const Rtl = CheckRtl();
-  const { style, numberOfLines, containerStyle, variant, children } = props;
+  const { style, numberOfLines, testID, containerStyle, variant, children } =
+    props;
 
   const textStyle = useMemo<StyleProp<TextStyle>>(() => {
     const alignSelf: TextStyle = {
@@ -43,7 +45,7 @@ const Text = React.memo((props: TextProps) => {
   // Handle string children
   if (typeof children === 'string') {
     return (
-      <RNText style={textStyle} numberOfLines={numberOfLines}>
+      <RNText style={textStyle} numberOfLines={numberOfLines} testID={testID}>
         {t(children)}
       </RNText>
     );

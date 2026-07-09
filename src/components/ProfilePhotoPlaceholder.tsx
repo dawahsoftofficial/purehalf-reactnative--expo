@@ -27,6 +27,8 @@ interface Props {
   size?: number;
   /** Round the outer fill (for grid/thumbnail cards). */
   rounded?: boolean;
+  /** Center and enlarge initials for full-bleed profile hero placeholders. */
+  centeredInitials?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -35,7 +37,13 @@ interface Props {
  * to load). Minimal by design: a soft violet gradient with the member's
  * initials set in the display serif — no rings, no badge, just the letters.
  */
-const ProfilePhotoPlaceholder = ({ name, size, rounded, style }: Props) => {
+const ProfilePhotoPlaceholder = ({
+  name,
+  size,
+  rounded,
+  centeredInitials,
+  style,
+}: Props) => {
   const initials = getInitials(name);
   const base = size ?? wp(34);
 
@@ -46,15 +54,19 @@ const ProfilePhotoPlaceholder = ({ name, size, rounded, style }: Props) => {
       end={{ x: 0.9, y: 1 }}
       style={[
         Styles.fill,
-        // Lift the monogram slightly above true center so it sits in the
-        // open space rather than colliding with the name/scrim below.
-        { paddingBottom: base * 0.85 },
+        !centeredInitials && { paddingBottom: base * 0.85 },
         rounded ? Styles.rounded : null,
         style,
       ]}
     >
       {initials ? (
-        <Text style={[Styles.initials, { fontSize: base * 0.56 }]}>
+        <Text
+          style={[
+            Styles.initials,
+            centeredInitials && Styles.centeredInitials,
+            { fontSize: base * (centeredInitials ? 0.72 : 0.56) },
+          ]}
+        >
           {initials}
         </Text>
       ) : (
@@ -89,5 +101,8 @@ const Styles = StyleSheet.create({
     textShadowColor: Colors.blackRGBA25,
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 14,
+  },
+  centeredInitials: {
+    color: 'rgba(255,255,255,0.84)',
   },
 });

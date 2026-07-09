@@ -1,6 +1,7 @@
 import moment from 'moment';
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import PopularBadgeIcon from '../assets/svgs/badges/popular-badge.svg';
 import ProfileCompleteBadgeIcon from '../assets/svgs/badges/profile-complete-badge.svg';
@@ -34,6 +35,7 @@ type ProfileBadgesProps = {
   showText?: boolean;
   vertical?: boolean;
   iconOnly?: boolean;
+  variant?: 'default' | 'pill';
 };
 
 export function ProfileBadges({
@@ -42,6 +44,7 @@ export function ProfileBadges({
   showText = true,
   vertical = false,
   iconOnly = false,
+  variant = 'default',
 }: ProfileBadgesProps) {
   const { currentUser } = useGlobalContext();
   const { getData, storageKeys } = StorageManager;
@@ -92,12 +95,14 @@ export function ProfileBadges({
   const badges = useMemo(() => {
     const badgeList: Array<{
       icon: React.ReactNode;
+      iconName: string;
       label: string;
     }> = [];
 
     if (isVIP) {
       badgeList.push({
         icon: <VipBadgeIcon width={wp(8)} height={wp(8)} />,
+        iconName: 'diamond',
         label: 'VIP',
       });
     }
@@ -105,6 +110,7 @@ export function ProfileBadges({
     if (isBoosted || false) {
       badgeList.push({
         icon: <PopularBadgeIcon width={wp(8)} height={wp(8)} />,
+        iconName: 'trending-up',
         label: 'Boosted',
       });
     }
@@ -112,6 +118,7 @@ export function ProfileBadges({
     if (isProfileCompleted) {
       badgeList.push({
         icon: <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />,
+        iconName: 'checkmark-circle',
         label: 'Complete',
       });
     }
@@ -121,6 +128,30 @@ export function ProfileBadges({
 
   if (badges.length === 0) {
     return null;
+  }
+
+  if (variant === 'pill') {
+    return (
+      <View
+        testID="profile-badges-pill"
+        style={[Styles.container, Styles.pillContainer]}
+      >
+        {badges.map((badge, index) => (
+          <View key={index} style={Styles.pillBadge}>
+            <View style={Styles.pillIconWrap}>
+              <Ionicons
+                name={badge.iconName}
+                color={Colors.verified}
+                size={wp(3.4)}
+              />
+            </View>
+            <Text style={Styles.pillLabel} numberOfLines={1}>
+              {badge.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
   }
 
   if (iconOnly) {
@@ -161,6 +192,37 @@ const Styles = StyleSheet.create({
   iconOnlyBadge: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pillContainer: {
+    marginTop: hp(0.75),
+  },
+  pillBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: wp(1.2),
+    maxWidth: '100%',
+    paddingVertical: hp(0.55),
+    paddingHorizontal: wp(2.2),
+    borderRadius: 999,
+    backgroundColor: 'rgba(46,158,91,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(46,158,91,0.24)',
+  },
+  pillIconWrap: {
+    width: wp(4.2),
+    height: wp(4.2),
+    borderRadius: wp(2.1),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
+  },
+  pillLabel: {
+    color: Colors.verified,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    includeFontPadding: false,
+    alignSelf: 'center',
   },
   badge: {
     flexDirection: 'row',

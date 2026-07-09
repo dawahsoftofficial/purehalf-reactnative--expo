@@ -35,6 +35,7 @@ export type MessageAudio = {
   duration_seconds: number;
   mime: string;
   size_bytes: number;
+  waveform_peaks?: number[] | null;
 };
 
 /**
@@ -145,6 +146,7 @@ export type SendAudioConversationMessagePayload = {
   type: 'audio';
   audio: AudioUploadFile;
   duration_seconds: number;
+  waveform_peaks?: number[];
 };
 
 /**
@@ -214,6 +216,7 @@ export type MessageSentEventData = {
     sender_id: number;
     created_at: string;
     statuses?: MessageStatus[];
+    audio?: MessageAudio | null;
   };
   conversation: {
     id: number;
