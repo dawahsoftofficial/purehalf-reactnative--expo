@@ -4,6 +4,7 @@ import moment from 'moment';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {
   Button,
@@ -153,7 +154,7 @@ function UserInput(props: UserInputProps) {
         if (!fromSettings) {
           props.navigation.reset({
             index: 0,
-            routes: [{ name: 'ProfilePicture' }],
+            routes: [{ name: 'OnboardingProfile' }],
           });
         }
         setSubmitLoader(false);
@@ -259,11 +260,9 @@ function UserInput(props: UserInputProps) {
   const scrollViewContentStyle = useMemo(
     () => ({
       flexGrow: 1,
-      justifyContent: fromSettings
-        ? ('flex-start' as const)
-        : ('center' as const),
+      justifyContent: 'flex-start' as const,
       paddingHorizontal: fromSettings ? 0 : wp(4),
-      paddingTop: fromSettings ? hp(2) : 0,
+      paddingTop: fromSettings ? hp(2) : hp(3),
       paddingBottom: hp(2),
     }),
     [fromSettings]
@@ -324,7 +323,7 @@ function UserInput(props: UserInputProps) {
       >
         {!fromSettings && <UserInputHeader />}
         {fromSettings && renderIdentity()}
-        <View style={fromSettings ? Styles.formCard : undefined}>
+        <View style={fromSettings ? Styles.formCard : Styles.formCardSignup}>
           <View style={Styles.inputFieldCon}>
             <NameInputFields
               firstName={firstName}
@@ -402,6 +401,10 @@ function UserInput(props: UserInputProps) {
       <CheckMembershipStatus />
       {renderContent()}
       <View style={Styles.buttonContainer}>
+        <View style={Styles.privacyRow}>
+          <Ionicons name="lock-closed" size={wp(3.6)} color={Colors.muted} />
+          <Text style={Styles.privacyText}>{LanguageKeys.detailsPrivate}</Text>
+        </View>
         <Button
           text={buttonText}
           onPress={onContinuePress}
@@ -447,6 +450,33 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
     paddingTop: hp(3),
     paddingBottom: hp(1),
+  },
+  formCardSignup: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    paddingHorizontal: wp(4.5),
+    paddingTop: hp(3),
+    paddingBottom: hp(1.5),
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1.5),
+  },
+  privacyText: {
+    marginLeft: wp(1.5),
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    includeFontPadding: false,
   },
   inputFieldCon: {
     marginBottom: hp(3),

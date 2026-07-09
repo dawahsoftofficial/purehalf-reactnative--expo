@@ -36,6 +36,7 @@ import {
   Messages,
   MyVideo,
   Notifications,
+  OnboardingProfile,
   Otp,
   PaymentOptions,
   PhoneNumber,
@@ -149,6 +150,10 @@ function App() {
           <Stack.Screen name="PhoneNumber" component={PhoneNumber} />
           <Stack.Screen name="Otp" component={Otp} />
           <Stack.Screen name="UserInput" component={UserInput} />
+          <Stack.Screen
+            name="OnboardingProfile"
+            component={OnboardingProfile}
+          />
           <Stack.Screen name="Location" component={Location} />
           <Stack.Screen
             name="ProFeaturesPromotion"
