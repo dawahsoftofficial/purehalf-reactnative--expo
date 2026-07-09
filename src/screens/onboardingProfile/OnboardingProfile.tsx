@@ -30,7 +30,8 @@ const GROUP_SEQUENCE: { key: string; title: string }[] = [
 
 type Phase = 'loading' | 'question' | 'checkpoint' | 'done';
 
-const OnboardingProfile = ({ navigation }: any) => {
+const OnboardingProfile = ({ navigation, route }: any) => {
+  const fromHome = route?.params?.from === 'Home';
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
   const gender = (currentUser as any)?.gender;
@@ -89,9 +90,10 @@ const OnboardingProfile = ({ navigation }: any) => {
     [categoriesData, currentUser, gender]
   );
 
-  const goToProfilePicture = useCallback(() => {
-    navigation.reset({ index: 0, routes: [{ name: 'ProfilePicture' }] });
-  }, [navigation]);
+  const exitFlow = useCallback(() => {
+    const next = fromHome ? 'BottomTab' : 'ProfilePicture';
+    navigation.reset({ index: 0, routes: [{ name: next }] });
+  }, [fromHome, navigation]);
 
   const currentGroup = GROUP_SEQUENCE[groupIndex];
   const isLastGroup = groupIndex >= GROUP_SEQUENCE.length - 1;
@@ -169,7 +171,7 @@ const OnboardingProfile = ({ navigation }: any) => {
           <Text style={Styles.doneBody}>{LanguageKeys.onboardingDoneBody}</Text>
         </View>
         <View style={Styles.footer}>
-          <Button text={LanguageKeys.continue} onPress={goToProfilePicture} />
+          <Button text={LanguageKeys.continue} onPress={exitFlow} />
         </View>
       </Container>
     );
@@ -227,7 +229,7 @@ const OnboardingProfile = ({ navigation }: any) => {
               text={LanguageKeys.continue}
               onPress={onContinueFromCheckpoint}
             />
-            <Ripple style={Styles.finishLaterBtn} onPress={goToProfilePicture}>
+            <Ripple style={Styles.finishLaterBtn} onPress={exitFlow}>
               <Text style={Styles.finishLaterText}>
                 {LanguageKeys.finishLater}
               </Text>

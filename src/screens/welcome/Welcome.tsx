@@ -197,6 +197,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [showRecommendationModal, setShowRecommendationModal] =
     useState<boolean>(false);
   const dailyRecommendations = useSettingsStore().getDailyRecommendations();
+  const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
+  const profileIncomplete =
+    profileCompleteProgress.length > 0 &&
+    profileCompleteProgress.filter((i) => i.completed).length <
+      profileCompleteProgress.length;
 
   // Check if recommendation modal should be shown based on daily recommendations settings
   useEffect(() => {
@@ -685,6 +690,39 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             />
           </Ripple>
         )}
+        {profileIncomplete && !profileBannerDismissed && (
+          <Ripple
+            style={[
+              Styles.pendingApprovalBanner,
+              { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            ]}
+            onPress={() =>
+              navigation.navigate('OnboardingProfile', { from: 'Home' })
+            }
+          >
+            <View style={Styles.pendingIconChip}>
+              <Ionicons
+                name="sparkles-outline"
+                size={wp(4.5)}
+                color={Colors.primary}
+              />
+            </View>
+            <View style={Styles.completeBannerTextWrap}>
+              <Text style={Styles.pendingApprovalText}>
+                {t(LanguageKeys.completeProfileCta)}
+              </Text>
+              <Text style={Styles.completeBannerSub}>
+                {t(LanguageKeys.completeProfileBannerBody)}
+              </Text>
+            </View>
+            <Ripple
+              onPress={() => setProfileBannerDismissed(true)}
+              style={Styles.bannerDismiss}
+            >
+              <Ionicons name="close" size={wp(4.5)} color={Colors.muted} />
+            </Ripple>
+          </Ripple>
+        )}
         {!isPremiumUser ? <PremiumButton /> : null}
       </View>
       <AccountModal
@@ -828,5 +866,17 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small1,
     color: Colors.ink,
     flex: 1,
+  },
+  completeBannerTextWrap: {
+    flex: 1,
+  },
+  completeBannerSub: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    marginTop: hp(0.2),
+  },
+  bannerDismiss: {
+    padding: wp(1.5),
   },
 });
