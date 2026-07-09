@@ -48,11 +48,15 @@ type FocusedInputState = {
 
 // Inline single-select pill group for option fields with only a few choices
 // (e.g. Yes/No, Future Plans). Larger option lists keep the modal PickerButton.
-const OptionTags = ({ label, item, options, onSelect, rtl }: any) => (
+const OptionTags = ({ item, options, onSelect, rtl }: any) => (
   <View>
-    <Text style={Styles.tagLabel}>{label}</Text>
     <View
-      style={[Styles.tagRow, { flexDirection: rtl ? 'row-reverse' : 'row' }]}
+      style={[
+        Styles.tagRow,
+        {
+          flexDirection: rtl ? 'row-reverse' : 'row',
+        },
+      ]}
     >
       {options.map((opt: any) => {
         const on = isOptionSelected(item, opt);
@@ -454,7 +458,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
               <ScallingButton item={item} />
             ) : useTags ? (
               <OptionTags
-                label={iTitle}
                 item={item}
                 options={tagOptions}
                 onSelect={onSelectOption}
@@ -637,16 +640,9 @@ const Styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  tagLabel: {
-    color: Colors.ink,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small2,
-    lineHeight: wp(4.5),
-  },
   tagRow: {
     flexWrap: 'wrap',
     gap: wp(2),
-    marginTop: hp(1),
   },
   tag: {
     paddingHorizontal: wp(4),
