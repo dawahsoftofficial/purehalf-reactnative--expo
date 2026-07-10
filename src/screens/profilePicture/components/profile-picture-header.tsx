@@ -1,20 +1,36 @@
 import React, { memo } from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { Text } from '../../../components';
-import { Colors, Fonts, Images } from '../../../res';
+import { hp, Typography, wp } from '../../../global';
+import { Colors, Fonts } from '../../../res';
 
 type ProfilePictureHeaderProps = {
-  onTooltipPress: () => void;
+  onGuidelinesPress: () => void;
 };
 
-function ProfilePictureHeader({ onTooltipPress }: ProfilePictureHeaderProps) {
+function ProfilePictureHeader({
+  onGuidelinesPress,
+}: ProfilePictureHeaderProps) {
   return (
-    <View style={Styles.headerWrapper}>
-      <Text style={Styles.headerText}>Profile Picture</Text>
-      <Ripple style={Styles.tooltipWrapper} onPress={onTooltipPress}>
-        <Image source={Images.infoIcon} style={Styles.infoIcon} />
+    <View style={Styles.wrapper}>
+      <Text style={Styles.title}>Add your profile picture</Text>
+      <Text style={Styles.subtitle}>
+        A clear, friendly photo helps you get better matches. You can change it
+        anytime.
+      </Text>
+      <Ripple
+        style={Styles.guidelinesBtn}
+        onPress={onGuidelinesPress}
+        rippleContainerBorderRadius={999}
+      >
+        <Ionicons
+          name="shield-checkmark-outline"
+          size={wp(4)}
+          color={Colors.primary}
+        />
+        <Text style={Styles.guidelinesText}>View photo guidelines</Text>
       </Ripple>
     </View>
   );
@@ -23,22 +39,38 @@ function ProfilePictureHeader({ onTooltipPress }: ProfilePictureHeaderProps) {
 export default memo(ProfilePictureHeader);
 
 const Styles = StyleSheet.create({
-  headerWrapper: {
+  wrapper: {
+    alignItems: 'center',
+    paddingHorizontal: wp(2),
+  },
+  title: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.large1,
+    textAlign: 'center',
+  },
+  subtitle: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    textAlign: 'center',
+    lineHeight: wp(5.4),
+    marginTop: hp(1),
+    maxWidth: wp(80),
+  },
+  guidelinesBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: wp(1.5),
+    backgroundColor: Colors.lavender,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    borderRadius: 999,
+    marginTop: hp(2),
   },
-  headerText: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: 20,
-  },
-  tooltipWrapper: {
-    borderRadius: 25,
-    marginLeft: 5,
-  },
-  infoIcon: {
-    width: 25,
-    height: 25,
+  guidelinesText: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
   },
 });

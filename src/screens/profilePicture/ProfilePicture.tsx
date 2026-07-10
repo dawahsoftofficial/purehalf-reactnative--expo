@@ -368,9 +368,12 @@ function ProfilePicture(props: ProfilePictureProps) {
         user={currentUser as User}
         onClose={hideTooltip}
       />
-      <ScrollView contentContainerStyle={Styles.scrollContainer}>
-        <View style={Styles.innerContainer}>
-          <ProfilePictureHeader onTooltipPress={showTooltip} />
+      <ScrollView
+        contentContainerStyle={Styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={Styles.content}>
+          <ProfilePictureHeader onGuidelinesPress={showTooltip} />
           {uploading ? (
             <UploadProgress progress={uploadingProgress} />
           ) : (
@@ -382,16 +385,15 @@ function ProfilePicture(props: ProfilePictureProps) {
             disabled={isButtonDisabled}
             text={LanguageKeys.continue}
             onPress={onContinuePress}
-            buttonStyle={Styles.continueButton}
           />
         </View>
-        <ImagePicker
-          from="primary_image_to_show"
-          onClose={hideImagePicker}
-          visible={imagePickerVisible}
-          onImageSelection={handleImagePickerSelection}
-        />
       </ScrollView>
+      <ImagePicker
+        from="primary_image_to_show"
+        onClose={hideImagePicker}
+        visible={imagePickerVisible}
+        onImageSelection={handleImagePickerSelection}
+      />
     </SafeAreaView>
   );
 }
@@ -401,21 +403,20 @@ export default ProfilePicture;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.appBg,
   },
   scrollContainer: {
-    flex: 1,
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(1.5),
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexGrow: 1,
+    paddingHorizontal: wp(5),
+    paddingTop: hp(4),
+    paddingBottom: hp(2),
+    justifyContent: 'space-between',
   },
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  content: {
+    alignItems: 'center',
   },
   btnWrapper: {
     width: '100%',
+    marginTop: hp(4),
   },
-  continueButton: {},
 });
