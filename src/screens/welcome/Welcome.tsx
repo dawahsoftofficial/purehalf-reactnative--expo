@@ -1,7 +1,13 @@
 import notifee from '@notifee/react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import moment from 'moment';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
@@ -247,11 +253,17 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     });
   }, [getData, setData, storageKeys]);
 
+  // Tracks whether a users fetch is in flight. A ref (not loader state) so a
+  // fetch that returns an empty deck can't flip a dependency of the focus
+  // effect below and spin into an infinite refetch loop (server then 429s).
+  const usersFetchInFlightRef = useRef(false);
+
   const getUsers = useCallback(
     (
       params: { page: number; type: number | string } = { page: 1, type: -1 },
       replace = false
     ) => {
+      usersFetchInFlightRef.current = true;
       ApiServices.getUsers(params)
         .then((res) => {
           const list = Array.isArray(res) ? res : [];
@@ -259,6 +271,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         })
         .catch(() => {})
         .finally(() => {
+          usersFetchInFlightRef.current = false;
           setLoader(false);
           setLoadMoreLoader(false);
         });
@@ -527,19 +540,15 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       // Counters now come from Pusher events, no API call needed
       handleProfileCompleteData();
 
-      // Ensure users are fetched when screen is focused if list is empty and not loading
-      // This handles cases where component remounts after profile picture upload
-      if (usersList.length === 0 && !loader && !loadMoreLoader) {
+      // Fetch users on focus when the deck is empty and no fetch is in flight.
+      // Guarded by a ref rather than `loader` state: an empty or failed fetch
+      // must not flip a dependency and re-run this effect, or it loops until
+      // the server throttles the endpoint (429).
+      if (usersList.length === 0 && !usersFetchInFlightRef.current) {
         setLoader(true);
         getUsers(undefined, true);
       }
-    }, [
-      handleProfileCompleteData,
-      usersList.length,
-      loader,
-      loadMoreLoader,
-      getUsers,
-    ])
+    }, [handleProfileCompleteData, usersList.length, getUsers])
   );
 
   // Collect chat credits when AccountModal opens (premium members only, once per 24 hours)
@@ -708,7 +717,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               />
             </View>
             <View style={Styles.completeBannerTextWrap}>
-              <Text style={Styles.pendingApprovalText}>
+              <Text style={Styles.completeBannerTitle}>
                 {t(LanguageKeys.completeProfileCta)}
               </Text>
               <Text style={Styles.completeBannerSub}>
@@ -869,6 +878,11 @@ const Styles = StyleSheet.create({
   },
   completeBannerTextWrap: {
     flex: 1,
+  },
+  completeBannerTitle: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    color: Colors.ink,
   },
   completeBannerSub: {
     color: Colors.muted,
