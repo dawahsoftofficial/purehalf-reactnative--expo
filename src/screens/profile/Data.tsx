@@ -19,18 +19,10 @@ const Data: any = {
       category: 'appearance-0',
       apiKey: 'height',
     },
-    {
-      title: LanguageKeys.weight,
-      data: [
-        { scale: 'kg', values: numberRange(40, 200) },
-        { scale: 'lbs', values: numberRange(90, 441) },
-      ],
-      type: 'scalling',
-      id: 'weight',
-      selected: { scale: 'kg' },
-      category: 'appearance-0',
-      apiKey: 'weight',
-    },
+    // Weight slider intentionally removed — a numeric weight prompt clashes with
+    // the welcome flow's empathy promise. Body type below (with "Prefer not to
+    // say") is the optional, dignity-preserving descriptor that replaces it.
+    // Height is kept.
     {
       title: LanguageKeys.disabilities,
       data: [],
