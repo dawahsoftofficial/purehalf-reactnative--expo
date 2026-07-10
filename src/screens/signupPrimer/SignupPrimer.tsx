@@ -257,8 +257,8 @@ const SignupPrimer = ({ navigation }: any) => {
                 : 'About you'}
             </RNText>
           </View>
-          <Ripple onPress={exitFlow}>
-            <RNText style={Styles.laterTxt}>Maybe later</RNText>
+          <Ripple onPress={advance}>
+            <RNText style={Styles.laterTxt}>Skip</RNText>
           </Ripple>
         </View>
         <View style={Styles.meterTrack}>

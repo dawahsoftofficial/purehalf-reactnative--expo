@@ -48,7 +48,6 @@ const femaleJourney: PrimerStepDef[] = [
     control: 'casteCombo',
     visibility: 'public',
     question: 'Your Khandan / Caste',
-    subtitle: 'Type it in, or choose Prefer not to say.',
   },
   {
     id: 'deen',
@@ -195,7 +194,6 @@ const maleJourney: PrimerStepDef[] = [
     control: 'casteCombo',
     visibility: 'public',
     question: 'Your Khandan / Caste',
-    subtitle: 'Type it in, or choose Prefer not to say.',
   },
   {
     id: 'deen',

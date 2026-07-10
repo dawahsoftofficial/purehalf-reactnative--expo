@@ -255,27 +255,37 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
 
     case 'casteCombo': {
       const v = value ?? {};
+      // Ask whether caste matters first; only collect the khandan text when it
+      // does. If it doesn't, there's nothing to type.
       return (
         <View>
-          <TextInput
-            style={Styles.input}
-            value={typeof v.caste === 'string' ? v.caste : ''}
-            onChangeText={(t) => onChange({ ...v, caste: t })}
-            placeholder="e.g. Rajput, Syed, Malik"
-            placeholderTextColor={Colors.primaryLite}
-          />
-          <View style={Styles.chips}>
-            <Chip
-              option={{ id: 'pns', label: 'Prefer not to say' }}
-              on={v.caste === '__pns__'}
-              onPress={() => onChange({ ...v, caste: '__pns__' })}
-            />
-          </View>
           <RNText style={Styles.subLabel}>Does it matter in your match?</RNText>
           <YesNo
             value={v.matters}
             onChange={(m) => onChange({ ...v, matters: m })}
           />
+          {v.matters === 'yes' ? (
+            <View style={Styles.casteReveal}>
+              <TextInput
+                style={Styles.input}
+                value={
+                  typeof v.caste === 'string' && v.caste !== '__pns__'
+                    ? v.caste
+                    : ''
+                }
+                onChangeText={(t) => onChange({ ...v, caste: t })}
+                placeholder="e.g. Rajput, Syed, Malik"
+                placeholderTextColor={Colors.primaryLite}
+              />
+              <View style={Styles.chips}>
+                <Chip
+                  option={{ id: 'pns', label: 'Prefer not to say' }}
+                  on={v.caste === '__pns__'}
+                  onPress={() => onChange({ ...v, caste: '__pns__' })}
+                />
+              </View>
+            </View>
+          ) : null}
         </View>
       );
     }
@@ -484,6 +494,7 @@ const Styles = StyleSheet.create({
     marginTop: hp(2),
     marginBottom: hp(0.5),
   },
+  casteReveal: { marginTop: hp(2) },
   hint: {
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
