@@ -20,6 +20,8 @@ class GStorageManager {
     FIREBASE_VERIFICATION_ID: 'FIREBASE_VERIFICATION_ID',
     IS_RECOMMENDED: 'isRecommended',
     MEMBERSHIP_DISCOUNT: 'membership_discount',
+    PRIMER_SEEN: 'PRIMER_SEEN',
+    PRIMER_ANSWERS: 'PRIMER_ANSWERS',
   };
 
   deleteAll = () => {

@@ -178,6 +178,9 @@ type SettingsState = {
   getChatCredits: () => ChatCredits | null;
   getForceUpdate: () => boolean;
   getSkipSignupMembershipPaywall: () => boolean;
+  getEnablePresignupQuestions: () => boolean;
+  getEnablePostsignupQuestions: () => boolean;
+  getEnableMatchCountReveal: () => boolean;
   getMaxChatsPerDay: () => MaxChatsPerDay | null;
   getBadgesAndPayments: () => BadgesAndPayments | null;
   getDailyRecommendations: () => DailyRecommendations | null;
@@ -219,6 +222,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     return (
       state.getSettingByKey<boolean>('skip_signup_membership_paywall') ?? true
     );
+  },
+
+  getEnablePresignupQuestions: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<boolean>('enable_presignup_questions') ?? false
+    );
+  },
+
+  getEnablePostsignupQuestions: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<boolean>('enable_postsignup_questions') ?? true
+    );
+  },
+
+  getEnableMatchCountReveal: () => {
+    const state = get();
+    return state.getSettingByKey<boolean>('enable_match_count_reveal') ?? false;
   },
 
   getMaxChatsPerDay: () => {
