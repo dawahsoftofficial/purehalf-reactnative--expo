@@ -24,22 +24,24 @@ function NameInputFields({
 
   return (
     <View style={Styles.container}>
-      <View style={Styles.inputFieldCon}>
+      <View style={Styles.field}>
         <IconInput
           label={LanguageKeys.firstName}
           placeholder={LanguageKeys.enterFirstName}
           value={firstName}
           onChangeText={onFirstNameChange}
+          containerStyle={Styles.fill}
           inputStyle={Styles.inputStyle}
           outerLabelStyle={{ color: labelColor }}
         />
       </View>
-      <View style={Styles.inputFieldCon}>
+      <View style={Styles.field}>
         <IconInput
           label={LanguageKeys.lastName}
           placeholder={LanguageKeys.enterLastName}
           value={lastName}
           onChangeText={onLastNameChange}
+          containerStyle={Styles.fill}
           inputStyle={Styles.inputStyle}
           outerLabelStyle={{ color: labelColor }}
         />
@@ -53,13 +55,17 @@ export default memo(NameInputFields);
 const Styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: wp(3),
   },
-  inputFieldCon: {
-    marginBottom: 0,
+  field: {
+    flex: 1,
+  },
+  fill: {
+    flex: 1,
   },
   inputStyle: {
-    width: wp(35),
+    flex: 1,
+    width: undefined,
   },
 });
