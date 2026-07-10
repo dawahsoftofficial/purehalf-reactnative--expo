@@ -33,7 +33,11 @@ function ProfilePictureUpload({
             style={Styles.image}
           />
         ) : (
-          <Ionicons name="person" size={wp(26)} color={Colors.primaryLite} />
+          <Ionicons
+            name="camera-outline"
+            size={wp(22)}
+            color={Colors.primaryLite}
+          />
         )}
         <View style={Styles.badge}>
           <Ionicons
@@ -63,7 +67,8 @@ const Styles = StyleSheet.create({
     borderRadius: RING / 2,
     backgroundColor: Colors.lavender,
     borderWidth: 2,
-    borderColor: Colors.hairline,
+    borderColor: Colors.primaryLite,
+    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
