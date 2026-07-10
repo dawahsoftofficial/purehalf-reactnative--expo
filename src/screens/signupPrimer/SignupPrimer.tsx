@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -7,6 +7,7 @@ import {
   Text as RNText,
   View,
 } from 'react-native';
+import * as Animatable from 'react-native-animatable';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -31,6 +32,34 @@ const isAnswered = (step: PrimerStepDef, value: any): boolean => {
   if (!step.required) return true;
   if (step.control === 'habits') return !!(value?.smoke && value?.drink);
   return value != null;
+};
+
+// Continuous twinkle for the reveal's star badge.
+const TWINKLE = {
+  0: { opacity: 0.7, scale: 0.9 },
+  0.5: { opacity: 1, scale: 1.15 },
+  1: { opacity: 0.7, scale: 0.9 },
+};
+
+// Counts up from 0 to `value` on mount (easeOut), formatted like the final
+// number, so the reveal number "grows" into place.
+const CountUp = ({ value, style }: { value: number; style: any }) => {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    let raf = 0;
+    let start = 0;
+    const duration = 1200;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      setDisplay(Math.round(eased * value));
+      if (p < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <RNText style={style}>{formatMatchCount(display)}</RNText>;
 };
 
 const SignupPrimer = ({ navigation }: any) => {
@@ -194,9 +223,16 @@ const SignupPrimer = ({ navigation }: any) => {
     return (
       <Container style={Styles.screen}>
         <View style={Styles.center}>
-          <View style={Styles.sparkBadge}>
+          <Animatable.View
+            animation={TWINKLE}
+            iterationCount="infinite"
+            duration={1800}
+            easing="ease-in-out"
+            useNativeDriver
+            style={Styles.sparkBadge}
+          >
             <Ionicons name="sparkles" size={wp(8)} color={Colors.primary} />
-          </View>
+          </Animatable.View>
           {founding || count == null ? (
             <>
               <RNText style={Styles.foundingTitle}>Be among the first</RNText>
@@ -207,9 +243,7 @@ const SignupPrimer = ({ navigation }: any) => {
             </>
           ) : (
             <>
-              <RNText style={Styles.revealNum}>
-                {formatMatchCount(count)}
-              </RNText>
+              <CountUp value={count} style={Styles.revealNum} />
               <RNText style={Styles.revealSub}>{subject}</RNText>
               {age.min ? (
                 <View style={Styles.revealChip}>

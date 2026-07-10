@@ -153,8 +153,6 @@ const femaleJourney: PrimerStepDef[] = [
     visibility: 'public',
     question: "What's wonderful about you?",
     subtitle: 'Go on, be proud — this makes your profile shine.',
-    support:
-      "Masha'Allah — you sound like a wonderful woman. Any good man would be lucky.",
     options: [
       o('kind_caring', 'Kind and caring'),
       o('family_oriented', 'Family-oriented'),
@@ -299,8 +297,7 @@ const maleJourney: PrimerStepDef[] = [
       const v = answers.offerings;
       return Array.isArray(v) && v.some((x) => GENEROUS_OFFERS.includes(x));
     },
-    support:
-      "Masha'Allah — offering this much is rare these days. A woman will value a man who brings this.",
+    support: 'The more open you are here, the better we can match you.',
     options: [
       o('separate_home', 'Separate home'),
       o('joint_family', 'Living with my parents (joint family)'),
@@ -316,7 +313,6 @@ const maleJourney: PrimerStepDef[] = [
     visibility: 'public',
     question: 'What makes you a great husband?',
     subtitle: "Own it — this is what she'll notice first.",
-    support: "Masha'Allah — you've got a lot to offer. She'll see it.",
     options: [
       o('caring_supportive', 'Caring and supportive'),
       o('hardworking', 'Hardworking and ambitious'),

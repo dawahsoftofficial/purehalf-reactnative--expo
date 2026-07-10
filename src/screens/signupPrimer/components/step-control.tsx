@@ -324,7 +324,9 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
           ))}
           {step.hasIncome ? (
             <>
-              <RNText style={Styles.subLabel}>Monthly income (optional)</RNText>
+              <RNText style={Styles.subLabel}>
+                Monthly income in PKR (optional)
+              </RNText>
               <View style={Styles.chips}>
                 {INCOME_BANDS.map((op) => (
                   <Chip
