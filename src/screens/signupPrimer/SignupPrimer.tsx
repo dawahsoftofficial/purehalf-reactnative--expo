@@ -223,10 +223,11 @@ const SignupPrimer = ({ navigation }: any) => {
           )}
         </View>
         <View style={Styles.footer}>
-          <Button text="Create your account to meet them" onPress={exitFlow} />
-          <Ripple style={Styles.laterBtn} onPress={exitFlow}>
-            <RNText style={Styles.laterTxt}>Maybe later</RNText>
-          </Ripple>
+          <Button
+            text="Create your account to meet them"
+            onPress={exitFlow}
+            textStyle={Styles.revealBtnTxt}
+          />
         </View>
       </Container>
     );
@@ -251,9 +252,6 @@ const SignupPrimer = ({ navigation }: any) => {
             >
               <Ionicons name="arrow-back" size={wp(5.6)} color={Colors.ink} />
             </Ripple>
-            {current.visibility === 'private' ? null : (
-              <RNText style={Styles.eyebrow}>About you</RNText>
-            )}
           </View>
           <Ripple onPress={advance}>
             <RNText style={Styles.laterTxt}>Skip</RNText>
@@ -330,13 +328,6 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: -wp(1.5),
-  },
-  eyebrow: {
-    color: Colors.primaryMid,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small1,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
   },
   meterTrack: {
     height: hp(0.7),
@@ -481,5 +472,11 @@ const Styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: hp(2),
     lineHeight: wp(5.4),
+  },
+  // Smaller than the default button text + a wider cap than the Button's
+  // maxWidth:wp(60), so the CTA fits on one line.
+  revealBtnTxt: {
+    fontSize: Typography.small2,
+    maxWidth: wp(85),
   },
 });
