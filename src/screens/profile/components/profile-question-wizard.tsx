@@ -213,13 +213,14 @@ const ScaleRuler = ({ item, onSelect }: any) => {
         {formatScaleValue(activeScale, shownValue)}
       </Text>
       <Text style={Styles.rulerReadoutAlt}>
-        {otherEntry
-          ? formatScaleValue(
-              otherEntry.scale,
-              convertScaleValue(shownValue, activeScale, otherEntry.scale)
-            )
-          : ''}
-        {display.value === null ? ` · ${LanguageKeys.notYetProvided}` : ''}
+        {display.value === null
+          ? LanguageKeys.notYetProvided
+          : otherEntry
+            ? formatScaleValue(
+                otherEntry.scale,
+                convertScaleValue(shownValue, activeScale, otherEntry.scale)
+              )
+            : ''}
       </Text>
       <View
         style={Styles.rulerWrap}

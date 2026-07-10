@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -17,20 +23,26 @@ import ProfileQuestionWizard from '../profile/components/profile-question-wizard
 import Data from '../profile/Data';
 import { updateDetails } from '../profile/Funtions';
 import { hydrateGroupFields } from '../profile/hydrate-group-fields';
-import { computeCompletion } from '../profile/profile-hub';
+import {
+  computeCompletion,
+  GROUP_META,
+  type GroupMeta,
+} from '../profile/profile-hub';
 
-// The six onboarding groups, in the approved order, mapped to their Data key.
-const GROUP_SEQUENCE: { key: string; title: string }[] = [
-  { key: 'appearanceAndHealth', title: LanguageKeys.appearanceHealth },
-  { key: 'islamicValues', title: LanguageKeys.islamicValues },
-  { key: 'lifeStyle', title: LanguageKeys.lifeStyle },
-  { key: 'futurePlan', title: LanguageKeys.futurePlans },
-  { key: 'familyBackground', title: LanguageKeys.familyBackground },
-  {
-    key: 'personalityRequirements',
-    title: LanguageKeys.personalityRequirements,
-  },
+// The six onboarding groups, in the approved order. Titles and icons are
+// reused from the ME section's GROUP_META so they never drift out of sync.
+const GROUP_ORDER = [
+  'appearanceAndHealth',
+  'islamicValues',
+  'lifeStyle',
+  'futurePlan',
+  'familyBackground',
+  'personalityRequirements',
 ];
+
+const GROUP_SEQUENCE = GROUP_ORDER.map((key) =>
+  GROUP_META.find((g) => g.key === key)
+).filter((g): g is GroupMeta => Boolean(g));
 
 type Phase = 'loading' | 'question' | 'checkpoint' | 'done';
 
@@ -48,13 +60,20 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   );
   const [lastRewardChats, setLastRewardChats] = useState(0);
 
+  // Snapshot the detail once at mount. Saving a group calls updateCurrentUser,
+  // and if hydration re-read the live currentUser it would re-hydrate mid-flow
+  // and reset the wizard — so the initial values are frozen here.
+  const detailSnapshotRef = useRef<any>((currentUser as any)?.detail ?? {});
+
   // Onboarding runs before the home screen populates the ATTRIBUTE cache, so
-  // fetch it here and hydrate every group up front.
+  // fetch it here and hydrate every group up front. This runs ONCE on mount:
+  // depending on currentUser would re-fire it after every group save and
+  // clobber the checkpoint phase, trapping the user on the same group.
   useEffect(() => {
     let alive = true;
 
     const hydrateAll = (attribute: any) => {
-      const detail = (currentUser as any)?.detail ?? {};
+      const detail = detailSnapshotRef.current;
       const hydrated: Record<string, any[]> = {};
       GROUP_SEQUENCE.forEach(({ key }) => {
         hydrated[key] = hydrateGroupFields(
@@ -81,7 +100,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
     return () => {
       alive = false;
     };
-  }, [currentUser, storageKeys.ATTRIBUTE]);
+  }, []);
 
   const strengthPct = useMemo(
     () =>
@@ -192,15 +211,23 @@ const OnboardingProfile = ({ navigation, route }: any) => {
     <Container style={Styles.screen}>
       <View style={Styles.header}>
         <View style={Styles.headerRow}>
-          <Text style={Styles.groupLabel}>
-            {`${LanguageKeys.group} ${groupIndex + 1}/${GROUP_SEQUENCE.length}`}
-          </Text>
+          <View style={Styles.groupNameRow}>
+            <View style={Styles.groupIconChip}>
+              <Ionicons
+                name={currentGroup.icon}
+                size={wp(4.5)}
+                color={Colors.primary}
+              />
+            </View>
+            <Text style={Styles.groupName} numberOfLines={1}>
+              {currentGroup.title}
+            </Text>
+          </View>
           <Text style={Styles.strengthLabel}>{`${strengthPct}%`}</Text>
         </View>
         <View style={Styles.meterTrack}>
           <View style={[Styles.meterFill, { width: `${strengthPct}%` }]} />
         </View>
-        <Text style={Styles.groupTitle}>{currentGroup.title}</Text>
       </View>
 
       {phase === 'question' ? (
@@ -268,10 +295,26 @@ const Styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  groupLabel: {
-    color: Colors.primaryMid,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small1,
+  groupNameRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
+    marginRight: wp(3),
+  },
+  groupIconChip: {
+    width: wp(8),
+    height: wp(8),
+    borderRadius: 9,
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  groupName: {
+    flexShrink: 1,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small3,
   },
   strengthLabel: {
     color: Colors.primary,
@@ -289,12 +332,6 @@ const Styles = StyleSheet.create({
     height: '100%',
     borderRadius: hp(0.45),
     backgroundColor: Colors.primary,
-  },
-  groupTitle: {
-    color: Colors.ink,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium1,
-    marginTop: hp(1.5),
   },
   checkpointBody: { flex: 1, paddingHorizontal: wp(4), paddingTop: hp(2) },
   checkpointCard: {
