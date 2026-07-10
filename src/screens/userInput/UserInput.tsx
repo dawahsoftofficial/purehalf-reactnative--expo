@@ -200,6 +200,11 @@ function UserInput(props: UserInputProps) {
     setLoader(false);
   }, [currentUser]);
 
+  // Gender is asked once (welcome primer / prior signup). When it's already on
+  // the account we skip re-asking during signup; the picker still shows in the
+  // settings edit and as a fallback when gender is missing.
+  const genderPreset = Boolean((currentUser as User)?.gender);
+
   const getLanguages = useCallback(async () => {
     try {
       const storedLanguage = await getData(storageKeys.LANGUAGE);
@@ -345,14 +350,16 @@ function UserInput(props: UserInputProps) {
               disabled={fromSettings}
             />
           </View>
-          <View style={Styles.lastFieldCon}>
-            <GenderPicker
-              value={gender}
-              onSelect={onGenderChange}
-              outerLabelStyle={{ color: Colors.ink }}
-              disabled={fromSettings}
-            />
-          </View>
+          {fromSettings || !genderPreset ? (
+            <View style={Styles.lastFieldCon}>
+              <GenderPicker
+                value={gender}
+                onSelect={onGenderChange}
+                outerLabelStyle={{ color: Colors.ink }}
+                disabled={fromSettings}
+              />
+            </View>
+          ) : null}
         </View>
       </KeyboardAwareScrollView>
     );
