@@ -29,6 +29,11 @@ const Initialization = (): JSX.Element => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  // The initial route depends on the /settings flags (e.g. the pre-signup
+  // primer), which load asynchronously. Track when they've arrived so we don't
+  // reveal the app — and let the router pick a route — before the flags exist.
+  const settingsLoaded = useSettingsStore((state) => state.loaded);
+  const [settingsWaitTimedOut, setSettingsWaitTimedOut] = useState(false);
 
   const checkForMandatoryUpdate = useCallback(async () => {
     try {
@@ -100,11 +105,24 @@ const Initialization = (): JSX.Element => {
     initializeApp();
   }, [clearOpenedConversationId, configureLanguage]);
 
+  // Fail-safe: never trap the user on the splash if the settings fetch is slow
+  // or fails — after this window we proceed with whatever settings we have.
   useEffect(() => {
-    if (!isLoading) {
+    const timer = setTimeout(() => setSettingsWaitTimedOut(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Reveal the app only once local init is done AND settings have loaded (or we
+  // timed out). This closes the race where RootNavigation picked the initial
+  // route before the /settings flags arrived and always fell through to the
+  // default route.
+  const appReady = !isLoading && (settingsLoaded || settingsWaitTimedOut);
+
+  useEffect(() => {
+    if (appReady) {
       RNBootSplash.hide({ fade: true });
     }
-  }, [isLoading]);
+  }, [appReady]);
 
   const handleUpdatePress = useCallback(async () => {
     try {
@@ -142,7 +160,7 @@ const Initialization = (): JSX.Element => {
           </View>
         </View>
       </Modal>
-      {isLoading ? <View /> : <RootNavigation />}
+      {appReady ? <RootNavigation /> : <View />}
       <RatingPromptModal />
     </View>
   );
