@@ -136,7 +136,7 @@ const itemFilled = (item: any) => {
 };
 ```
 
-Add `isFieldFilled` to the import from `../../screens/profile/profile-editor-flow`... — this file has no such import yet, so add one at the top of `profile-hub.tsx` (after the existing `Colors, Fonts` import):
+`profile-hub.tsx` has no import from `profile-editor-flow.ts` yet, so add one at the top of the file (after the existing `Colors, Fonts` import):
 
 ```ts
 import { isFieldFilled } from './profile-editor-flow';
