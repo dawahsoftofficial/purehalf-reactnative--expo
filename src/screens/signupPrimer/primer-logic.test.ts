@@ -2,6 +2,7 @@ import {
   computeProgress,
   formatMatchCount,
   nextStepIndex,
+  prevStepIndex,
   type PrimerStep,
   shouldShowPrimer,
 } from './primer-logic';
@@ -50,6 +51,15 @@ describe('conditional steps', () => {
 
   it('nextStepIndex returns -1 at the end', () => {
     expect(nextStepIndex(steps, { wantB: false }, 2)).toBe(-1);
+  });
+
+  it('prevStepIndex skips a hidden step', () => {
+    expect(prevStepIndex(steps, { wantB: false }, 2)).toBe(0);
+    expect(prevStepIndex(steps, { wantB: true }, 2)).toBe(1);
+  });
+
+  it('prevStepIndex returns -1 at the first question', () => {
+    expect(prevStepIndex(steps, { wantB: false }, 0)).toBe(-1);
   });
 
   it('computeProgress is over visible steps only', () => {

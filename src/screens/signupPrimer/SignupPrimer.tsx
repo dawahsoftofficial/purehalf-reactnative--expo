@@ -21,6 +21,7 @@ import {
   computeProgress,
   formatMatchCount,
   nextStepIndex,
+  prevStepIndex,
 } from './primer-logic';
 import type { PrimerGender, PrimerStepDef } from './primer-types';
 
@@ -117,6 +118,17 @@ const SignupPrimer = ({ navigation }: any) => {
       setStepIndex(next);
     }
   }, [answers, current, fetchCount, gender, markSeen, stepIndex, steps]);
+
+  // Step back to the previous visible question; from the first question, return
+  // to the gender step so nothing is a dead end.
+  const goBack = useCallback(() => {
+    const prev = prevStepIndex(steps, answers, stepIndex);
+    if (prev === -1) {
+      setPhase('gender');
+    } else {
+      setStepIndex(prev);
+    }
+  }, [answers, stepIndex, steps]);
 
   // --- Gender select -------------------------------------------------------
   if (phase === 'gender') {
@@ -231,11 +243,20 @@ const SignupPrimer = ({ navigation }: any) => {
     <Container style={Styles.screen}>
       <View style={Styles.header}>
         <View style={Styles.headerRow}>
-          <RNText style={Styles.eyebrow}>
-            {current.visibility === 'private'
-              ? 'Only you can see this'
-              : 'About you'}
-          </RNText>
+          <View style={Styles.headerLeft}>
+            <Ripple
+              onPress={goBack}
+              style={Styles.backBtn}
+              rippleContainerBorderRadius={999}
+            >
+              <Ionicons name="arrow-back" size={wp(5.6)} color={Colors.ink} />
+            </Ripple>
+            <RNText style={Styles.eyebrow}>
+              {current.visibility === 'private'
+                ? 'Only you can see this'
+                : 'About you'}
+            </RNText>
+          </View>
           <Ripple onPress={exitFlow}>
             <RNText style={Styles.laterTxt}>Maybe later</RNText>
           </Ripple>
@@ -298,6 +319,19 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.5),
+  },
+  backBtn: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -wp(1.5),
   },
   eyebrow: {
     color: Colors.primaryMid,

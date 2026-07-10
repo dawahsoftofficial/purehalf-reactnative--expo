@@ -45,6 +45,20 @@ export const nextStepIndex = (
   return -1;
 };
 
+// Index of the previous visible step before `fromIndex`, or -1 if none remain
+// (i.e. we're at the first question — the caller then sends the user back to the
+// gender step). Skips conditionally-hidden steps, mirroring nextStepIndex.
+export const prevStepIndex = (
+  steps: PrimerStep[],
+  answers: PrimerAnswers,
+  fromIndex: number
+): number => {
+  for (let i = fromIndex - 1; i >= 0; i -= 1) {
+    if (isVisible(steps[i], answers)) return i;
+  }
+  return -1;
+};
+
 // Whole-journey progress (0–100), computed over currently-visible steps so the
 // global bar stays honest when conditional steps drop out.
 export const computeProgress = (
