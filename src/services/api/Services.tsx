@@ -674,6 +674,35 @@ class GApiServices {
     });
   };
 
+  // Public, unauthenticated live match count for the welcome primer reveal.
+  getMatchCount = (params: {
+    seeking: string;
+    min_age?: number;
+    max_age?: number;
+    country?: string;
+  }) => {
+    return new Promise((resolve, reject) => {
+      const parts = [`seeking=${encodeURIComponent(params.seeking)}`];
+      if (params.min_age != null) parts.push(`min_age=${params.min_age}`);
+      if (params.max_age != null) parts.push(`max_age=${params.max_age}`);
+      if (params.country) {
+        parts.push(`country=${encodeURIComponent(params.country)}`);
+      }
+      Api.get(`${EndPoints.matchCount}?${parts.join('&')}`)
+        .then((data) => resolve(data?.data?.results))
+        .catch((error) => reject(error?.response?.data));
+    });
+  };
+
+  // Commit the primer's collected answers to the account after auth.
+  commitIntroAnswers = (payload: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.introCommit, payload)
+        .then((data) => resolve(data?.data?.results))
+        .catch((error) => reject(error?.response?.data));
+    });
+  };
+
   getUserDetail = (id: any) => {
     return new Promise((resolve, reject) => {
       Api.get(`${EndPoints.getUserDetail}/${id}/detail`)

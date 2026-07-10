@@ -30,6 +30,7 @@ export * from './searchProfiles';
 export * from './settings';
 export * from './signup-step-input';
 export * from './signup-step-radio';
+export * from './signupPrimer';
 export * from './userInput';
 export * from './userProfile';
 export * from './welcome';

@@ -79,6 +79,10 @@ const EndPoints = {
   notificationsMarkAllRead: '/auth/notifications/mark-all-read',
   notificationDelete: (id: number) => `/auth/notifications/${id}`,
   notificationsClearAll: '/auth/notifications/clear-all',
+
+  // Signup welcome primer (Part 2)
+  matchCount: '/public/match-count',
+  introCommit: '/auth/intro/commit',
 };
 
 export default EndPoints;
