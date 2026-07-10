@@ -3,6 +3,7 @@ import type { PrimerAnswers } from './primer-logic';
 // The control kinds the step engine knows how to render.
 export type PrimerControl =
   | 'single' // auto-advance single-select
+  | 'reason' // single-select presets + an open "in your own words" text field
   | 'multi' // multi-select (optional `max`)
   | 'text' // free text
   | 'slider' // dual-thumb age range

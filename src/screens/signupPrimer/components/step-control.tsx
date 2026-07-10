@@ -114,6 +114,33 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
         </View>
       );
 
+    case 'reason': {
+      // Single-select presets plus an open text field. The value is either a
+      // preset id or the free text; picking one clears the other.
+      const v = typeof value === 'string' ? value : '';
+      const isPreset = opts.some((op) => op.id === v);
+      return (
+        <View style={Styles.list}>
+          {opts.map((op) => (
+            <Row
+              key={op.id}
+              label={op.label}
+              on={v === op.id}
+              onPress={() => onChange(op.id)}
+            />
+          ))}
+          <RNText style={Styles.subLabel}>Or say it in your own words</RNText>
+          <TextInput
+            style={Styles.input}
+            value={isPreset ? '' : v}
+            onChangeText={onChange}
+            placeholder="Tell us what brought you here…"
+            placeholderTextColor={Colors.primaryLite}
+          />
+        </View>
+      );
+    }
+
     case 'multi':
     case 'traits': {
       const selected = asArray(value);

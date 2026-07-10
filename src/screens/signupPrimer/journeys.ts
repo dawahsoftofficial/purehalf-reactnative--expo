@@ -22,14 +22,15 @@ const SECT_OPTIONS: PrimerOption[] = [
 const femaleJourney: PrimerStepDef[] = [
   {
     id: 'stage',
-    control: 'single',
+    control: 'reason',
     visibility: 'private',
-    question: 'Where are you in this journey?',
+    question: 'What brings you here?',
+    subtitle: 'Pick one, or say it in your own words.',
     options: [
-      o('just_starting', 'Just starting out'),
-      o('searching_while', 'Searching for a while'),
-      o('tired_rishta', 'Honestly tired of the rishta process'),
-      o('family_searching', 'My family is searching for me'),
+      o('ready_partner', 'Ready to find my life partner'),
+      o('exploring', 'Exploring seriously, no rush'),
+      o('tired_rishta', 'Tired of the rishta process, hoping for better'),
+      o('family_searching', 'My family is helping me search'),
     ],
   },
   {
@@ -171,14 +172,15 @@ const femaleJourney: PrimerStepDef[] = [
 const maleJourney: PrimerStepDef[] = [
   {
     id: 'stage',
-    control: 'single',
+    control: 'reason',
     visibility: 'private',
-    question: 'What best describes you right now?',
+    question: 'What brings you here?',
+    subtitle: 'Pick one, or say it in your own words.',
     options: [
       o('ready_now', 'Ready to marry now'),
-      o('getting_late', "It's getting late — I really want to settle down"),
-      o('guard_deen', 'Keen to marry, to guard my deen'),
-      o('been_searching', 'Been searching for a while'),
+      o('getting_late', "It's getting late — I want to settle down"),
+      o('guard_deen', 'To complete half my deen'),
+      o('been_searching', 'Been searching, hoping to find the one'),
     ],
   },
   {
