@@ -8,6 +8,17 @@ const o = (id: string, label: string): PrimerOption => ({ id, label });
 
 const GENEROUS_OFFERS = ['separate_home', 'continue_career', 'simple_nikah'];
 
+// Sect options mirror the two Sunni madhahib the backend stores (sect-2 Hanafi,
+// sect-1 Salafi) so a generic "Sunni" is never collapsed onto one sub-sect on a
+// public profile. Shared by both journeys.
+const SECT_OPTIONS: PrimerOption[] = [
+  o('sunni_hanafi', 'Sunni (Hanafi)'),
+  o('sunni_salafi', 'Sunni (Salafi)'),
+  o('shia', 'Shia'),
+  o('other', 'Other'),
+  o('prefer_not_say', 'Prefer not to say'),
+];
+
 const femaleJourney: PrimerStepDef[] = [
   {
     id: 'stage',
@@ -57,12 +68,7 @@ const femaleJourney: PrimerStepDef[] = [
     control: 'sectCombo',
     visibility: 'public',
     question: 'Your sect',
-    options: [
-      o('sunni', 'Sunni'),
-      o('shia', 'Shia'),
-      o('other', 'Other'),
-      o('prefer_not_say', 'Prefer not to say'),
-    ],
+    options: SECT_OPTIONS,
   },
   {
     id: 'concerns',
@@ -211,12 +217,7 @@ const maleJourney: PrimerStepDef[] = [
     control: 'sectCombo',
     visibility: 'public',
     question: 'Your sect',
-    options: [
-      o('sunni', 'Sunni'),
-      o('shia', 'Shia'),
-      o('other', 'Other'),
-      o('prefer_not_say', 'Prefer not to say'),
-    ],
+    options: SECT_OPTIONS,
   },
   {
     id: 'concerns',
@@ -337,10 +338,15 @@ const maleJourney: PrimerStepDef[] = [
 export const journeyFor = (gender: PrimerGender): PrimerStepDef[] =>
   gender === 'male' ? maleJourney : femaleJourney;
 
+// Bands mirror the backend earn-* attribute boundaries so income resolves to a
+// single earnings_per_month_id exactly. Values are monthly, in PKR.
 export const INCOME_BANDS: PrimerOption[] = [
-  o('up_to_100k', 'Up to 100k'),
-  o('100_300k', '100k–300k'),
-  o('300k_plus', '300k+'),
+  o('up_to_50k', 'Up to 50,000'),
+  o('50k_100k', '50,000 – 100,000'),
+  o('100k_200k', '100,000 – 200,000'),
+  o('200k_500k', '200,000 – 500,000'),
+  o('500k_1m', '500,000 – 1,000,000'),
+  o('above_1m', 'Above 1,000,000'),
 ];
 
 export const HABIT_OPTIONS: PrimerOption[] = [

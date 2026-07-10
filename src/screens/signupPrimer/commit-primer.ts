@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { ApiServices, StorageManager } from '../../services';
+import { buildIntroSummary } from './build-summary';
 
 // Flush any locally-held primer answers to the account after auth. The backend
 // stores the JSON, resolves fact labels → columns, and generates the profile
@@ -13,6 +14,7 @@ export const flushPrimerAnswers = async (): Promise<void> => {
     await ApiServices.commitIntroAnswers({
       gender: stored.gender,
       intro_answers: stored.answers,
+      intro_summary: buildIntroSummary(stored.answers, stored.gender),
     });
     await setData(storageKeys.PRIMER_ANSWERS, null);
   } catch {
