@@ -87,6 +87,12 @@ function UserInput(props: UserInputProps) {
   const [lastName, setLastName] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState<Date | string>('');
   const [gender, setGender] = useState('');
+  // Gender is asked once (welcome primer / prior signup). When it's already
+  // known — from the account or the primer — we skip re-asking during signup;
+  // the picker still shows in the settings edit and as a fallback.
+  const [genderPreset, setGenderPreset] = useState(
+    Boolean((currentUser as User)?.gender)
+  );
 
   const onChangeFirstName = useCallback((text: string) => {
     setFirstName(text);
@@ -176,7 +182,7 @@ function UserInput(props: UserInputProps) {
     hideLoader,
   ]);
 
-  const initializeUserData = useCallback(() => {
+  const initializeUserData = useCallback(async () => {
     if (currentUser) {
       const user = currentUser as User;
       const { first_name, last_name, date_of_birth, gender: userGender } = user;
@@ -189,21 +195,30 @@ function UserInput(props: UserInputProps) {
       if (date_of_birth) {
         setDateOfBirth(new Date(date_of_birth));
       }
-      if (userGender) {
+
+      // Gender is asked once. Prefer the account; otherwise fall back to the
+      // welcome-primer answer, which is held locally (MMKV) even before the
+      // post-auth commit lands on the server.
+      let effectiveGender = userGender;
+      if (!effectiveGender) {
+        const primer = (await getData(storageKeys.PRIMER_ANSWERS)) as {
+          gender?: string;
+        } | null;
+        if (primer?.gender) {
+          effectiveGender = primer.gender;
+        }
+      }
+      if (effectiveGender) {
         setGender(
-          userGender.toLowerCase() === 'male'
+          String(effectiveGender).toLowerCase() === 'male'
             ? LanguageKeys.male
             : LanguageKeys.female
         );
+        setGenderPreset(true);
       }
     }
     setLoader(false);
-  }, [currentUser]);
-
-  // Gender is asked once (welcome primer / prior signup). When it's already on
-  // the account we skip re-asking during signup; the picker still shows in the
-  // settings edit and as a fallback when gender is missing.
-  const genderPreset = Boolean((currentUser as User)?.gender);
+  }, [currentUser, getData, storageKeys.PRIMER_ANSWERS]);
 
   const getLanguages = useCallback(async () => {
     try {
