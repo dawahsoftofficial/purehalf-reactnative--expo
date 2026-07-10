@@ -18,6 +18,26 @@ drop-off analytics. Answers live in MMKV until auth, then flush to the backend.
 **Tech stack:** RN 0.82, React 19.1, TS, Zustand settings store, MMKV, i18next, native-stack,
 existing geolocation (Location.tsx), `addAnaylatics`.
 
+## BUILD STATUS (2026-07-10, branch `feat/signup-welcome-primer`)
+
+**Done + committed (type-check + jest green):** Tasks 1–8. Storage keys + settings getters;
+pure resolvers + 11 jest tests; both journey configs (`journeys.ts`); the step engine
+(`SignupPrimer.tsx`) + all controls (`components/step-control.tsx`); the reveal (live count +
+founding-member <50 fallback + graceful network failure); commit-after-auth
+(`commit-primer.ts`, wired into `Otp.onLoggedIn` + a startup net in `RootNavigation`); nav
+gating (SignupPrimer as the not-logged-in initial route behind the flag); gender-skip in
+`UserInput`. Copy is inline English (renders through `t()`); full i18n keys = the remaining
+Task 10. Analytics fire `primer_started` / `primer_step` (per-screen drop-off events still to
+add).
+
+**Remaining follow-ups (deferred — they touch shared/core code and want on-device
+verification):**
+
+- Task 9 — Part-1 trim: remove the weight slider → optional body-type, and drop the caste
+  question from the ME wizard (`src/screens/profile/Data.tsx`, shared with the ME section).
+- Task 10 — i18n: move all inline strings into `Keys` + the three locale JSONs.
+- Polygamy female-side filter wiring + profile badge (pairs with the backend filter).
+
 ## Global Constraints
 
 - Every user-visible string via `t()`, keys in all three locales (identical keys).
