@@ -21,6 +21,7 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import PolygamyBadge from './components/polygamy-badge';
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
@@ -58,6 +59,7 @@ type UserDetail = {
   weight_scale?: string;
   weight?: number;
   gender?: string;
+  open_for_polygamy?: boolean | number | null;
 };
 
 type User = {
@@ -594,6 +596,9 @@ const Profile = ({
                     </>
                   ) : (
                     <>
+                      {userData?.detail?.open_for_polygamy ? (
+                        <PolygamyBadge />
+                      ) : null}
                       <InterestAndHobbyCard
                         data={interestAndHobbies}
                         headerHeading={LanguageKeys.myInterestAndHobbies}
