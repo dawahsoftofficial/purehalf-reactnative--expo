@@ -8,6 +8,7 @@ import { hp, Typography, wp } from '../../../global';
 import { Colors, Fonts } from '../../../res';
 import { HABIT_OPTIONS, INCOME_BANDS } from '../journeys';
 import type { PrimerOption, PrimerStepDef } from '../primer-types';
+import RangeSlider from './range-slider';
 
 type Props = {
   step: PrimerStepDef;
@@ -89,41 +90,6 @@ const YesNo = ({
       on={value === 'no'}
       onPress={() => onChange('no')}
     />
-  </View>
-);
-
-const AgeStepper = ({
-  label,
-  val,
-  min,
-  max,
-  onChange,
-}: {
-  label: string;
-  val: number;
-  min: number;
-  max: number;
-  onChange: (n: number) => void;
-}) => (
-  <View style={Styles.stepperRow}>
-    <RNText style={Styles.stepperLabel}>{label}</RNText>
-    <View style={Styles.stepper}>
-      <Ripple
-        style={Styles.stepBtn}
-        onPress={() => onChange(Math.max(min, val - 1))}
-        rippleContainerBorderRadius={999}
-      >
-        <Ionicons name="remove" size={wp(5)} color={Colors.primary} />
-      </Ripple>
-      <RNText style={Styles.stepVal}>{val}</RNText>
-      <Ripple
-        style={Styles.stepBtn}
-        onPress={() => onChange(Math.min(max, val + 1))}
-        rippleContainerBorderRadius={999}
-      >
-        <Ionicons name="add" size={wp(5)} color={Colors.primary} />
-      </Ripple>
-    </View>
   </View>
 );
 
@@ -211,22 +177,13 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
       const max = step.sliderMax ?? 60;
       const range = value ?? { min: 25, max: 35 };
       return (
-        <View>
-          <AgeStepper
-            label="From"
-            val={range.min}
-            min={min}
-            max={range.max}
-            onChange={(n) => onChange({ ...range, min: n })}
-          />
-          <AgeStepper
-            label="To"
-            val={range.max}
-            min={range.min}
-            max={max}
-            onChange={(n) => onChange({ ...range, max: n })}
-          />
-        </View>
+        <RangeSlider
+          min={min}
+          max={max}
+          from={range.min}
+          to={range.max}
+          onChange={onChange}
+        />
       );
     }
 
@@ -524,32 +481,5 @@ const Styles = StyleSheet.create({
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
-  },
-  stepperRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: hp(2),
-  },
-  stepperLabel: {
-    color: Colors.ink,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small3,
-  },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: wp(4) },
-  stepBtn: {
-    width: wp(11),
-    height: wp(11),
-    borderRadius: wp(5.5),
-    backgroundColor: Colors.lavender,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepVal: {
-    minWidth: wp(10),
-    textAlign: 'center',
-    color: Colors.primary,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large1,
   },
 });
