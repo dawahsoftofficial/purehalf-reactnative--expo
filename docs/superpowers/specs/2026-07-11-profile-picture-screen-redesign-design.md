@@ -17,13 +17,13 @@ Two files only:
 
 **Header**
 
-- Title/subtitle copy unchanged.
-- "View photo guidelines" trigger changes from a filled lavender pill to an inline text link: `shield-check` icon (16px) + "Photo guidelines" text, `Colors.primary`, no background fill or border. Reduces visual competition with the upload circle, which becomes the primary focal point.
+- Title/subtitle and "View photo guidelines" copy unchanged.
+- "View photo guidelines" trigger changes from a filled lavender pill to an inline text link: `shield-checkmark-outline` icon (Ionicons — the icon set already used in this file) + "View photo guidelines" text, underlined, `Colors.primary`, no background fill or border. Reduces visual competition with the upload circle, which becomes the primary focal point.
 
 **Upload circle**
 
-- Fill switches from solid `Colors.lavender` to a dashed-border ring (`Colors.primaryLite`, `borderStyle: 'dashed'`) around a `Colors.lavender` fill — reads as a drop zone rather than a static avatar placeholder.
-- Placeholder icon switches from `person` to `camera-plus` (`Colors.primaryLite`), signaling "add a photo" more directly than a generic silhouette.
+- Border switches from a solid `Colors.hairline` ring to a `Colors.primaryLite` ring, `borderStyle: 'dashed'`, around a `Colors.lavender` fill. Note: on a full-circle `borderRadius`, React Native tends to render `dashed` as a solid line on iOS (a known platform limitation) — in practice this ships as a solid `Colors.primaryLite` ring on iOS, and the `borderStyle: 'dashed'` value is left in place as a no-cost Android enhancement rather than removed. Still a visible upgrade from the old `Colors.hairline` border regardless of platform.
+- Placeholder icon switches from `person` to `camera-outline` (Ionicons — the icon set already used in this file), `Colors.primaryLite`.
 - Badge overlay (bottom-right add/camera icon on `Colors.primary` circle) is unchanged — it already correctly swaps between `add` and `camera` based on whether a photo is selected.
 - Caption text ("Tap to upload" / "Tap to change your photo") unchanged.
 - When an image is already selected, the dashed ring and placeholder icon are not shown — the selected `Image` fills the circle as it does today. Only the empty-state placeholder changes.
