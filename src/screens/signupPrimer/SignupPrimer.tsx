@@ -251,9 +251,9 @@ const SignupPrimer = ({ navigation }: any) => {
             >
               <Ionicons name="arrow-back" size={wp(5.6)} color={Colors.ink} />
             </Ripple>
-            <RNText style={Styles.eyebrow}>
-              {current.visibility === 'private' ? 'Private' : 'About you'}
-            </RNText>
+            {current.visibility === 'private' ? null : (
+              <RNText style={Styles.eyebrow}>About you</RNText>
+            )}
           </View>
           <Ripple onPress={advance}>
             <RNText style={Styles.laterTxt}>Skip</RNText>
