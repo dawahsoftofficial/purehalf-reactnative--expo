@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { t } from 'i18next';
 import React, {
   useCallback,
   useEffect,
@@ -18,7 +19,12 @@ import {
   scheduleProfileReminder,
 } from '../../notifications/profile-reminder';
 import { Colors, Fonts } from '../../res';
-import { ApiServices, StorageManager, useGlobalContext } from '../../services';
+import {
+  ApiServices,
+  flashSuccessMessage,
+  StorageManager,
+  useGlobalContext,
+} from '../../services';
 import ProfileQuestionWizard from '../profile/components/profile-question-wizard';
 import Data from '../profile/Data';
 import { updateDetails } from '../profile/Funtions';
@@ -44,7 +50,7 @@ const GROUP_SEQUENCE = GROUP_ORDER.map((key) =>
   GROUP_META.find((g) => g.key === key)
 ).filter((g): g is GroupMeta => Boolean(g));
 
-type Phase = 'loading' | 'question' | 'checkpoint' | 'done';
+type Phase = 'loading' | 'question' | 'done';
 
 const OnboardingProfile = ({ navigation, route }: any) => {
   const fromHome = route?.params?.from === 'Home';
@@ -54,11 +60,11 @@ const OnboardingProfile = ({ navigation, route }: any) => {
 
   const [phase, setPhase] = useState<Phase>('loading');
   const [groupIndex, setGroupIndex] = useState(0);
+  const [startAtEnd, setStartAtEnd] = useState(false);
   const [saving, setSaving] = useState(false);
   const [categoriesData, setCategoriesData] = useState<Record<string, any[]>>(
     {}
   );
-  const [lastRewardChats, setLastRewardChats] = useState(0);
 
   // Snapshot the detail once at mount. Saving a group calls updateCurrentUser,
   // and if hydration re-read the live currentUser it would re-hydrate mid-flow
@@ -140,9 +146,13 @@ const OnboardingProfile = ({ navigation, route }: any) => {
             const chats = Math.round(
               reward.awarded / (reward.multiplier || 50)
             );
-            setLastRewardChats(chats);
-          } else {
-            setLastRewardChats(0);
+            // Reward is surfaced as a lightweight toast now that the between-
+            // groups checkpoint screen is gone. Translate each key first — the
+            // flash helper t()s the whole string, which can't resolve a
+            // concatenation of keys.
+            flashSuccessMessage(
+              `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
+            );
           }
           if (res?.detail) {
             const updatedUser: any = {
@@ -156,27 +166,32 @@ const OnboardingProfile = ({ navigation, route }: any) => {
             updateCurrentUser(updatedUser);
           }
           setSaving(false);
-          setPhase('checkpoint');
+          if (isLastGroup) {
+            setPhase('done');
+          } else {
+            // Straight on to the next group — no interstitial.
+            setStartAtEnd(false);
+            setGroupIndex((i) => i + 1);
+          }
         })
         .catch(() => setSaving(false));
     },
     [
       currentGroup.key,
       currentUser,
+      isLastGroup,
       setData,
       storageKeys.USER,
       updateCurrentUser,
     ]
   );
 
-  const onContinueFromCheckpoint = useCallback(() => {
-    if (isLastGroup) {
-      setPhase('done');
-      return;
-    }
-    setGroupIndex((i) => i + 1);
-    setPhase('question');
-  }, [isLastGroup]);
+  // Back from the first question of a group returns to the previous group,
+  // landing on its last question.
+  const goToPrevGroup = useCallback(() => {
+    setStartAtEnd(true);
+    setGroupIndex((i) => Math.max(i - 1, 0));
+  }, []);
 
   if (phase === 'loading') {
     return (
@@ -223,58 +238,31 @@ const OnboardingProfile = ({ navigation, route }: any) => {
               {currentGroup.title}
             </Text>
           </View>
-          <Text style={Styles.strengthLabel}>{`${strengthPct}%`}</Text>
+          <Ripple onPress={saving ? undefined : bailFlow} disabled={saving}>
+            <Text style={Styles.finishLaterText}>
+              {LanguageKeys.finishLater}
+            </Text>
+          </Ripple>
         </View>
-        <View style={Styles.meterTrack}>
-          <View style={[Styles.meterFill, { width: `${strengthPct}%` }]} />
+        <View style={Styles.meterRow}>
+          <View style={Styles.meterTrack}>
+            <View style={[Styles.meterFill, { width: `${strengthPct}%` }]} />
+          </View>
+          <Text style={Styles.strengthLabel}>{`${strengthPct}%`}</Text>
         </View>
       </View>
 
-      {phase === 'question' ? (
-        <ProfileQuestionWizard
-          key={currentGroup.key}
-          fields={categoriesData[currentGroup.key] ?? []}
-          gender={gender}
-          saving={saving}
-          finalLabel={LanguageKeys.continue}
-          showSkip={false}
-          onComplete={onGroupComplete}
-        />
-      ) : (
-        <>
-          <View style={Styles.checkpointBody}>
-            <View style={Styles.checkpointCard}>
-              {lastRewardChats > 0 ? (
-                <View style={Styles.rewardChip}>
-                  <Ionicons
-                    name="chatbubbles"
-                    size={wp(5)}
-                    color={Colors.verified}
-                  />
-                  <Text style={Styles.rewardText}>
-                    {`${LanguageKeys.youEarned} +${lastRewardChats} ${LanguageKeys.chatCredits}`}
-                  </Text>
-                </View>
-              ) : null}
-              <Text style={Styles.checkpointStrength}>{`${strengthPct}%`}</Text>
-              <Text style={Styles.checkpointHint}>
-                {LanguageKeys.matchQualityHint}
-              </Text>
-            </View>
-          </View>
-          <View style={Styles.footer}>
-            <Button
-              text={LanguageKeys.continue}
-              onPress={onContinueFromCheckpoint}
-            />
-            <Ripple style={Styles.finishLaterBtn} onPress={bailFlow}>
-              <Text style={Styles.finishLaterText}>
-                {LanguageKeys.finishLater}
-              </Text>
-            </Ripple>
-          </View>
-        </>
-      )}
+      <ProfileQuestionWizard
+        key={currentGroup.key}
+        fields={categoriesData[currentGroup.key] ?? []}
+        gender={gender}
+        saving={saving}
+        finalLabel={LanguageKeys.continue}
+        showSkip={false}
+        startAtEnd={startAtEnd}
+        onBack={groupIndex > 0 ? goToPrevGroup : undefined}
+        onComplete={onGroupComplete}
+      />
     </Container>
   );
 };
@@ -320,64 +308,31 @@ const Styles = StyleSheet.create({
     color: Colors.primary,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.small1,
+    minWidth: wp(9),
+    textAlign: 'right',
+  },
+  meterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+    marginTop: hp(1),
   },
   meterTrack: {
+    flex: 1,
     height: hp(0.9),
     borderRadius: hp(0.45),
     backgroundColor: Colors.lavender,
     overflow: 'hidden',
-    marginTop: hp(1),
   },
   meterFill: {
     height: '100%',
     borderRadius: hp(0.45),
     backgroundColor: Colors.primary,
   },
-  checkpointBody: { flex: 1, paddingHorizontal: wp(4), paddingTop: hp(2) },
-  checkpointCard: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-    borderRadius: 16,
-    padding: wp(5),
-    alignItems: 'center',
-  },
-  rewardChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(2),
-    backgroundColor: 'rgba(46,158,91,0.12)',
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1),
-    borderRadius: 999,
-    marginBottom: hp(2),
-  },
-  rewardText: {
-    color: Colors.verified,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
-  },
-  checkpointStrength: {
-    color: Colors.primary,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: wp(11),
-  },
-  checkpointHint: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small2,
-    textAlign: 'center',
-    marginTop: hp(1),
-  },
   footer: {
     paddingHorizontal: wp(4),
     paddingTop: hp(1.5),
     paddingBottom: hp(2),
-  },
-  finishLaterBtn: {
-    alignSelf: 'center',
-    paddingVertical: hp(1.4),
-    paddingHorizontal: wp(6),
   },
   finishLaterText: {
     color: Colors.muted,

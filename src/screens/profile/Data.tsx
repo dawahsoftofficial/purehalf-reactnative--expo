@@ -40,6 +40,7 @@ const Data: any = {
       selected: {},
       category: 'appearance-0',
       apiKey: 'body_type_id',
+      inline: true,
     },
     {
       title: LanguageKeys.eyesColor,
@@ -49,6 +50,7 @@ const Data: any = {
       selected: {},
       category: 'appearance-0',
       apiKey: 'eyes_color_id',
+      inline: true,
     },
     {
       title: LanguageKeys.skinTone,
@@ -58,6 +60,7 @@ const Data: any = {
       selected: {},
       category: 'appearance-0',
       apiKey: 'skin_tone_id',
+      inline: true,
     },
   ],
   familyBackground: [

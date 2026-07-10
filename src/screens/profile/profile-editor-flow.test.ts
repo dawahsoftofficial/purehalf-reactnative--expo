@@ -129,6 +129,23 @@ describe('option helpers', () => {
 
     expect(shouldUseTagOptions(item, item.data)).toBe(false);
   });
+
+  it('uses tags for inline-flagged dropdowns regardless of option count', () => {
+    const item = field({
+      type: 'dropDown',
+      inline: true,
+      data: [
+        { id: 1, value: 'A' },
+        { id: 2, value: 'B' },
+        { id: 3, value: 'C' },
+        { id: 4, value: 'D' },
+        { id: 5, value: 'E' },
+        { id: 6, value: 'F' },
+      ],
+    });
+
+    expect(shouldUseTagOptions(item, item.data)).toBe(true);
+  });
 });
 
 describe('inchesFromLegacyFeet', () => {

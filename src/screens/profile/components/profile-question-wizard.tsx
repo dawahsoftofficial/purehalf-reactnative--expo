@@ -263,6 +263,12 @@ type ProfileQuestionWizardProps = {
   finalLabel?: string;
   showSkip?: boolean;
   onComplete: (formData: any[]) => void;
+  // Called when Back is pressed on the FIRST question — lets a multi-group host
+  // (onboarding) step to the previous group. Absent for single-group use (ME).
+  onBack?: () => void;
+  // Start on the last question instead of the first (used when returning to a
+  // previous group via Back, so the user lands where they left off).
+  startAtEnd?: boolean;
 };
 
 const ProfileQuestionWizard = ({
@@ -272,13 +278,19 @@ const ProfileQuestionWizard = ({
   finalLabel = LanguageKeys.update,
   showSkip = true,
   onComplete,
+  onBack,
+  startAtEnd = false,
 }: ProfileQuestionWizardProps) => {
   const Rtl = CheckRtl();
 
   const [formData, setFormData] = useState<any[]>(() =>
     JSON.parse(JSON.stringify(fields ?? [])).map(normalizeScalingSelected)
   );
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(() =>
+    startAtEnd
+      ? Math.max(getVisibleProfileFields(fields ?? [], gender).length - 1, 0)
+      : 0
+  );
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
   const [focusedInput, setFocusedInput] = useState<FocusedInputState>({
     activeInputId: '',
@@ -565,9 +577,9 @@ const ProfileQuestionWizard = ({
           </View>
         ) : null}
         <View style={Styles.footerRow}>
-          {!isFirstStep ? (
+          {!isFirstStep || onBack ? (
             <Ripple
-              onPress={saving ? undefined : goBackStep}
+              onPress={saving ? undefined : isFirstStep ? onBack : goBackStep}
               style={[Styles.secondaryBtn, saving && Styles.disabledBtn]}
               disabled={saving}
             >

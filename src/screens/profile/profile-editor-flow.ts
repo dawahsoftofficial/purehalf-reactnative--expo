@@ -6,6 +6,7 @@ export type ProfileEditorField = {
   type?: string;
   data?: any[];
   selected?: any;
+  inline?: boolean; // force inline option tiles regardless of option count
 };
 
 export const isFieldHiddenForGender = (
@@ -54,10 +55,13 @@ export const shouldUseTagOptions = (
   item: ProfileEditorField,
   options: any[] = []
 ) => {
-  if (item?.type === 'dropDownBinary') return options.length >= 2;
-  return (
-    item?.type === 'dropDown' && options.length >= 2 && options.length <= 5
-  );
+  if (options.length < 2) return false;
+  if (item?.type === 'dropDownBinary') return true;
+  if (item?.type !== 'dropDown') return false;
+  // Fields flagged `inline` always render as tappable tiles, however many
+  // options they have (e.g. body type, eye colour, complexion). Otherwise only
+  // short lists become tiles; longer ones keep the searchable modal picker.
+  return item?.inline === true || options.length <= 5;
 };
 
 // Height is always sent to the API as cm. The backend stores height in a
