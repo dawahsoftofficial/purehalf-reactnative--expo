@@ -22,10 +22,9 @@ const SECT_OPTIONS: PrimerOption[] = [
 const femaleJourney: PrimerStepDef[] = [
   {
     id: 'stage',
-    control: 'reason',
+    control: 'single',
     visibility: 'private',
     question: 'What brings you here?',
-    subtitle: 'Pick one, or say it in your own words.',
     options: [
       o('ready_partner', 'Ready to find my life partner'),
       o('exploring', 'Exploring seriously, no rush'),
@@ -48,7 +47,7 @@ const femaleJourney: PrimerStepDef[] = [
     id: 'caste',
     control: 'casteCombo',
     visibility: 'public',
-    question: 'Your Khandan / Caste',
+    question: 'Your Caste',
   },
   {
     id: 'deen',
@@ -172,10 +171,9 @@ const femaleJourney: PrimerStepDef[] = [
 const maleJourney: PrimerStepDef[] = [
   {
     id: 'stage',
-    control: 'reason',
+    control: 'single',
     visibility: 'private',
     question: 'What brings you here?',
-    subtitle: 'Pick one, or say it in your own words.',
     options: [
       o('ready_now', 'Ready to marry now'),
       o('getting_late', "It's getting late — I want to settle down"),
@@ -195,7 +193,7 @@ const maleJourney: PrimerStepDef[] = [
     id: 'caste',
     control: 'casteCombo',
     visibility: 'public',
-    question: 'Your Khandan / Caste',
+    question: 'Your Caste',
   },
   {
     id: 'deen',

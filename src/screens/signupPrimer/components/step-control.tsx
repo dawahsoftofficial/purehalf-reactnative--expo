@@ -79,17 +79,9 @@ const YesNo = ({
   value: 'yes' | 'no' | undefined;
   onChange: (v: 'yes' | 'no') => void;
 }) => (
-  <View style={Styles.chips}>
-    <Chip
-      option={{ id: 'yes', label: 'Yes' }}
-      on={value === 'yes'}
-      onPress={() => onChange('yes')}
-    />
-    <Chip
-      option={{ id: 'no', label: 'No' }}
-      on={value === 'no'}
-      onPress={() => onChange('no')}
-    />
+  <View style={Styles.list}>
+    <Row label="Yes" on={value === 'yes'} onPress={() => onChange('yes')} />
+    <Row label="No" on={value === 'no'} onPress={() => onChange('no')} />
   </View>
 );
 
@@ -113,33 +105,6 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
           ))}
         </View>
       );
-
-    case 'reason': {
-      // Single-select presets plus an open text field. The value is either a
-      // preset id or the free text; picking one clears the other.
-      const v = typeof value === 'string' ? value : '';
-      const isPreset = opts.some((op) => op.id === v);
-      return (
-        <View style={Styles.list}>
-          {opts.map((op) => (
-            <Row
-              key={op.id}
-              label={op.label}
-              on={v === op.id}
-              onPress={() => onChange(op.id)}
-            />
-          ))}
-          <RNText style={Styles.subLabel}>Or say it in your own words</RNText>
-          <TextInput
-            style={Styles.input}
-            value={isPreset ? '' : v}
-            onChangeText={onChange}
-            placeholder="Tell us what brought you here…"
-            placeholderTextColor={Colors.primaryLite}
-          />
-        </View>
-      );
-    }
 
     case 'multi':
     case 'traits': {
@@ -243,7 +208,9 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
       // does. If it doesn't, there's nothing to type.
       return (
         <View>
-          <RNText style={Styles.subLabel}>Does it matter in your match?</RNText>
+          <RNText style={[Styles.subLabel, Styles.firstLabel]}>
+            Does it matter in your match?
+          </RNText>
           <YesNo
             value={v.matters}
             onChange={(m) => onChange({ ...v, matters: m })}
@@ -252,22 +219,11 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
             <View style={Styles.casteReveal}>
               <TextInput
                 style={Styles.input}
-                value={
-                  typeof v.caste === 'string' && v.caste !== '__pns__'
-                    ? v.caste
-                    : ''
-                }
+                value={typeof v.caste === 'string' ? v.caste : ''}
                 onChangeText={(t) => onChange({ ...v, caste: t })}
                 placeholder="e.g. Rajput, Syed, Malik"
                 placeholderTextColor={Colors.primaryLite}
               />
-              <View style={Styles.chips}>
-                <Chip
-                  option={{ id: 'pns', label: 'Prefer not to say' }}
-                  on={v.caste === '__pns__'}
-                  onPress={() => onChange({ ...v, caste: '__pns__' })}
-                />
-              </View>
             </View>
           ) : null}
         </View>
@@ -479,6 +435,7 @@ const Styles = StyleSheet.create({
     marginBottom: hp(0.5),
   },
   casteReveal: { marginTop: hp(2) },
+  firstLabel: { marginTop: 0 },
   hint: {
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
