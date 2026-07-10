@@ -30,13 +30,34 @@ gating (SignupPrimer as the not-logged-in initial route behind the flag); gender
 Task 10. Analytics fire `primer_started` / `primer_step` (per-screen drop-off events still to
 add).
 
+**Also done since (committed):**
+
+- **Profile summary** (`build-summary.ts` + jest, commit `03425b5`): client composes the
+  public blurb from the journey's own option copy (PUBLIC answers only — the male M4
+  priorities stay private) and sends it as `intro_summary`; the backend stores it verbatim
+  (no PHP/JS label drift). Sect question split into "Sunni (Hanafi)"/"Sunni (Salafi)" and
+  income bands aligned to the backend `earn-*` boundaries so both resolve to a single
+  attribute id exactly.
+- **Polygamy badge** (`components/polygamy-badge.tsx` + `Profile.tsx`, commit `081d3ae`): a
+  prominent "Open to another marriage" pill at the top of a viewed profile when
+  `open_for_polygamy` is set. Pairs with the backend `exclude_polygamy` filter. Needs a device
+  eyeball for placement/style.
+- **Task 9 (partial)** — weight slider removed from `Data.tsx` (commit `0c3e623`); body-type
+  (with "Prefer not to say") already existed as the empathy-friendly replacement, height kept.
+
 **Remaining follow-ups (deferred — they touch shared/core code and want on-device
 verification):**
 
-- Task 9 — Part-1 trim: remove the weight slider → optional body-type, and drop the caste
-  question from the ME wizard (`src/screens/profile/Data.tsx`, shared with the ME section).
-- Task 10 — i18n: move all inline strings into `Keys` + the three locale JSONs.
-- Polygamy female-side filter wiring + profile badge (pairs with the backend filter).
+- Task 9 (rest) — **caste** question NOT removed from the ME wizard yet. With
+  `enable_presignup_questions` off by default the welcome flow (caste's intended new capture
+  point) doesn't run, so removing it now regresses caste capture on the default path. Remove
+  when the flow is enabled. (Gating the wizard on `getEnablePostsignupQuestions()` also still
+  pending.)
+- Task 10 — i18n: move the inline English into `Keys` + the three locale JSONs. Deferred to
+  the product owner — the empathetic, culturally-nuanced Urdu/RomanUrdu copy needs native
+  review, and the inline English already renders correctly via `t()`.
+- F5 "not_second_wife" → auto-driving the backend `exclude_polygamy` browse filter: a UX
+  decision (silent lifetime filter vs. a user-controlled toggle) — left for the product owner.
 
 ## Global Constraints
 
