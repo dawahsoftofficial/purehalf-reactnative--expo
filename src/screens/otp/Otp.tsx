@@ -28,6 +28,7 @@ import {
 } from '../../services';
 import FirebaseServices from '../../services/firebase/Firebase';
 import { useSettingsStore } from '../../stores';
+import { flushPrimerAnswers } from '../signupPrimer/commit-primer';
 import OtpHeader from './components/otp-header';
 import OtpInput from './components/otp-input';
 import ResendTimer from './components/resend-timer';
@@ -145,6 +146,7 @@ const Otp = (props: OtpProps) => {
   const onLoggedIn = useCallback(
     async (userObj: { results?: User }) => {
       try {
+        void flushPrimerAnswers();
         if (userObj?.results?.id) {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           setRevenueCat(userObj.results.id as any);

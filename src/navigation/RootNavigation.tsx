@@ -6,6 +6,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 
 import PremiumPaywallScreen from '@/screens/proFeaturesPromotion/PremiumPaywallScreen';
+import { useSettingsStore } from '@/stores';
 
 import { CustomModal, ImageViewer } from '../components';
 import { CheckRtl } from '../languages';
@@ -49,6 +50,7 @@ import {
   SearchProfiles,
   SearchResults,
   Settings,
+  SignupPrimer,
   SignupStepInput,
   SignupStepRadio,
   SingleChat,
@@ -58,6 +60,8 @@ import {
   Welcome,
   WelcomeUser,
 } from '../screens';
+import { flushPrimerAnswers } from '../screens/signupPrimer/commit-primer';
+import { shouldShowPrimer } from '../screens/signupPrimer/primer-logic';
 import {
   ApiServices,
   setRevenueCat,
@@ -81,11 +85,13 @@ function App() {
 
   const getUserData = () => {
     getData(storageKeys.IS_LOGGED_IN)
-      .then((res: any) => {
+      .then(async (res: any) => {
         if (res) {
           getData(storageKeys.USER)
             .then(async (res: any) => {
               updateCurrentUser(res);
+              // Universal net: flush any pending primer answers once logged in.
+              void flushPrimerAnswers();
               if (res?.id === 'guardian') {
                 setInitialRouteName('Messages');
               } else if (!res?.latitude || !res?.longitude) {
@@ -118,6 +124,15 @@ function App() {
             })
             .catch(hideLoader);
         } else {
+          // Not logged in: show the welcome primer on first install when the
+          // flag is on and it hasn't been seen. Degrades to AuthWelcome.
+          const seen = await getData(storageKeys.PRIMER_SEEN);
+          const enabled = useSettingsStore
+            .getState()
+            .getEnablePresignupQuestions();
+          if (shouldShowPrimer({ loggedIn: false, enabled, seen: !!seen })) {
+            setInitialRouteName('SignupPrimer');
+          }
           setLoader(false);
         }
       })
@@ -146,6 +161,7 @@ function App() {
           <Stack.Screen name="Notifications" component={Notifications} />
           <Stack.Screen name="ChooseLanguage" component={ChooseLanguage} />
           <Stack.Screen name="Languages" component={Languages} />
+          <Stack.Screen name="SignupPrimer" component={SignupPrimer} />
           <Stack.Screen name="AuthWelcome" component={AuthWelcome} />
           <Stack.Screen name="PhoneNumber" component={PhoneNumber} />
           <Stack.Screen name="Otp" component={Otp} />
