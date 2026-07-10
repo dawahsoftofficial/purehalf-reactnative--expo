@@ -7,6 +7,10 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Button, Container, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
+import {
+  cancelProfileReminder,
+  scheduleProfileReminder,
+} from '../../notifications/profile-reminder';
 import { Colors, Fonts } from '../../res';
 import { ApiServices, StorageManager, useGlobalContext } from '../../services';
 import ProfileQuestionWizard from '../profile/components/profile-question-wizard';
@@ -91,6 +95,13 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   );
 
   const exitFlow = useCallback(() => {
+    cancelProfileReminder();
+    const next = fromHome ? 'BottomTab' : 'ProfilePicture';
+    navigation.reset({ index: 0, routes: [{ name: next }] });
+  }, [fromHome, navigation]);
+
+  const bailFlow = useCallback(() => {
+    scheduleProfileReminder();
     const next = fromHome ? 'BottomTab' : 'ProfilePicture';
     navigation.reset({ index: 0, routes: [{ name: next }] });
   }, [fromHome, navigation]);
@@ -229,7 +240,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
               text={LanguageKeys.continue}
               onPress={onContinueFromCheckpoint}
             />
-            <Ripple style={Styles.finishLaterBtn} onPress={exitFlow}>
+            <Ripple style={Styles.finishLaterBtn} onPress={bailFlow}>
               <Text style={Styles.finishLaterText}>
                 {LanguageKeys.finishLater}
               </Text>
