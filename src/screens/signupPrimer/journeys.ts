@@ -187,11 +187,8 @@ const maleJourney: PrimerStepDef[] = [
     control: 'status',
     visibility: 'public',
     question: "What's your current status?",
-    options: [
-      o('single', 'Single (never married)'),
-      o('divorced', 'Divorced'),
-      o('widowed', 'Widowed'),
-    ],
+    // "Widowed" is intentionally omitted for men (kept for the female flow).
+    options: [o('single', 'Single (never married)'), o('divorced', 'Divorced')],
   },
   {
     id: 'caste',
