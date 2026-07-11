@@ -7,8 +7,8 @@ import React, {
   useState,
 } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {
   Button,
@@ -61,8 +61,8 @@ const OptionTags = ({ item, options, onSelect, rtl }: any) => (
       const on = isOptionSelected(item, opt);
       const optLabel = getOptionLabel(item, opt);
       const swatch = item?.id === 'eye-0' ? getEyeColorSwatch(optLabel) : {};
-      const { color, icon } = swatch;
-      const hasSwatch = Boolean(color || icon);
+      const { color, gradient } = swatch;
+      const hasSwatch = Boolean(color || gradient);
       const label = (
         <Text
           style={[
@@ -91,12 +91,12 @@ const OptionTags = ({ item, options, onSelect, rtl }: any) => (
                 <View
                   style={[Styles.optionSwatch, { backgroundColor: color }]}
                 />
-              ) : icon ? (
-                <Ionicons
-                  name={icon}
-                  size={wp(4.5)}
-                  color={on ? Colors.color2 : Colors.primary}
-                  style={Styles.optionSwatchIcon}
+              ) : gradient ? (
+                <LinearGradient
+                  colors={gradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={Styles.optionSwatch}
                 />
               ) : null}
               {label}
@@ -850,9 +850,6 @@ const Styles = StyleSheet.create({
     borderRadius: wp(2.25),
     borderWidth: 1,
     borderColor: Colors.hairline,
-  },
-  optionSwatchIcon: {
-    marginTop: -1,
   },
   optionRowTxt: {
     color: Colors.ink,

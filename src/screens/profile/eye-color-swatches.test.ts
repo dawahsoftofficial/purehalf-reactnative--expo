@@ -15,9 +15,9 @@ describe('getEyeColorSwatch', () => {
     expect(getEyeColorSwatch('brown')).toEqual({ color: '#6F4E37' });
   });
 
-  it('returns a palette icon for Multicolor instead of a flat color', () => {
+  it('returns a rainbow gradient for Multicolor instead of a flat color', () => {
     expect(getEyeColorSwatch('Multicolor')).toEqual({
-      icon: 'color-palette-outline',
+      gradient: ['#F16A6A', '#F5B942', '#4C9A5B', '#4A7FBF', '#8E4EC6'],
     });
   });
 
