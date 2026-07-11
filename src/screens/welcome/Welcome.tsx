@@ -943,7 +943,7 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
   },
   pendingIconChipReady: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.attention,
   },
   pendingApprovalText: {
     fontFamily: Fonts.APPFONT_SB,

@@ -94,6 +94,7 @@ const Colors = {
   appBg: '#F6F5FA', // app background
   verified: '#2E9E5B', // success / verified
   primaryRGBA12: 'rgba(75, 46, 131, 0.12)', // focus ring / faint wash
+  attention: '#D34836', // urgent accent — draws the eye (e.g. eligible gift)
 };
 
 export default Colors;

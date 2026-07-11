@@ -240,7 +240,7 @@ const Styles = StyleSheet.create({
     width: wp(4.2),
     height: wp(4.2),
     borderRadius: wp(2.1),
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.attention,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,

@@ -60,7 +60,7 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.lavender,
   },
   chipEligible: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.attention,
   },
   chipClaimed: {
     backgroundColor: 'rgba(46,158,91,0.12)',
