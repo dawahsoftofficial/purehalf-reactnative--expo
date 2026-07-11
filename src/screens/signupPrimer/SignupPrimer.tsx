@@ -16,6 +16,7 @@ import { hp, Typography, wp } from '../../global';
 import { Colors, Fonts } from '../../res';
 import { ApiServices, StorageManager } from '../../services';
 import { addAnaylatics } from '../../services/firebase/analytics';
+import { useSettingsStore } from '../../stores';
 import StepControl from './components/step-control';
 import { journeyFor } from './journeys';
 import {
@@ -70,6 +71,7 @@ const SignupPrimer = ({ navigation }: any) => {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [count, setCount] = useState<number | null>(null);
   const [founding, setFounding] = useState(false);
+  const enableMatchCountReveal = useSettingsStore().getEnableMatchCountReveal();
 
   const steps = useMemo(() => (gender ? journeyFor(gender) : []), [gender]);
   const current = steps[stepIndex];
@@ -139,6 +141,10 @@ const SignupPrimer = ({ navigation }: any) => {
     addAnaylatics('primer_step', { gender, step: current.id });
     const next = nextStepIndex(steps, answers, stepIndex);
     if (next === -1) {
+      if (!enableMatchCountReveal) {
+        exitFlow();
+        return;
+      }
       setPhase('loading');
       await fetchCount();
       setPhase('reveal');
@@ -146,7 +152,17 @@ const SignupPrimer = ({ navigation }: any) => {
     } else {
       setStepIndex(next);
     }
-  }, [answers, current, fetchCount, gender, markSeen, stepIndex, steps]);
+  }, [
+    answers,
+    current,
+    enableMatchCountReveal,
+    exitFlow,
+    fetchCount,
+    gender,
+    markSeen,
+    stepIndex,
+    steps,
+  ]);
 
   // Step back to the previous visible question; from the first question, return
   // to the gender step so nothing is a dead end.
