@@ -54,11 +54,7 @@ import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
 import { usePremiumStore, useSettingsStore } from '../../stores';
 import GiftBadge from './components/gift-badge';
 import GiftClaimModal from './components/gift-claim-modal';
-import {
-  buildUpdatedUserAfterGiftClaim,
-  giftClaimChats,
-  shouldShowGiftClaimToast,
-} from './gift-claim-outcome';
+import { buildUpdatedUserAfterGiftClaim } from './gift-claim-outcome';
 
 const { width, height } = Dimensions.get('window');
 
@@ -637,8 +633,23 @@ const Header = ({
     }
   }, [currentUser, isUpdatingBlur, updateCurrentUser, userData?.is_blur]);
 
-  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+
+  // GiftBadge is tappable in all three states; only the eligible tap opens
+  // the claim modal — locked/claimed taps just explain the state.
+  const onGiftBadgePress = useCallback(() => {
+    if (giftClaimed) {
+      flashSuccessMessage(t(LanguageKeys.giftAlreadyClaimedHint));
+      return;
+    }
+    if (!giftEligible) {
+      flashErrorMessage(
+        t(LanguageKeys.giftLockedHint, { percent: giftThreshold })
+      );
+      return;
+    }
+    setGiftModalVisible(true);
+  }, [giftClaimed, giftEligible, giftThreshold, t]);
 
   // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
   // so callers cast at the call site — matching the existing
@@ -658,19 +669,17 @@ const Header = ({
 
   const onGiftClaimed = useCallback(
     (result: any) => {
+      // GiftClaimModal shows its own confetti/"You earned" celebration
+      // before calling this (for a fresh claim) or hands off immediately
+      // (for an already-claimed race) — either way, no separate toast here,
+      // just persisting the result on currentUser.
       setGiftModalVisible(false);
       const { setData, storageKeys } = StorageManager;
       const updatedUser = buildUpdatedUserAfterGiftClaim(currentUser, result);
       setData(storageKeys.USER, updatedUser);
       updateCurrentUser(updatedUser);
-      if (shouldShowGiftClaimToast(result)) {
-        const chats = giftClaimChats(result);
-        flashSuccessMessage(
-          `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
-        );
-      }
     },
-    [currentUser, updateCurrentUser, t]
+    [currentUser, updateCurrentUser]
   );
 
   const onProfileImageLoadStart = useCallback(
@@ -878,7 +887,7 @@ const Header = ({
                 <GiftBadge
                   eligible={giftEligible}
                   claimed={giftClaimed}
-                  onPress={openGiftModal}
+                  onPress={onGiftBadgePress}
                 />
               </View>
             </View>

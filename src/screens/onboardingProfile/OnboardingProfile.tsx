@@ -21,6 +21,7 @@ import {
 import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
   flashSuccessMessage,
   StorageManager,
   useGlobalContext,
@@ -31,11 +32,7 @@ import GiftClaimModal from '../profile/components/gift-claim-modal';
 import ProfileQuestionWizard from '../profile/components/profile-question-wizard';
 import Data from '../profile/Data';
 import { updateDetails } from '../profile/Funtions';
-import {
-  buildUpdatedUserAfterGiftClaim,
-  giftClaimChats,
-  shouldShowGiftClaimToast,
-} from '../profile/gift-claim-outcome';
+import { buildUpdatedUserAfterGiftClaim } from '../profile/gift-claim-outcome';
 import { hydrateGroupFields } from '../profile/hydrate-group-fields';
 import {
   computeCompletion,
@@ -162,8 +159,23 @@ const OnboardingProfile = ({ navigation, route }: any) => {
     setPhase('question');
   }, [setData, storageKeys.ONBOARDING_INTRO_SEEN]);
 
-  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+
+  // GiftBadge is tappable in all three states; only the eligible tap opens
+  // the claim modal — locked/claimed taps just explain the state.
+  const onGiftBadgePress = useCallback(() => {
+    if (giftClaimed) {
+      flashSuccessMessage(t(LanguageKeys.giftAlreadyClaimedHint));
+      return;
+    }
+    if (!giftEligible) {
+      flashErrorMessage(
+        t(LanguageKeys.giftLockedHint, { percent: giftThreshold })
+      );
+      return;
+    }
+    setGiftModalVisible(true);
+  }, [giftClaimed, giftEligible, giftThreshold]);
 
   // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
   // so callers cast at the call site — matching the existing
@@ -183,22 +195,14 @@ const OnboardingProfile = ({ navigation, route }: any) => {
 
   const onGiftClaimed = useCallback(
     (result: any) => {
+      // GiftClaimModal shows its own confetti/"You earned" celebration
+      // before calling this (for a fresh claim) or hands off immediately
+      // (for an already-claimed race) — either way, no separate toast here,
+      // just persisting the result on currentUser.
       setGiftModalVisible(false);
       const updatedUser = buildUpdatedUserAfterGiftClaim(currentUser, result);
       setData(storageKeys.USER, updatedUser);
       updateCurrentUser(updatedUser);
-      // A repeat claim resolves with status: 'already_claimed' (awarded: 0)
-      // instead of rejecting — see ApiServices.claimProfileGift's JSDoc. Only
-      // show the reward toast for a genuinely fresh claim so stale local
-      // state (e.g. multi-device use) doesn't surface a confusing "+0 Chat
-      // Credits" toast; the badge's claimed checkmark already communicates
-      // the already-claimed state.
-      if (shouldShowGiftClaimToast(result)) {
-        const chats = giftClaimChats(result);
-        flashSuccessMessage(
-          `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
-        );
-      }
     },
     [currentUser, setData, storageKeys.USER, updateCurrentUser]
   );
@@ -349,7 +353,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
             <GiftBadge
               eligible={giftEligible}
               claimed={giftClaimed}
-              onPress={openGiftModal}
+              onPress={onGiftBadgePress}
             />
           </View>
         </View>

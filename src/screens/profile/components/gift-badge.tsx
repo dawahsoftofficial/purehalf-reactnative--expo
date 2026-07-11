@@ -1,10 +1,11 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { wp } from '../../../global';
 import { Colors } from '../../../res';
+import Wiggle from './wiggle';
 
 type GiftBadgeProps = {
   eligible: boolean;
@@ -12,30 +13,35 @@ type GiftBadgeProps = {
   onPress: () => void;
 };
 
-// Three states: locked (muted, below the completion threshold), eligible
-// (solid primary, tappable — opens the claim modal), claimed (checkmark,
-// inert). Used identically in both the OnboardingProfile header and the ME
-// profile header so the gift reads the same wherever the user reaches it.
+// Three states, all tappable — the caller (which already knows
+// strengthPct/giftThreshold) decides what onPress does for each: locked
+// (muted, below the completion threshold) shows an explanatory hint,
+// eligible (solid primary, wiggling to draw the eye) opens the claim modal,
+// claimed (solid, verified-green — "opened") shows an already-claimed hint.
+// Used identically in the OnboardingProfile header and the ME profile
+// header so the gift reads the same wherever the user reaches it.
 const GiftBadge = ({ eligible, claimed, onPress }: GiftBadgeProps) => {
   if (claimed) {
     return (
-      <View style={[Styles.chip, Styles.chipClaimed]}>
-        <Ionicons name="checkmark" size={wp(4.2)} color={Colors.verified} />
-      </View>
+      <Ripple style={[Styles.chip, Styles.chipClaimed]} onPress={onPress}>
+        <Ionicons name="gift" size={wp(4.2)} color={Colors.verified} />
+      </Ripple>
     );
   }
 
   if (!eligible) {
     return (
-      <View style={[Styles.chip, Styles.chipLocked]}>
+      <Ripple style={[Styles.chip, Styles.chipLocked]} onPress={onPress}>
         <Ionicons name="gift-outline" size={wp(4.2)} color={Colors.muted} />
-      </View>
+      </Ripple>
     );
   }
 
   return (
     <Ripple style={[Styles.chip, Styles.chipEligible]} onPress={onPress}>
-      <Ionicons name="gift" size={wp(4.2)} color={Colors.color2} />
+      <Wiggle active>
+        <Ionicons name="gift" size={wp(4.2)} color={Colors.color2} />
+      </Wiggle>
     </Ripple>
   );
 };

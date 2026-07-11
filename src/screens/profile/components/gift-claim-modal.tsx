@@ -1,5 +1,5 @@
 import { t } from 'i18next';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal, StyleSheet, Text as ReactText, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -8,7 +8,8 @@ import { hp, Typography, wp } from '../../../global';
 import { LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 import { flashErrorMessage } from '../../../services';
-import type { ClaimResult } from '../gift-claim-outcome';
+import { type ClaimResult, giftClaimChats } from '../gift-claim-outcome';
+import Confetti from './confetti';
 
 type GiftClaimModalProps = {
   visible: boolean;
@@ -18,9 +19,14 @@ type GiftClaimModalProps = {
   claim: () => Promise<ClaimResult>;
 };
 
-// Presented when the user taps an eligible GiftBadge. Owns only the
-// confirm/claim round trip; the parent decides what eligible/claimed mean
-// and how to persist the result on currentUser.
+// How long the confetti/success view holds before handing off to the parent
+// (which updates currentUser and closes this modal).
+const SUCCESS_HOLD_MS = 1800;
+
+// Presented when the user taps an eligible GiftBadge. Owns the confirm/claim
+// round trip and the brief celebratory view on a fresh claim; the parent
+// decides what eligible/claimed mean and how to persist the result on
+// currentUser.
 const GiftClaimModal = ({
   visible,
   giftCredits,
@@ -29,14 +35,36 @@ const GiftClaimModal = ({
   claim,
 }: GiftClaimModalProps) => {
   const [claiming, setClaiming] = useState(false);
+  const [justClaimed, setJustClaimed] = useState<ClaimResult | null>(null);
+  const handoffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (handoffTimer.current) clearTimeout(handoffTimer.current);
+    },
+    []
+  );
 
   const onClaimPress = () => {
     if (claiming) return;
     setClaiming(true);
+    // Clear any previous run's success view before starting a new attempt —
+    // in practice this modal isn't reachable again after a genuine claim
+    // (the badge permanently switches to its claimed state), but this keeps
+    // a repeat open/claim sequence honest regardless.
+    setJustClaimed(null);
     claim()
       .then((result) => {
         setClaiming(false);
-        onClaimed(result);
+        if (result.status === 'claimed') {
+          setJustClaimed(result);
+          handoffTimer.current = setTimeout(
+            () => onClaimed(result),
+            SUCCESS_HOLD_MS
+          );
+        } else {
+          onClaimed(result);
+        }
       })
       .catch((error) => {
         setClaiming(false);
@@ -51,36 +79,58 @@ const GiftClaimModal = ({
       transparent
       visible={visible}
       animationType="fade"
-      onRequestClose={claiming ? undefined : onClose}
+      statusBarTranslucent
+      onRequestClose={claiming || justClaimed ? undefined : onClose}
     >
       <View style={Styles.wrapper}>
         <View style={Styles.card}>
-          <View style={Styles.iconChip}>
-            <Ionicons name="gift" size={wp(7)} color={Colors.primary} />
-          </View>
-          <Text variant="display" style={Styles.title}>
-            {LanguageKeys.giftClaimTitle}
-          </Text>
-          <ReactText style={Styles.body}>
-            {t(LanguageKeys.giftClaimBody, { amount: giftCredits })}
-          </ReactText>
-          <View style={Styles.buttonRow}>
-            <Button
-              variant="outline"
-              onPress={claiming ? undefined : onClose}
-              buttonStyle={Styles.button}
-              text={LanguageKeys.maybeLater}
-              disabled={claiming}
-            />
-            <Button
-              onPress={onClaimPress}
-              buttonStyle={Styles.button}
-              text={LanguageKeys.claimGift}
-              disabled={claiming}
-              loading={claiming}
-              loadingMessage={LanguageKeys.updating}
-            />
-          </View>
+          {justClaimed ? (
+            <>
+              <Confetti />
+              <View style={[Styles.iconChip, Styles.iconChipSuccess]}>
+                <Ionicons
+                  name="checkmark"
+                  size={wp(7)}
+                  color={Colors.verified}
+                />
+              </View>
+              <Text variant="display" style={Styles.title}>
+                {LanguageKeys.youEarned}
+              </Text>
+              <ReactText style={Styles.body}>
+                {`+${giftClaimChats(justClaimed)} ${t(LanguageKeys.chatCredits)}`}
+              </ReactText>
+            </>
+          ) : (
+            <>
+              <View style={Styles.iconChip}>
+                <Ionicons name="gift" size={wp(7)} color={Colors.primary} />
+              </View>
+              <Text variant="display" style={Styles.title}>
+                {LanguageKeys.giftClaimTitle}
+              </Text>
+              <ReactText style={Styles.body}>
+                {t(LanguageKeys.giftClaimBody, { amount: giftCredits })}
+              </ReactText>
+              <View style={Styles.buttonRow}>
+                <Button
+                  variant="outline"
+                  onPress={claiming ? undefined : onClose}
+                  buttonStyle={Styles.button}
+                  text={LanguageKeys.maybeLater}
+                  disabled={claiming}
+                />
+                <Button
+                  onPress={onClaimPress}
+                  buttonStyle={Styles.button}
+                  text={LanguageKeys.claimGift}
+                  disabled={claiming}
+                  loading={claiming}
+                  loadingMessage={LanguageKeys.updating}
+                />
+              </View>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -103,6 +153,7 @@ const Styles = StyleSheet.create({
     borderRadius: wp(4),
     padding: wp(5),
     alignItems: 'center',
+    overflow: 'hidden',
   },
   iconChip: {
     width: wp(16),
@@ -112,6 +163,9 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: hp(1.5),
+  },
+  iconChipSuccess: {
+    backgroundColor: 'rgba(46,158,91,0.12)',
   },
   title: {
     color: Colors.ink,
