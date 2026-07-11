@@ -29,6 +29,7 @@ import {
   getProgressLabel,
   getScalingDisplay,
   getVisibleProfileFields,
+  isFieldFilled,
   isOptionSelected,
   normalizeScalingSelected,
   shouldUseTagOptions,
@@ -314,6 +315,7 @@ const ProfileQuestionWizard = ({
   const isFirstStep = activeIndex === 0;
   const isLastStep =
     visibleFields.length > 0 && activeIndex === visibleFields.length - 1;
+  const isAnswered = isFieldFilled(activeItem);
 
   useEffect(() => {
     if (activeIndex > 0 && activeIndex >= visibleFields.length) {
@@ -610,9 +612,11 @@ const ProfileQuestionWizard = ({
                     : LanguageKeys.next
               }
               onPress={
-                saving || visibleFields.length === 0 ? undefined : advance
+                saving || visibleFields.length === 0 || !isAnswered
+                  ? undefined
+                  : advance
               }
-              disabled={saving || visibleFields.length === 0}
+              disabled={saving || visibleFields.length === 0 || !isAnswered}
             />
           </View>
         </View>
