@@ -31,6 +31,11 @@ import GiftClaimModal from '../profile/components/gift-claim-modal';
 import ProfileQuestionWizard from '../profile/components/profile-question-wizard';
 import Data from '../profile/Data';
 import { updateDetails } from '../profile/Funtions';
+import {
+  buildUpdatedUserAfterGiftClaim,
+  giftClaimChats,
+  shouldShowGiftClaimToast,
+} from '../profile/gift-claim-outcome';
 import { hydrateGroupFields } from '../profile/hydrate-group-fields';
 import {
   computeCompletion,
@@ -179,11 +184,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   const onGiftClaimed = useCallback(
     (result: any) => {
       setGiftModalVisible(false);
-      const updatedUser: any = {
-        ...(currentUser as any),
-        chat_credits: result.new_balance,
-        profile_finish_bonus_awarded: true,
-      };
+      const updatedUser = buildUpdatedUserAfterGiftClaim(currentUser, result);
       setData(storageKeys.USER, updatedUser);
       updateCurrentUser(updatedUser);
       // A repeat claim resolves with status: 'already_claimed' (awarded: 0)
@@ -192,8 +193,8 @@ const OnboardingProfile = ({ navigation, route }: any) => {
       // state (e.g. multi-device use) doesn't surface a confusing "+0 Chat
       // Credits" toast; the badge's claimed checkmark already communicates
       // the already-claimed state.
-      if (result.status === 'claimed') {
-        const chats = Math.round(result.awarded / (result.multiplier || 50));
+      if (shouldShowGiftClaimToast(result)) {
+        const chats = giftClaimChats(result);
         flashSuccessMessage(
           `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
         );

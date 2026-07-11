@@ -1,6 +1,6 @@
 import { t } from 'i18next';
 import React, { useState } from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
+import { Modal, StyleSheet, Text as ReactText, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Button, Text } from '../../../components';
@@ -8,13 +8,7 @@ import { hp, Typography, wp } from '../../../global';
 import { LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 import { flashErrorMessage } from '../../../services';
-
-type ClaimResult = {
-  status: string;
-  awarded: number;
-  new_balance: number;
-  multiplier: number;
-};
+import type { ClaimResult } from '../gift-claim-outcome';
 
 type GiftClaimModalProps = {
   visible: boolean;
@@ -67,9 +61,9 @@ const GiftClaimModal = ({
           <Text variant="display" style={Styles.title}>
             {LanguageKeys.giftClaimTitle}
           </Text>
-          <Text style={Styles.body}>
+          <ReactText style={Styles.body}>
             {t(LanguageKeys.giftClaimBody, { amount: giftCredits })}
-          </Text>
+          </ReactText>
           <View style={Styles.buttonRow}>
             <Button
               variant="outline"

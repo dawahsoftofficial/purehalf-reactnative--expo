@@ -54,6 +54,11 @@ import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
 import { usePremiumStore, useSettingsStore } from '../../stores';
 import GiftBadge from './components/gift-badge';
 import GiftClaimModal from './components/gift-claim-modal';
+import {
+  buildUpdatedUserAfterGiftClaim,
+  giftClaimChats,
+  shouldShowGiftClaimToast,
+} from './gift-claim-outcome';
 
 const { width, height } = Dimensions.get('window');
 
@@ -655,15 +660,11 @@ const Header = ({
     (result: any) => {
       setGiftModalVisible(false);
       const { setData, storageKeys } = StorageManager;
-      const updatedUser: any = {
-        ...(currentUser as any),
-        chat_credits: result.new_balance,
-        profile_finish_bonus_awarded: true,
-      };
+      const updatedUser = buildUpdatedUserAfterGiftClaim(currentUser, result);
       setData(storageKeys.USER, updatedUser);
       updateCurrentUser(updatedUser);
-      if (result.status === 'claimed') {
-        const chats = Math.round(result.awarded / (result.multiplier || 50));
+      if (shouldShowGiftClaimToast(result)) {
+        const chats = giftClaimChats(result);
         flashSuccessMessage(
           `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
         );
