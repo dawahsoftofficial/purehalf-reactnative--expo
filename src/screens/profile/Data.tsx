@@ -1,4 +1,4 @@
-import { LanguageKeys } from '../../languages';
+import LanguageKeys from '../../languages/Keys';
 
 const numberRange = (min: number, max: number) =>
   Array.from({ length: max - min + 1 }, (_, i) => min + i);
