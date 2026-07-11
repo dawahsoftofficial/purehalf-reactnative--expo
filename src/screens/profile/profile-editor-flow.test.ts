@@ -372,4 +372,10 @@ describe('isFieldFilled', () => {
     ).toBe(false);
     expect(isFieldFilled(field({ type: 'input', selected: {} }))).toBe(false);
   });
+
+  it('is unfilled for whitespace-only free text', () => {
+    expect(
+      isFieldFilled(field({ type: 'input', selected: { value: '   ' } }))
+    ).toBe(false);
+  });
 });

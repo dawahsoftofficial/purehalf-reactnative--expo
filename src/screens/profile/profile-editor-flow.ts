@@ -58,7 +58,12 @@ export const isFieldFilled = (item: ProfileEditorField) => {
   if (item?.type === 'scalling') return sel.value != null && sel.value !== '';
   if (item?.type === 'dropDown') return sel.id != null;
   if (item?.type === 'dropDownBinary') return sel.value != null;
-  return sel.value != null && sel.value !== '';
+  // Free-text/default branch: trim whitespace before checking emptiness so
+  // this matches the backend's ProfileRewardService::isFilled() check. A
+  // whitespace-only answer must not satisfy the wizard's required-answer
+  // gate, or profile-strength could read 100% locally while the backend
+  // still considers the field unfilled and rejects the completion claim.
+  return sel.value != null && String(sel.value).trim() !== '';
 };
 
 export const shouldUseTagOptions = (
