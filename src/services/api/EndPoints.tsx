@@ -10,8 +10,6 @@ const EndPoints = {
   getUserDetail: '/auth/user',
   recommendedUsers: '/auth/user/exclusive?page=1&type=-1',
   getCurrentUserDetail: '/auth/my/detail',
-  messagePushNotification:
-    'https://fcm.googleapis.com/v1/projects/purehalf-19603/messages:send',
   getAttribute: '/auth/list/attribute',
   logout: '/auth/logout',
   deleteMedia: '/auth/media/delete',
