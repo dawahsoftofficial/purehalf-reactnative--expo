@@ -25,6 +25,9 @@ const IconInput = React.memo((props: any) => {
     placeholderColor = Colors.muted,
     secureTextEntry = false,
     disabled = false,
+    multiline = false,
+    numberOfLines,
+    maxLength,
   } = props;
 
   const iconElement = useMemo(() => {
@@ -46,6 +49,7 @@ const IconInput = React.memo((props: any) => {
           style={[
             Styles.inputOuterContainer,
             { backgroundColor: disabled ? Colors.lavender : Colors.surface },
+            multiline && Styles.inputOuterContainerMultiline,
           ]}
         >
           <TextInput
@@ -56,6 +60,7 @@ const IconInput = React.memo((props: any) => {
                 paddingRight: icon ? 0 : wp(2),
                 paddingLeft: wp(2),
               },
+              multiline && Styles.inputMultiline,
               inputStyle,
             ]}
             placeholder={t(placeholder)}
@@ -64,7 +69,10 @@ const IconInput = React.memo((props: any) => {
             onChangeText={onChangeText}
             onFocus={onFocus}
             onBlur={onBlur}
-            multiline={false}
+            multiline={multiline}
+            numberOfLines={numberOfLines}
+            maxLength={maxLength}
+            textAlignVertical={multiline ? 'top' : 'center'}
             secureTextEntry={secureTextEntry}
             editable={!disabled}
           />
@@ -75,6 +83,7 @@ const IconInput = React.memo((props: any) => {
           style={[
             Styles.inputOuterContainer,
             { backgroundColor: disabled ? Colors.lavender : Colors.surface },
+            multiline && Styles.inputOuterContainerMultiline,
           ]}
         >
           {iconElement}
@@ -86,6 +95,7 @@ const IconInput = React.memo((props: any) => {
                 paddingLeft: icon ? 0 : wp(2),
                 paddingRight: wp(2),
               },
+              multiline && Styles.inputMultiline,
               inputStyle,
             ]}
             placeholder={t(placeholder)}
@@ -94,7 +104,10 @@ const IconInput = React.memo((props: any) => {
             onChangeText={onChangeText}
             onFocus={onFocus}
             onBlur={onBlur}
-            multiline={false}
+            multiline={multiline}
+            numberOfLines={numberOfLines}
+            maxLength={maxLength}
+            textAlignVertical={multiline ? 'top' : 'center'}
             secureTextEntry={secureTextEntry}
             editable={!disabled}
           />
@@ -125,6 +138,10 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(2),
     backgroundColor: Colors.surface,
   },
+  inputOuterContainerMultiline: {
+    alignItems: 'flex-start',
+    paddingVertical: hp(1.2),
+  },
   input: {
     height: hp(6.3),
     fontSize: Typography.small3,
@@ -132,6 +149,10 @@ const Styles = StyleSheet.create({
     includeFontPadding: false,
     width: wp(80),
     color: Colors.ink,
+  },
+  inputMultiline: {
+    height: hp(16),
+    paddingTop: 0,
   },
   inputIcon: {
     width: wp(4),

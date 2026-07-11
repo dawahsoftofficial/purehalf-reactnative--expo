@@ -7,6 +7,9 @@ export type ProfileEditorField = {
   data?: any[];
   selected?: any;
   inline?: boolean; // force inline option tiles regardless of option count
+  multiline?: boolean; // free-text fields: render as a multi-line text area
+  minLength?: number; // free-text fields: minimum trimmed length to count as answered
+  maxLength?: number; // free-text fields: hard cap enforced by the input itself
 };
 
 export const isFieldHiddenForGender = (

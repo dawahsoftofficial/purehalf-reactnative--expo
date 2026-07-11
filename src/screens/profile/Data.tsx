@@ -337,6 +337,9 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'about_you',
+      multiline: true,
+      minLength: 10,
+      maxLength: 400,
     },
     {
       title: LanguageKeys.aboutPartner,
@@ -348,6 +351,9 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'about_partner',
+      multiline: true,
+      minLength: 10,
+      maxLength: 400,
     },
     {
       title: LanguageKeys.likes,
@@ -358,6 +364,9 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'likes',
+      multiline: true,
+      minLength: 3,
+      maxLength: 200,
     },
     {
       title: LanguageKeys.disLikes,
@@ -368,6 +377,9 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'dislikes',
+      multiline: true,
+      minLength: 3,
+      maxLength: 200,
     },
     {
       title: LanguageKeys.openForPolygamy,

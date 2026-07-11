@@ -55,6 +55,9 @@ type TextQuestionInputProps = {
   id: string;
   placeholder?: string;
   initialValue: string;
+  multiline?: boolean;
+  minLength?: number;
+  maxLength?: number;
   onAnsweredChange: (id: string, answered: boolean) => void;
   onCommit: (id: string, value: string) => void;
 };
@@ -83,22 +86,36 @@ export type TextQuestionInputHandle = {
 // instead of depending on blur having already happened.
 const TextQuestionInput = React.memo(
   React.forwardRef<TextQuestionInputHandle, TextQuestionInputProps>(
-    ({ id, placeholder, initialValue, onAnsweredChange, onCommit }, ref) => {
+    (
+      {
+        id,
+        placeholder,
+        initialValue,
+        multiline = false,
+        minLength = 1,
+        maxLength,
+        onAnsweredChange,
+        onCommit,
+      },
+      ref
+    ) => {
       const [value, setValue] = useState(initialValue);
-      const wasAnswered = useRef(Boolean(initialValue?.trim()));
+      const wasAnswered = useRef(
+        (initialValue?.trim().length ?? 0) >= minLength
+      );
 
       useImperativeHandle(ref, () => ({ getValue: () => value }), [value]);
 
       const onChangeText = useCallback(
         (text: string) => {
           setValue(text);
-          const answered = Boolean(text?.trim());
+          const answered = (text?.trim().length ?? 0) >= minLength;
           if (answered !== wasAnswered.current) {
             wasAnswered.current = answered;
             onAnsweredChange(id, answered);
           }
         },
-        [id, onAnsweredChange]
+        [id, minLength, onAnsweredChange]
       );
 
       const onBlur = useCallback(() => {
@@ -106,15 +123,25 @@ const TextQuestionInput = React.memo(
       }, [id, value, onCommit]);
 
       return (
-        <IconInput
-          placeholder={placeholder}
-          outerLabelStyle={Styles.hiddenControlLabel}
-          containerStyle={Styles.labelLessControl}
-          inputStyle={Styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          onBlur={onBlur}
-        />
+        <View>
+          <IconInput
+            placeholder={placeholder}
+            outerLabelStyle={Styles.hiddenControlLabel}
+            containerStyle={Styles.labelLessControl}
+            inputStyle={Styles.input}
+            value={value}
+            onChangeText={onChangeText}
+            onBlur={onBlur}
+            multiline={multiline}
+            numberOfLines={multiline ? 5 : undefined}
+            maxLength={maxLength}
+          />
+          {maxLength ? (
+            <Text style={Styles.charCounter}>
+              {`${value?.length ?? 0}/${maxLength}`}
+            </Text>
+          ) : null}
+        </View>
       );
     }
   )
@@ -588,6 +615,9 @@ const ProfileQuestionWizard = ({
         type,
         placeholder,
         id,
+        multiline,
+        minLength,
+        maxLength,
       } = item;
       const { value } = selected ?? {};
 
@@ -625,6 +655,9 @@ const ProfileQuestionWizard = ({
                 id={id}
                 placeholder={placeholder}
                 initialValue={value == null ? '' : String(value)}
+                multiline={multiline}
+                minLength={minLength}
+                maxLength={maxLength}
                 onAnsweredChange={onAnsweredChange}
                 onCommit={onCommitText}
               />
@@ -812,6 +845,14 @@ const Styles = StyleSheet.create({
   },
   labelLessControl: {
     marginTop: 0,
+  },
+  charCounter: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small1,
+    textAlign: 'right',
+    alignSelf: 'flex-end',
+    marginTop: hp(0.5),
   },
   labelLessPickerButton: {
     marginTop: 0,
