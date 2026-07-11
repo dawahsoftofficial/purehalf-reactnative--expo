@@ -569,11 +569,20 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     }
   }, []);
 
-  const onBoostSuccessCollect = useCallback(() => {
+  const onBoostSuccessCollect = useCallback(async () => {
     setBoostSuccessModalVisible(false);
-    // TODO: Backend integration - collect boost credits
+    // Boost credit is granted server-side by the RevenueCat purchase webhook
+    // (assignBoostPack), not by this handler. Just refresh the local user so
+    // the new chat_credits balance is reflected in the UI.
+    try {
+      const refreshedUser: any = await ApiServices.getCurrentUserDetail();
+      updateCurrentUser(refreshedUser);
+      setData(storageKeys.USER, refreshedUser);
+    } catch (error) {
+      console.log('error while refreshing user after boost purchase =>', error);
+    }
     flashSuccessMessage('Boost profile activated successfully!');
-  }, []);
+  }, [setData, storageKeys.USER, updateCurrentUser]);
 
   const onRecommendationPress = useCallback((value?: boolean) => {
     if (value) {
