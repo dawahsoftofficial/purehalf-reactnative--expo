@@ -513,7 +513,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       }));
       return updated.sort(sortByCompletion);
     });
-  }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
+  }, [
+    currentUser,
+    getData,
+    profileProgressTemplate,
+    storageKeys.PROFILE_DETAIL_LOCAL,
+  ]);
 
   // Call getAttribute and getUsers on mount
   useEffect(() => {
