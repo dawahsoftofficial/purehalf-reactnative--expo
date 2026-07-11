@@ -340,6 +340,28 @@ const Data: any = {
       multiline: true,
       minLength: 10,
       maxLength: 400,
+      // Sourced from the pre-registration signup primer's "strengths" step
+      // (journeys.ts) so the same self-description language carries through.
+      suggestionsFemale: [
+        'Kind and caring',
+        'Family-oriented',
+        'Well educated',
+        'Ambitious and hardworking',
+        'Good sense of humour',
+        'Practising in my deen',
+        'Honest and loyal',
+        'Independent',
+      ],
+      suggestionsMale: [
+        'Caring and supportive',
+        'Hardworking and ambitious',
+        'Family-oriented',
+        'Well educated',
+        'Good sense of humour',
+        'Practising in my deen',
+        'Honest and loyal',
+        'Financially responsible',
+      ],
     },
     {
       title: LanguageKeys.aboutPartner,
@@ -354,6 +376,28 @@ const Data: any = {
       multiline: true,
       minLength: 10,
       maxLength: 400,
+      // Sourced from the pre-registration signup primer's "priorities" step.
+      suggestionsFemale: [
+        'Strong deen & character',
+        'Good-looking, takes care of himself',
+        'Tall',
+        'Financially settled',
+        'Respected family background',
+        'Well educated',
+        'Respects my career and goals',
+        'Kind to the women in his life',
+        'Emotionally mature',
+      ],
+      suggestionsMale: [
+        'Beautiful / attractive',
+        'Youthful and full of life',
+        'Warm, well-mannered nature',
+        'Easy-going and fun to be with',
+        'Practising deen and modesty',
+        'Honest and loyal',
+        'Family-oriented',
+        'Career-minded is a plus',
+      ],
     },
     {
       title: LanguageKeys.likes,
@@ -367,6 +411,17 @@ const Data: any = {
       multiline: true,
       minLength: 3,
       maxLength: 200,
+      // No pre-registration equivalent exists yet -- authored fresh.
+      suggestions: [
+        'Reading',
+        'Cooking',
+        'Traveling',
+        'Sports & fitness',
+        'Nature & outdoors',
+        'Volunteering',
+        'Learning new things',
+        'Spending time with family',
+      ],
     },
     {
       title: LanguageKeys.disLikes,
@@ -380,6 +435,18 @@ const Data: any = {
       multiline: true,
       minLength: 3,
       maxLength: 200,
+      // No pre-registration equivalent exists yet -- authored fresh, kept to
+      // behaviours/values rather than anything about protected traits.
+      suggestions: [
+        'Dishonesty',
+        'Rudeness',
+        'Lack of ambition',
+        'Gossiping',
+        'Being late',
+        'Materialism',
+        'Closed-mindedness',
+        'Arguing',
+      ],
     },
     {
       title: LanguageKeys.openForPolygamy,

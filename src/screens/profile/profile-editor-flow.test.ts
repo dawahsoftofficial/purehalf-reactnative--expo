@@ -13,6 +13,8 @@ import {
   isOptionSelected,
   normalizeScalingSelected,
   shouldUseTagOptions,
+  splitSuggestionValue,
+  toggleSuggestionInValue,
 } from './profile-editor-flow';
 
 const field = (overrides: Record<string, unknown>) => ({
@@ -442,5 +444,59 @@ describe('isActiveItemAnswered', () => {
 
   it('is unanswered when there is no active item', () => {
     expect(isActiveItemAnswered(undefined, null)).toBe(false);
+  });
+});
+
+describe('splitSuggestionValue', () => {
+  it('splits a comma-joined value into trimmed segments', () => {
+    expect(splitSuggestionValue('Reading, Cooking,  Travel ')).toEqual([
+      'Reading',
+      'Cooking',
+      'Travel',
+    ]);
+  });
+
+  it('drops empty segments from consecutive or trailing commas', () => {
+    expect(splitSuggestionValue('Reading,, Cooking,')).toEqual([
+      'Reading',
+      'Cooking',
+    ]);
+  });
+
+  it('returns an empty array for an empty or whitespace-only value', () => {
+    expect(splitSuggestionValue('')).toEqual([]);
+    expect(splitSuggestionValue('   ')).toEqual([]);
+  });
+
+  it('treats a value with no commas as a single segment', () => {
+    expect(splitSuggestionValue('Reading')).toEqual(['Reading']);
+  });
+});
+
+describe('toggleSuggestionInValue', () => {
+  it('appends a suggestion to an empty value', () => {
+    expect(toggleSuggestionInValue('', 'Reading')).toBe('Reading');
+  });
+
+  it('appends a suggestion to an existing value', () => {
+    expect(toggleSuggestionInValue('Reading', 'Cooking')).toBe(
+      'Reading, Cooking'
+    );
+  });
+
+  it('removes a suggestion already present, matching case-insensitively', () => {
+    expect(toggleSuggestionInValue('Reading, Cooking', 'reading')).toBe(
+      'Cooking'
+    );
+  });
+
+  it('removes the only suggestion present, leaving an empty value', () => {
+    expect(toggleSuggestionInValue('Reading', 'Reading')).toBe('');
+  });
+
+  it('does not disturb free-typed text that is not itself a suggestion', () => {
+    expect(toggleSuggestionInValue('I love long walks', 'Reading')).toBe(
+      'I love long walks, Reading'
+    );
   });
 });

@@ -38,6 +38,8 @@ import {
   isOptionSelected,
   normalizeScalingSelected,
   shouldUseTagOptions,
+  splitSuggestionValue,
+  toggleSuggestionInValue,
 } from '../profile-editor-flow';
 
 const RULER_TICK_WIDTH = Math.round(wp(2.5));
@@ -58,6 +60,7 @@ type TextQuestionInputProps = {
   multiline?: boolean;
   minLength?: number;
   maxLength?: number;
+  suggestions?: string[];
   onAnsweredChange: (id: string, answered: boolean) => void;
   onCommit: (id: string, value: string) => void;
 };
@@ -94,6 +97,7 @@ const TextQuestionInput = React.memo(
         multiline = false,
         minLength = 1,
         maxLength,
+        suggestions,
         onAnsweredChange,
         onCommit,
       },
@@ -122,6 +126,19 @@ const TextQuestionInput = React.memo(
         onCommit(id, value);
       }, [id, value, onCommit]);
 
+      // Tapping a suggestion toggles it in/out of the comma-joined answer
+      // rather than replacing it, so multiple suggestions (and the user's
+      // own typed words) can coexist.
+      const selectedSuggestions = useMemo(
+        () => new Set(splitSuggestionValue(value).map((s) => s.toLowerCase())),
+        [value]
+      );
+
+      const onSuggestionPress = useCallback(
+        (label: string) => onChangeText(toggleSuggestionInValue(value, label)),
+        [value, onChangeText]
+      );
+
       return (
         <View>
           <IconInput
@@ -140,6 +157,32 @@ const TextQuestionInput = React.memo(
             <Text style={Styles.charCounter}>
               {`${value?.length ?? 0}/${maxLength}`}
             </Text>
+          ) : null}
+          {suggestions?.length ? (
+            <View style={Styles.suggestionWrap}>
+              {suggestions.map((label) => {
+                const on = selectedSuggestions.has(label.toLowerCase());
+                return (
+                  <Ripple
+                    key={label}
+                    style={[
+                      Styles.suggestionChip,
+                      on && Styles.suggestionChipOn,
+                    ]}
+                    onPress={() => onSuggestionPress(label)}
+                  >
+                    <Text
+                      style={[
+                        Styles.suggestionChipTxt,
+                        on && Styles.suggestionChipTxtOn,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Ripple>
+                );
+              })}
+            </View>
           ) : null}
         </View>
       );
@@ -618,6 +661,9 @@ const ProfileQuestionWizard = ({
         multiline,
         minLength,
         maxLength,
+        suggestions,
+        suggestionsMale,
+        suggestionsFemale,
       } = item;
       const { value } = selected ?? {};
 
@@ -627,6 +673,9 @@ const ProfileQuestionWizard = ({
         tagOptions = tagOptions.filter((v: any) => v?.value !== 'Widowed');
       }
       const useTags = shouldUseTagOptions(item, tagOptions);
+      const activeSuggestions =
+        (gender === 'female' ? suggestionsFemale : suggestionsMale) ??
+        suggestions;
 
       return (
         <View style={Styles.questionCard}>
@@ -658,6 +707,7 @@ const ProfileQuestionWizard = ({
                 multiline={multiline}
                 minLength={minLength}
                 maxLength={maxLength}
+                suggestions={activeSuggestions}
                 onAnsweredChange={onAnsweredChange}
                 onCommit={onCommitText}
               />
@@ -853,6 +903,29 @@ const Styles = StyleSheet.create({
     textAlign: 'right',
     alignSelf: 'flex-end',
     marginTop: hp(0.5),
+  },
+  suggestionWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: wp(2),
+    marginTop: hp(1.5),
+  },
+  suggestionChip: {
+    paddingHorizontal: wp(3.2),
+    paddingVertical: hp(0.9),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
+  },
+  suggestionChipOn: {
+    backgroundColor: Colors.primary,
+  },
+  suggestionChipTxt: {
+    color: Colors.primaryMid,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+  },
+  suggestionChipTxtOn: {
+    color: Colors.color2,
   },
   labelLessPickerButton: {
     marginTop: 0,

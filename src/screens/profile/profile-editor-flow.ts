@@ -10,6 +10,9 @@ export type ProfileEditorField = {
   multiline?: boolean; // free-text fields: render as a multi-line text area
   minLength?: number; // free-text fields: minimum trimmed length to count as answered
   maxLength?: number; // free-text fields: hard cap enforced by the input itself
+  suggestions?: string[]; // free-text fields: tappable suggestion chips (gender-neutral)
+  suggestionsMale?: string[]; // overrides `suggestions` when gender === 'male'
+  suggestionsFemale?: string[]; // overrides `suggestions` when gender === 'female'
 };
 
 export const isFieldHiddenForGender = (
@@ -88,6 +91,33 @@ export const isActiveItemAnswered = (
     return liveAnswered.answered;
   }
   return isFieldFilled(item);
+};
+
+// Splits a comma-joined free-text answer into trimmed, non-empty segments.
+export const splitSuggestionValue = (value: string): string[] =>
+  (value ?? '')
+    .split(',')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+// Adds a suggestion chip's label to the comma-joined value, or removes it if
+// already present (case-insensitive) -- lets suggestion chips act as a
+// toggle over a free-text answer instead of just appending duplicates.
+export const toggleSuggestionInValue = (
+  value: string,
+  label: string
+): string => {
+  const segments = splitSuggestionValue(value);
+  const exists = segments.some(
+    (segment) => segment.toLowerCase() === label.toLowerCase()
+  );
+  const next = exists
+    ? segments.filter(
+        (segment) => segment.toLowerCase() !== label.toLowerCase()
+      )
+    : [...segments, label];
+
+  return next.join(', ');
 };
 
 export const shouldUseTagOptions = (
