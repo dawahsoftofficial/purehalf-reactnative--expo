@@ -16,7 +16,8 @@ export const isFieldHiddenForGender = (
   const isMale = gender !== 'female';
   return (
     (item?.id === 'doYouHaveABeard' && !isMale) ||
-    (item?.id === 'hijab-0' && isMale)
+    (item?.id === 'hijab-0' && isMale) ||
+    (item?.id === 'earn-0' && !isMale)
   );
 };
 

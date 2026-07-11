@@ -4,7 +4,7 @@
 // its RN components) so it can be imported by non-RN consumers (e.g.
 // gift-status.ts) and unit-tested directly under jest.
 import LanguageKeys from '../../languages/Keys';
-import { isFieldFilled } from './profile-editor-flow';
+import { isFieldFilled, isFieldHiddenForGender } from './profile-editor-flow';
 
 export type GroupMeta = { key: string; title: string; icon: string };
 
@@ -41,19 +41,11 @@ export const GROUP_META: GroupMeta[] = [
   },
 ];
 
-const isHidden = (item: any, gender?: string) => {
-  const isMale = gender !== 'female';
-  return (
-    (item?.id === 'doYouHaveABeard' && !isMale) ||
-    (item?.id === 'hijab-0' && isMale)
-  );
-};
-
 export const countFilled = (group: any[], gender?: string) => {
   let filled = 0;
   let total = 0;
   (group ?? []).forEach((item) => {
-    if (isHidden(item, gender)) return;
+    if (isFieldHiddenForGender(item, gender)) return;
     total += 1;
     if (isFieldFilled(item)) filled += 1;
   });
@@ -63,7 +55,7 @@ export const countFilled = (group: any[], gender?: string) => {
 export const previewOf = (group: any[], gender?: string) => {
   const values: string[] = [];
   (group ?? []).forEach((item) => {
-    if (isHidden(item, gender) || !isFieldFilled(item)) return;
+    if (isFieldHiddenForGender(item, gender) || !isFieldFilled(item)) return;
     if (item?.type === 'dropDownBinary') return;
     const sel = item?.selected ?? {};
     let display: any;

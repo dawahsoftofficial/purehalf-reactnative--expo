@@ -72,6 +72,7 @@ const Data: any = {
       selected: {},
       category: 'familybg-0',
       apiKey: 'ethinicity_id',
+      inline: true,
     },
     {
       title: LanguageKeys.language,
@@ -91,16 +92,6 @@ const Data: any = {
       category: 'familybg-0',
       apiKey: 'nationality',
     },
-    {
-      title: LanguageKeys.caste,
-      placeholder: 'Enter caste',
-      data: [],
-      id: 'caste',
-      type: 'input',
-      selected: {},
-      category: 'familybg-0',
-      apiKey: 'caste',
-    },
   ],
   lifeStyle: [
     {
@@ -111,6 +102,7 @@ const Data: any = {
       selected: {},
       category: 'life-0',
       apiKey: 'education_level_id',
+      inline: true,
     },
     {
       title: LanguageKeys.profession,
@@ -129,6 +121,7 @@ const Data: any = {
       selected: {},
       category: 'life-0',
       apiKey: 'earnings_per_month_id',
+      inline: true,
     },
     {
       title: LanguageKeys.maritalStatus,
@@ -138,6 +131,7 @@ const Data: any = {
       selected: {},
       category: 'life-0',
       apiKey: 'maritial_status_id',
+      inline: true,
     },
     {
       title: LanguageKeys.haveChildren,
