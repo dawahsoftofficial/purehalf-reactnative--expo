@@ -38,6 +38,10 @@ import {
 } from '../../services';
 import { presentBoostProfilePaywall } from '../../services/paywall-service';
 import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
+import GiftClaimModal from '../profile/components/gift-claim-modal';
+import Wiggle from '../profile/components/wiggle';
+import { buildUpdatedUserAfterGiftClaim } from '../profile/gift-claim-outcome';
+import { computeGiftStatus } from '../profile/gift-status';
 import { AccountModal, RecommendationHeart } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
@@ -208,6 +212,46 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     profileCompleteProgress.length > 0 &&
     profileCompleteProgress.filter((i) => i.completed).length <
       profileCompleteProgress.length;
+
+  const giftThreshold =
+    useSettingsStore().getProfileCompletionThresholdPercent();
+  const giftCreditsAmount =
+    useSettingsStore().getProfileCompletionGiftCredits();
+  const giftStatus = useMemo(
+    () => computeGiftStatus(currentUser, giftThreshold),
+    [currentUser, giftThreshold]
+  );
+  const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
+  const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+
+  // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
+  // so callers cast at the call site — same idiom used by OnboardingProfile
+  // and Header for this exact endpoint.
+  const claimGift = useCallback(
+    () =>
+      ApiServices.claimProfileGift() as unknown as Promise<{
+        status: string;
+        awarded: number;
+        new_balance: number;
+        multiplier: number;
+      }>,
+    []
+  );
+
+  const onGiftClaimed = useCallback(
+    (result: any) => {
+      // GiftClaimModal shows its own confetti/"You earned" celebration
+      // before calling this (for a fresh claim) or hands off immediately
+      // (for an already-claimed race) — either way, no separate toast here,
+      // just persisting the result on currentUser.
+      setGiftModalVisible(false);
+      const updatedUser = buildUpdatedUserAfterGiftClaim(currentUser, result);
+      setData(storageKeys.USER, updatedUser);
+      updateCurrentUser(updatedUser);
+    },
+    [currentUser, setData, storageKeys.USER, updateCurrentUser]
+  );
 
   // Check if recommendation modal should be shown based on daily recommendations settings
   useEffect(() => {
@@ -699,39 +743,60 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             />
           </Ripple>
         )}
-        {profileIncomplete && !profileBannerDismissed && (
-          <Ripple
-            style={[
-              Styles.pendingApprovalBanner,
-              { flexDirection: Rtl ? 'row-reverse' : 'row' },
-            ]}
-            onPress={() =>
-              navigation.navigate('OnboardingProfile', { from: 'Home' })
-            }
-          >
-            <View style={Styles.pendingIconChip}>
-              <Ionicons
-                name="sparkles-outline"
-                size={wp(4.5)}
-                color={Colors.primary}
-              />
-            </View>
-            <View style={Styles.completeBannerTextWrap}>
-              <Text style={Styles.completeBannerTitle}>
-                {t(LanguageKeys.completeProfileCta)}
-              </Text>
-              <Text style={Styles.completeBannerSub}>
-                {t(LanguageKeys.completeProfileBannerBody)}
-              </Text>
-            </View>
+        {!giftStatus.claimed &&
+          (profileIncomplete || giftStatus.eligible) &&
+          !profileBannerDismissed && (
             <Ripple
-              onPress={() => setProfileBannerDismissed(true)}
-              style={Styles.bannerDismiss}
+              style={[
+                Styles.pendingApprovalBanner,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+              onPress={() =>
+                giftStatus.eligible
+                  ? openGiftModal()
+                  : navigation.navigate('OnboardingProfile', {
+                      from: 'Home',
+                    })
+              }
             >
-              <Ionicons name="close" size={wp(4.5)} color={Colors.muted} />
+              <View
+                style={[
+                  Styles.pendingIconChip,
+                  giftStatus.eligible && Styles.pendingIconChipReady,
+                ]}
+              >
+                <Wiggle active={giftStatus.eligible}>
+                  <Ionicons
+                    name={giftStatus.eligible ? 'gift' : 'gift-outline'}
+                    size={wp(4.5)}
+                    color={giftStatus.eligible ? Colors.color2 : Colors.primary}
+                  />
+                </Wiggle>
+              </View>
+              <View style={Styles.completeBannerTextWrap}>
+                <Text style={Styles.completeBannerTitle}>
+                  {t(
+                    giftStatus.eligible
+                      ? LanguageKeys.giftReadyTitle
+                      : LanguageKeys.completeProfileCta
+                  )}
+                </Text>
+                <Text style={Styles.completeBannerSub}>
+                  {t(
+                    giftStatus.eligible
+                      ? LanguageKeys.giftReadyBody
+                      : LanguageKeys.completeProfileBannerBody
+                  )}
+                </Text>
+              </View>
+              <Ripple
+                onPress={() => setProfileBannerDismissed(true)}
+                style={Styles.bannerDismiss}
+              >
+                <Ionicons name="close" size={wp(4.5)} color={Colors.muted} />
+              </Ripple>
             </Ripple>
-          </Ripple>
-        )}
+          )}
         {!isPremiumUser ? <PremiumButton /> : null}
       </View>
       <AccountModal
@@ -740,6 +805,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         profileCompleteProgress={profileCompleteProgress}
         onInfoItemPress={onInfoItemPress}
         currentUser={currentUser}
+      />
+      <GiftClaimModal
+        visible={giftModalVisible}
+        giftCredits={giftCreditsAmount}
+        onClose={closeGiftModal}
+        onClaimed={onGiftClaimed}
+        claim={claimGift}
       />
       {/* <RecommendationButton onPress={onRecommendationPress} /> */}
       {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
@@ -869,6 +941,9 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pendingIconChipReady: {
+    backgroundColor: Colors.primary,
   },
   pendingApprovalText: {
     fontFamily: Fonts.APPFONT_SB,
