@@ -51,7 +51,9 @@ import messageServices from '../../services/api/message-services';
 import type { Conversation as ApiConversation } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
 import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
-import { usePremiumStore } from '../../stores';
+import { usePremiumStore, useSettingsStore } from '../../stores';
+import GiftBadge from './components/gift-badge';
+import GiftClaimModal from './components/gift-claim-modal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -322,6 +324,17 @@ const Header = ({
   const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const giftThreshold =
+    useSettingsStore().getProfileCompletionThresholdPercent();
+  const giftCredits = useSettingsStore().getProfileCompletionGiftCredits();
+  const giftClaimed = Boolean(
+    (currentUser as any)?.profile_finish_bonus_awarded
+  );
+  const giftEligible =
+    !giftClaimed &&
+    typeof profileStrength === 'number' &&
+    profileStrength >= giftThreshold;
 
   const chatUserData = useMemo(
     () => ({
@@ -619,6 +632,46 @@ const Header = ({
     }
   }, [currentUser, isUpdatingBlur, updateCurrentUser, userData?.is_blur]);
 
+  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
+  const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+
+  // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
+  // so callers cast at the call site — matching the existing
+  // `as unknown as User` idiom already used elsewhere in this file
+  // (getCurrentUserDetail, a few lines up) rather than a bare `as`, which TS
+  // rejects between unrelated types.
+  const claimGift = useCallback(
+    () =>
+      ApiServices.claimProfileGift() as unknown as Promise<{
+        status: string;
+        awarded: number;
+        new_balance: number;
+        multiplier: number;
+      }>,
+    []
+  );
+
+  const onGiftClaimed = useCallback(
+    (result: any) => {
+      setGiftModalVisible(false);
+      const { setData, storageKeys } = StorageManager;
+      const updatedUser: any = {
+        ...(currentUser as any),
+        chat_credits: result.new_balance,
+        profile_finish_bonus_awarded: true,
+      };
+      setData(storageKeys.USER, updatedUser);
+      updateCurrentUser(updatedUser);
+      if (result.status === 'claimed') {
+        const chats = Math.round(result.awarded / (result.multiplier || 50));
+        flashSuccessMessage(
+          `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
+        );
+      }
+    },
+    [currentUser, updateCurrentUser, t]
+  );
+
   const onProfileImageLoadStart = useCallback(
     () => setProfileImageLoader(true),
     []
@@ -817,9 +870,16 @@ const Header = ({
               <Text style={Styles.strengthLabel}>
                 {LanguageKeys.profileStrength}
               </Text>
-              <ReactText style={Styles.strengthPct}>
-                {`${profileStrength}%`}
-              </ReactText>
+              <View style={Styles.strengthEndRow}>
+                <ReactText style={Styles.strengthPct}>
+                  {`${profileStrength}%`}
+                </ReactText>
+                <GiftBadge
+                  eligible={giftEligible}
+                  claimed={giftClaimed}
+                  onPress={openGiftModal}
+                />
+              </View>
             </View>
             <View style={Styles.strengthTrack}>
               <View
@@ -1248,6 +1308,14 @@ const Header = ({
           </View>
         </View>
       </Modal>
+
+      <GiftClaimModal
+        visible={giftModalVisible}
+        giftCredits={giftCredits}
+        onClose={closeGiftModal}
+        onClaimed={onGiftClaimed}
+        claim={claimGift}
+      />
     </View>
   );
 };
@@ -1391,6 +1459,11 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.small2,
     includeFontPadding: false,
+  },
+  strengthEndRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
   },
   strengthTrack: {
     height: hp(0.85),
