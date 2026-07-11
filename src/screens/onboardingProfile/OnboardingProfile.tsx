@@ -89,7 +89,14 @@ const OnboardingProfile = ({ navigation, route }: any) => {
         );
       });
       setCategoriesData(hydrated);
-      const introSeen = await getData(storageKeys.ONBOARDING_INTRO_SEEN);
+      let introSeen = false;
+      try {
+        introSeen = Boolean(await getData(storageKeys.ONBOARDING_INTRO_SEEN));
+      } catch {
+        // Storage read failed — default to showing the intro rather than
+        // getting stuck on the loading spinner with no recovery path.
+        introSeen = false;
+      }
       if (!alive) return;
       setPhase(introSeen ? 'question' : 'intro');
     };
