@@ -1,7 +1,6 @@
 import type { ClaimResult } from './gift-claim-outcome';
 import {
   buildUpdatedUserAfterGiftClaim,
-  giftClaimChats,
   shouldShowGiftClaimToast,
 } from './gift-claim-outcome';
 
@@ -71,27 +70,5 @@ describe('shouldShowGiftClaimToast', () => {
   it('is false for any other unexpected status value', () => {
     expect(shouldShowGiftClaimToast(result({ status: 'pending' }))).toBe(false);
     expect(shouldShowGiftClaimToast(result({ status: '' }))).toBe(false);
-  });
-});
-
-describe('giftClaimChats', () => {
-  it('divides awarded by the multiplier and rounds', () => {
-    expect(giftClaimChats(result({ awarded: 100, multiplier: 50 }))).toBe(2);
-  });
-
-  it('rounds to the nearest whole number', () => {
-    expect(giftClaimChats(result({ awarded: 120, multiplier: 50 }))).toBe(2);
-    expect(giftClaimChats(result({ awarded: 130, multiplier: 50 }))).toBe(3);
-  });
-
-  it('falls back to dividing by 50 when multiplier is 0', () => {
-    // 0 || 50 evaluates to 50, so this must NOT divide by zero.
-    expect(giftClaimChats(result({ awarded: 100, multiplier: 0 }))).toBe(2);
-  });
-
-  it('falls back to dividing by 50 when multiplier is otherwise falsy', () => {
-    expect(
-      giftClaimChats(result({ awarded: 100, multiplier: undefined }))
-    ).toBe(2);
   });
 });

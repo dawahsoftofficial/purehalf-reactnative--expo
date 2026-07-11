@@ -27,6 +27,3 @@ export const buildUpdatedUserAfterGiftClaim = (
 // multi-device use) doesn't surface a confusing "+0 Chat Credits" toast.
 export const shouldShowGiftClaimToast = (result: ClaimResult): boolean =>
   result.status === 'claimed';
-
-export const giftClaimChats = (result: ClaimResult): number =>
-  Math.round(result.awarded / (result.multiplier || 50));

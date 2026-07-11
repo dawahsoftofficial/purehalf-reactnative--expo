@@ -8,7 +8,7 @@ import { hp, Typography, wp } from '../../../global';
 import { LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 import { flashErrorMessage } from '../../../services';
-import { type ClaimResult, giftClaimChats } from '../gift-claim-outcome';
+import type { ClaimResult } from '../gift-claim-outcome';
 import Confetti from './confetti';
 
 type GiftClaimModalProps = {
@@ -106,7 +106,7 @@ const GiftClaimModal = ({
                 {LanguageKeys.youEarned}
               </Text>
               <ReactText style={Styles.body}>
-                {`+${giftClaimChats(justClaimed)} ${t(LanguageKeys.chatCredits)}`}
+                {`+${justClaimed.awarded} ${t(LanguageKeys.chatCredits)}`}
               </ReactText>
             </>
           ) : (
