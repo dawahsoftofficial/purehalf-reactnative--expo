@@ -31,7 +31,7 @@ import {
   getProgressLabel,
   getScalingDisplay,
   getVisibleProfileFields,
-  isFieldFilled,
+  isActiveItemAnswered,
   isOptionSelected,
   normalizeScalingSelected,
   shouldUseTagOptions,
@@ -346,7 +346,11 @@ const ProfileQuestionWizard = ({
   const isFirstStep = activeIndex === 0;
   const isLastStep =
     visibleFields.length > 0 && activeIndex === visibleFields.length - 1;
-  const isAnswered = isFieldFilled(activeItem);
+  const isAnswered = isActiveItemAnswered(
+    activeItem,
+    focusedInput.activeInputId,
+    focusedInput.value
+  );
 
   useEffect(() => {
     if (activeIndex > 0 && activeIndex >= visibleFields.length) {
@@ -439,19 +443,14 @@ const ProfileQuestionWizard = ({
     );
   }, [focusedInput]);
 
-  const onChangeInput = useCallback(
-    (text: any) => {
-      setFocusedInput((prev) => ({ ...prev, value: text }));
-      setFormData((prev: any[]) =>
-        prev.map((element: any) =>
-          element.title === focusedInput?.item?.title
-            ? { ...element, selected: { ...element.selected, value: text } }
-            : element
-        )
-      );
-    },
-    [focusedInput]
-  );
+  // Only buffers into focusedInput while typing — formData is the committed
+  // store and only onBlurInput writes to it. Updating formData on every
+  // keystroke was redundant (onBlurInput already commits on blur) and forced
+  // a full formData/visibleFields/activeItem recompute per character, which
+  // is unnecessary churn on every keystroke.
+  const onChangeInput = useCallback((text: any) => {
+    setFocusedInput((prev) => ({ ...prev, value: text }));
+  }, []);
 
   const onPickerItemPress = useCallback(
     (item: any) => {

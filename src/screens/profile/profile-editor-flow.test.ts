@@ -8,6 +8,7 @@ import {
   getScalingDisplay,
   getVisibleProfileFields,
   inchesFromLegacyFeet,
+  isActiveItemAnswered,
   isFieldFilled,
   isOptionSelected,
   normalizeScalingSelected,
@@ -377,5 +378,59 @@ describe('isFieldFilled', () => {
     expect(
       isFieldFilled(field({ type: 'input', selected: { value: '   ' } }))
     ).toBe(false);
+  });
+});
+
+describe('isActiveItemAnswered', () => {
+  it('reads the live typing buffer for the item currently focused, ignoring its uncommitted selected value', () => {
+    const item = field({
+      id: 'aboutYourself',
+      type: 'input',
+      selected: {},
+    });
+
+    expect(isActiveItemAnswered(item, 'aboutYourself', 'Kind and honest')).toBe(
+      true
+    );
+  });
+
+  it('treats a whitespace-only live buffer as unanswered', () => {
+    const item = field({ id: 'aboutYourself', type: 'input', selected: {} });
+
+    expect(isActiveItemAnswered(item, 'aboutYourself', '   ')).toBe(false);
+  });
+
+  it('treats an empty live buffer as unanswered even if committed selected has a stale value', () => {
+    const item = field({
+      id: 'aboutYourself',
+      type: 'input',
+      selected: { value: 'old answer' },
+    });
+
+    expect(isActiveItemAnswered(item, 'aboutYourself', '')).toBe(false);
+  });
+
+  it('falls back to the committed selected value when this item is not the focused one', () => {
+    const item = field({
+      id: 'aboutYourself',
+      type: 'input',
+      selected: { value: 'Kind and honest' },
+    });
+
+    expect(isActiveItemAnswered(item, 'otherField', '')).toBe(true);
+  });
+
+  it('falls back to isFieldFilled for non-input types regardless of focus state', () => {
+    const item = field({
+      id: 'sect-0',
+      type: 'dropDown',
+      selected: { id: 4, value: 'Sunni' },
+    });
+
+    expect(isActiveItemAnswered(item, 'sect-0', '')).toBe(true);
+  });
+
+  it('is unanswered when there is no active item', () => {
+    expect(isActiveItemAnswered(undefined, '', '')).toBe(false);
   });
 });
