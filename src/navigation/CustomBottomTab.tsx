@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import { hasNotch } from 'react-native-device-info';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { hp, wp } from '../global';
 import { Colors, Fonts, Images } from '../res';
+import Wiggle from '../screens/profile/components/wiggle';
+import { computeGiftStatus } from '../screens/profile/gift-status';
 import { isIOS, useGlobalContext } from '../services';
-import { useConversationStore } from '../stores';
+import { useConversationStore, useSettingsStore } from '../stores';
 
 const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
   const unreadConversationsCount = useConversationStore(
@@ -14,6 +17,12 @@ const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
   );
   const { conversations, updateConversations, currentUser } =
     useGlobalContext();
+  const giftThreshold =
+    useSettingsStore().getProfileCompletionThresholdPercent();
+  const giftEligible = useMemo(
+    () => computeGiftStatus(currentUser, giftThreshold).eligible,
+    [currentUser, giftThreshold]
+  );
   const focusedOptions = descriptors[state.routes[state.index].key].options;
 
   if (focusedOptions.tabBarVisible === false) {
@@ -162,6 +171,17 @@ const CustomBottomTab = ({ state, descriptors, navigation }: any) => {
                   </Text>
                 </View>
               )}
+              {route.name === 'Profile' && giftEligible && (
+                <View style={Styles.giftBadgeDot}>
+                  <Wiggle active>
+                    <Ionicons
+                      name="gift"
+                      size={wp(2.8)}
+                      color={Colors.color2}
+                    />
+                  </Wiggle>
+                </View>
+              )}
             </Ripple>
           </View>
         );
@@ -212,6 +232,19 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: wp(3),
     maxWidth: wp(10),
+  },
+  giftBadgeDot: {
+    position: 'absolute',
+    top: 0,
+    right: wp(2.5),
+    width: wp(4.2),
+    height: wp(4.2),
+    borderRadius: wp(2.1),
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.color2,
   },
   shadow: {
     shadowColor: Colors.color1,
