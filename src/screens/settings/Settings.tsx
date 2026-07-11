@@ -195,12 +195,15 @@ function Settings(props: SettingsProps) {
             name: LanguageKeys.blockedListControl,
             onPress: onBlockListPress,
           },
-          {
-            iconName: 'person-add-outline',
-            name: LanguageKeys.addWali,
-            onPress: onAddWaliPress,
-            showCondition: () => currentUser?.gender !== 'male',
-          },
+          // Wali/guardian settings entry hidden for now (comment out only,
+          // per explicit direction -- guardian is core functionality, not
+          // being removed).
+          // {
+          //   iconName: 'person-add-outline',
+          //   name: LanguageKeys.addWali,
+          //   onPress: onAddWaliPress,
+          //   showCondition: () => currentUser?.gender !== 'male',
+          // },
         ],
       },
       {

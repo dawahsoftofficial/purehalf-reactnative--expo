@@ -319,10 +319,13 @@ function ProfilePicture(props: ProfilePictureProps) {
     // });
     addAnaylatics('complete_registration', info);
 
-    // For females: if they already have guardian, skip AddWali
-    const isFemale = user?.gender === 'female';
-    const hasGuardian = Boolean(user?.guardian);
-    const nextRoute = isFemale && !hasGuardian ? 'AddWali' : 'WelcomeUser';
+    // Wali/guardian signup step hidden for now (comment out only, per explicit
+    // direction -- guardian is core functionality, not being removed).
+    // // For females: if they already have guardian, skip AddWali
+    // const isFemale = user?.gender === 'female';
+    // const hasGuardian = Boolean(user?.guardian);
+    // const nextRoute = isFemale && !hasGuardian ? 'AddWali' : 'WelcomeUser';
+    const nextRoute = 'WelcomeUser';
 
     props.navigation.reset({
       index: 0,

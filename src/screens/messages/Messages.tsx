@@ -678,13 +678,15 @@ const Messages = (props: MessagesProps) => {
 
   const keyExtractor = (item: Conversation) => item.id.toString();
 
-  const onChangePasswordPress = () => {
-    props.navigation.navigate('GuardianChangePassword');
-  };
+  // Wali/guardian entry points hidden for now (comment out only, per explicit
+  // direction -- guardian is core functionality, not being removed).
+  // const onChangePasswordPress = () => {
+  //   props.navigation.navigate('GuardianChangePassword');
+  // };
 
-  const onWaliPress = () => {
-    props.navigation.navigate('AddWali', { fromSettings: true });
-  };
+  // const onWaliPress = () => {
+  //   props.navigation.navigate('AddWali', { fromSettings: true });
+  // };
 
   const onFindMatchPress = () => {
     props.navigation.navigate('SearchProfiles');
@@ -725,10 +727,12 @@ const Messages = (props: MessagesProps) => {
                   <MenuOptions
                     optionsContainerStyle={Styles.menuOptionsContainer}
                   >
+                    {/* Wali/guardian change-password entry hidden for now
+                        (comment out only, per explicit direction).
                     <MenuOption
                       onSelect={onChangePasswordPress}
                       text={t(LanguageKeys.changePassword)}
-                    />
+                    /> */}
                     <MenuOption
                       onSelect={onLogoutPress}
                       text={t(LanguageKeys.logOut)}
@@ -741,6 +745,8 @@ const Messages = (props: MessagesProps) => {
           </View>
         )}
       />
+      {/* Wali/guardian banner hidden for now (comment out only, per explicit
+          direction -- guardian is core functionality, not being removed).
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
           <Ionicons
@@ -759,7 +765,7 @@ const Messages = (props: MessagesProps) => {
           />
           <Text style={Styles.guardianText}>{t('addAWali')}</Text>
         </Ripple>
-      ) : null}
+      ) : null} */}
       {currentUser?.role === 'guardian' && (
         <CommonActions
           navigation={props.navigation}

@@ -7,13 +7,11 @@ import {
   AppState,
   type AppStateStatus,
   ScrollView,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
   VirtualizedList,
 } from 'react-native';
-import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import pusherService from '@/services/pusher';
@@ -78,7 +76,8 @@ const SingleChat = (props: any) => {
   const fromNotification =
     props?.route?.params?.from === 'notification' ? true : false;
   const fromMessages = props?.route?.params?.from === 'messages' ? true : false;
-  const guardian = currentUser?.guardian ? currentUser?.guardian : false;
+  // Only used by the wali/guardian banner, hidden for now (see below).
+  // const guardian = currentUser?.guardian ? currentUser?.guardian : false;
   const [otherUserData, setOtherUserData] = useState(
     props?.route?.params?.otherUserData
   );
@@ -1180,9 +1179,11 @@ const SingleChat = (props: any) => {
     flashInfoMessage(LanguageKeys.disabledChatDescription);
   };
 
-  const onWaliPress = () => {
-    props.navigation.navigate('AddWali', { fromSettings: true });
-  };
+  // Wali/guardian banner hidden for now (comment out only, per explicit
+  // direction -- guardian is core functionality, not being removed).
+  // const onWaliPress = () => {
+  //   props.navigation.navigate('AddWali', { fromSettings: true });
+  // };
 
   const onViewProfilePress = () => {
     props.navigation.navigate('UserProfile', { userData: otherUserData });
@@ -1323,6 +1324,9 @@ const SingleChat = (props: any) => {
         scrollEnabled={false}
       >
         <ChatBackgroundPattern />
+        {/* Wali/guardian banner hidden for now (comment out only, per
+            explicit direction -- guardian is core functionality, not being
+            removed).
         {guardian ? (
           <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
             <Text style={Styles.guardianText}>{t('monitoredByWali')}</Text>
@@ -1331,7 +1335,7 @@ const SingleChat = (props: any) => {
           <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
             <Text style={Styles.guardianText}>{t('addAWali')}</Text>
           </Ripple>
-        ) : null}
+        ) : null} */}
 
         {/* Typing Indicator */}
         {isOtherUserTyping && (
