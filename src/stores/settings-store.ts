@@ -148,6 +148,7 @@ type SettingValue =
   | AuthenticationMethod
   | ChatCredits
   | boolean
+  | number
   | MaxChatsPerDay
   | BadgesAndPayments
   | DailyRecommendations
@@ -181,6 +182,8 @@ type SettingsState = {
   getEnablePresignupQuestions: () => boolean;
   getEnablePostsignupQuestions: () => boolean;
   getEnableMatchCountReveal: () => boolean;
+  getProfileCompletionGiftCredits: () => number;
+  getProfileCompletionThresholdPercent: () => number;
   getMaxChatsPerDay: () => MaxChatsPerDay | null;
   getBadgesAndPayments: () => BadgesAndPayments | null;
   getDailyRecommendations: () => DailyRecommendations | null;
@@ -241,6 +244,21 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   getEnableMatchCountReveal: () => {
     const state = get();
     return state.getSettingByKey<boolean>('enable_match_count_reveal') ?? false;
+  },
+
+  getProfileCompletionGiftCredits: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<number>('profile_completion_gift_credits') ?? 150
+    );
+  },
+
+  getProfileCompletionThresholdPercent: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<number>('profile_completion_threshold_percent') ??
+      90
+    );
   },
 
   getMaxChatsPerDay: () => {

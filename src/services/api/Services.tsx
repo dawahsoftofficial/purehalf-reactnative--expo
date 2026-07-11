@@ -1172,6 +1172,44 @@ class GApiServices {
     });
   };
 
+  /**
+   * Claim the one-time profile-completion gift. Only succeeds once the
+   * backend independently confirms the profile is at/above the completion
+   * threshold; a second call after a successful claim resolves with
+   * status 'already_claimed' rather than rejecting.
+   * @returns Promise resolving to { status, awarded, new_balance, multiplier }
+   */
+  claimProfileGift = () => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.claimProfileGift)
+        .then((response) => {
+          const data = response?.data;
+          if (data?.error === false && data?.results) {
+            resolve(data.results);
+          } else {
+            const errorMessage = data?.message || 'Failed to claim gift';
+            console.error(
+              '[ApiServices.claimProfileGift] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to claim gift';
+          console.error('[ApiServices.claimProfileGift] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          reject(errorMessage);
+        });
+    });
+  };
+
   deleteSearchFilter = (id: any) => {
     return new Promise((resolve, reject) => {
       Api.delete(`${EndPoints.searchFilter}/${id}/delete`)
