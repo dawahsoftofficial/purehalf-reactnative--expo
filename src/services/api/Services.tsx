@@ -569,7 +569,7 @@ class GApiServices {
         })
         .catch((error) => {
           const errorMessage = error?.response?.data?.results;
-          if (errorMessage && errorMessage?.length !== 0) {
+          if (errorMessage?.length) {
             flashErrorMessage(errorMessage[0]);
           } else {
             flashErrorMessage();
@@ -976,8 +976,9 @@ class GApiServices {
           resolve(data?.data);
         })
         .catch((error) => {
-          if (error?.response?.data?.results.length !== 0) {
-            flashErrorMessage(error?.response?.data?.results[0]);
+          const results = error?.response?.data?.results;
+          if (results?.length) {
+            flashErrorMessage(results[0]);
           }
           console.log(
             'error while running search filter API  =>',
