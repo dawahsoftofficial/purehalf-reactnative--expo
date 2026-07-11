@@ -37,6 +37,11 @@ const GiftClaimModal = ({
   const [claiming, setClaiming] = useState(false);
   const [justClaimed, setJustClaimed] = useState<ClaimResult | null>(null);
   const handoffTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Guards re-entrancy synchronously. claiming (state) only takes effect on
+  // the next render, so a second tap landing in the same tick as the first
+  // (e.g. a fast double-tap) could otherwise slip through and fire a second
+  // claim() before the button re-renders as disabled/loading.
+  const claimingRef = useRef(false);
 
   useEffect(
     () => () => {
@@ -46,7 +51,8 @@ const GiftClaimModal = ({
   );
 
   const onClaimPress = () => {
-    if (claiming) return;
+    if (claimingRef.current) return;
+    claimingRef.current = true;
     setClaiming(true);
     // Clear any previous run's success view before starting a new attempt —
     // in practice this modal isn't reachable again after a genuine claim
@@ -55,6 +61,7 @@ const GiftClaimModal = ({
     setJustClaimed(null);
     claim()
       .then((result) => {
+        claimingRef.current = false;
         setClaiming(false);
         if (result.status === 'claimed') {
           setJustClaimed(result);
@@ -67,6 +74,7 @@ const GiftClaimModal = ({
         }
       })
       .catch((error) => {
+        claimingRef.current = false;
         setClaiming(false);
         flashErrorMessage(
           typeof error === 'string' ? error : 'Failed to claim gift'
