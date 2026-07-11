@@ -382,55 +382,65 @@ describe('isFieldFilled', () => {
 });
 
 describe('isActiveItemAnswered', () => {
-  it('reads the live typing buffer for the item currently focused, ignoring its uncommitted selected value', () => {
+  it('uses the live answered flag for the item it names, ignoring its uncommitted selected value', () => {
     const item = field({
       id: 'aboutYourself',
       type: 'input',
       selected: {},
     });
 
-    expect(isActiveItemAnswered(item, 'aboutYourself', 'Kind and honest')).toBe(
-      true
-    );
+    expect(
+      isActiveItemAnswered(item, { id: 'aboutYourself', answered: true })
+    ).toBe(true);
   });
 
-  it('treats a whitespace-only live buffer as unanswered', () => {
-    const item = field({ id: 'aboutYourself', type: 'input', selected: {} });
-
-    expect(isActiveItemAnswered(item, 'aboutYourself', '   ')).toBe(false);
-  });
-
-  it('treats an empty live buffer as unanswered even if committed selected has a stale value', () => {
+  it('treats a live answered:false flag as unanswered even if committed selected has a stale value', () => {
     const item = field({
       id: 'aboutYourself',
       type: 'input',
       selected: { value: 'old answer' },
     });
 
-    expect(isActiveItemAnswered(item, 'aboutYourself', '')).toBe(false);
+    expect(
+      isActiveItemAnswered(item, { id: 'aboutYourself', answered: false })
+    ).toBe(false);
   });
 
-  it('falls back to the committed selected value when this item is not the focused one', () => {
+  it('falls back to the committed selected value when the live flag names a different item', () => {
     const item = field({
       id: 'aboutYourself',
       type: 'input',
       selected: { value: 'Kind and honest' },
     });
 
-    expect(isActiveItemAnswered(item, 'otherField', '')).toBe(true);
+    expect(
+      isActiveItemAnswered(item, { id: 'otherField', answered: false })
+    ).toBe(true);
   });
 
-  it('falls back to isFieldFilled for non-input types regardless of focus state', () => {
+  it('falls back to the committed selected value when there is no live flag at all', () => {
+    const item = field({
+      id: 'aboutYourself',
+      type: 'input',
+      selected: { value: 'Kind and honest' },
+    });
+
+    expect(isActiveItemAnswered(item, null)).toBe(true);
+  });
+
+  it('falls back to isFieldFilled for non-input types regardless of any live flag', () => {
     const item = field({
       id: 'sect-0',
       type: 'dropDown',
       selected: { id: 4, value: 'Sunni' },
     });
 
-    expect(isActiveItemAnswered(item, 'sect-0', '')).toBe(true);
+    expect(isActiveItemAnswered(item, { id: 'sect-0', answered: false })).toBe(
+      true
+    );
   });
 
   it('is unanswered when there is no active item', () => {
-    expect(isActiveItemAnswered(undefined, '', '')).toBe(false);
+    expect(isActiveItemAnswered(undefined, null)).toBe(false);
   });
 });

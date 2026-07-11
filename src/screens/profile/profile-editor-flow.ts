@@ -69,16 +69,19 @@ export const isFieldFilled = (item: ProfileEditorField) => {
 // Whether the active question counts as "answered" for the wizard's Next-
 // button gate. A free-text field being actively typed into hasn't committed
 // its value to item.selected yet (that only happens on blur — see
-// profile-question-wizard's onBlurInput), so while it's focused this reads
-// the live per-keystroke buffer instead of the stale committed value.
+// TextQuestionInput's onCommit in profile-question-wizard), so while it's
+// the active question this reads a live boolean the input reports on every
+// keystroke instead of the stale committed value. That boolean (not the raw
+// text) is deliberate: the input owns its own per-keystroke text state so
+// typing never re-renders the surrounding question card, and only reports
+// upward when answered/unanswered actually flips.
 export const isActiveItemAnswered = (
   item: ProfileEditorField | undefined,
-  focusedInputId: string,
-  focusedValue: unknown
+  liveAnswered: { id: string; answered: boolean } | null
 ): boolean => {
   if (!item) return false;
-  if (item.type === 'input' && item.id != null && item.id === focusedInputId) {
-    return focusedValue != null && String(focusedValue).trim() !== '';
+  if (item.type === 'input' && liveAnswered && item.id === liveAnswered.id) {
+    return liveAnswered.answered;
   }
   return isFieldFilled(item);
 };

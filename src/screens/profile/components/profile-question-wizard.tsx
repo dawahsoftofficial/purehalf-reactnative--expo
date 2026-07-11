@@ -46,11 +46,62 @@ type PickerState = {
   activePicker: string;
 };
 
-type FocusedInputState = {
-  activeInputId: string;
-  value: any;
-  item: any;
+type LiveAnswered = { id: string; answered: boolean } | null;
+
+type TextQuestionInputProps = {
+  id: string;
+  placeholder?: string;
+  initialValue: string;
+  onAnsweredChange: (id: string, answered: boolean) => void;
+  onCommit: (id: string, value: string) => void;
 };
+
+// Owns its own per-keystroke text state so typing never touches the wizard's
+// state and never re-renders the surrounding question card (which was
+// forcing a full card re-render on every keystroke — a known trigger for
+// Android controlled-TextInput glitches where rapid/held-key typing gets
+// visibly reverted). Only reports upward on blur (the committed value) and
+// when answered/unanswered flips (for the Next-button gate), not per
+// keystroke. Keyed by the caller on the field's id so switching questions
+// remounts it fresh instead of carrying over the previous question's text.
+const TextQuestionInput = React.memo(function TextQuestionInput({
+  id,
+  placeholder,
+  initialValue,
+  onAnsweredChange,
+  onCommit,
+}: TextQuestionInputProps) {
+  const [value, setValue] = useState(initialValue);
+  const wasAnswered = useRef(Boolean(initialValue?.trim()));
+
+  const onChangeText = useCallback(
+    (text: string) => {
+      setValue(text);
+      const answered = Boolean(text?.trim());
+      if (answered !== wasAnswered.current) {
+        wasAnswered.current = answered;
+        onAnsweredChange(id, answered);
+      }
+    },
+    [id, onAnsweredChange]
+  );
+
+  const onBlur = useCallback(() => {
+    onCommit(id, value);
+  }, [id, value, onCommit]);
+
+  return (
+    <IconInput
+      placeholder={placeholder}
+      outerLabelStyle={Styles.hiddenControlLabel}
+      containerStyle={Styles.labelLessControl}
+      inputStyle={Styles.input}
+      value={value}
+      onChangeText={onChangeText}
+      onBlur={onBlur}
+    />
+  );
+});
 
 // Inline single-select option list for fields with only a few choices
 // (e.g. Yes/No, Future Plans). Each option is a full-width row. Larger option
@@ -324,11 +375,7 @@ const ProfileQuestionWizard = ({
       : 0
   );
   const [pickerDataLoader, setPickerDataLoader] = useState(false);
-  const [focusedInput, setFocusedInput] = useState<FocusedInputState>({
-    activeInputId: '',
-    value: '',
-    item: {},
-  });
+  const [liveAnswered, setLiveAnswered] = useState<LiveAnswered>(null);
   const [picker, setPicker] = useState<PickerState>({
     visible: false,
     data: [],
@@ -346,11 +393,7 @@ const ProfileQuestionWizard = ({
   const isFirstStep = activeIndex === 0;
   const isLastStep =
     visibleFields.length > 0 && activeIndex === visibleFields.length - 1;
-  const isAnswered = isActiveItemAnswered(
-    activeItem,
-    focusedInput.activeInputId,
-    focusedInput.value
-  );
+  const isAnswered = isActiveItemAnswered(activeItem, liveAnswered);
 
   useEffect(() => {
     if (activeIndex > 0 && activeIndex >= visibleFields.length) {
@@ -427,29 +470,19 @@ const ProfileQuestionWizard = ({
     [gender, getApiData]
   );
 
-  const onInputFocus = useCallback((id: any, value: any, item: any) => {
-    setFocusedInput({ activeInputId: id, value, item });
-  }, []);
-
-  const onBlurInput = useCallback(() => {
-    const { activeInputId, item, value } = focusedInput;
-    const { category } = item;
+  // TextQuestionInput commits on blur; formData is the committed store.
+  const onCommitText = useCallback((id: string, value: string) => {
     setFormData((prev: any[]) =>
       prev.map((element: any) =>
-        element.id === activeInputId
-          ? { ...element, selected: { id: activeInputId, value, category } }
+        element.id === id
+          ? { ...element, selected: { id, value, category: element.category } }
           : element
       )
     );
-  }, [focusedInput]);
+  }, []);
 
-  // Only buffers into focusedInput while typing — formData is the committed
-  // store and only onBlurInput writes to it. Updating formData on every
-  // keystroke was redundant (onBlurInput already commits on blur) and forced
-  // a full formData/visibleFields/activeItem recompute per character, which
-  // is unnecessary churn on every keystroke.
-  const onChangeInput = useCallback((text: any) => {
-    setFocusedInput((prev) => ({ ...prev, value: text }));
+  const onAnsweredChange = useCallback((id: string, answered: boolean) => {
+    setLiveAnswered({ id, answered });
   }, []);
 
   const onPickerItemPress = useCallback(
@@ -533,17 +566,13 @@ const ProfileQuestionWizard = ({
 
           <View style={Styles.controlWrap}>
             {type === 'input' ? (
-              <IconInput
+              <TextQuestionInput
+                key={id}
+                id={id}
                 placeholder={placeholder}
-                outerLabelStyle={Styles.hiddenControlLabel}
-                containerStyle={Styles.labelLessControl}
-                inputStyle={Styles.input}
-                value={
-                  focusedInput.activeInputId === id ? focusedInput.value : value
-                }
-                onChangeText={onChangeInput}
-                onFocus={onInputFocus.bind(null, id, value, item)}
-                onBlur={onBlurInput}
+                initialValue={value == null ? '' : String(value)}
+                onAnsweredChange={onAnsweredChange}
+                onCommit={onCommitText}
               />
             ) : type === 'scalling' ? (
               <ScaleRuler item={item} onSelect={onSelectOption} />
@@ -577,10 +606,8 @@ const ProfileQuestionWizard = ({
     },
     [
       gender,
-      focusedInput,
-      onBlurInput,
-      onChangeInput,
-      onInputFocus,
+      onAnsweredChange,
+      onCommitText,
       openPicker,
       onSelectOption,
       Rtl,
