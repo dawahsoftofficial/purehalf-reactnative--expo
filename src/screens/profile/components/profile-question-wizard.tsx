@@ -1,7 +1,10 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any, react/prop-types -- prop-types is a
+   JS-era check fully superseded by TS here; it also false-positives on the
+   memo(forwardRef(...)) composition below, which TS already type-checks correctly. */
 import React, {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
@@ -56,6 +59,12 @@ type TextQuestionInputProps = {
   onCommit: (id: string, value: string) => void;
 };
 
+// Exposes the live, not-yet-blurred value so the wizard can force a commit
+// before advancing — see the note on getValue below.
+export type TextQuestionInputHandle = {
+  getValue: () => string;
+};
+
 // Owns its own per-keystroke text state so typing never touches the wizard's
 // state and never re-renders the surrounding question card (which was
 // forcing a full card re-render on every keystroke — a known trigger for
@@ -64,44 +73,52 @@ type TextQuestionInputProps = {
 // when answered/unanswered flips (for the Next-button gate), not per
 // keystroke. Keyed by the caller on the field's id so switching questions
 // remounts it fresh instead of carrying over the previous question's text.
-const TextQuestionInput = React.memo(function TextQuestionInput({
-  id,
-  placeholder,
-  initialValue,
-  onAnsweredChange,
-  onCommit,
-}: TextQuestionInputProps) {
-  const [value, setValue] = useState(initialValue);
-  const wasAnswered = useRef(Boolean(initialValue?.trim()));
+//
+// Tapping Next/Update while still focused on this field doesn't reliably
+// fire onBlur before the wizard reads its committed formData — RN's blur
+// event isn't guaranteed to land before another touch target's onPress, and
+// unmounting a focused input (this component remounts per-question via
+// `key`) doesn't fire onBlur at all. getValue() lets the wizard pull the
+// current text directly and commit it itself right before advancing,
+// instead of depending on blur having already happened.
+const TextQuestionInput = React.memo(
+  React.forwardRef<TextQuestionInputHandle, TextQuestionInputProps>(
+    ({ id, placeholder, initialValue, onAnsweredChange, onCommit }, ref) => {
+      const [value, setValue] = useState(initialValue);
+      const wasAnswered = useRef(Boolean(initialValue?.trim()));
 
-  const onChangeText = useCallback(
-    (text: string) => {
-      setValue(text);
-      const answered = Boolean(text?.trim());
-      if (answered !== wasAnswered.current) {
-        wasAnswered.current = answered;
-        onAnsweredChange(id, answered);
-      }
-    },
-    [id, onAnsweredChange]
-  );
+      useImperativeHandle(ref, () => ({ getValue: () => value }), [value]);
 
-  const onBlur = useCallback(() => {
-    onCommit(id, value);
-  }, [id, value, onCommit]);
+      const onChangeText = useCallback(
+        (text: string) => {
+          setValue(text);
+          const answered = Boolean(text?.trim());
+          if (answered !== wasAnswered.current) {
+            wasAnswered.current = answered;
+            onAnsweredChange(id, answered);
+          }
+        },
+        [id, onAnsweredChange]
+      );
 
-  return (
-    <IconInput
-      placeholder={placeholder}
-      outerLabelStyle={Styles.hiddenControlLabel}
-      containerStyle={Styles.labelLessControl}
-      inputStyle={Styles.input}
-      value={value}
-      onChangeText={onChangeText}
-      onBlur={onBlur}
-    />
-  );
-});
+      const onBlur = useCallback(() => {
+        onCommit(id, value);
+      }, [id, value, onCommit]);
+
+      return (
+        <IconInput
+          placeholder={placeholder}
+          outerLabelStyle={Styles.hiddenControlLabel}
+          containerStyle={Styles.labelLessControl}
+          inputStyle={Styles.input}
+          value={value}
+          onChangeText={onChangeText}
+          onBlur={onBlur}
+        />
+      );
+    }
+  )
+);
 
 // Inline single-select option list for fields with only a few choices
 // (e.g. Yes/No, Future Plans). Each option is a full-width row. Larger option
@@ -382,6 +399,10 @@ const ProfileQuestionWizard = ({
     headerTitle: '',
     activePicker: '',
   });
+  // Points at whichever TextQuestionInput is currently mounted (there's at
+  // most one, for the active question), so its live value can be pulled and
+  // committed on demand before advancing — see commitPendingText below.
+  const activeTextInputRef = useRef<TextQuestionInputHandle | null>(null);
 
   const visibleFields = useMemo(
     () => getVisibleProfileFields(formData, gender),
@@ -485,6 +506,36 @@ const ProfileQuestionWizard = ({
     setLiveAnswered({ id, answered });
   }, []);
 
+  // Forces the active question's TextQuestionInput (if any) to hand over its
+  // live value and commits it into formData directly, without depending on
+  // onBlur having fired first — see the note on TextQuestionInputHandle.
+  // Returns the up-to-date formData synchronously (setFormData alone
+  // wouldn't be visible until the next render) so callers that need it
+  // immediately (onComplete) get the real, current data instead of a stale
+  // closure.
+  const commitPendingText = useCallback((): any[] => {
+    const pendingId = activeItem?.type === 'input' ? activeItem.id : null;
+    const pendingValue = pendingId
+      ? activeTextInputRef.current?.getValue()
+      : undefined;
+    if (!pendingId || pendingValue === undefined) return formData;
+
+    const next = formData.map((element: any) =>
+      element.id === pendingId
+        ? {
+            ...element,
+            selected: {
+              id: pendingId,
+              value: pendingValue,
+              category: element.category,
+            },
+          }
+        : element
+    );
+    setFormData(next);
+    return next;
+  }, [activeItem, formData]);
+
   const onPickerItemPress = useCallback(
     (item: any) => {
       setFormData((prev: any[]) =>
@@ -508,22 +559,24 @@ const ProfileQuestionWizard = ({
   }, []);
 
   const goBackStep = useCallback(() => {
+    commitPendingText();
     setActiveIndex((prev) => Math.max(prev - 1, 0));
-  }, []);
+  }, [commitPendingText]);
 
   const goNextStep = useCallback(() => {
+    commitPendingText();
     setActiveIndex((prev) =>
       visibleFields.length ? Math.min(prev + 1, visibleFields.length - 1) : 0
     );
-  }, [visibleFields.length]);
+  }, [commitPendingText, visibleFields.length]);
 
   const advance = useCallback(() => {
     if (isLastStep) {
-      onComplete(formData);
+      onComplete(commitPendingText());
       return;
     }
     goNextStep();
-  }, [formData, goNextStep, isLastStep, onComplete]);
+  }, [commitPendingText, goNextStep, isLastStep, onComplete]);
 
   const renderActiveControl = useCallback(
     (item: any) => {
@@ -568,6 +621,7 @@ const ProfileQuestionWizard = ({
             {type === 'input' ? (
               <TextQuestionInput
                 key={id}
+                ref={activeTextInputRef}
                 id={id}
                 placeholder={placeholder}
                 initialValue={value == null ? '' : String(value)}
