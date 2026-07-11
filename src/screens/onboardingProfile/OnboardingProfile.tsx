@@ -186,10 +186,18 @@ const OnboardingProfile = ({ navigation, route }: any) => {
       };
       setData(storageKeys.USER, updatedUser);
       updateCurrentUser(updatedUser);
-      const chats = Math.round(result.awarded / (result.multiplier || 50));
-      flashSuccessMessage(
-        `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
-      );
+      // A repeat claim resolves with status: 'already_claimed' (awarded: 0)
+      // instead of rejecting — see ApiServices.claimProfileGift's JSDoc. Only
+      // show the reward toast for a genuinely fresh claim so stale local
+      // state (e.g. multi-device use) doesn't surface a confusing "+0 Chat
+      // Credits" toast; the badge's claimed checkmark already communicates
+      // the already-claimed state.
+      if (result.status === 'claimed') {
+        const chats = Math.round(result.awarded / (result.multiplier || 50));
+        flashSuccessMessage(
+          `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
+        );
+      }
     },
     [currentUser, setData, storageKeys.USER, updateCurrentUser]
   );
