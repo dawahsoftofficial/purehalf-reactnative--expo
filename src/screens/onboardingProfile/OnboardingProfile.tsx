@@ -25,6 +25,9 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import { useSettingsStore } from '../../stores';
+import GiftBadge from '../profile/components/gift-badge';
+import GiftClaimModal from '../profile/components/gift-claim-modal';
 import ProfileQuestionWizard from '../profile/components/profile-question-wizard';
 import Data from '../profile/Data';
 import { updateDetails } from '../profile/Funtions';
@@ -65,6 +68,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   const [categoriesData, setCategoriesData] = useState<Record<string, any[]>>(
     {}
   );
+  const [giftModalVisible, setGiftModalVisible] = useState(false);
 
   // Snapshot the detail once at mount. Saving a group calls updateCurrentUser,
   // and if hydration re-read the live currentUser it would re-hydrate mid-flow
@@ -128,6 +132,14 @@ const OnboardingProfile = ({ navigation, route }: any) => {
     [categoriesData, currentUser, gender]
   );
 
+  const giftThreshold =
+    useSettingsStore().getProfileCompletionThresholdPercent();
+  const giftCredits = useSettingsStore().getProfileCompletionGiftCredits();
+  const giftClaimed = Boolean(
+    (currentUser as any)?.profile_finish_bonus_awarded
+  );
+  const giftEligible = !giftClaimed && strengthPct >= giftThreshold;
+
   const exitFlow = useCallback(() => {
     cancelProfileReminder();
     const next = fromHome ? 'BottomTab' : 'ProfilePicture';
@@ -144,6 +156,43 @@ const OnboardingProfile = ({ navigation, route }: any) => {
     setData(storageKeys.ONBOARDING_INTRO_SEEN, true);
     setPhase('question');
   }, [setData, storageKeys.ONBOARDING_INTRO_SEEN]);
+
+  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
+  const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+
+  // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
+  // so callers cast at the call site — matching the existing
+  // `as unknown as User` idiom already used elsewhere in this codebase
+  // (e.g. Header.tsx's getCurrentUserDetail call) rather than a bare `as`,
+  // which TS rejects between unrelated types.
+  const claimGift = useCallback(
+    () =>
+      ApiServices.claimProfileGift() as unknown as Promise<{
+        status: string;
+        awarded: number;
+        new_balance: number;
+        multiplier: number;
+      }>,
+    []
+  );
+
+  const onGiftClaimed = useCallback(
+    (result: any) => {
+      setGiftModalVisible(false);
+      const updatedUser: any = {
+        ...(currentUser as any),
+        chat_credits: result.new_balance,
+        profile_finish_bonus_awarded: true,
+      };
+      setData(storageKeys.USER, updatedUser);
+      updateCurrentUser(updatedUser);
+      const chats = Math.round(result.awarded / (result.multiplier || 50));
+      flashSuccessMessage(
+        `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
+      );
+    },
+    [currentUser, setData, storageKeys.USER, updateCurrentUser]
+  );
 
   const currentGroup = GROUP_SEQUENCE[groupIndex];
   const isLastGroup = groupIndex >= GROUP_SEQUENCE.length - 1;
@@ -282,11 +331,18 @@ const OnboardingProfile = ({ navigation, route }: any) => {
               {currentGroup.title}
             </Text>
           </View>
-          <Ripple onPress={saving ? undefined : bailFlow} disabled={saving}>
-            <Text style={Styles.finishLaterText}>
-              {LanguageKeys.finishLater}
-            </Text>
-          </Ripple>
+          <View style={Styles.headerEndRow}>
+            <Ripple onPress={saving ? undefined : bailFlow} disabled={saving}>
+              <Text style={Styles.finishLaterText}>
+                {LanguageKeys.finishLater}
+              </Text>
+            </Ripple>
+            <GiftBadge
+              eligible={giftEligible}
+              claimed={giftClaimed}
+              onPress={openGiftModal}
+            />
+          </View>
         </View>
         <View style={Styles.meterRow}>
           <View style={Styles.meterTrack}>
@@ -306,6 +362,13 @@ const OnboardingProfile = ({ navigation, route }: any) => {
         startAtEnd={startAtEnd}
         onBack={groupIndex > 0 ? goToPrevGroup : undefined}
         onComplete={onGroupComplete}
+      />
+      <GiftClaimModal
+        visible={giftModalVisible}
+        giftCredits={giftCredits}
+        onClose={closeGiftModal}
+        onClaimed={onGiftClaimed}
+        claim={claimGift}
       />
     </Container>
   );
@@ -333,6 +396,11 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2.5),
     marginRight: wp(3),
+  },
+  headerEndRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
   },
   groupIconChip: {
     width: wp(8),
