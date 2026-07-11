@@ -354,6 +354,7 @@ const Styles = StyleSheet.create({
     color: Colors.ink,
     marginTop: 24,
     textAlign: 'center',
+    alignSelf: 'center',
   },
   emptyListText: {
     color: Colors.muted,
@@ -361,6 +362,7 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
     textAlign: 'center',
+    alignSelf: 'center',
     marginTop: 6,
     marginHorizontal: 30,
   },
