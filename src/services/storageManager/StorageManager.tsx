@@ -22,6 +22,7 @@ class GStorageManager {
     MEMBERSHIP_DISCOUNT: 'membership_discount',
     PRIMER_SEEN: 'PRIMER_SEEN',
     PRIMER_ANSWERS: 'PRIMER_ANSWERS',
+    ONBOARDING_INTRO_SEEN: 'ONBOARDING_INTRO_SEEN',
   };
 
   deleteAll = () => {

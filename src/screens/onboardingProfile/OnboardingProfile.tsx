@@ -50,12 +50,12 @@ const GROUP_SEQUENCE = GROUP_ORDER.map((key) =>
   GROUP_META.find((g) => g.key === key)
 ).filter((g): g is GroupMeta => Boolean(g));
 
-type Phase = 'loading' | 'question' | 'done';
+type Phase = 'loading' | 'intro' | 'question' | 'done';
 
 const OnboardingProfile = ({ navigation, route }: any) => {
   const fromHome = route?.params?.from === 'Home';
   const { currentUser, updateCurrentUser } = useGlobalContext();
-  const { setData, storageKeys } = StorageManager;
+  const { setData, getData, storageKeys } = StorageManager;
   const gender = (currentUser as any)?.gender;
 
   const [phase, setPhase] = useState<Phase>('loading');
@@ -78,7 +78,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   useEffect(() => {
     let alive = true;
 
-    const hydrateAll = (attribute: any) => {
+    const hydrateAll = async (attribute: any) => {
       const detail = detailSnapshotRef.current;
       const hydrated: Record<string, any[]> = {};
       GROUP_SEQUENCE.forEach(({ key }) => {
@@ -89,7 +89,9 @@ const OnboardingProfile = ({ navigation, route }: any) => {
         );
       });
       setCategoriesData(hydrated);
-      setPhase('question');
+      const introSeen = await getData(storageKeys.ONBOARDING_INTRO_SEEN);
+      if (!alive) return;
+      setPhase(introSeen ? 'question' : 'intro');
     };
 
     ApiServices.getAttribute()
@@ -130,6 +132,11 @@ const OnboardingProfile = ({ navigation, route }: any) => {
     const next = fromHome ? 'BottomTab' : 'ProfilePicture';
     navigation.reset({ index: 0, routes: [{ name: next }] });
   }, [fromHome, navigation]);
+
+  const onIntroContinue = useCallback(() => {
+    setData(storageKeys.ONBOARDING_INTRO_SEEN, true);
+    setPhase('question');
+  }, [setData, storageKeys.ONBOARDING_INTRO_SEEN]);
 
   const currentGroup = GROUP_SEQUENCE[groupIndex];
   const isLastGroup = groupIndex >= GROUP_SEQUENCE.length - 1;
@@ -198,6 +205,36 @@ const OnboardingProfile = ({ navigation, route }: any) => {
       <Container style={Styles.screen}>
         <View style={Styles.center}>
           <ActivityIndicator color={Colors.primary} size="large" />
+        </View>
+      </Container>
+    );
+  }
+
+  if (phase === 'intro') {
+    return (
+      <Container style={Styles.screen}>
+        <View style={Styles.center}>
+          <View style={Styles.doneBadge}>
+            <Ionicons name="gift-outline" size={wp(9)} color={Colors.color2} />
+          </View>
+          <Text variant="display" style={Styles.doneTitle}>
+            {LanguageKeys.onboardingIntroTitle}
+          </Text>
+          <Text style={Styles.doneBody}>
+            {LanguageKeys.onboardingIntroBody}
+          </Text>
+          <View style={Styles.introRewardChip}>
+            <Ionicons name="gift" size={wp(4)} color={Colors.primary} />
+            <Text style={Styles.introRewardChipTxt}>
+              {LanguageKeys.onboardingIntroRewardChip}
+            </Text>
+          </View>
+        </View>
+        <View style={Styles.footer}>
+          <Button
+            text={LanguageKeys.onboardingIntroCta}
+            onPress={onIntroContinue}
+          />
         </View>
       </Container>
     );
@@ -361,5 +398,20 @@ const Styles = StyleSheet.create({
     textAlign: 'center',
     alignSelf: 'center',
     marginTop: hp(1),
+  },
+  introRewardChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+    backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    paddingVertical: hp(1),
+    paddingHorizontal: wp(4),
+    marginTop: hp(2.5),
+  },
+  introRewardChipTxt: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
   },
 });
