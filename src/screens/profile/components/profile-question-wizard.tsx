@@ -61,7 +61,8 @@ const OptionTags = ({ item, options, onSelect, rtl }: any) => (
       const on = isOptionSelected(item, opt);
       const optLabel = getOptionLabel(item, opt);
       const swatch = item?.id === 'eye-0' ? getEyeColorSwatch(optLabel) : {};
-      const hasSwatch = Boolean(swatch.color || swatch.icon);
+      const { color, icon } = swatch;
+      const hasSwatch = Boolean(color || icon);
       const label = (
         <Text
           style={[
@@ -86,21 +87,18 @@ const OptionTags = ({ item, options, onSelect, rtl }: any) => (
                 { flexDirection: rtl ? 'row-reverse' : 'row' },
               ]}
             >
-              {swatch.color ? (
+              {color ? (
                 <View
-                  style={[
-                    Styles.optionSwatch,
-                    { backgroundColor: swatch.color },
-                  ]}
+                  style={[Styles.optionSwatch, { backgroundColor: color }]}
                 />
-              ) : (
+              ) : icon ? (
                 <Ionicons
-                  name={swatch.icon!}
+                  name={icon}
                   size={wp(4.5)}
                   color={on ? Colors.color2 : Colors.primary}
                   style={Styles.optionSwatchIcon}
                 />
-              )}
+              ) : null}
               {label}
             </View>
           ) : (
