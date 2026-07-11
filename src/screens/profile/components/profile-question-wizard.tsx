@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {
   Button,
@@ -20,6 +21,7 @@ import { hp, Typography, wp } from '../../../global';
 import { CheckRtl, LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 import { ApiServices } from '../../../services';
+import { getEyeColorSwatch } from '../eye-color-swatches';
 import {
   buildScalingSelected,
   convertScaleValue,
@@ -58,21 +60,52 @@ const OptionTags = ({ item, options, onSelect, rtl }: any) => (
     {options.map((opt: any) => {
       const on = isOptionSelected(item, opt);
       const optLabel = getOptionLabel(item, opt);
+      const swatch = item?.id === 'eye-0' ? getEyeColorSwatch(optLabel) : {};
+      const hasSwatch = Boolean(swatch.color || swatch.icon);
+      const label = (
+        <Text
+          style={[
+            Styles.optionRowTxt,
+            { textAlign: rtl ? 'right' : 'left' },
+            on && Styles.optionRowTxtOn,
+          ]}
+        >
+          {optLabel}
+        </Text>
+      );
       return (
         <Ripple
           key={getOptionKey(opt)}
           onPress={() => onSelect(item, opt)}
           style={[Styles.optionRow, on && Styles.optionRowOn]}
         >
-          <Text
-            style={[
-              Styles.optionRowTxt,
-              { textAlign: rtl ? 'right' : 'left' },
-              on && Styles.optionRowTxtOn,
-            ]}
-          >
-            {optLabel}
-          </Text>
+          {hasSwatch ? (
+            <View
+              style={[
+                Styles.optionRowInner,
+                { flexDirection: rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              {swatch.color ? (
+                <View
+                  style={[
+                    Styles.optionSwatch,
+                    { backgroundColor: swatch.color },
+                  ]}
+                />
+              ) : (
+                <Ionicons
+                  name={swatch.icon!}
+                  size={wp(4.5)}
+                  color={on ? Colors.color2 : Colors.primary}
+                  style={Styles.optionSwatchIcon}
+                />
+              )}
+              {label}
+            </View>
+          ) : (
+            label
+          )}
         </Ripple>
       );
     })}
@@ -809,6 +842,20 @@ const Styles = StyleSheet.create({
   },
   optionRowOn: {
     backgroundColor: Colors.primary,
+  },
+  optionRowInner: {
+    alignItems: 'center',
+    gap: wp(2.5),
+  },
+  optionSwatch: {
+    width: wp(4.5),
+    height: wp(4.5),
+    borderRadius: wp(2.25),
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
+  optionSwatchIcon: {
+    marginTop: -1,
   },
   optionRowTxt: {
     color: Colors.ink,
