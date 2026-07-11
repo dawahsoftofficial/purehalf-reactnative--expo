@@ -253,7 +253,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     [currentUser, setData, storageKeys.USER, updateCurrentUser]
   );
 
-  // Check if recommendation modal should be shown based on daily recommendations settings
+  // Check if recommendation modal should be shown based on daily
+  // recommendations settings. The time-window check alone isn't enough --
+  // it used to show the heart/modal even when there were zero actual
+  // recommendations for this user's location, landing on a bare "no options
+  // available" card. Only show either once we know there's really something
+  // to see.
   useEffect(() => {
     if (!dailyRecommendations) return;
 
@@ -274,10 +279,25 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         ? currentHour >= startHour
         : currentHour >= startHour && currentHour < endHour;
 
-    if (shouldShow) {
-      setShowRecommendationModal(true);
-      setRecommendationModal(true);
-    }
+    if (!shouldShow) return;
+
+    let cancelled = false;
+    ApiServices.getRecommendedUser()
+      .then((res: any) => {
+        if (cancelled) return;
+        if (Array.isArray(res) && res.length > 0) {
+          setShowRecommendationModal(true);
+          setRecommendationModal(true);
+        }
+      })
+      .catch(() => {
+        // Silently skip -- absence of the heart/modal is an acceptable
+        // fallback for a feature that's already best-effort.
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [dailyRecommendations]);
   const applyOptionSelection = useCallback((item: OptionButton) => {
     setOptionTab(item.name);
