@@ -652,6 +652,7 @@ const ProfileQuestionWizard = ({
                 }
                 onPress={openPicker.bind(null, iData, iTitle, id)}
                 buttonContainer={Styles.labelLessPickerButton}
+                outerLabelStyle={Styles.hiddenControlLabel}
               />
             )}
           </View>
