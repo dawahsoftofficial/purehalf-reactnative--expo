@@ -51,6 +51,16 @@ export const isOptionSelected = (item: ProfileEditorField, option: any) =>
     ? item?.selected?.value === option?.value
     : item?.selected?.id === option?.id;
 
+// Whether a field's current selection counts as "answered" — used to gate
+// the wizard's Next button and, indirectly, profile-strength completion.
+export const isFieldFilled = (item: ProfileEditorField) => {
+  const sel: any = item?.selected ?? {};
+  if (item?.type === 'scalling') return sel.value != null && sel.value !== '';
+  if (item?.type === 'dropDown') return sel.id != null;
+  if (item?.type === 'dropDownBinary') return sel.value != null;
+  return sel.value != null && sel.value !== '';
+};
+
 export const shouldUseTagOptions = (
   item: ProfileEditorField,
   options: any[] = []

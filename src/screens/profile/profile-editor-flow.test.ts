@@ -8,6 +8,7 @@ import {
   getScalingDisplay,
   getVisibleProfileFields,
   inchesFromLegacyFeet,
+  isFieldFilled,
   isOptionSelected,
   normalizeScalingSelected,
   shouldUseTagOptions,
@@ -311,5 +312,64 @@ describe('getScalingDisplay', () => {
         })
       )
     ).toEqual({ scale: 'lbs', value: 154 });
+  });
+});
+
+describe('isFieldFilled', () => {
+  it('is unfilled for a dropdown with no id selected', () => {
+    expect(isFieldFilled(field({ type: 'dropDown', selected: {} }))).toBe(
+      false
+    );
+  });
+
+  it('is filled once a dropdown option id is selected', () => {
+    expect(
+      isFieldFilled(
+        field({ type: 'dropDown', selected: { id: 4, value: 'Engineer' } })
+      )
+    ).toBe(true);
+  });
+
+  it('is filled for a binary field even when the value is falsy (No = 0)', () => {
+    expect(
+      isFieldFilled(
+        field({ type: 'dropDownBinary', selected: { id: 'No', value: 0 } })
+      )
+    ).toBe(true);
+  });
+
+  it('is unfilled for a binary field with no value yet', () => {
+    expect(isFieldFilled(field({ type: 'dropDownBinary', selected: {} }))).toBe(
+      false
+    );
+  });
+
+  it('is filled for a scalling field once a value is committed', () => {
+    expect(
+      isFieldFilled(
+        field({ type: 'scalling', selected: { value: 178, scale: 'cm' } })
+      )
+    ).toBe(true);
+  });
+
+  it('is unfilled for a scalling field with no committed value', () => {
+    expect(
+      isFieldFilled(field({ type: 'scalling', selected: { scale: 'cm' } }))
+    ).toBe(false);
+  });
+
+  it('is filled for free text once non-empty', () => {
+    expect(
+      isFieldFilled(
+        field({ type: 'input', selected: { value: 'Kind and practising' } })
+      )
+    ).toBe(true);
+  });
+
+  it('is unfilled for empty free text', () => {
+    expect(
+      isFieldFilled(field({ type: 'input', selected: { value: '' } }))
+    ).toBe(false);
+    expect(isFieldFilled(field({ type: 'input', selected: {} }))).toBe(false);
   });
 });

@@ -8,6 +8,7 @@ import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
+import { isFieldFilled } from './profile-editor-flow';
 
 export type GroupMeta = { key: string; title: string; icon: string };
 
@@ -52,21 +53,13 @@ const isHidden = (item: any, gender?: string) => {
   );
 };
 
-const itemFilled = (item: any) => {
-  const sel = item?.selected ?? {};
-  if (item?.type === 'scalling') return sel.value != null && sel.value !== '';
-  if (item?.type === 'dropDown') return sel.id != null;
-  if (item?.type === 'dropDownBinary') return sel.value != null;
-  return sel.value != null && sel.value !== '';
-};
-
 export const countFilled = (group: any[], gender?: string) => {
   let filled = 0;
   let total = 0;
   (group ?? []).forEach((item) => {
     if (isHidden(item, gender)) return;
     total += 1;
-    if (itemFilled(item)) filled += 1;
+    if (isFieldFilled(item)) filled += 1;
   });
   return { filled, total };
 };
@@ -74,7 +67,7 @@ export const countFilled = (group: any[], gender?: string) => {
 const previewOf = (group: any[], gender?: string) => {
   const values: string[] = [];
   (group ?? []).forEach((item) => {
-    if (isHidden(item, gender) || !itemFilled(item)) return;
+    if (isHidden(item, gender) || !isFieldFilled(item)) return;
     if (item?.type === 'dropDownBinary') return;
     const sel = item?.selected ?? {};
     let display: any;
