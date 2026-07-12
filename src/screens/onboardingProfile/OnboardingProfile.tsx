@@ -219,15 +219,12 @@ const OnboardingProfile = ({ navigation, route }: any) => {
         .then(async (res: any) => {
           const reward = res?.reward;
           if (reward && reward.awarded > 0) {
-            const chats = Math.round(
-              reward.awarded / (reward.multiplier || 50)
-            );
             // Reward is surfaced as a lightweight toast now that the between-
             // groups checkpoint screen is gone. Translate each key first — the
             // flash helper t()s the whole string, which can't resolve a
             // concatenation of keys.
             flashSuccessMessage(
-              `${t(LanguageKeys.youEarned)} +${chats} ${t(LanguageKeys.chatCredits)}`
+              `${t(LanguageKeys.youEarned)} +${reward.awarded} ${t(LanguageKeys.chatCredits)}`
             );
           }
           if (res?.detail) {

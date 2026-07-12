@@ -156,11 +156,13 @@ const AddWali = ({ navigation, route }: any) => {
         email: email?.toLowerCase().trim(),
         // phone: phoneNumberWithCode
       };
-      console.log({ params });
+      if (__DEV__) {
+        console.log({ params });
+      }
 
       ApiServices.addWaliInformation(params)
         .then(async () => {
-          ApiServices.getCurrentUserDetail()
+          await ApiServices.getCurrentUserDetail()
             .then(async (res) => {
               updateCurrentUser(res);
               await setData(storageKeys.USER, currentUser);
@@ -213,7 +215,7 @@ const AddWali = ({ navigation, route }: any) => {
     setAddWaliLoader(true);
     ApiServices.removeWali()
       .then(async () => {
-        ApiServices.getCurrentUserDetail()
+        await ApiServices.getCurrentUserDetail()
           .then(async (res) => {
             updateCurrentUser(res);
             await setData(storageKeys.USER, res);

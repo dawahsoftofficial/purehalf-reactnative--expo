@@ -61,20 +61,9 @@ export async function presentPaywall(
 
     // Check if purchase was completed
     if (paywallResult === PAYWALL_RESULT.PURCHASED) {
-      try {
-        // const customerInfo = await Purchases.getCustomerInfo();
-        // if (customerInfo) {
-        return {
-          success: true,
-          // customerInfo: customerInfo,
-        };
-        // }
-      } catch {
-        // Customer info fetch failed, but purchase was successful
-        return {
-          success: true,
-        };
-      }
+      return {
+        success: true,
+      };
     }
 
     // User cancelled or dismissed the paywall
