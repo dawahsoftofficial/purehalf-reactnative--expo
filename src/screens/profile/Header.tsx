@@ -866,7 +866,7 @@ const Header = ({
 
   const renderSelfHeader = () => (
     <>
-      {renderHeroPhoto(false, false, true)}
+      {renderHeroPhoto(true, false, true)}
       <View style={Styles.infoCard}>
         <View style={Styles.profileSummaryRow}>
           <View style={Styles.profileIdentity}>

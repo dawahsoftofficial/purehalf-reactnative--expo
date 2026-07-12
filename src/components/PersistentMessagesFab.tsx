@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,21 +36,29 @@ const HIDDEN_ON_ROUTES = new Set([
   'AccountSuspended',
 ]);
 
+// `useSyncExternalStore` (rather than `useEffect` + `useState`) so the
+// current route is read synchronously on the very first render. React
+// Navigation's 'state' event only fires on subsequent state *changes* — if
+// a logged-in user lands directly on a screen via `initialRouteName` and
+// never navigates again, an effect-based subscription would never seed the
+// route and the FAB would stay hidden forever. `getSnapshot` covers that
+// case by reading the current route directly, while `subscribe` keeps the
+// FAB in sync with later navigation.
+const subscribeToRouteChanges = (onStoreChange: () => void) =>
+  navigationRef.addListener('state', onStoreChange);
+
+const getCurrentRouteName = () =>
+  navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
+
 function PersistentMessagesFab() {
   const unreadConversationsCount = useConversationStore(
     (state) => state.unreadConversationsCount
   );
   const { bottom } = useSafeAreaInsets();
-  const [currentRoute, setCurrentRoute] = useState<string | undefined>(
-    undefined
+  const currentRoute = useSyncExternalStore(
+    subscribeToRouteChanges,
+    getCurrentRouteName
   );
-
-  useEffect(() => {
-    const unsubscribe = navigationRef.addListener('state', () => {
-      setCurrentRoute(navigationRef.getCurrentRoute()?.name);
-    });
-    return unsubscribe;
-  }, []);
 
   if (!currentRoute || HIDDEN_ON_ROUTES.has(currentRoute)) {
     return null;
