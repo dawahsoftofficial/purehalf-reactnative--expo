@@ -20,6 +20,7 @@ const EndPoints = {
   privatePhotoAccessRequest: '/auth/interaction/photo/access',
   privatePhotoAcceptRequest: '/auth/interaction/photo/access/approve',
   privatePhotoRejectRequest: '/auth/interaction/photo/access/reject',
+  privatePhotoRevokeAccess: '/auth/interaction/photo/access/revoke',
   privatePhotoRemoveRequest: '/auth/interaction/photo/access/remove',
   counter: '/auth/counter',
   searchFilterApply: '/auth/filter/apply',

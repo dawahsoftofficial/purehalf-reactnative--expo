@@ -45,25 +45,39 @@ const RequestedList = (props: any) => {
     from: '',
   });
 
-  const pickerData = [
-    {
-      label: 'Delete',
-      value: 'delete',
-      buttonStyle: { backgroundColor: Colors.color24 },
-      buttonTextStyle: { color: Colors.color2 },
-    },
-    {
-      label: 'Cancel',
-      value: 'cancel',
-    },
-  ];
-
   const {
     data = [],
     onLoadMorePress = () => null,
     loadMoreLoader = false,
     from = '',
   } = props;
+
+  const showConfirmation = (userId: number, value: string, title: string) => {
+    setButtonPickerVisible({
+      visible: true,
+      userId,
+      from: value,
+      pickerData: [
+        {
+          label:
+            value === 'revoke'
+              ? LanguageKeys.revokePhotoAccess
+              : value === 'accept'
+                ? LanguageKeys.accept
+                : value === 'reject'
+                  ? LanguageKeys.reject
+                  : LanguageKeys.delete,
+          value,
+          buttonStyle:
+            value === 'accept'
+              ? undefined
+              : { backgroundColor: Colors.color24 },
+        },
+        { label: LanguageKeys.cancel, value: 'cancel' },
+      ],
+      pickerHeaderTitle: title,
+    });
+  };
 
   const RenderItemContent = ({ item }: any) => {
     return (
@@ -88,42 +102,45 @@ const RequestedList = (props: any) => {
             {item?.city && `${item.city},`} {item?.country}
           </ReactText>
         )}
+        <View
+          style={[
+            Styles.statusPill,
+            item?.photo_access_status
+              ? Styles.statusPillGranted
+              : Styles.statusPillPending,
+          ]}
+        >
+          <Text
+            style={[
+              Styles.statusPillText,
+              item?.photo_access_status
+                ? Styles.statusPillTextGranted
+                : Styles.statusPillTextPending,
+            ]}
+          >
+            {item?.photo_access_status
+              ? LanguageKeys.photoAccessGranted
+              : LanguageKeys.photoAccessPending}
+          </Text>
+        </View>
       </View>
     );
   };
 
   const onDeletePress = (item: any) => {
-    setButtonPickerVisible({
-      visible: true,
-      userId: item?.id,
-      from: 'delete',
-      pickerData: pickerData,
-      pickerHeaderTitle: LanguageKeys.sureDeleteDes,
-    });
+    showConfirmation(item?.id, 'delete', LanguageKeys.sureDeleteDes);
   };
 
   const onAcceptPress = (item: any) => {
-    pickerData[0].label = LanguageKeys.accept;
-    pickerData[0].value = 'accept';
-    setButtonPickerVisible({
-      visible: true,
-      userId: item?.id,
-      from: 'accept',
-      pickerData: pickerData,
-      pickerHeaderTitle: LanguageKeys.sureAcceptDes,
-    });
+    showConfirmation(item?.id, 'accept', LanguageKeys.sureAcceptDes);
   };
 
   const onRejectPress = (item: any) => {
-    pickerData[0].label = LanguageKeys.reject;
-    pickerData[0].value = 'reject';
-    setButtonPickerVisible({
-      visible: true,
-      userId: item?.id,
-      from: 'reject',
-      pickerData: pickerData,
-      pickerHeaderTitle: LanguageKeys.sureRejectDes,
-    });
+    showConfirmation(item?.id, 'reject', LanguageKeys.sureRejectDes);
+  };
+
+  const onRevokePress = (item: any) => {
+    showConfirmation(item?.id, 'revoke', LanguageKeys.sureRevokePhotoAccess);
   };
 
   const RenderSignleButton = ({ name, onPress }: any) => (
@@ -139,14 +156,32 @@ const RequestedList = (props: any) => {
           flexDirection: Rtl ? 'row-reverse' : 'row',
         }}
       >
-        <RenderSignleButton
-          name="close"
-          onPress={onRejectPress.bind(null, item)}
-        />
-        <RenderSignleButton
-          name="check"
-          onPress={onAcceptPress.bind(null, item)}
-        />
+        {item?.photo_access_status ? (
+          <Ripple
+            style={Styles.revokeButton}
+            onPress={onRevokePress.bind(null, item)}
+          >
+            <AntDesign
+              name="closecircle"
+              color={Colors.color24}
+              size={wp(3.6)}
+            />
+            <Text style={Styles.revokeButtonText}>
+              {LanguageKeys.revokePhotoAccess}
+            </Text>
+          </Ripple>
+        ) : (
+          <>
+            <RenderSignleButton
+              name="close"
+              onPress={onRejectPress.bind(null, item)}
+            />
+            <RenderSignleButton
+              name="check"
+              onPress={onAcceptPress.bind(null, item)}
+            />
+          </>
+        )}
       </View>
     ) : (
       <View
@@ -279,9 +314,10 @@ const RequestedList = (props: any) => {
       const userId = buttonPickerVisible.userId;
       ApiServices.privatePhotoAcceptRequest(userId)
         .then(() => {
-          _.remove(data, function (n: any) {
-            return n.id === userId;
-          });
+          const approvedRequest = data.find(
+            (request: any) => request.id === userId
+          );
+          if (approvedRequest) approvedRequest.photo_access_status = true;
           forceUpdate();
           hideModalLoader();
           flashSuccessMessage(LanguageKeys.accepted);
@@ -301,6 +337,22 @@ const RequestedList = (props: any) => {
           forceUpdate();
           hideModalLoader();
           flashSuccessMessage(LanguageKeys.rejected);
+        })
+        .catch(hideModalLoader);
+    } else if (value === 'revoke') {
+      setModalLoader({
+        visible: true,
+        message: LanguageKeys.revokingPhotoAccess,
+      });
+      const userId = buttonPickerVisible.userId;
+      ApiServices.privatePhotoRevokeAccess(userId)
+        .then(() => {
+          _.remove(data, function (n: any) {
+            return n.id === userId;
+          });
+          forceUpdate();
+          hideModalLoader();
+          flashSuccessMessage(LanguageKeys.photoAccessRevoked);
         })
         .catch(hideModalLoader);
     }
@@ -386,6 +438,30 @@ const Styles = StyleSheet.create({
     color: Colors.muted,
     marginTop: hp(0.2),
   },
+  statusPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    marginTop: hp(0.9),
+    paddingHorizontal: wp(2.1),
+    paddingVertical: hp(0.35),
+  },
+  statusPillGranted: {
+    backgroundColor: '#E5F4EC',
+  },
+  statusPillPending: {
+    backgroundColor: Colors.lavender,
+  },
+  statusPillText: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    includeFontPadding: false,
+  },
+  statusPillTextGranted: {
+    color: '#237A4B',
+  },
+  statusPillTextPending: {
+    color: Colors.primary,
+  },
   requestedOnView: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -411,6 +487,21 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  revokeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.color24,
+    borderRadius: 999,
+    paddingHorizontal: wp(2.3),
+    paddingVertical: hp(0.8),
+    gap: wp(1.2),
+  },
+  revokeButtonText: {
+    color: Colors.color24,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
   },
   emptyListContainer: {
     marginVertical: hp(20),

@@ -30,17 +30,19 @@ const ButtonPicker = (props: any) => {
 
   const renderList = useCallback(
     ({ item }: any) => {
-      const { label, value } = item;
+      const { label, value, buttonStyle, buttonTextStyle } = item;
       return (
         <Button
           buttonStyle={{
             ...Styles.button,
             backgroundColor: value === 'cancel' ? Colors.color8 : Colors.theme,
+            ...buttonStyle,
           }}
           text={label}
           onPress={() => handleButtonPress(item)}
           textStyle={{
             color: value === 'cancel' ? Colors.color1 : Colors.color2,
+            ...buttonTextStyle,
           }}
         />
       );

@@ -952,6 +952,23 @@ class GApiServices {
     });
   };
 
+  privatePhotoRevokeAccess = (userId: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.privatePhotoRevokeAccess, { action_user_id: userId })
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while revoking private photo access =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
   privatePhotoRemoveRequest = (userId: any) => {
     return new Promise((resolve, reject) => {
       Api.post(EndPoints.privatePhotoRemoveRequest, { action_user_id: userId })
