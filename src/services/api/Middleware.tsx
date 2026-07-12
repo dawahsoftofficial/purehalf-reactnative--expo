@@ -5,6 +5,7 @@ import { navigationRef } from '../../navigation/RootNavigation';
 import { setGlobalState } from '../context';
 import { stopConversationsListener } from '../firebase';
 import { StorageManager } from '../storageManager';
+import { TesterDiagnostics } from '../tester/tester-diagnostics';
 import BaseUrl from './BaseUrl';
 
 const Api = axios.create({
@@ -83,6 +84,15 @@ Api.interceptors.response.use(
       return response;
     }
 
+    const startedAt = (response.config as any)?.metadata?.startTime;
+    TesterDiagnostics.record({
+      method: response.config?.method?.toUpperCase() || 'GET',
+      url: response.config?.url || '',
+      status: response.status,
+      duration_ms: startedAt ? Date.now() - startedAt : 0,
+      timestamp: new Date().toISOString(),
+    });
+
     if (__DEV__) {
       const responseInfo = {
         method: response.config?.method?.toUpperCase(),
@@ -97,6 +107,14 @@ Api.interceptors.response.use(
     return response;
   },
   async (error: any) => {
+    const startedAt = error?.config?.metadata?.startTime;
+    TesterDiagnostics.record({
+      method: error?.config?.method?.toUpperCase() || 'GET',
+      url: error?.config?.url || '',
+      status: error?.response?.status,
+      duration_ms: startedAt ? Date.now() - startedAt : 0,
+      timestamp: new Date().toISOString(),
+    });
     if (__DEV__) {
       const errorInfo = {
         method: error?.config?.method?.toUpperCase(),

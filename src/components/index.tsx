@@ -19,4 +19,5 @@ export * from './settings-header';
 export { default as SlideShowContainer } from './SlideShowContainer';
 export * from './social-links';
 export { default as Swiper } from './Swiper';
+export * from './tester';
 export { default as Text } from './Text';

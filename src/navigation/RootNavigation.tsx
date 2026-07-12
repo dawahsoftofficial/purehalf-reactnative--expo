@@ -8,7 +8,12 @@ import { useEffect, useState } from 'react';
 import PremiumPaywallScreen from '@/screens/proFeaturesPromotion/PremiumPaywallScreen';
 import { useSettingsStore } from '@/stores';
 
-import { CustomModal, ImageViewer, PersistentMessagesFab } from '../components';
+import {
+  CustomModal,
+  ImageViewer,
+  PersistentMessagesFab,
+  TesterFab,
+} from '../components';
 import { CheckRtl } from '../languages';
 import DisplayForegroundNotificaton from '../notifications/DisplayForegroundNotificaton';
 import {
@@ -54,6 +59,11 @@ import {
   SignupStepInput,
   SignupStepRadio,
   SingleChat,
+  TesterConsole,
+  TesterGallery,
+  TesterInsights,
+  TesterScreenInfo,
+  TesterSplash,
   UserInput,
   UserProfile,
   VerifyWaliCode,
@@ -68,6 +78,7 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../services';
+import { TesterDiagnostics } from '../services/tester';
 import BottomTab from './BottomTab';
 
 const Stack = createNativeStackNavigator();
@@ -114,8 +125,8 @@ function App() {
                 const user = await ApiServices.getCurrentUserDetail();
                 // console.log("UPdated Userrr", user)
                 updateCurrentUser({
-                  ...(user as Record<string, unknown>),
                   ...(res as Record<string, unknown>),
+                  ...(user as Record<string, unknown>),
                 });
                 setRevenueCat(res?.id);
                 setInitialRouteName('BottomTab');
@@ -144,7 +155,19 @@ function App() {
   }, []);
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() =>
+        TesterDiagnostics.setCurrentScreen(
+          navigationRef.getCurrentRoute()?.name
+        )
+      }
+      onStateChange={() =>
+        TesterDiagnostics.setCurrentScreen(
+          navigationRef.getCurrentRoute()?.name
+        )
+      }
+    >
       <DisplayForegroundNotificaton />
       <CustomModal />
       {!loader && <PersistentMessagesFab />}
@@ -244,8 +267,18 @@ function App() {
           <Stack.Screen name="SignupStepRadio" component={SignupStepRadio} />
           <Stack.Screen name="EditProfileGroup" component={EditProfileGroup} />
           <Stack.Screen name="EditInterests" component={EditInterests} />
+          <Stack.Screen name="TesterConsole" component={TesterConsole} />
+          <Stack.Screen name="TesterScreenInfo" component={TesterScreenInfo} />
+          <Stack.Screen name="TesterInsights" component={TesterInsights} />
+          <Stack.Screen name="TesterGallery" component={TesterGallery} />
+          <Stack.Screen
+            name="TesterSplash"
+            component={TesterSplash}
+            options={{ animation: 'fade' }}
+          />
         </Stack.Navigator>
       )}
+      {!loader && <TesterFab />}
     </NavigationContainer>
   );
 }

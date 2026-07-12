@@ -14,6 +14,8 @@ export type FcmToken = {
   app_version: string | null;
   device_type: number;
   status: number;
+  is_tester: boolean;
+  tester_can_view_private_media: boolean;
   device_word: string;
 };
 
