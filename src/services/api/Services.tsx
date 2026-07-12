@@ -1081,6 +1081,29 @@ class GApiServices {
     });
   };
 
+  debugForceDeleteAccount = () => {
+    return new Promise(async (resolve, reject) => {
+      const config = {
+        method: 'delete',
+        maxBodyLength: Infinity,
+        url: `${BaseUrl}${EndPoints.debugForceDeleteAccount}`,
+        headers: {
+          Authorization: `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`,
+          'Content-Type': 'application/json',
+        },
+      };
+      axios
+        .request(config)
+        .then(() => {
+          resolve('');
+        })
+        .catch((error) => {
+          reject(error);
+          console.log('error while debug force-deleting account =>', error);
+        });
+    });
+  };
+
   getCurrentUserDetail = (): Promise<CurrentUserDetail> => {
     return new Promise((resolve, reject) => {
       Api.get(`${EndPoints.getCurrentUserDetail}`)

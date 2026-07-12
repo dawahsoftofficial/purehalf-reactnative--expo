@@ -1,5 +1,9 @@
 import { getApp } from '@react-native-firebase/app';
-import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
+import {
+  getAuth,
+  signInWithPhoneNumber,
+  signOut,
+} from '@react-native-firebase/auth';
 import {
   equalTo,
   get,
@@ -461,6 +465,10 @@ class GFirebase {
           reject('');
         });
     });
+  };
+
+  debugSignOut = () => {
+    return signOut(auth);
   };
 }
 
