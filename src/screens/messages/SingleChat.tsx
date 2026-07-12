@@ -54,6 +54,8 @@ type ChatAudioPlaybackState = {
   durationMillis: number;
 };
 
+const MESSAGES_PAGE_SIZE = 50;
+
 const isRateLimitError = (error: unknown): boolean => {
   if (typeof error === 'string') {
     return error.toLowerCase().includes('too many attempts');
@@ -108,14 +110,38 @@ const SingleChat = (props: any) => {
   const markedAsDeliveredRef = useRef<Set<number>>(new Set());
   // Track messages to avoid race conditions between fetchMessages and Pusher events
   const messagesRef = useRef<Message[]>([]);
+  // Bulk mark-all-read should fire once per focus session, not on every
+  // messages-array change — otherwise every single incoming message while
+  // the screen stays focused re-triggers a "mark whole conversation read"
+  // round-trip (this was already tripping the 429 handling below).
+  const hasMarkedAllOnFocusRef = useRef<boolean>(false);
   const isFetchingMessagesRef = useRef<boolean>(false);
+  // Older-message pagination: history was previously capped at whatever the
+  // first fetch returned (50 messages) with no way to load anything before that.
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const isLoadingMoreRef = useRef<boolean>(false);
+  const hasMoreMessagesRef = useRef<boolean>(true);
+  const currentPageRef = useRef<number>(1);
   const audioPlaybackRef = useRef<ChatAudioPlaybackState>(audioPlayback);
   const audioSourceCacheRef = useRef<Map<number, string>>(new Map());
 
   const [inputMessage, setInputMessage] = useState('');
   const onChangeInputMessage = (text: string) => {
     setInputMessage(text);
-    // TODO: Send typing indicator when user types
+
+    // Throttle: at most one client-typing event every 2s, and only while
+    // there's an existing conversation to broadcast on.
+    if (conversationId && text.trim().length > 0) {
+      const now = Date.now();
+      if (now - lastTypingEventRef.current > 2000) {
+        lastTypingEventRef.current = now;
+        void pusherService.triggerClientEvent(
+          `private-conversation.${conversationId}`,
+          'client-typing',
+          {}
+        );
+      }
+    }
   };
 
   const [isRecordingVoice, setIsRecordingVoice] = useState(false);
@@ -217,8 +243,10 @@ const SingleChat = (props: any) => {
 
       const fetchedMessages = await messageServices.getConversationMessages(
         conversationIdNum,
-        { per_page: 50 }
+        { per_page: MESSAGES_PAGE_SIZE, page: 1 }
       );
+      currentPageRef.current = 1;
+      hasMoreMessagesRef.current = fetchedMessages.length >= MESSAGES_PAGE_SIZE;
 
       // Merge fetched messages with existing messages to avoid losing Pusher messages
       // Get current messages from ref to avoid stale closure
@@ -271,6 +299,56 @@ const SingleChat = (props: any) => {
       console.error('[SingleChat.fetchMessages] Error:', error);
       setLoader(false);
       isFetchingMessagesRef.current = false;
+    }
+  }, [conversationId]);
+
+  // Loads the next older page of history. The API doesn't return a total
+  // count, so "more pages exist" is inferred from getting a full page back.
+  const loadOlderMessages = useCallback(async () => {
+    if (!conversationId) return;
+    if (!hasMoreMessagesRef.current) return;
+    // Ref check (not just the isLoadingMoreMessages state) guards against two
+    // onEndReached firings in the same tick, before either has re-rendered —
+    // both would otherwise read the same stale (false) state value.
+    if (isFetchingMessagesRef.current || isLoadingMoreRef.current) return;
+
+    const conversationIdNum = parseInt(conversationId, 10);
+    if (isNaN(conversationIdNum)) return;
+
+    isLoadingMoreRef.current = true;
+    setIsLoadingMoreMessages(true);
+    try {
+      const nextPage = currentPageRef.current + 1;
+      const olderMessages = await messageServices.getConversationMessages(
+        conversationIdNum,
+        { per_page: MESSAGES_PAGE_SIZE, page: nextPage }
+      );
+
+      currentPageRef.current = nextPage;
+      hasMoreMessagesRef.current = olderMessages.length >= MESSAGES_PAGE_SIZE;
+
+      if (olderMessages.length === 0) return;
+
+      const currentMessages = messagesRef.current;
+      const existingIds = new Set(currentMessages.map((msg) => msg.id));
+      const newOlderMessages = olderMessages.filter(
+        (msg) => !existingIds.has(msg.id)
+      );
+      if (newOlderMessages.length === 0) return;
+
+      // Older messages sort to the end of the (newest-first) array.
+      const merged = [...currentMessages, ...newOlderMessages].sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setMessages(merged);
+      messagesRef.current = merged;
+    } catch (error: unknown) {
+      console.error('[SingleChat.loadOlderMessages] Error:', error);
+    } finally {
+      isLoadingMoreRef.current = false;
+      setIsLoadingMoreMessages(false);
     }
   }, [conversationId]);
 
@@ -397,6 +475,22 @@ const SingleChat = (props: any) => {
                     rawData as ParticipantBlockedEventData
                   );
                 }
+                break;
+              }
+
+              case 'client-typing': {
+                // Client events are peer-to-peer via Pusher and never echoed
+                // back to the sender, so this only ever fires for the other
+                // participant. Auto-clears if no further keystroke event
+                // arrives within a few seconds (covers the other user
+                // closing the app mid-type without sending a stop signal).
+                setIsOtherUserTyping(true);
+                if (typingTimeoutRef.current) {
+                  clearTimeout(typingTimeoutRef.current);
+                }
+                typingTimeoutRef.current = setTimeout(() => {
+                  setIsOtherUserTyping(false);
+                }, 4000);
                 break;
               }
 
@@ -960,8 +1054,10 @@ const SingleChat = (props: any) => {
   // Only run when conversationId changes, not when callbacks are recreated
   useEffect(() => {
     if (conversationId) {
-      // Reset messages ref when conversation changes
+      // Reset messages ref and pagination cursor when conversation changes
       messagesRef.current = [];
+      currentPageRef.current = 1;
+      hasMoreMessagesRef.current = true;
       fetchMessages();
       setupPusherListeners();
 
@@ -1003,7 +1099,8 @@ const SingleChat = (props: any) => {
         );
       });
 
-      if (unreadMessages.length > 0) {
+      if (unreadMessages.length > 0 && !hasMarkedAllOnFocusRef.current) {
+        hasMarkedAllOnFocusRef.current = true;
         unreadMessages.forEach((message) =>
           markedAsReadRef.current.add(message.id)
         );
@@ -1026,6 +1123,7 @@ const SingleChat = (props: any) => {
               unreadMessages.forEach((message) =>
                 markedAsReadRef.current.delete(message.id)
               );
+              hasMarkedAllOnFocusRef.current = false;
             }
           });
       }
@@ -1105,10 +1203,17 @@ const SingleChat = (props: any) => {
           }
         }
       });
+      // Note: intentionally no cleanup returned here — useFocusEffect
+      // re-invokes this callback (and would run any returned cleanup)
+      // every time `messages` changes while still focused, since the
+      // callback identity is part of its dependency array. Resetting the
+      // mark-all-read gate there would refire it on every new message,
+      // which is exactly the redundant behavior being fixed. The gate is
+      // reset on a real navigation 'blur' instead (see effect below).
     }, [conversationId, messages, currentUser])
   );
 
-  const { onSendPress } = useSendMessage({
+  const { onSendPress, isSending } = useSendMessage({
     otherUserData,
     conversationData,
     setConversationData,
@@ -1127,6 +1232,9 @@ const SingleChat = (props: any) => {
         'chat_activity',
         currentUser?.created_at
       );
+      // Allow the bulk mark-all-read to fire again next time this screen
+      // regains focus (e.g. messages arrived while the user was elsewhere).
+      hasMarkedAllOnFocusRef.current = false;
     });
     return unsubscribe;
   }, [props.navigation, currentUser?.created_at, stopAudioPlayback]);
@@ -1209,7 +1317,7 @@ const SingleChat = (props: any) => {
   );
 
   const handleSubmitEditing = async () => {
-    if (inputMessage.trim().length > 0) {
+    if (inputMessage.trim().length > 0 && !isSending) {
       const res = await onSendPress(inputMessage);
 
       if (res?.type === 'blockedByYou') {
@@ -1389,6 +1497,17 @@ const SingleChat = (props: any) => {
               getItem={(data, index) => data[index]}
               getItemCount={(data) => data.length}
               keyExtractor={(item: any) => String(item.id)}
+              onEndReached={loadOlderMessages}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                isLoadingMoreMessages ? (
+                  <ActivityIndicator
+                    color={Colors.primary}
+                    size={'small'}
+                    style={{ marginVertical: wp(4) }}
+                  />
+                ) : null
+              }
             />
           ) : (
             <View style={Styles.threadIntroEmptyWrapper}>
@@ -1439,7 +1558,9 @@ const SingleChat = (props: any) => {
                       ? Colors.primaryLite
                       : Colors.primary,
                 }}
+                disabled={isSending}
                 onPress={async () => {
+                  if (isSending) return;
                   if (inputMessage.trim().length === 0) {
                     await startVoiceRecording();
                     return;

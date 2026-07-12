@@ -16,6 +16,7 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import { LinearGradient, ModalLoader, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
+import { REVENUECAT_ENTITLEMENT_ID } from '../../global/Entitlements';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
 import {
@@ -27,11 +28,10 @@ import {
 import PackagesList from './PackagesList';
 import PaymentMethodList from './PaymentMethodList';
 
-// RevenueCat entitlement key — also referenced in App.tsx, premium-store.ts,
-// and use-premium.ts. M18 requires verifying the entitlement is genuinely
-// active before granting premium on restore; using `activeSubscriptions.length`
-// alone counts expired entries.
-const ENTITLEMENT_ID = '2026-packages';
+// M18 requires verifying the entitlement is genuinely active before granting
+// premium on restore; using `activeSubscriptions.length` alone counts expired
+// entries.
+const ENTITLEMENT_ID = REVENUECAT_ENTITLEMENT_ID;
 
 const ProFeaturesPromotion = (props: any) => {
   const { top } = useSafeAreaInsets();

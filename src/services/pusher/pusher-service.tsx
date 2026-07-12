@@ -1,7 +1,7 @@
 import {
   Pusher,
   type PusherChannel,
-  type PusherEvent,
+  PusherEvent,
 } from '@pusher/pusher-websocket-react-native';
 import axios from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -235,6 +235,52 @@ class PusherService {
       } catch (error) {
         console.error('[PusherService.disconnect] Error:', error);
       }
+    }
+  };
+
+  /**
+   * Send a Pusher client event (e.g. typing indicators) on a channel this
+   * client is already subscribed to. Client events only work on private/
+   * presence channels and only reach OTHER subscribers on the channel (Pusher
+   * never echoes them back to the sender) — and only if "client events" is
+   * enabled for the app in the Pusher dashboard; otherwise this is a no-op
+   * that Pusher silently drops.
+   * @param channelName - Must already be subscribed via subscribeToChannel
+   * @param eventName - Must start with "client-" per Pusher's client event spec
+   * @param data - JSON-serializable payload
+   */
+  triggerClientEvent = async (
+    channelName: string,
+    eventName: string,
+    data: Record<string, unknown> = {}
+  ): Promise<void> => {
+    if (!eventName.startsWith('client-')) {
+      console.error(
+        '[PusherService] Client event names must start with "client-":',
+        eventName
+      );
+      return;
+    }
+
+    const sub = this.channels.get(channelName);
+    if (!sub || !this.isReady()) {
+      console.log(
+        '[PusherService] Cannot trigger client event, not subscribed/ready:',
+        channelName
+      );
+      return;
+    }
+
+    try {
+      await sub.channel.trigger(
+        new PusherEvent({
+          channelName,
+          eventName,
+          data: JSON.stringify(data),
+        })
+      );
+    } catch (error) {
+      console.error('[PusherService.triggerClientEvent] Error:', error);
     }
   };
 
