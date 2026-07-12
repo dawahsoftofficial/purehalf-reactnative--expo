@@ -7,11 +7,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hp, wp } from '../global';
 import { navigationRef } from '../navigation/RootNavigation';
 import { Colors } from '../res';
-import { useConversationStore } from '../stores';
 
 // The messages shortcut belongs to Home. Keeping this allow-list small prevents
 // it from leaking onto internal screens as new routes are added.
 const VISIBLE_ON_ROUTES = new Set(['BottomTab', 'Welcome']);
+// TEMP: requested for visual QA. Restore the live unread count after approval.
+const TEST_BADGE_COUNT = 10;
 
 // `useSyncExternalStore` (rather than `useEffect` + `useState`) so the
 // current route is read synchronously on the very first render. React
@@ -28,9 +29,6 @@ const getCurrentRouteName = () =>
   navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
 
 function PersistentMessagesFab() {
-  const unreadConversationsCount = useConversationStore(
-    (state) => state.unreadConversationsCount
-  );
   const { bottom } = useSafeAreaInsets();
   const currentRoute = useSyncExternalStore(
     subscribeToRouteChanges,
@@ -57,23 +55,11 @@ function PersistentMessagesFab() {
     >
       <Ripple style={Styles.fab} onPress={onPress} rippleColor={Colors.color2}>
         <Ionicons name="mail" size={wp(6)} color={Colors.color2} />
-        {unreadConversationsCount > 0 && (
-          <View
-            style={[
-              Styles.badge,
-              {
-                minWidth:
-                  unreadConversationsCount.toString().length >= 3
-                    ? wp(7)
-                    : wp(5.5),
-              },
-            ]}
-          >
-            <Text style={Styles.badgeText} numberOfLines={1}>
-              {unreadConversationsCount}
-            </Text>
-          </View>
-        )}
+        <View style={Styles.badge}>
+          <Text style={Styles.badgeText} numberOfLines={1}>
+            {TEST_BADGE_COUNT}
+          </Text>
+        </View>
       </Ripple>
     </View>
   );
@@ -106,7 +92,7 @@ const Styles = StyleSheet.create({
     right: -2,
     height: wp(5),
     borderRadius: wp(2.5),
-    backgroundColor: Colors.theme,
+    backgroundColor: Colors.attention,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: wp(1.2),

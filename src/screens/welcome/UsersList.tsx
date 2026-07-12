@@ -130,18 +130,23 @@ const UsersList = (props: any) => {
 
   const renderEmptyList = () => {
     let emptyText = '';
+    let emptyIcon: 'heart-outline' | 'eye-outline' | 'sparkles-outline' =
+      'sparkles-outline';
     switch (optionTab) {
       case 'recommended':
         emptyText = LanguageKeys.noRecommendation;
         break;
       case 'likedByYou':
         emptyText = LanguageKeys.noLiked;
+        emptyIcon = 'heart-outline';
         break;
       case 'likedYou':
         emptyText = LanguageKeys.noLike;
+        emptyIcon = 'heart-outline';
         break;
       case 'visitors':
         emptyText = LanguageKeys.noVisiter;
+        emptyIcon = 'eye-outline';
         break;
       default:
         emptyText = LanguageKeys.noRecommendation;
@@ -149,12 +154,10 @@ const UsersList = (props: any) => {
     }
     return (
       <View style={Styles.emptyListCon}>
-        <View style={Styles.emptyIconCircle}>
-          <Ionicons
-            name="sparkles-outline"
-            size={wp(9)}
-            color={Colors.primary}
-          />
+        <View style={Styles.emptyIconHalo}>
+          <View style={Styles.emptyIconCircle}>
+            <Ionicons name={emptyIcon} size={wp(7)} color={Colors.primary} />
+          </View>
         </View>
         <Text style={Styles.emptyListText}>{emptyText}</Text>
       </View>
@@ -173,7 +176,11 @@ const UsersList = (props: any) => {
       onEndReached={handleEndReached}
       ListEmptyComponent={renderEmptyList}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={Styles.container}
+      style={Styles.list}
+      contentContainerStyle={[
+        Styles.container,
+        data.length === 0 && Styles.emptyContent,
+      ]}
       columnWrapperStyle={Styles.columnWrapper}
       keyExtractor={(item, index) => `${item?.id}-${index}`}
     />
@@ -187,6 +194,12 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(3),
     paddingTop: hp(1.2),
     paddingBottom: hp(2),
+  },
+  list: {
+    flex: 1,
+  },
+  emptyContent: {
+    flexGrow: 1,
   },
   columnWrapper: {
     justifyContent: 'space-between',
@@ -261,17 +274,34 @@ const Styles = StyleSheet.create({
     includeFontPadding: false,
   },
   emptyListCon: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: hp(16),
+    paddingHorizontal: wp(8),
+    paddingBottom: hp(10),
+  },
+  emptyIconHalo: {
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    backgroundColor: Colors.primaryRGBA12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyIconCircle: {
-    width: wp(20),
-    height: wp(20),
-    borderRadius: wp(10),
-    backgroundColor: Colors.lavender,
+    width: wp(17),
+    height: wp(17),
+    borderRadius: wp(8.5),
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   emptyListText: {
     color: Colors.muted,
@@ -279,7 +309,8 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small3,
     textAlign: 'center',
-    marginTop: hp(2.5),
-    marginHorizontal: wp(12),
+    lineHeight: wp(5.6),
+    marginTop: hp(2),
+    maxWidth: wp(72),
   },
 });

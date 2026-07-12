@@ -2,17 +2,12 @@ import React, { useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
-import { Colors } from '../../../res';
+import { Colors } from '../res';
 
 const WAVE_HALF_PERIOD = 18;
 const ROW_SPACING = 36;
 const AMPLITUDE = 12;
 
-/**
- * One horizontal wave line at baseline `y`, spanning `startX`..`endX`.
- * A leading quadratic curve establishes the crest; smooth continuations (T)
- * alternate crest/trough every half period.
- */
 const waveRow = (startX: number, y: number, endX: number): string => {
   let d =
     `M${startX} ${y} ` +
@@ -28,15 +23,8 @@ const waveRow = (startX: number, y: number, endX: number): string => {
   return d;
 };
 
-/**
- * Subtle flowing-waves motif rendered behind chat content so a new or
- * sparse screen never reads as an empty void. Alternate rows are offset by
- * half a period so the crests interleave. All rows are concatenated into a
- * single path (instead of an SVG <Pattern>, which renders inconsistently in
- * react-native-svg on Android). Purely decorative: absolutely positioned
- * and transparent to touches.
- */
-const ChatBackgroundPattern = () => {
+/** A subtle, touch-transparent zig-zag motif shared by standard app screens. */
+const AppBackgroundPattern = () => {
   const { width, height } = useWindowDimensions();
 
   const tiledPath = useMemo(() => {
@@ -70,11 +58,11 @@ const ChatBackgroundPattern = () => {
   );
 };
 
+export default AppBackgroundPattern;
+
 const Styles = StyleSheet.create({
   fill: {
     ...StyleSheet.absoluteFillObject,
     opacity: 0.07,
   },
 });
-
-export default ChatBackgroundPattern;

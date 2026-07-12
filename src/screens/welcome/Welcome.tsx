@@ -680,7 +680,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               style={Styles.searchIconBtn}
               onPress={() => navigation.navigate('SearchProfiles')}
             >
-              <Ionicons name="search" size={wp(5.4)} color={Colors.ink} />
+              <Ionicons name="search" size={wp(5.8)} color={Colors.ink} />
             </Ripple>
             <Ripple
               rippleColor={Colors.primary}

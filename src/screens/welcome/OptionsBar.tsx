@@ -3,19 +3,17 @@ import { FlatList, StyleSheet, Text as ReactText, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { Text } from '../../components';
+import { LinearGradient, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { usePremiumStore } from '../../stores';
 
+// TEMP: requested for visual QA. Restore the live counters after approval.
+const TEST_BADGE_COUNT = 10;
+
 const OptionsBar = (props: any) => {
-  const {
-    userStats = {},
-    options = [],
-    activeOptionButton = {},
-    onPress = () => null,
-  } = props;
+  const { options = [], activeOptionButton = {}, onPress = () => null } = props;
   const Rtl = CheckRtl();
   const isPremium = usePremiumStore((state) => state.isPremium);
   const premiumLoaded = usePremiumStore((state) => state.loaded);
@@ -28,52 +26,71 @@ const OptionsBar = (props: any) => {
     const isPaid = value === '1' || value === '3';
     const isLocked = isPaid && premiumLoaded && !isPremiumUser;
     const isPremiumFeature = isPaid && isPremiumUser;
-    const counter =
-      value === '1'
-        ? userStats?.like_you_counter
-        : value === '3'
-          ? userStats?.visit_you_counter
-          : 0;
-    const showCounter = !isLocked && counter && counter > 0;
+    const isGoldPremiumCta = isPremiumFeature;
+    const showCounter = value === '1' || value === '2' || value === '3';
 
     return (
       <Ripple
-        rippleColor={Colors.primary}
+        rippleColor={isPremiumFeature ? Colors.color20 : Colors.primary}
         style={[
           Styles.pill,
           isPremiumFeature && Styles.premiumPill,
+          isGoldPremiumCta && Styles.premiumPillGold,
+          isPremiumFeature && isActive && Styles.premiumPillActive,
           {
-            backgroundColor: isActive
-              ? Colors.primary
-              : isPremiumFeature
-                ? Colors.primaryMid
+            backgroundColor: isGoldPremiumCta
+              ? 'transparent'
+              : isActive
+                ? Colors.primary
                 : Colors.lavender,
             flexDirection: Rtl ? 'row-reverse' : 'row',
           },
         ]}
         onPress={onPress.bind(null, item)}
       >
+        {isGoldPremiumCta ? (
+          <LinearGradient
+            colors={isActive ? ['#F0C974', '#D99A32'] : ['#F8E4B1', '#E8B45A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            pointerEvents="none"
+            style={Styles.premiumGoldGradient}
+          />
+        ) : null}
+        {showCounter ? (
+          <View
+            style={[
+              Styles.countBubble,
+              {
+                backgroundColor: Colors.attention,
+                marginLeft: Rtl ? wp(1.2) : 0,
+                marginRight: Rtl ? 0 : wp(1.2),
+              },
+            ]}
+          >
+            <ReactText
+              style={[Styles.countTxt, { color: Colors.surface }]}
+              numberOfLines={1}
+            >
+              {TEST_BADGE_COUNT}
+            </ReactText>
+          </View>
+        ) : null}
         <Text
           style={{
             ...Styles.pillTxt,
-            color: isActive || isPremiumFeature ? Colors.surface : Colors.muted,
+            color: isGoldPremiumCta
+              ? Colors.ink
+              : isActive
+                ? Colors.surface
+                : Colors.muted,
             fontFamily:
               isActive || isPremiumFeature ? Fonts.APPFONT_SB : Fonts.APPFONT_M,
           }}
         >
           {name}
         </Text>
-        {isPremiumFeature ? (
-          <Ionicons
-            name="diamond"
-            size={wp(3.1)}
-            color={Colors.surface}
-            style={{
-              marginLeft: Rtl ? 0 : wp(1.1),
-              marginRight: Rtl ? wp(1.1) : 0,
-            }}
-          />
-        ) : isLocked ? (
+        {isLocked ? (
           <Ionicons
             name="lock-closed"
             size={wp(3.1)}
@@ -83,27 +100,6 @@ const OptionsBar = (props: any) => {
               marginRight: Rtl ? wp(1.1) : 0,
             }}
           />
-        ) : showCounter ? (
-          <View
-            style={[
-              Styles.countBubble,
-              {
-                backgroundColor: isActive ? Colors.surface : Colors.primary,
-                marginLeft: Rtl ? 0 : wp(1.2),
-                marginRight: Rtl ? wp(1.2) : 0,
-              },
-            ]}
-          >
-            <ReactText
-              style={[
-                Styles.countTxt,
-                { color: isActive ? Colors.primary : Colors.surface },
-              ]}
-              numberOfLines={1}
-            >
-              {counter > 99 ? '99+' : counter}
-            </ReactText>
-          </View>
         ) : null}
       </Ripple>
     );
@@ -143,12 +139,22 @@ const Styles = StyleSheet.create({
   },
   premiumPill: {
     borderWidth: 1,
-    borderColor: Colors.primary,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.22,
     shadowRadius: 5,
     elevation: 3,
+  },
+  premiumPillGold: {
+    borderColor: '#E0A848',
+    shadowColor: Colors.color37,
+    overflow: 'hidden',
+  },
+  premiumPillActive: {
+    borderColor: Colors.color20,
+  },
+  premiumGoldGradient: {
+    ...StyleSheet.absoluteFillObject,
   },
   pillTxt: {
     fontSize: Typography.small,
@@ -157,9 +163,9 @@ const Styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   countBubble: {
-    minWidth: wp(4.2),
-    height: wp(4.2),
-    borderRadius: wp(2.1),
+    minWidth: wp(5.4),
+    height: wp(5.4),
+    borderRadius: wp(2.7),
     paddingHorizontal: wp(1),
     justifyContent: 'center',
     alignItems: 'center',

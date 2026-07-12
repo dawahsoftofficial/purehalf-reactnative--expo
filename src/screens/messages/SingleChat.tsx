@@ -37,7 +37,6 @@ import type {
 } from '../../services/api/types/message-types';
 import chatAudioService from '../../services/audio/chat-audio-service';
 import type { AudioBubblePlayback } from './components/AudioMessageBubble';
-import ChatBackgroundPattern from './components/ChatBackgroundPattern';
 import IcebreakerChips from './components/IcebreakerChips';
 import MatchIntroCard from './components/MatchIntroCard';
 import MessageBubble from './components/MessageBubble';
@@ -1433,7 +1432,6 @@ const SingleChat = (props: any) => {
         keyboardShouldPersistTaps={'handled'}
         scrollEnabled={false}
       >
-        <ChatBackgroundPattern />
         {/* Wali/guardian banner hidden for now (comment out only, per
             explicit direction -- guardian is core functionality, not being
             removed).

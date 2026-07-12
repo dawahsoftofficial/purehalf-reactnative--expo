@@ -64,7 +64,6 @@ import {
   usePremiumStore,
   useUserStatsStore,
 } from '../../stores';
-import ChatBackgroundPattern from './components/ChatBackgroundPattern';
 import { isLastMessageReadByParticipant } from './SingleChat.utils';
 
 type MessagesProps = {
@@ -780,7 +779,6 @@ const Messages = (props: MessagesProps) => {
         message="Your chat bundle is ready."
       />
       <View style={Styles.contentContainer}>
-        <ChatBackgroundPattern />
         {isLoading ? (
           <AnimatedLoader
             text={LanguageKeys.loading}

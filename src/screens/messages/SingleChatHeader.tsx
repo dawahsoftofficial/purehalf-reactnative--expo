@@ -19,7 +19,7 @@ import {
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts } from '../../res';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -52,7 +52,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     setMessages,
   } = props;
 
-  const isSupportParticipant = otherUserData?.type === 'Admin';
+  const isSupportConversation =
+    conversationData?.type === 'support' || otherUserData?.type === 'Admin';
 
   const [isBlockedByYou, setIsBlockedByYou] = useState(propsIsBlockedByYou);
   const [isBlockedYou, setIsBlockedYou] = useState(propsIsBlockedYou);
@@ -336,8 +337,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   const blurText = isBlurred
     ? 'Unblur Profile Picture'
     : 'Blur Profile Picture';
-  const viewProfileOption = isSupportParticipant ? [] : ['View profile'];
-  const viewProfileAction = isSupportParticipant ? [] : [onViewProfilePress];
+  const viewProfileOption = isSupportConversation ? [] : ['View profile'];
+  const viewProfileAction = isSupportConversation ? [] : [onViewProfilePress];
   if (!conversationData || !Object.keys(conversationData).length) {
     if (isBlockedByYou) {
       optionsArray = [
@@ -430,7 +431,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         <Ripple
           style={Styles.headerInnerCon}
           onPress={() => {
-            if (isSupportParticipant) {
+            if (isSupportConversation) {
               return;
             }
             props.navigation.navigate('UserProfile', {
@@ -443,7 +444,13 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
               <Image
                 source={{ uri: otherUserData.image }}
                 resizeMode="cover"
-                style={Styles.userImage}
+                style={Styles.avatarImage}
+              />
+            ) : isSupportConversation ? (
+              <Image
+                source={Images.logoWithoutTextBlack}
+                resizeMode="contain"
+                style={Styles.avatarImage}
               />
             ) : (
               <ProfilePhotoPlaceholder
@@ -458,7 +465,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
           </Text>
         </Ripple>
       </View>
-      {currentUserId !== 'guardian' && (
+      {currentUserId !== 'guardian' && !isSupportConversation && (
         <Menu ref={menuRef} renderer={PopupMenuRenderer}>
           <MenuTrigger>
             <View style={Styles.menuBtn}>
@@ -560,6 +567,10 @@ const Styles = StyleSheet.create({
     fontSize: Typography.medium,
     color: Colors.ink,
     maxWidth: wp(52),
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   menuBtn: {
     width: wp(9),

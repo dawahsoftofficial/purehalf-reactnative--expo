@@ -43,12 +43,12 @@ export const RecommendationHeart = ({ onPress }: RecommendationHeartProps) => {
   return (
     <Ripple
       rippleColor={Colors.primary}
-      rippleContainerBorderRadius={wp(6)}
+      rippleContainerBorderRadius={wp(5)}
       style={Styles.button}
       onPress={onPress}
     >
       <Animated.View style={animatedStyle}>
-        <Ionicons name="heart" size={wp(7)} color={Colors.primary} />
+        <Ionicons name="heart" size={wp(5.8)} color={Colors.primary} />
       </Animated.View>
     </Ripple>
   );
@@ -56,9 +56,9 @@ export const RecommendationHeart = ({ onPress }: RecommendationHeartProps) => {
 
 const Styles = StyleSheet.create({
   button: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
     // Light tint of the primary heart color (~12% opacity)
     backgroundColor: `${Colors.primary}1F`,
     justifyContent: 'center',

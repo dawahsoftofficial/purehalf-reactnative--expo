@@ -3,6 +3,7 @@ import { StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '../res';
+import AppBackgroundPattern from './AppBackgroundPattern';
 
 const Container = (props: any) => {
   const {
@@ -19,6 +20,7 @@ const Container = (props: any) => {
           barStyle={barStyle}
           translucent={false}
         />
+        <AppBackgroundPattern />
         {props.children}
       </View>
     </SafeAreaView>
