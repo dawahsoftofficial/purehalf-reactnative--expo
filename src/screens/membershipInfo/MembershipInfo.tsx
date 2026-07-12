@@ -298,7 +298,7 @@ const Styles = StyleSheet.create({
   benefitRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingVertical: hp(1.7),
     paddingHorizontal: wp(4),
     gap: wp(3),
@@ -312,11 +312,11 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
   },
   benefitTxt: {
-    flexShrink: 1,
+    flex: 1,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small2,
     color: Colors.ink,
-    textAlign: 'center',
+    textAlign: 'left',
   },
   button: {
     marginVertical: hp(2),
@@ -350,12 +350,14 @@ const Styles = StyleSheet.create({
   heroTitle: {
     color: Colors.color2,
     fontSize: Typography.large,
+    alignSelf: 'stretch',
     textAlign: 'center',
   },
   heroSub: {
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
     color: Colors.whiteRGBA90,
+    alignSelf: 'stretch',
     textAlign: 'center',
     marginTop: hp(1),
   },

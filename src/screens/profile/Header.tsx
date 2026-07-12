@@ -38,7 +38,7 @@ import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
 import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
   capitalize,
@@ -327,6 +327,7 @@ const Header = ({
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
   const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [blockPickerRequested, setBlockPickerRequested] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const giftThreshold =
@@ -501,24 +502,24 @@ const Header = ({
                 navigateToChat();
               } else {
                 flashErrorMessage(
-                  `You need at least ${requiredCredits} credits to start a new conversation`
+                  'You need a chat bundle to start a new conversation.'
                 );
               }
             } catch (error) {
               console.error('Error refreshing user data:', error);
-              flashErrorMessage('Failed to refresh credits. Please try again.');
+              flashErrorMessage(
+                'Failed to refresh your chats. Please try again.'
+              );
             }
           } else if (
             result.error &&
             result.error !== 'Purchase cancelled by user'
           ) {
-            flashErrorMessage(
-              result.error || 'Failed to purchase chat credits'
-            );
+            flashErrorMessage(result.error || 'Failed to purchase chat bundle');
           }
         } catch (error) {
           console.error('Error presenting chat credits paywall:', error);
-          flashErrorMessage('Failed to open chat credits paywall');
+          flashErrorMessage('Failed to open chat bundles');
         }
         return;
       }
@@ -595,9 +596,16 @@ const Header = ({
   const openMenu = useCallback(() => setMenuVisible(true), []);
   const closeMenu = useCallback(() => setMenuVisible(false), []);
   const handleBlockFromMenu = useCallback(() => {
-    setMenuVisible(false);
+    setBlockPickerRequested(true);
+    closeMenu();
+  }, [closeMenu]);
+
+  useEffect(() => {
+    if (!blockPickerRequested || menuVisible) return;
+
+    setBlockPickerRequested(false);
     onBlockPress();
-  }, [onBlockPress]);
+  }, [blockPickerRequested, menuVisible, onBlockPress]);
 
   const onBlurButtonPress = useCallback(() => {
     setBlurModalVisible(true);
@@ -905,6 +913,21 @@ const Header = ({
                   onPress={onChatCreditsPress}
                   disabled={isChatCreditsLoading}
                 />
+                {!currentUser?.is_approved ? (
+                  <Ripple
+                    style={Styles.reviewStatusIcon}
+                    onPress={() => setReviewModalVisible(true)}
+                    rippleColor={Colors.primaryRGBA12}
+                    accessibilityRole="button"
+                    accessibilityLabel={t(LanguageKeys.profileInReview)}
+                  >
+                    <Ionicons
+                      name="time-outline"
+                      size={wp(4)}
+                      color={Colors.primaryMid}
+                    />
+                  </Ripple>
+                ) : null}
               </View>
             </View>
             <MetaLine
@@ -1018,21 +1041,6 @@ const Header = ({
             </Text>
           </Ripple>
         </View>
-        {!currentUser?.is_approved ? (
-          <Ripple
-            style={Styles.reviewStatusIcon}
-            onPress={() => setReviewModalVisible(true)}
-            rippleColor={Colors.primaryRGBA12}
-            accessibilityRole="button"
-            accessibilityLabel={t(LanguageKeys.profileInReview)}
-          >
-            <Ionicons
-              name="time-outline"
-              size={wp(5.5)}
-              color={Colors.primaryMid}
-            />
-          </Ripple>
-        ) : null}
       </View>
     </>
   );
@@ -1133,17 +1141,13 @@ const Header = ({
                     onPress={onSeeAllPicPress}
                     rippleColor={Colors.primaryLite}
                   >
-                    <Image
-                      source={Images.gallery}
-                      resizeMode="contain"
-                      style={[
-                        Styles.seeAllIcon,
-                        {
-                          marginRight: Rtl ? 0 : wp(1.6),
-                          marginLeft: Rtl ? wp(1.6) : 0,
-                        },
-                      ]}
-                    />
+                    <View style={Styles.seeAllIcon}>
+                      <Ionicons
+                        name="images-outline"
+                        size={wp(4.6)}
+                        color={Colors.primary}
+                      />
+                    </View>
                     <Text style={Styles.seeAllTxt}>
                       {LanguageKeys.seeAllPictures}
                     </Text>
@@ -1370,7 +1374,7 @@ const Header = ({
             <Text style={Styles.taglineModalTitle}>{LanguageKeys.tagline}</Text>
             <TextInput
               style={Styles.taglineModalInput}
-              placeholder={LanguageKeys.enterTagline}
+              placeholder={t(LanguageKeys.enterTagline)}
               placeholderTextColor={Colors.muted}
               value={taglineInput}
               onChangeText={onTaglineChange}
@@ -1455,7 +1459,7 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.appBg,
   },
   heroWrap: {
-    height: height * 0.42,
+    height: height * 0.42 * 0.8,
     backgroundColor: Colors.primaryPress,
     overflow: 'hidden',
   },
@@ -1552,14 +1556,12 @@ const Styles = StyleSheet.create({
     marginTop: hp(1),
   },
   reviewStatusIcon: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
+    width: wp(7),
+    height: wp(7),
+    borderRadius: wp(3.5),
     backgroundColor: Colors.lavender,
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'flex-start',
-    marginTop: hp(1.2),
   },
   lastSeenRow: {
     flexDirection: 'row',
@@ -1659,8 +1661,12 @@ const Styles = StyleSheet.create({
     paddingVertical: hp(1.25),
   },
   seeAllIcon: {
-    width: wp(4),
-    height: hp(2.4),
+    width: wp(7),
+    height: wp(7),
+    borderRadius: wp(3.5),
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   seeAllTxt: {
     color: Colors.primaryPress,
@@ -1782,6 +1788,7 @@ const Styles = StyleSheet.create({
     marginBottom: hp(1.5),
   },
   reviewModalTitle: {
+    alignSelf: 'stretch',
     textAlign: 'center',
   },
   reviewModalBody: {
@@ -1789,6 +1796,7 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
     lineHeight: wp(5.5),
+    alignSelf: 'stretch',
     textAlign: 'center',
   },
   reviewModalButton: {
@@ -1905,7 +1913,7 @@ const Styles = StyleSheet.create({
   },
   heroMenuContainer: {
     position: 'absolute',
-    top: wp(2),
+    top: wp(5),
     zIndex: 10,
     flexDirection: 'row',
     alignItems: 'center',

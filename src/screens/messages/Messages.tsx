@@ -477,13 +477,13 @@ const Messages = (props: MessagesProps) => {
         result.error &&
         result.error !== 'Purchase cancelled by user'
       ) {
-        flashErrorMessage(result.error || 'Failed to purchase chat credits');
+        flashErrorMessage(result.error || 'Failed to purchase chat bundle');
       }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to purchase chat credits';
+          : 'Failed to purchase chat bundle';
       flashErrorMessage(errorMessage);
     } finally {
       setIsChatCreditsLoading(false);
@@ -493,7 +493,7 @@ const Messages = (props: MessagesProps) => {
   const onChatCreditsSuccessCollect = () => {
     setChatCreditsSuccessModalVisible(false);
 
-    flashSuccessMessage('Chat credits added successfully!');
+    flashSuccessMessage('Your chat bundle is ready.');
   };
 
   const onLogoutPress = async () => {
@@ -776,8 +776,8 @@ const Messages = (props: MessagesProps) => {
       <PurchaseSuccessModal
         visible={chatCreditsSuccessModalVisible}
         onCollect={onChatCreditsSuccessCollect}
-        title="Chat Credits Purchased!"
-        message="Your chat credits have been added successfully."
+        title="Chats added!"
+        message="Your chat bundle is ready."
       />
       <View style={Styles.contentContainer}>
         <ChatBackgroundPattern />

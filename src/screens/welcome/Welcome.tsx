@@ -862,17 +862,17 @@ const Styles = StyleSheet.create({
     borderColor: Colors.primaryRGBA12,
   },
   avatarBtn: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
     backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarImg: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
   },
   headerText: {
     fontFamily: Fonts.APPFONT_B,

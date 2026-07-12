@@ -21,11 +21,12 @@ function ChatCreditsBadge({
   if (credits === undefined || credits === null) {
     return null;
   }
+  const chats = Math.max(0, Math.floor(credits / 50));
 
   const badgeContent = (
     <View style={Styles.container}>
       <Ionicons name="sparkles" size={wp(4)} color={Colors.primary} />
-      <Text style={Styles.creditsText}>{credits?.toString()}</Text>
+      <Text style={Styles.creditsText}>{chats.toString()}</Text>
     </View>
   );
 
@@ -35,6 +36,8 @@ function ChatCreditsBadge({
         style={Styles.rippleContainer}
         onPress={onPress}
         disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={`${chats} chats available`}
       >
         {badgeContent}
       </Ripple>

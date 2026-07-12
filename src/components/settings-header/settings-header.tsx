@@ -58,5 +58,8 @@ const Styles = StyleSheet.create({
   title: {
     fontSize: Typography.large1,
     color: Colors.ink,
+    alignSelf: 'stretch',
+    marginHorizontal: wp(10),
+    textAlign: 'center',
   },
 });

@@ -106,7 +106,7 @@ const GiftClaimModal = ({
                 {LanguageKeys.youEarned}
               </Text>
               <ReactText style={Styles.body}>
-                {`+${justClaimed.awarded} ${t(LanguageKeys.chatCredits)}`}
+                {`+${Math.floor(justClaimed.awarded / 50)} ${t(LanguageKeys.chatCredits)}`}
               </ReactText>
             </>
           ) : (

@@ -19,6 +19,7 @@ import Purchases, {
   type PurchasesPackage,
 } from 'react-native-purchases';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { hp, wp } from '@/global';
@@ -33,12 +34,8 @@ const CANCELLED_RESULT: PaywallResult = {
   error: 'Purchase cancelled by user',
 };
 const FALLBACK_CREDITS = [500, 1250, 3000];
-const CREDIT_ICON = 'cash-multiple';
-const CREDIT_STACK_OFFSETS = [
-  { x: 0, y: 0 },
-  { x: -5, y: 5 },
-  { x: 5, y: -5 },
-];
+const CREDITS_PER_NEW_CHAT = 50;
+const CHAT_BUNDLE_ICON = 'sparkles';
 
 type Props = {
   navigation?: {
@@ -53,16 +50,18 @@ type Props = {
 };
 
 type PackagePresentation = {
-  credits: number;
   title: string;
   description: string;
   recommended: boolean;
 };
 
-function formatChats(credits: number) {
-  const chats = Math.floor(credits / 50);
-  if (chats <= 0) return 'new chats';
-  return `${chats} new ${chats === 1 ? 'chat' : 'chats'}`;
+function getChatCount(credits: number) {
+  return Math.max(0, Math.floor(credits / CREDITS_PER_NEW_CHAT));
+}
+
+function formatChatBundle(credits: number) {
+  const chats = getChatCount(credits);
+  return `${chats} ${chats === 1 ? 'Chat' : 'Chats'}`;
 }
 
 function extractCredits(pkg: PurchasesPackage, index: number) {
@@ -97,14 +96,13 @@ function getPackagePresentation(
       .includes('recommended');
 
   const descriptions = [
-    `Start up to ${formatChats(credits)}.`,
-    `Best value for up to ${formatChats(credits)}.`,
-    `Maximum reach with up to ${formatChats(credits)}.`,
+    'Start new conversations with people you like.',
+    'Meet more compatible people.',
+    'Best value for expanding your search.',
   ];
 
   return {
-    credits,
-    title: `${credits} Chat Credits`,
+    title: formatChatBundle(credits),
     description: descriptions[index] || descriptions[descriptions.length - 1],
     recommended,
   };
@@ -114,42 +112,8 @@ function getPrice(pkg: PurchasesPackage) {
   return pkg.product?.priceString || '';
 }
 
-function CreditStackIcon({
-  count,
-  color,
-  size,
-}: {
-  count: number;
-  color: string;
-  size: number;
-}) {
-  const visibleCount = Math.max(
-    1,
-    Math.min(count, CREDIT_STACK_OFFSETS.length)
-  );
-
-  return (
-    <View
-      style={[styles.creditStackIcon, { width: size + 12, height: size + 12 }]}
-    >
-      {CREDIT_STACK_OFFSETS.slice(0, visibleCount).map((offset, index) => (
-        <MaterialCommunityIcons
-          key={`${offset.x}-${offset.y}`}
-          name={CREDIT_ICON}
-          size={size}
-          color={color}
-          style={[
-            styles.creditStackGlyph,
-            {
-              left: 6 + offset.x,
-              top: 6 + offset.y,
-              opacity: index === 0 ? 1 : 0.78,
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
+function ChatBundleIcon({ color, size }: { color: string; size: number }) {
+  return <Ionicons name={CHAT_BUNDLE_ICON} size={size} color={color} />;
 }
 
 export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
@@ -192,12 +156,12 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
         setPackages(availablePackages);
         setError(
           availablePackages.length === 0
-            ? 'Chat credit packages are unavailable right now.'
+            ? 'Chat bundles are unavailable right now.'
             : ''
         );
       } catch {
         if (!mounted) return;
-        setError('Failed to load chat credit packages.');
+        setError('Failed to load chat bundles.');
       } finally {
         if (mounted) {
           setLoading(false);
@@ -215,7 +179,7 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
   const currentBalanceText = useMemo(() => {
     const credits =
       (currentUser as { chat_credits?: number })?.chat_credits ?? 0;
-    return `${credits} ${credits === 1 ? 'credit' : 'credits'}`;
+    return getChatCount(credits).toString();
   }, [currentUser]);
 
   const handleClose = () => complete(CANCELLED_RESULT);
@@ -238,7 +202,7 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
         complete(CANCELLED_RESULT);
         return;
       }
-      flashErrorMessage(err.message || 'Failed to purchase chat credits');
+      flashErrorMessage(err.message || 'Failed to purchase chat bundle');
     } finally {
       setActivePackageId(null);
     }
@@ -275,12 +239,12 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
       >
         <View style={styles.headerRow}>
           <View style={styles.heroIcon}>
-            <CreditStackIcon count={3} size={wp(6.2)} color={Colors.surface} />
+            <ChatBundleIcon size={wp(6.2)} color={Colors.surface} />
           </View>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Close chat credits"
+            accessibilityLabel="Close chat bundles"
             onPress={handleClose}
             style={styles.closeBtn}
           >
@@ -292,17 +256,16 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
           </Pressable>
         </View>
 
-        <Text style={styles.title}>Add chat credits</Text>
+        <Text style={styles.title}>Get more chats</Text>
         <Text style={styles.subtitle}>
-          Use credits to start new conversations when your daily chats run out.
+          Choose a bundle to start new conversations with people you like.
         </Text>
 
         <View style={styles.balanceCard}>
           <View>
-            <Text style={styles.balanceLabel}>Current balance</Text>
+            <Text style={styles.balanceLabel}>Chats available</Text>
             <Text style={styles.balanceValue}>{currentBalanceText}</Text>
           </View>
-          <Text style={styles.conversionText}>50 credits = 1 new chat</Text>
         </View>
 
         {loading ? (
@@ -336,11 +299,7 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
                   ]}
                 >
                   <View style={styles.packageIcon}>
-                    <CreditStackIcon
-                      count={Math.min(index + 1, 3)}
-                      size={wp(5)}
-                      color={Colors.primary}
-                    />
+                    <ChatBundleIcon size={wp(5)} color={Colors.primary} />
                   </View>
 
                   <View style={styles.packageContent}>
@@ -371,24 +330,24 @@ export default function ChatCreditsPaywallScreen({ navigation, route }: Props) {
         )}
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>How credits work</Text>
+          <Text style={styles.infoTitle}>Good to know</Text>
           <View style={styles.infoRows}>
             <View style={styles.infoRow}>
               <View style={styles.infoBullet} />
               <Text style={styles.infoText}>
-                Starting a new conversation uses 50 credits.
+                Each chat starts a new conversation.
               </Text>
             </View>
             <View style={styles.infoRow}>
               <View style={styles.infoBullet} />
               <Text style={styles.infoText}>
-                Existing conversations do not need credits to continue.
+                Continue existing conversations freely.
               </Text>
             </View>
             <View style={styles.infoRow}>
               <View style={styles.infoBullet} />
               <Text style={styles.infoText}>
-                Credits are added to your account after checkout.
+                Your chats are ready immediately after checkout.
               </Text>
             </View>
           </View>
@@ -490,13 +449,6 @@ const styles = StyleSheet.create({
     marginTop: hp(0.4),
     includeFontPadding: false,
   },
-  conversionText: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: 12,
-    textAlign: 'right',
-    includeFontPadding: false,
-  },
   packageList: {
     gap: 10,
   },
@@ -521,12 +473,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.lavender,
-  },
-  creditStackIcon: {
-    position: 'relative',
-  },
-  creditStackGlyph: {
-    position: 'absolute',
   },
   packageContent: {
     flex: 1,

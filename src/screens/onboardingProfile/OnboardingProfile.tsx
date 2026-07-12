@@ -224,7 +224,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
             // flash helper t()s the whole string, which can't resolve a
             // concatenation of keys.
             flashSuccessMessage(
-              `${t(LanguageKeys.youEarned)} +${reward.awarded} ${t(LanguageKeys.chatCredits)}`
+              `${t(LanguageKeys.youEarned)} +${Math.floor(reward.awarded / 50)} ${t(LanguageKeys.chatCredits)}`
             );
           }
           if (res?.detail) {

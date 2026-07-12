@@ -120,6 +120,19 @@ export const toggleSuggestionInValue = (
   return next.join(', ');
 };
 
+// These API-backed fields are intentionally shown as open option rows. Keep
+// the ids here as a fallback for profile data hydrated from older caches that
+// do not retain the field-level `inline` flag.
+const INLINE_OPTION_FIELD_IDS = new Set([
+  'ethini-0',
+  'bdy-0',
+  'eye-0',
+  'skin-0',
+  'edu-0',
+  'earn-0',
+  'martial-0',
+]);
+
 export const shouldUseTagOptions = (
   item: ProfileEditorField,
   options: any[] = []
@@ -130,7 +143,11 @@ export const shouldUseTagOptions = (
   // Fields flagged `inline` always render as tappable tiles, however many
   // options they have (e.g. body type, eye colour, complexion). Otherwise only
   // short lists become tiles; longer ones keep the searchable modal picker.
-  return item?.inline === true || options.length <= 5;
+  return (
+    item?.inline === true ||
+    INLINE_OPTION_FIELD_IDS.has(item?.id ?? '') ||
+    options.length <= 5
+  );
 };
 
 // Height is always sent to the API as cm. The backend stores height in a
