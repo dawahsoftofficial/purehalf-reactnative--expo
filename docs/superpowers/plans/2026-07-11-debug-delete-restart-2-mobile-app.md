@@ -3,12 +3,14 @@
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **Target repo:** `D:\GitHub\Pure Half\app-old` (React Native 0.82). All paths below are relative to that repo. Run all commands from there.
+>
+> **Revision (2026-07-11):** replaces the original floating-draggable-icon design with a row in the existing Settings screen. See the spec's Revision History section for why. This supersedes any earlier version of this plan file — do not build a floating icon or touch `App.tsx`.
 
-**Goal:** A floating, draggable debug icon, visible everywhere (gated on `APP_DEBUG`), that on tap (after a confirm dialog) hard-deletes the account via the new backend endpoint, wipes all local state, and restarts the app.
+**Goal:** A debug-only row in the Settings screen (gated on `APP_DEBUG`) that, after a confirm dialog, hard-deletes the account via the new backend endpoint, wipes all local state, and restarts the app.
 
-**Architecture:** Task 1 adds the small, mechanical plumbing (env type declaration, a new Firebase sign-out export, a new API service method) that has no user-visible behavior on its own. Task 2 adds the actual draggable/tappable component, mounts it in `App.tsx`, and adds the new restart dependency — this is the task with an end-to-end, manually-testable deliverable.
+**Architecture:** Task 1 adds the small, mechanical plumbing (env type declaration, a new Firebase sign-out export, a new API service method) that has no user-visible behavior on its own. Task 2 adds a small debug-logic module and one new Settings-screen entry that calls it, plus the new restart dependency — this is the task with an end-to-end, manually-testable deliverable.
 
-**Tech Stack:** React Native 0.82 (new architecture), TypeScript, `react-native-gesture-handler` ^2.29.1 (`Gesture.Pan()`/`Gesture.Tap()`/`Gesture.Race()` API), `react-native-reanimated` ^4.2.0, `react-native-dotenv` (`@env`), MMKV (`StorageManager`), `@react-native-firebase/auth`.
+**Tech Stack:** React Native 0.82 (new architecture), TypeScript, `react-native-dotenv` (`@env`), MMKV (`StorageManager`), `@react-native-firebase/auth`. (No gesture/animation libraries needed — this is a plain list row, not a floating draggable element.)
 
 **Spec:** `docs/superpowers/specs/2026-07-11-debug-delete-account-restart-design.md`.
 
@@ -33,7 +35,7 @@
 **Interfaces:**
 
 - Consumes: existing module-level `auth` const in `Firebase.tsx` (`const auth = getAuth(firebaseApp);`, already present at line 35), existing `BaseUrl`, `EndPoints`, `StorageManager` imports already used by `Services.tsx`'s `deleteAccount` method.
-- Produces (for Task 2): `APP_DEBUG: string` importable from `@env`; `Firebase.debugSignOut(): Promise<void>` (default-exported `FirebaseServices` instance, re-exported as `Firebase` from `src/services/firebase/index.tsx`); `ApiServices.debugForceDeleteAccount(): Promise<unknown>` (the `Services.tsx` default-exported instance, however it's already imported elsewhere in the codebase — check the existing import alias used for `deleteAccount`'s call sites if unsure, but `ApiServices` is the conventional name used in this plan's Task 2).
+- Produces (for Task 2): `APP_DEBUG: string` importable from `@env`; `Firebase.debugSignOut(): Promise<void>` (default-exported `FirebaseServices` instance, re-exported as `Firebase` from `src/services/firebase/index.tsx`); `ApiServices.debugForceDeleteAccount(): Promise<unknown>` (the `Services.tsx` default-exported instance).
 
 - [ ] **Step 1: Add the `APP_DEBUG` type declaration**
 
@@ -157,17 +159,17 @@ endpoint into Services.tsx."
 
 ---
 
-### Task 2: Floating draggable button, App.tsx mount, restart dependency
+### Task 2: Debug logic module, Settings screen entry, restart dependency
 
 **Files:**
 
-- Create: `src/components/DebugDeleteButton.tsx`
-- Modify: `App.tsx`
+- Create: `src/services/debug/debugDeleteAccountAndRestart.ts`
+- Modify: `src/screens/settings/Settings.tsx`
 - Modify: `package.json` (new dependency, via `yarn add`, not hand-edited)
 
 **Interfaces:**
 
-- Consumes: `APP_DEBUG` from `@env`, `ApiServices.debugForceDeleteAccount(): Promise<unknown>`, `Firebase.debugSignOut(): Promise<void>`, `StorageManager.deleteAll(): Promise<void>` (existing, unchanged) — all from Task 1 / pre-existing code.
+- Consumes: `APP_DEBUG` from `@env`, `ApiServices.debugForceDeleteAccount(): Promise<unknown>`, `Firebase.debugSignOut(): Promise<void>`, `StorageManager.deleteAll(): Promise<void>` (existing, unchanged) — all from Task 1 / pre-existing code. Also consumes the existing `SettingsMenuItem` type (`{iconName: string; name: string; onPress: () => void; showCondition?: () => boolean}`) and `settingsSections` array already defined in `Settings.tsx`.
 - Produces: nothing consumed elsewhere — this is the top of the feature's call graph.
 
 - [ ] **Step 1: Add the restart dependency**
@@ -178,30 +180,19 @@ Then, since this project targets iOS too:
 
 Run (macOS only — skip if not on macOS): `cd ios && bundle exec pod install && cd ..`
 
-- [ ] **Step 2: Create the component**
+- [ ] **Step 2: Create the debug logic module**
 
-Create `src/components/DebugDeleteButton.tsx`:
+Create `src/services/debug/debugDeleteAccountAndRestart.ts`:
 
 ```typescript
-import React from 'react';
-import { Alert, Dimensions, StyleSheet, Text } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import { Alert } from 'react-native';
 import RNRestart from 'react-native-restart';
-import { APP_DEBUG } from '@env';
 
-import { Firebase } from '../services/firebase';
-import ApiServices from '../services/api/Services';
-import { StorageManager } from '../services/storageManager';
+import ApiServices from '../api/Services';
+import { Firebase } from '../firebase';
+import { StorageManager } from '../storageManager';
 
-const BUTTON_SIZE = 56;
-const { width, height } = Dimensions.get('window');
-
-const handleDeleteAndRestart = async (): Promise<void> => {
+const deleteAccountAndRestart = async (): Promise<void> => {
   try {
     await ApiServices.debugForceDeleteAccount();
   } catch (error) {
@@ -223,7 +214,7 @@ const handleDeleteAndRestart = async (): Promise<void> => {
   RNRestart.restart();
 };
 
-const confirmDeleteAndRestart = (): void => {
+export const confirmDebugDeleteAccountAndRestart = (): void => {
   Alert.alert(
     'Delete account?',
     'This permanently deletes your account and restarts the app. This cannot be undone.',
@@ -233,106 +224,49 @@ const confirmDeleteAndRestart = (): void => {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          handleDeleteAndRestart();
+          deleteAccountAndRestart();
         },
       },
     ]
   );
 };
-
-const DebugDeleteButton = (): React.JSX.Element | null => {
-  const translateX = useSharedValue(width - BUTTON_SIZE - 16);
-  const translateY = useSharedValue(height - BUTTON_SIZE - 120);
-  const startX = useSharedValue(0);
-  const startY = useSharedValue(0);
-
-  const panGesture = Gesture.Pan()
-    .onStart(() => {
-      startX.value = translateX.value;
-      startY.value = translateY.value;
-    })
-    .onUpdate((event) => {
-      translateX.value = startX.value + event.translationX;
-      translateY.value = startY.value + event.translationY;
-    });
-
-  const tapGesture = Gesture.Tap().onEnd(() => {
-    runOnJS(confirmDeleteAndRestart)();
-  });
-
-  const composedGesture = Gesture.Race(panGesture, tapGesture);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-    ],
-  }));
-
-  if (APP_DEBUG !== 'true') {
-    return null;
-  }
-
-  return (
-    <GestureDetector gesture={composedGesture}>
-      <Animated.View style={[styles.button, animatedStyle]}>
-        <Text style={styles.icon}>⚠</Text>
-      </Animated.View>
-    </GestureDetector>
-  );
-};
-
-const styles = StyleSheet.create({
-  button: {
-    position: 'absolute',
-    width: BUTTON_SIZE,
-    height: BUTTON_SIZE,
-    borderRadius: BUTTON_SIZE / 2,
-    backgroundColor: '#d32f2f',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999,
-    elevation: 9999,
-  },
-  icon: {
-    fontSize: 24,
-    color: '#ffffff',
-  },
-});
-
-export default DebugDeleteButton;
 ```
 
-- [ ] **Step 3: Mount it in `App.tsx`**
+- [ ] **Step 3: Wire it into the Settings screen**
 
-Add the import near the other local imports (after `import { Initialization } from './src/initialization';`):
+In `src/screens/settings/Settings.tsx`, add the import alongside the other local imports (after the `useGlobalContext` import):
 
 ```typescript
-import DebugDeleteButton from './src/components/DebugDeleteButton';
+import { APP_DEBUG } from '@env';
+
+import { confirmDebugDeleteAccountAndRestart } from '../../services/debug/debugDeleteAccountAndRestart';
 ```
 
-Change:
+Add a new callback next to the other `on*Press` callbacks (e.g. after `onNeedHelpPress`):
 
 ```typescript
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <MenuProvider>
-        <Initialization />
-        <FlashMessage position="top" statusBarHeight={top} />
-      </MenuProvider>
-    </GestureHandlerRootView>
+const onDebugDeleteAccountPress = useCallback(() => {
+  confirmDebugDeleteAccountAndRestart();
+}, []);
 ```
 
-to:
+Add a new section to the `settingsSections` array — append it as the last entry, after the `supportSection` entry, immediately before the array's closing `],`:
 
 ```typescript
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <MenuProvider>
-        <Initialization />
-        <FlashMessage position="top" statusBarHeight={top} />
-        <DebugDeleteButton />
-      </MenuProvider>
-    </GestureHandlerRootView>
+      {
+        title: 'Debug',
+        data: [
+          {
+            iconName: 'trash-outline',
+            name: 'Delete Test Account & Restart',
+            onPress: onDebugDeleteAccountPress,
+            showCondition: () => APP_DEBUG === 'true',
+          },
+        ],
+      },
 ```
+
+Add `onDebugDeleteAccountPress` to the `useMemo` dependency array that already lists `onBasicInfoPress, onLocationPress, ...` (the one immediately below the `settingsSections` array definition).
 
 - [ ] **Step 4: Type-check**
 
@@ -345,31 +279,31 @@ Expected: clean (no new errors).
 This step cannot be skipped or replaced with a static check; it is the only way to confirm the native restart module actually works in this project's build.
 
 1. Run the app (`yarn android` or `yarn ios`) with `APP_DEBUG=true` in `.env` (already set).
-2. Confirm the red circular button appears, floating over both a pre-login screen and a logged-in screen.
-3. Drag it to a different corner — confirm it follows your finger and stays where you drop it.
-4. Tap it (without dragging) — confirm the confirm dialog appears (and that a drag doesn't also fire the dialog).
-5. Tap "Delete" — confirm the app restarts (returns to the splash/initial screen) within a few seconds, with no stale logged-in state.
-6. **If step 5 does not restart the app** (e.g. a "native module not found" error, or nothing happens): this confirms the compatibility risk noted in Global Constraints. Swap the dependency: `yarn remove react-native-restart && yarn add react-native-restart-newarch`, change the import in `src/components/DebugDeleteButton.tsx` from `import RNRestart from 'react-native-restart';` to `import RNRestart from 'react-native-restart-newarch';` (the call site, `RNRestart.restart()`, is unchanged), rebuild, and repeat steps 1-5.
-7. Confirm server-side: the account used in step 5 no longer exists (check the admin panel or query the `users` table for that phone/email — it should be gone, not just soft-deleted).
+2. Log in, navigate to Settings, confirm a "Debug" section with a "Delete Test Account & Restart" row appears at the bottom.
+3. Tap it — confirm the confirm dialog appears.
+4. Tap "Delete" — confirm the app restarts (returns to the splash/initial screen) within a few seconds, with no stale logged-in state.
+5. **If step 4 does not restart the app** (e.g. a "native module not found" error, or nothing happens): this confirms the compatibility risk noted in Global Constraints. Swap the dependency: `yarn remove react-native-restart && yarn add react-native-restart-newarch`, change the import in `src/services/debug/debugDeleteAccountAndRestart.ts` from `import RNRestart from 'react-native-restart';` to `import RNRestart from 'react-native-restart-newarch';` (the call site, `RNRestart.restart()`, is unchanged), rebuild, and repeat steps 1-4.
+6. Confirm server-side: the account used in step 4 no longer exists (check the admin panel or query the `users` table for that phone/email — it should be gone, not just soft-deleted).
+7. Confirm with `APP_DEBUG` unset or `false`: the "Debug" section does not appear in Settings at all.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/components/DebugDeleteButton.tsx App.tsx package.json yarn.lock
-git commit -m "feat(debug): add floating draggable delete-account-and-restart button
+git add src/services/debug/debugDeleteAccountAndRestart.ts src/screens/settings/Settings.tsx package.json yarn.lock
+git commit -m "feat(debug): add Settings-screen delete-account-and-restart tool
 
-Debug-only (APP_DEBUG-gated) floating button: drag to reposition, tap
-to confirm-and-permanently-delete the current account, then wipe local
-storage, sign out of Firebase, and restart the app for fast re-testing
-of the signup flow."
+Debug-only (APP_DEBUG-gated) row in Settings: tap to confirm, then
+permanently delete the current account, wipe local storage, sign out
+of Firebase, and restart the app for fast re-testing of the signup
+flow."
 ```
 
-If Step 5.6's fallback was needed, `git add` should include whichever restart package ended up in `package.json`/`yarn.lock`, and the commit message should note the swap and why.
+If Step 5.5's fallback was needed, `git add` should include whichever restart package ended up in `package.json`/`yarn.lock`, and the commit message should note the swap and why.
 
 ---
 
 ## Self-Review Notes
 
-- **Spec coverage:** env plumbing, Firebase sign-out, API call → Task 1. Component (drag + tap + confirm), App.tsx mount, restart dependency, manual QA → Task 2. The spec's i18n and automated-test exceptions are captured in Global Constraints, not a code task.
+- **Spec coverage:** env plumbing, Firebase sign-out, API call → Task 1. Debug logic module, Settings entry, restart dependency, manual QA → Task 2. The spec's i18n and automated-test exceptions are captured in Global Constraints, not a code task.
 - **Placeholder scan:** no TODO/TBD; all steps show literal code and exact commands. The restart-library fallback is an explicit, concrete swap (exact commands and exact import-line change), not a vague "handle if it doesn't work."
-- **Type consistency:** `Firebase.debugSignOut()`, `ApiServices.debugForceDeleteAccount()`, and `StorageManager.deleteAll()` are called in Task 2 exactly as defined/existing in Task 1 and pre-existing code.
+- **Type consistency:** `Firebase.debugSignOut()`, `ApiServices.debugForceDeleteAccount()`, and `StorageManager.deleteAll()` are called in Task 2 exactly as defined/existing in Task 1 and pre-existing code. `confirmDebugDeleteAccountAndRestart(): void` matches its one call site in `Settings.tsx`'s new `onDebugDeleteAccountPress` callback. The new `SettingsMenuItem` object literal matches the existing type shape (`iconName`, `name`, `onPress`, `showCondition`) exactly, and `showCondition`'s presence is what the existing `visibleSections` filter already checks.

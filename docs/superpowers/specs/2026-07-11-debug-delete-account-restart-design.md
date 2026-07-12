@@ -10,20 +10,25 @@ Manually testing the signup flow repeatedly requires deleting the test account t
 
 ## Goals
 
-- A single floating, draggable icon, visible everywhere in the app (including pre-login/signup screens), gated on a mobile `APP_DEBUG` flag.
+- A single debug-only row in the existing Settings screen, gated on a mobile `APP_DEBUG` flag.
 - Tapping it, after a confirm dialog, permanently (hard) deletes the current user's account server-side, clears all local app state, and restarts the app so it lands back on a fresh signup flow.
+
+## Revision history
+
+- 2026-07-11 (original): floating, draggable icon visible everywhere (including pre-login), gated on `APP_DEBUG`.
+- 2026-07-11 (revised): replaced with a row in the Settings screen, gated the same way. Settings is a logged-in-only screen, so "everywhere including pre-login" no longer applies — this tool is only reachable once a test account is logged in, which matches its actual use (wiping the _current_ account, which requires being logged into it). Dropped `react-native-gesture-handler`/`react-native-reanimated` drag logic and the `App.tsx` mount entirely — the existing `SettingsMenuItem.showCondition` mechanism already gates rows conditionally, so this is a plain list item, not a new interaction paradigm.
 
 ## Non-goals (YAGNI)
 
 - No audit/reconciliation of accounts already deleted the old (soft-delete) way — unrelated.
-- No submenu or multiple debug actions — one icon, one action, per the original ask.
+- No submenu or multiple debug actions — one row, one action, per the original ask.
 - No i18n coverage for this feature's UI text (confirm dialog copy). This is an internal debug tool never shown to a real user; translating it would add translation-file upkeep with no product value. Documented here as a deliberate, scoped exception to the "every user-visible string goes through `t()`" convention in `app-old/CLAUDE.md`.
 - No automated mobile test — consistent with this repo's current state (`yarn test` is broken; see `app-old/CLAUDE.md` Known Issues). Verified by manual QA instead.
 
 ## Decisions (confirmed with user)
 
 1. **Delete scope:** full backend hard-delete of the user row and related data (not the existing soft-delete OTP flow).
-2. **Icon visibility:** everywhere, including pre-login/signup screens.
+2. **Location/visibility:** a row in the existing Settings screen (`src/screens/settings/Settings.tsx`), not a floating icon — visible only when logged in (Settings is a post-login screen), which is the only time the action is meaningful anyway.
 3. **Confirmation:** a native confirm `Alert` before the destructive action (one extra tap, not a full re-auth step).
 4. **Gating mechanism:** a new mobile-only `APP_DEBUG` env flag (`app-old/.env`, already set to `true` by the user), read via `react-native-dotenv` / `@env` — independent of `__DEV__` and independent of the backend's own `APP_DEBUG`.
 5. **Backend safety net:** the new hard-delete endpoint additionally gates on Laravel's own `config('app.debug')` (already `true` in `admin/.env` for this environment), so the endpoint 404s in any environment where the backend's `APP_DEBUG` is `false` — regardless of what a given mobile build has baked in for its own `APP_DEBUG`.
@@ -58,17 +63,31 @@ New `AuthController::forceDeleteAccountDebug()`:
 
 - `app-old/.env` already has `APP_DEBUG=true` (user-added). Add the missing type declaration to `src/types/env.d.ts`: `export const APP_DEBUG: string;`.
 
-### Component
+### Settings entry
 
-New `src/components/DebugDeleteButton.tsx` (flat file, matching the existing convention in `src/components/` — e.g. `BlurView.tsx`, `Container.tsx`, `Header.tsx`):
+`src/screens/settings/Settings.tsx` already renders `SettingsSection[]` (each `{title, data: SettingsMenuItem[]}`) through a `SettingsButton` per item, and `SettingsMenuItem` already has an optional `showCondition?: () => boolean` gate (currently used, commented out, for a gender-based guardian entry) — so no new conditional-rendering mechanism is needed.
 
-- A small circular floating button, draggable anywhere on screen via `react-native-gesture-handler`'s `Gesture.Pan()` + `react-native-reanimated`'s `useSharedValue`/`useAnimatedStyle` (both already installed — no new dependency for the drag itself). Initial position: near the bottom-right corner.
-- A single tap **is** the action — no submenu.
-- The whole component renders `null` unless `APP_DEBUG === 'true'` (from `@env`).
+Add one new section to the `settingsSections` array:
 
-### Mount point
+```typescript
+{
+  title: 'Debug',
+  data: [
+    {
+      iconName: 'trash-outline',
+      name: 'Delete Test Account & Restart',
+      onPress: onDebugDeleteAccountPress,
+      showCondition: () => APP_DEBUG === 'true',
+    },
+  ],
+},
+```
 
-`App.tsx`, inside `GestureHandlerRootView` → `MenuProvider`, as a sibling to the existing `<FlashMessage>` — gesture context is already available there.
+The existing `visibleSections` filter (`.filter((section) => section.data.length > 0)`) already drops a section whose only item's `showCondition` returns false, so the whole "Debug" section disappears automatically outside debug builds — no extra logic needed. The row's label is a plain hardcoded string, not `t()`/`LanguageKeys` (see Non-goals — deliberate i18n exception for this debug-only text).
+
+### Debug delete/restart logic module
+
+New `src/services/debug/debugDeleteAccountAndRestart.ts`, exporting one function, `confirmDebugDeleteAccountAndRestart(): void`, containing the confirm `Alert` + orchestration described in Action Flow below. `Settings.tsx`'s `onDebugDeleteAccountPress` callback just calls it — kept out of `Settings.tsx` itself so that already-sizable file gains one import and one callback, not ~30 lines of orchestration logic.
 
 ### New dependency
 
@@ -86,14 +105,14 @@ On tap → a plain (non-translated, per the Non-goals note) confirm `Alert`: "De
 
 ### Mobile verification
 
-No automated test (see Non-goals). Manual QA: drag the icon around, confirm it doesn't block other UI, tap it, confirm the dialog, confirm on the backend that the user row and its relations are gone, confirm the app restarts straight into the signup/auth flow with no stale session.
+No automated test (see Non-goals). Manual QA: with `APP_DEBUG=true`, open Settings and confirm the "Debug" section/row appears; tap it, confirm the dialog; confirm on the backend that the user row and its relations are gone; confirm the app restarts straight into the signup/auth flow with no stale session.
 
 ---
 
 ## Rollout order
 
 1. **Admin backend** (additive: new route + controller method, no schema change, reuses an existing repository method). Safe to ship ahead of the app.
-2. **Mobile** (env plumbing, component, App.tsx mount, new dependency, service call, local-state wipe + restart).
+2. **Mobile** (env plumbing, debug logic module, Settings.tsx entry, new dependency, service call, local-state wipe + restart).
 
 ## Open implementation notes
 
