@@ -4,6 +4,7 @@ import FlashMessage from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MenuProvider } from 'react-native-popup-menu';
 
+import { REVENUECAT_ENTITLEMENT_ID } from './src/global/Entitlements';
 import { Initialization } from './src/initialization';
 import { usePremiumStore } from './src/stores';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
@@ -60,7 +61,7 @@ const AppContent = (): JSX.Element => {
     // Real-time listener
     const listener = (ci: CustomerInfo) => {
       const isPremiumFromRevenueCat =
-        ci.entitlements.active['2026-packages']?.isActive === true;
+        ci.entitlements.active[REVENUECAT_ENTITLEMENT_ID]?.isActive === true;
       usePremiumStore.setState({
         premium: isPremiumFromRevenueCat,
         loaded: true,

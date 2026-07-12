@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useRef, useState } from 'react';
 
 import { recordSentMessage } from '@/services/rating/ratingEngagement';
 
@@ -43,6 +44,7 @@ export type SendMessageInput = string | AudioSendInput;
 
 type UseSendMessageReturn = {
   onSendPress: (input: SendMessageInput) => Promise<SendMessageResult>;
+  isSending: boolean;
 };
 
 export function useSendMessage({
@@ -56,7 +58,21 @@ export function useSendMessage({
   isBlockedByYou,
   setInputMessage,
 }: UseSendMessageParams): UseSendMessageReturn {
+  const [isSending, setIsSending] = useState(false);
+  // Guards against a double-tap/double-Enter firing two overlapping sends
+  // before the first request resolves (isSending state updates are async
+  // and can't be read synchronously between the two calls).
+  const isSendingRef = useRef(false);
+
   const sendMessage = async (input: SendMessageInput): Promise<boolean> => {
+    // Preserve the typed text so it can be restored if the send fails —
+    // previously it was cleared unconditionally and lost on any error.
+    const originalText = typeof input === 'string' ? input : null;
+    const restoreInputIfText = () => {
+      if (originalText !== null) {
+        setInputMessage(originalText);
+      }
+    };
     setInputMessage('');
 
     // New conversation - check if conversationData is null/undefined or doesn't have an id
@@ -91,6 +107,7 @@ export function useSendMessage({
         }
         return true;
       } catch (error: unknown) {
+        restoreInputIfText();
         const errorMessage = error as string;
         // Check if error is about chat credits
         if (
@@ -109,6 +126,7 @@ export function useSendMessage({
 
     // Existing conversation - send message
     if (!conversationId) {
+      restoreInputIfText();
       flashErrorMessage('Conversation ID is missing');
       return false;
     }
@@ -116,6 +134,7 @@ export function useSendMessage({
     try {
       const conversationIdNum = parseInt(conversationId, 10);
       if (isNaN(conversationIdNum)) {
+        restoreInputIfText();
         flashErrorMessage('Invalid conversation ID');
         return false;
       }
@@ -149,6 +168,7 @@ export function useSendMessage({
       });
       return true;
     } catch (error: unknown) {
+      restoreInputIfText();
       flashErrorMessage(error as string);
       return false;
     }
@@ -161,13 +181,26 @@ export function useSendMessage({
       return { type: 'blockedByYou' };
     }
 
-    const didSend = await sendMessage(input);
-    if (didSend) {
-      recordSentMessage();
-      return { type: 'sent' };
+    // A double-tap/double-Enter before the first request resolves would
+    // otherwise create two identical messages server-side (they get distinct
+    // IDs, so client-side id-based dedup never catches it).
+    if (isSendingRef.current) {
+      return { type: 'failed' };
     }
-    return { type: 'failed' };
+    isSendingRef.current = true;
+    setIsSending(true);
+    try {
+      const didSend = await sendMessage(input);
+      if (didSend) {
+        recordSentMessage();
+        return { type: 'sent' };
+      }
+      return { type: 'failed' };
+    } finally {
+      isSendingRef.current = false;
+      setIsSending(false);
+    }
   };
 
-  return { onSendPress };
+  return { onSendPress, isSending };
 }

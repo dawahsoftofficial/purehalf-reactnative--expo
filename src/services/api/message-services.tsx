@@ -151,6 +151,7 @@ class MessageServices {
     return new Promise<Message[]>((resolve, reject) => {
       const queryParams = {
         per_page: params?.per_page || 20,
+        ...(params?.page ? { page: params.page } : {}),
       };
 
       Api.get(EndPoints.getConversationMessages(conversationId), {

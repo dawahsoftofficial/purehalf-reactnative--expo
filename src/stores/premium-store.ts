@@ -2,7 +2,9 @@ import moment from 'moment';
 import Purchases, { type CustomerInfo } from 'react-native-purchases';
 import { create } from 'zustand';
 
-const ENTITLEMENT_ID = '2026-packages';
+import { REVENUECAT_ENTITLEMENT_ID } from '../global/Entitlements';
+
+const ENTITLEMENT_ID = REVENUECAT_ENTITLEMENT_ID;
 
 type PremiumState = {
   premium: boolean; // RevenueCat premium status

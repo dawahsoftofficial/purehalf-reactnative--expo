@@ -110,6 +110,7 @@ export type GetConversationsListResponse = {
  */
 export type GetConversationMessagesParams = {
   per_page?: number;
+  page?: number;
 };
 
 /**
