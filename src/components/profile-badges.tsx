@@ -267,26 +267,7 @@ export function ProfileBadges({
       >
         {badges.map((badge, index) => (
           <View key={index} style={Styles.iconOnlyBadge}>
-            {badge.iconName === 'diamond' ? (
-              <View
-                style={[
-                  Styles.iconOnlyPremiumBadge,
-                  {
-                    width: badgeIconSize,
-                    height: badgeIconSize,
-                    borderRadius: badgeIconSize / 2,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name="diamond"
-                  color={Colors.surface}
-                  size={badgeIconSize * 0.525}
-                />
-              </View>
-            ) : (
-              badge.icon
-            )}
+            {badge.icon}
           </View>
         ))}
       </View>
@@ -317,16 +298,6 @@ const Styles = StyleSheet.create({
     gap: hp(0.8),
   },
   iconOnlyBadge: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconOnlyPremiumBadge: {
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    backgroundColor: Colors.primary,
-    borderWidth: 1.5,
-    borderColor: Colors.whiteRGBA30,
     alignItems: 'center',
     justifyContent: 'center',
   },
