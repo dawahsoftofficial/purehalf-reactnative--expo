@@ -1,3 +1,4 @@
+import { APP_DEBUG } from '@env';
 import React, { memo, useCallback, useMemo, useState } from 'react';
 import { PermissionsAndroid } from 'react-native';
 import { Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
@@ -16,6 +17,7 @@ import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { useGlobalContext } from '../../services';
+import { confirmDebugDeleteAccountAndRestart } from '../../services/debug/debugDeleteAccountAndRestart';
 
 type SettingsProps = {
   navigation: {
@@ -155,6 +157,10 @@ function Settings(props: SettingsProps) {
     navigate('ContactSupport');
   }, [navigate]);
 
+  const onDebugDeleteAccountPress = useCallback(() => {
+    confirmDebugDeleteAccountAndRestart();
+  }, []);
+
   const settingsSections = useMemo<SettingsSection[]>(
     () => [
       {
@@ -223,6 +229,17 @@ function Settings(props: SettingsProps) {
           },
         ],
       },
+      {
+        title: 'Debug',
+        data: [
+          {
+            iconName: 'trash-outline',
+            name: 'Delete Test Account & Restart',
+            onPress: onDebugDeleteAccountPress,
+            showCondition: () => APP_DEBUG === 'true',
+          },
+        ],
+      },
     ],
     [
       onBasicInfoPress,
@@ -235,6 +252,7 @@ function Settings(props: SettingsProps) {
       onRateAppPress,
       onHelpAndSupportPress,
       onNeedHelpPress,
+      onDebugDeleteAccountPress,
       currentUser?.gender,
     ]
   );
