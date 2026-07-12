@@ -114,6 +114,7 @@ export type CurrentUserDetail = {
   banned_at: string | null;
   purpose_of_leaving: string | null;
   membership_status: number | null;
+  membership_priority: number;
   membership_expiry: string | null;
   membership_product_data: unknown | null;
   search_visibility: number;

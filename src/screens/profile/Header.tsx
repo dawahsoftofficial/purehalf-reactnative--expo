@@ -51,8 +51,7 @@ import {
 import messageServices from '../../services/api/message-services';
 import type { Conversation as ApiConversation } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
-import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
-import { usePremiumStore, useSettingsStore } from '../../stores';
+import { useSettingsStore } from '../../stores';
 import GiftBadge from './components/gift-badge';
 import GiftClaimModal from './components/gift-claim-modal';
 import { buildUpdatedUserAfterGiftClaim } from './gift-claim-outcome';
@@ -313,7 +312,6 @@ const Header = ({
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { t } = useTranslation();
-  const isPremium = usePremiumStore((state) => state.isPremium);
   const [userConversation, setUserConversation] = useState<Conversation | null>(
     null
   );
@@ -433,45 +431,6 @@ const Header = ({
   }, [chatUserData, navigation, userConversation]);
 
   const onMessagePress = useCallback(async () => {
-    // Collect chat credits for premium members (once per 24 hours)
-    const isUserPremium = isPremium();
-    const canCollect = canCollectChatCredits(
-      currentUser?.last_chat_credit_collected_at
-    );
-    console.log(
-      '[Header.onMessagePress] Premium check:',
-      isUserPremium,
-      'Can collect:',
-      canCollect
-    );
-
-    if (isUserPremium && canCollect) {
-      try {
-        await ApiServices.collectChatCredits();
-        // Refresh user data to get updated chat credits and last_chat_credit_collected_at
-        // try {
-        //   const refreshedUser =
-        //     (await ApiServices.getCurrentUserDetail()) as unknown as User;
-        //   updateCurrentUser(refreshedUser);
-        //   await StorageManager.setData(
-        //     StorageManager.storageKeys.USER,
-        //     refreshedUser
-        //   );
-        // } catch (refreshError) {
-        //   console.error(
-        //     '[Header.onMessagePress] Error refreshing user data after collect:',
-        //     refreshError
-        //   );
-        // }
-      } catch (error) {
-        // Silently handle error - don't block user from messaging
-        console.error(
-          '[Header.onMessagePress] Error collecting chat credits:',
-          error
-        );
-      }
-    }
-
     // Check if this is a new conversation (no existing conversation)
     // userConversation can be Conversation (old) or ApiConversation (new) type
     const conversationId = userConversation
@@ -527,13 +486,7 @@ const Header = ({
 
     // User has sufficient credits or it's an existing conversation, proceed to chat
     navigateToChat();
-  }, [
-    currentUser,
-    navigateToChat,
-    updateCurrentUser,
-    userConversation,
-    isPremium,
-  ]);
+  }, [currentUser, navigateToChat, updateCurrentUser, userConversation]);
 
   const Rtl = CheckRtl();
 

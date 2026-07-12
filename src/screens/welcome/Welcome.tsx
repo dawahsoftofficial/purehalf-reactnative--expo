@@ -48,6 +48,9 @@ import Wiggle from '../profile/components/wiggle';
 import { buildUpdatedUserAfterGiftClaim } from '../profile/gift-claim-outcome';
 import { computeGiftStatus } from '../profile/gift-status';
 import { RecommendationHeart } from './components';
+import DailyVipRewardModal, {
+  type DailyVipReward,
+} from './components/daily-vip-reward-modal';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
@@ -82,6 +85,7 @@ const sortByCompletion = (
 
 // Module-level flag to prevent multiple initial fetches across remounts
 let hasInitializedUsers = false;
+let dailyRewardPromptedFor: string | null = null;
 
 const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const { t } = useTranslation();
@@ -248,6 +252,8 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     [currentUser, giftThreshold]
   );
   const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [dailyReward, setDailyReward] = useState<DailyVipReward | null>(null);
+  const [dailyRewardVisible, setDailyRewardVisible] = useState(false);
   const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
 
@@ -277,6 +283,54 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       updateCurrentUser(updatedUser);
     },
     [currentUser, setData, storageKeys.USER, updateCurrentUser]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!currentUser?.id) return;
+
+      let active = true;
+      ApiServices.getDailyChatCreditReward()
+        .then((result: any) => {
+          if (!active || !result?.available) return;
+
+          const promptKey = `${currentUser.id}:${currentUser.last_chat_credit_collected_at ?? 'never'}:${result.eligible_days}`;
+          setDailyReward(result as DailyVipReward);
+          if (dailyRewardPromptedFor !== promptKey) {
+            dailyRewardPromptedFor = promptKey;
+            setRecommendationModal(false);
+            setDailyRewardVisible(true);
+          }
+        })
+        .catch(() => {
+          // A reward popup is celebratory, not a reason to block the home feed.
+        });
+
+      return () => {
+        active = false;
+      };
+    }, [currentUser?.id, currentUser?.last_chat_credit_collected_at])
+  );
+
+  const claimDailyReward = useCallback(
+    () =>
+      ApiServices.collectChatCredits() as unknown as Promise<{
+        user: any;
+        reward: DailyVipReward;
+      }>,
+    []
+  );
+
+  const onDailyRewardClaimed = useCallback(
+    (result: { user: any; reward: DailyVipReward }) => {
+      setDailyRewardVisible(false);
+      setDailyReward(null);
+      if (result.user) {
+        updateCurrentUser(result.user);
+        setData(storageKeys.USER, result.user);
+      }
+    },
+    [setData, storageKeys.USER, updateCurrentUser]
   );
 
   // Check if recommendation modal should be shown based on daily
@@ -848,8 +902,17 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         onClaimed={onGiftClaimed}
         claim={claimGift}
       />
+      <DailyVipRewardModal
+        visible={dailyRewardVisible}
+        reward={dailyReward}
+        onClose={() => setDailyRewardVisible(false)}
+        claim={claimDailyReward}
+        onClaimed={onDailyRewardClaimed}
+      />
       {/* <RecommendationButton onPress={onRecommendationPress} /> */}
-      {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
+      {recommendationModal && !dailyRewardVisible ? (
+        <Swiper onPress={onRecommendationPress} />
+      ) : null}
       {photo_request_count && photo_request_count >= 1 ? (
         <PrivatePhotoAccessBtn
           navigation={navigation}

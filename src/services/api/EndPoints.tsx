@@ -72,6 +72,7 @@ const EndPoints = {
   markMessageDelivered: (messageId: number) =>
     `/auth/conversations/messages/${messageId}/delivered`,
   collectChatCredit: '/auth/collect/chat-credit',
+  dailyChatCreditReward: '/auth/chat-credit/daily-reward',
 
   // Notification center endpoints
   notifications: '/auth/notifications',

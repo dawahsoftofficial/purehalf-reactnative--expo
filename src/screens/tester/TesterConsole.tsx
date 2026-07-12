@@ -1,8 +1,8 @@
 import { CommonActions } from '@react-navigation/native';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
-  Platform,
+  DevSettings,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,7 +11,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import DeviceInfo from 'react-native-device-info';
 
 import { Container, Header } from '../../components';
 import { Colors } from '../../res';
@@ -20,7 +19,6 @@ import {
   flashSuccessMessage,
   StorageManager,
   TesterApi,
-  TesterDiagnostics,
   useGlobalContext,
 } from '../../services';
 import { useUserStatsStore } from '../../stores';
@@ -49,21 +47,158 @@ const Button = ({
   </TouchableOpacity>
 );
 
-export default function TesterConsole({ navigation, route }: any) {
+const VIP_PACKAGES = [
+  {
+    name: 'Plus Starter',
+    badge: 'Starter',
+    priority: 'Low',
+    bonusChats: 10,
+    dailyChats: 3,
+    productId: 'plus_starter',
+    benefits: [
+      'See who liked you',
+      'See profile visitors from the last 7 days',
+      'Basic chat filters',
+      'Enhanced visibility above free members',
+    ],
+  },
+  {
+    name: 'Pro Recommended',
+    badge: 'Recommended',
+    priority: 'Medium',
+    bonusChats: 15,
+    dailyChats: 6,
+    productId: 'pro_recommended',
+    benefits: [
+      'See and sort everyone who liked you',
+      'See profile visitors from the last 30 days',
+      'Advanced chat filters',
+      'Higher visibility than Starter and free members',
+    ],
+  },
+  {
+    name: 'Elite Highest Visibility',
+    badge: 'VIP / Maximum visibility',
+    priority: 'High',
+    bonusChats: 30,
+    dailyChats: 12,
+    productId: 'elite_highest_visibility',
+    benefits: [
+      'Full likes and profile-views access',
+      'Advanced chat filters',
+      'Highest membership search priority',
+      'Maximum visibility above Pro, Starter, and free members',
+    ],
+  },
+] as const;
+
+function VipPackagesTab() {
+  return (
+    <View style={styles.packageList}>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>Current VIP package behavior</Text>
+        <Text style={styles.infoText}>
+          Static tester reference for the three packages currently shown on the
+          membership paywall. Search priority is applied only while membership
+          is active.
+        </Text>
+      </View>
+
+      {VIP_PACKAGES.map((plan, index) => (
+        <View
+          key={plan.productId}
+          style={[
+            styles.packageCard,
+            index === VIP_PACKAGES.length - 1 && styles.elitePackageCard,
+          ]}
+        >
+          <View style={styles.packageHeader}>
+            <View style={styles.packageTitleWrap}>
+              <Text style={styles.packageName}>{plan.name}</Text>
+              <Text style={styles.packageId}>{plan.productId}</Text>
+            </View>
+            <View style={styles.packageBadge}>
+              <Text style={styles.packageBadgeText}>{plan.badge}</Text>
+            </View>
+          </View>
+
+          <View style={styles.packageStats}>
+            <View style={styles.packageStat}>
+              <Text style={styles.packageStatValue}>+{plan.bonusChats}</Text>
+              <Text style={styles.packageStatLabel}>Chats on purchase</Text>
+            </View>
+            <View style={styles.packageStat}>
+              <Text style={styles.packageStatValue}>{plan.dailyChats}</Text>
+              <Text style={styles.packageStatLabel}>Chats every day</Text>
+            </View>
+            <View style={styles.packageStat}>
+              <Text style={styles.packageStatValue}>{plan.priority}</Text>
+              <Text style={styles.packageStatLabel}>Search priority</Text>
+            </View>
+          </View>
+
+          <Text style={styles.includesTitle}>What to test</Text>
+          {plan.benefits.map((benefit) => (
+            <View key={benefit} style={styles.benefitRow}>
+              <Text style={styles.benefitCheck}>✓</Text>
+              <Text style={styles.benefitText}>{benefit}</Text>
+            </View>
+          ))}
+        </View>
+      ))}
+
+      <View style={styles.testNote}>
+        <Text style={styles.testNoteTitle}>Daily gift behavior</Text>
+        <Text style={styles.testNoteText}>
+          Each package earns its listed daily chats after every full 24 hours.
+          Missed days accumulate. Home should show the VIP daily-gift popup with
+          every waiting day and the combined chat total before collection.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function TesterTabs({
+  active,
+  onChange,
+}: {
+  active: 'actions' | 'vip';
+  onChange: (tab: 'actions' | 'vip') => void;
+}) {
+  return (
+    <View style={styles.tabs}>
+      {(
+        [
+          ['actions', 'Test actions'],
+          ['vip', 'VIP packages'],
+        ] as const
+      ).map(([value, label]) => (
+        <TouchableOpacity
+          key={value}
+          style={[styles.tab, active === value && styles.tabActive]}
+          onPress={() => onChange(value)}
+        >
+          <Text
+            style={[styles.tabText, active === value && styles.tabTextActive]}
+          >
+            {label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+export default function TesterConsole({ navigation }: any) {
   const { currentUser, updateCurrentUser } = useGlobalContext();
-  const sourceScreenName = route.params?.sourceScreenName || 'Unknown';
-  const screenshotUri = route.params?.screenshotUri as string | null;
   const [busy, setBusy] = useState(false);
   const [gender, setGender] = useState(currentUser?.gender || 'male');
   const [dob, setDob] = useState(currentUser?.date_of_birth || '');
   const [creditAmount, setCreditAmount] = useState('50');
-  const [notes, setNotes] = useState('');
+  const [activeTab, setActiveTab] = useState<'actions' | 'vip'>('actions');
   const setUserStats = useUserStatsStore((state) => state.setUserStats);
   const userStats = useUserStatsStore();
-  const calls = useMemo(
-    () => TesterDiagnostics.forScreen(sourceScreenName),
-    [sourceScreenName]
-  );
 
   useEffect(() => {
     TesterApi.status().catch(() => {
@@ -93,44 +228,6 @@ export default function TesterConsole({ navigation, route }: any) {
     }
   };
 
-  const submitNote = async () => {
-    setBusy(true);
-    try {
-      const form = new FormData();
-      form.append('screen_name', sourceScreenName);
-      form.append('notes', notes);
-      form.append('api_calls', JSON.stringify(calls));
-      form.append(
-        'device_context',
-        JSON.stringify({
-          platform: Platform.OS,
-          platform_version: Platform.Version,
-          app_version: DeviceInfo.getVersion(),
-          build_number: DeviceInfo.getBuildNumber(),
-          device_id: DeviceInfo.getDeviceId(),
-          system_name: DeviceInfo.getSystemName(),
-          system_version: DeviceInfo.getSystemVersion(),
-        })
-      );
-      if (screenshotUri) {
-        form.append('screenshot', {
-          uri: screenshotUri,
-          type: 'image/jpeg',
-          name: `tester-${Date.now()}.jpg`,
-        } as any);
-      }
-      await TesterApi.submitNote(form);
-      setNotes('');
-      flashSuccessMessage('Snapshot and tester notes sent to admin.');
-    } catch (error: any) {
-      flashErrorMessage(
-        error?.response?.data?.message || 'Could not send tester notes.'
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const goToBeginning = async () => {
     await StorageManager.deleteData(StorageManager.storageKeys.PRIMER_SEEN);
     navigation.dispatch(
@@ -139,6 +236,28 @@ export default function TesterConsole({ navigation, route }: any) {
   };
 
   const playSplash = () => navigation.navigate('TesterSplash');
+
+  const restartApp = () =>
+    Alert.alert(
+      'Restart Pure Half?',
+      'The app will reload now. Your signed-in tester session will be preserved.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Restart app',
+          onPress: () => {
+            if (typeof DevSettings.reload === 'function') {
+              DevSettings.reload('Tester requested app restart');
+              return;
+            }
+
+            navigation.dispatch(
+              CommonActions.reset({ index: 0, routes: [{ name: 'BottomTab' }] })
+            );
+          },
+        },
+      ]
+    );
 
   const deleteSelf = () =>
     Alert.alert(
@@ -219,6 +338,18 @@ export default function TesterConsole({ navigation, route }: any) {
       },
     ]);
 
+  if (activeTab === 'vip') {
+    return (
+      <Container>
+        <Header navigation={navigation} title="Tester tools" />
+        <ScrollView contentContainerStyle={styles.content}>
+          <TesterTabs active={activeTab} onChange={setActiveTab} />
+          <VipPackagesTab />
+        </ScrollView>
+      </Container>
+    );
+  }
+
   return (
     <Container>
       <Header navigation={navigation} title="Tester tools" />
@@ -234,29 +365,7 @@ export default function TesterConsole({ navigation, route }: any) {
           </Text>
         </View>
 
-        <Text style={styles.heading}>Snapshot and debugging</Text>
-        <Text style={styles.meta}>Captured screen: {sourceScreenName}</Text>
-        <TextInput
-          multiline
-          placeholder="What happened? Expected result, steps, account state..."
-          placeholderTextColor={Colors.muted}
-          value={notes}
-          onChangeText={setNotes}
-          style={[styles.input, styles.notes]}
-        />
-        <Button
-          label={`Send snapshot + notes (${calls.length} APIs)`}
-          onPress={submitNote}
-          disabled={busy}
-        />
-        <Button
-          label="Screen info / APIs hit"
-          onPress={() =>
-            navigation.navigate('TesterScreenInfo', {
-              screenName: sourceScreenName,
-            })
-          }
-        />
+        <TesterTabs active={activeTab} onChange={setActiveTab} />
 
         <Text style={styles.heading}>Account state</Text>
         <Text style={styles.label}>Gender</Text>
@@ -371,7 +480,9 @@ export default function TesterConsole({ navigation, route }: any) {
             onValueChange={(value) =>
               run(
                 () =>
-                  TesterApi.updateSelf({ membership_status: value ? 1 : 0 }),
+                  TesterApi.updateSelf({
+                    membership_status: value ? 1 : 0,
+                  }),
                 `VIP ${value ? 'enabled' : 'disabled'}.`
               )
             }
@@ -449,6 +560,7 @@ export default function TesterConsole({ navigation, route }: any) {
         />
 
         <Text style={styles.heading}>App flow</Text>
+        <Button label="Restart app" onPress={restartApp} disabled={busy} />
         <Button
           label="Go to pre-registration beginning"
           onPress={goToBeginning}
@@ -495,7 +607,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     color: Colors.ink,
   },
-  notes: { minHeight: 100, textAlignVertical: 'top' },
   button: {
     backgroundColor: Colors.primary,
     padding: 13,
@@ -535,4 +646,109 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   switchCopy: { flex: 1 },
+  tabs: {
+    flexDirection: 'row',
+    borderRadius: 10,
+    padding: 4,
+    backgroundColor: Colors.appBg,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+  },
+  tab: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabActive: { backgroundColor: Colors.primary },
+  tabText: { color: Colors.muted, fontSize: 13, fontWeight: '700' },
+  tabTextActive: { color: '#fff' },
+  packageList: { gap: 14, paddingTop: 4 },
+  infoCard: {
+    backgroundColor: '#EEF4FF',
+    borderColor: '#BDD1F8',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+  },
+  infoTitle: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
+  infoText: {
+    color: Colors.muted,
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 5,
+  },
+  packageCard: {
+    backgroundColor: '#fff',
+    borderColor: Colors.hairline,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+  },
+  elitePackageCard: { borderColor: Colors.primary, borderWidth: 2 },
+  packageHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  packageTitleWrap: { flex: 1 },
+  packageName: { color: Colors.ink, fontSize: 17, fontWeight: '800' },
+  packageId: { color: Colors.muted, fontSize: 11, marginTop: 3 },
+  packageBadge: {
+    backgroundColor: Colors.primary,
+    borderRadius: 20,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    maxWidth: 130,
+  },
+  packageBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  packageStats: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  packageStat: {
+    flex: 1,
+    minHeight: 74,
+    backgroundColor: Colors.appBg,
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  packageStatValue: { color: Colors.primary, fontSize: 17, fontWeight: '900' },
+  packageStatLabel: {
+    color: Colors.muted,
+    fontSize: 10,
+    lineHeight: 13,
+    textAlign: 'center',
+    marginTop: 3,
+  },
+  includesTitle: {
+    color: Colors.ink,
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 14,
+    marginBottom: 3,
+  },
+  benefitRow: { flexDirection: 'row', gap: 8, marginTop: 7 },
+  benefitCheck: { color: Colors.primary, fontSize: 14, fontWeight: '900' },
+  benefitText: { color: Colors.ink, fontSize: 12, lineHeight: 17, flex: 1 },
+  testNote: {
+    backgroundColor: '#F5EDFF',
+    borderColor: '#D8BDF4',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+  },
+  testNoteTitle: { color: Colors.ink, fontSize: 15, fontWeight: '800' },
+  testNoteText: {
+    color: Colors.muted,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 5,
+  },
 });
