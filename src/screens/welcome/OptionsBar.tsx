@@ -9,11 +9,13 @@ import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { usePremiumStore } from '../../stores';
 
-// TEMP: requested for visual QA. Restore the live counters after approval.
-const TEST_BADGE_COUNT = 10;
-
 const OptionsBar = (props: any) => {
-  const { options = [], activeOptionButton = {}, onPress = () => null } = props;
+  const {
+    userStats = {},
+    options = [],
+    activeOptionButton = {},
+    onPress = () => null,
+  } = props;
   const Rtl = CheckRtl();
   const isPremium = usePremiumStore((state) => state.isPremium);
   const premiumLoaded = usePremiumStore((state) => state.loaded);
@@ -27,7 +29,13 @@ const OptionsBar = (props: any) => {
     const isLocked = isPaid && premiumLoaded && !isPremiumUser;
     const isPremiumFeature = isPaid && isPremiumUser;
     const isGoldPremiumCta = isPremiumFeature;
-    const showCounter = value === '1' || value === '2' || value === '3';
+    const counter =
+      value === '1'
+        ? userStats?.like_you_counter
+        : value === '3'
+          ? userStats?.visit_you_counter
+          : 0;
+    const showCounter = !isLocked && counter && counter > 0;
 
     return (
       <Ripple
@@ -72,7 +80,7 @@ const OptionsBar = (props: any) => {
               style={[Styles.countTxt, { color: Colors.surface }]}
               numberOfLines={1}
             >
-              {TEST_BADGE_COUNT}
+              {counter > 99 ? '99+' : counter}
             </ReactText>
           </View>
         ) : null}
