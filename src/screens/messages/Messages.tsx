@@ -1,5 +1,4 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { CommonActions as CommonActionsNavigation } from '@react-navigation/native';
 import React, {
   useCallback,
   useEffect,
@@ -17,12 +16,6 @@ import {
   VirtualizedList,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import {
-  Menu,
-  MenuOption,
-  MenuOptions,
-  MenuTrigger,
-} from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
@@ -33,15 +26,13 @@ import {
   AnimatedLoader,
   Container,
   Header,
-  ModalLoader,
   ProfilePhotoPlaceholder,
   PurchaseSuccessModal,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { CommonActions } from '../../navigation';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -59,11 +50,7 @@ import type {
 } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
 import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
-import {
-  useConversationStore,
-  usePremiumStore,
-  useUserStatsStore,
-} from '../../stores';
+import { useConversationStore, usePremiumStore } from '../../stores';
 import ChatBackgroundPattern from './components/ChatBackgroundPattern';
 import { isLastMessageReadByParticipant } from './SingleChat.utils';
 
@@ -76,12 +63,7 @@ type MessagesProps = {
 
 const Messages = (props: MessagesProps) => {
   const { t } = useTranslation();
-  const { deleteAll } = StorageManager;
   const Rtl = CheckRtl();
-  const [modalLoader, setModalLoader] = useState({
-    visible: false,
-    message: '',
-  });
   const [quote, setQuote] = useState('');
   const [chatCreditsSuccessModalVisible, setChatCreditsSuccessModalVisible] =
     useState<boolean>(false);
@@ -90,7 +72,7 @@ const Messages = (props: MessagesProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const { setData, storageKeys } = StorageManager;
-  const { currentUser, updateCurrentUser, language } = useGlobalContext();
+  const { currentUser, updateCurrentUser } = useGlobalContext();
   const isPremium = usePremiumStore((state) => state.isPremium);
   const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
   const subscribedUserIdRef = useRef<string | number | null>(null);
@@ -110,9 +92,6 @@ const Messages = (props: MessagesProps) => {
   const setUnreadCounts = useConversationStore(
     (state) => state.setUnreadCounts
   );
-  const resetConversationStore = useConversationStore((state) => state.reset);
-  const resetUserStatsStore = useUserStatsStore((state) => state.reset);
-
   // Handle new conversation created event
   const handleNewConversationCreated = useCallback(
     (data: NewConversationCreatedEventData) => {
@@ -237,10 +216,8 @@ const Messages = (props: MessagesProps) => {
 
   // Extract userId using useMemo to avoid unnecessary re-renders
   const userId = useMemo(() => {
-    return currentUser?.id === 'guardian'
-      ? currentUser?.user?.id
-      : currentUser?.id;
-  }, [currentUser?.id, currentUser?.user?.id]);
+    return currentUser?.id;
+  }, [currentUser?.id]);
 
   // Setup Pusher real-time updates for user channel
   const setupPusherListeners = useCallback(async () => {
@@ -460,13 +437,6 @@ const Messages = (props: MessagesProps) => {
     ])
   );
 
-  const hideModalLoader = () => {
-    setModalLoader({
-      visible: false,
-      message: '',
-    });
-  };
-
   const onChatCreditsPress = async () => {
     setIsChatCreditsLoading(true);
     try {
@@ -496,39 +466,8 @@ const Messages = (props: MessagesProps) => {
     flashSuccessMessage('Chat credits added successfully!');
   };
 
-  const onLogoutPress = async () => {
-    setModalLoader({
-      visible: true,
-      message: LanguageKeys.loggingOut,
-    });
-
-    // Cleanup Pusher
-    if (unsubscribeUserChannelRef.current) {
-      unsubscribeUserChannelRef.current();
-      unsubscribeUserChannelRef.current = null;
-    }
-
-    await ApiServices.logoutGuardian().catch(hideModalLoader);
-    await deleteAll()
-      .then(async () => {
-        updateCurrentUser(null);
-        resetConversationStore(); // Reset unread counts on logout
-        resetUserStatsStore(); // Reset user stats counters on logout
-        await setData(storageKeys.LANGUAGE, language);
-        hideModalLoader();
-        props.navigation.dispatch(
-          CommonActionsNavigation.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
-      })
-      .catch(hideModalLoader);
-  };
-
   const onItemPress = (item: Conversation) => {
-    const currentUserId =
-      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+    const currentUserId = currentUser?.id;
     const currentUserIdStr =
       currentUserId != null ? String(currentUserId) : null;
 
@@ -544,8 +483,7 @@ const Messages = (props: MessagesProps) => {
   };
 
   const renderConversations = ({ item }: { item: Conversation }) => {
-    const currentUserId =
-      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
+    const currentUserId = currentUser?.id;
     const currentUserIdStr =
       currentUserId != null ? String(currentUserId) : null;
 
@@ -678,15 +616,9 @@ const Messages = (props: MessagesProps) => {
 
   const keyExtractor = (item: Conversation) => item.id.toString();
 
-  // Wali/guardian entry points hidden for now (comment out only, per explicit
-  // direction -- guardian is core functionality, not being removed).
-  // const onChangePasswordPress = () => {
-  //   props.navigation.navigate('GuardianChangePassword');
-  // };
-
-  // const onWaliPress = () => {
-  //   props.navigation.navigate('AddWali', { fromSettings: true });
-  // };
+  const onWaliPress = () => {
+    props.navigation.navigate('AddWali', { fromSettings: true });
+  };
 
   const onFindMatchPress = () => {
     props.navigation.navigate('SearchProfiles');
@@ -714,39 +646,9 @@ const Messages = (props: MessagesProps) => {
               disabled={isChatCreditsLoading}
               credits={currentUser?.chat_credits || 0}
             />
-            {currentUser?.role === 'guardian' && (
-              <View style={[Styles.gaurdianHeader]}>
-                <Menu>
-                  <MenuTrigger>
-                    <Image
-                      source={Images.verticalDots}
-                      style={Styles.menuBtn}
-                      resizeMode="contain"
-                    />
-                  </MenuTrigger>
-                  <MenuOptions
-                    optionsContainerStyle={Styles.menuOptionsContainer}
-                  >
-                    {/* Wali/guardian change-password entry hidden for now
-                        (comment out only, per explicit direction).
-                    <MenuOption
-                      onSelect={onChangePasswordPress}
-                      text={t(LanguageKeys.changePassword)}
-                    /> */}
-                    <MenuOption
-                      onSelect={onLogoutPress}
-                      text={t(LanguageKeys.logOut)}
-                      style={Styles.destructiveOption}
-                    />
-                  </MenuOptions>
-                </Menu>
-              </View>
-            )}
           </View>
         )}
       />
-      {/* Wali/guardian banner hidden for now (comment out only, per explicit
-          direction -- guardian is core functionality, not being removed).
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
           <Ionicons
@@ -765,13 +667,7 @@ const Messages = (props: MessagesProps) => {
           />
           <Text style={Styles.guardianText}>{t('addAWali')}</Text>
         </Ripple>
-      ) : null} */}
-      {currentUser?.role === 'guardian' && (
-        <CommonActions
-          navigation={props.navigation}
-          userId={currentUser?.user?.id}
-        />
-      )}
+      ) : null}
       <PurchaseSuccessModal
         visible={chatCreditsSuccessModalVisible}
         onCollect={onChatCreditsSuccessCollect}
@@ -804,10 +700,6 @@ const Messages = (props: MessagesProps) => {
       <Ripple style={Styles.btnPlus} onPress={onFindMatchPress}>
         <AntDesign name="plus" size={wp(8)} color={Colors.color2} />
       </Ripple>
-      <ModalLoader
-        visible={modalLoader.visible}
-        message={modalLoader.message}
-      />
     </Container>
   );
 };

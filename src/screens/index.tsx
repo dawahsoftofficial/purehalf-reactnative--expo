@@ -7,7 +7,6 @@ export * from './chatCreditsPaywall';
 export * from './chooseLanguage';
 export * from './contactSupport';
 export * from './giftMembershipCongrats';
-export * from './guardian';
 export * from './languages';
 export * from './location';
 export * from './Map';
