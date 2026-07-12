@@ -34,6 +34,7 @@ import {
   ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
+import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
 import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -324,6 +325,7 @@ const Header = ({
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
   const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
+  const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const giftThreshold =
@@ -600,6 +602,32 @@ const Header = ({
     setBlurModalVisible(true);
   }, []);
 
+  const onChatCreditsPress = useCallback(async () => {
+    setIsChatCreditsLoading(true);
+    try {
+      const result = await presentChatCreditsPaywall();
+      if (result.success) {
+        const refreshedUser =
+          (await ApiServices.getCurrentUserDetail()) as unknown as User;
+        updateCurrentUser(refreshedUser);
+        flashSuccessMessage('Chat credits added successfully!');
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(result.error || 'Failed to purchase chat credits');
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to purchase chat credits';
+      flashErrorMessage(errorMessage);
+    } finally {
+      setIsChatCreditsLoading(false);
+    }
+  }, [updateCurrentUser]);
+
   const closeBlurModal = useCallback(() => {
     setBlurModalVisible(false);
   }, []);
@@ -731,7 +759,11 @@ const Header = ({
 
   // Full-bleed photo hero shared by both the self and other-user headers.
   // The info card is rendered as a sibling below it and pulled up to overlap.
-  const renderHeroPhoto = (showBack: boolean, showMenu: boolean) => (
+  const renderHeroPhoto = (
+    showBack: boolean,
+    showMenu: boolean,
+    showSettings: boolean
+  ) => (
     <View style={Styles.heroWrap}>
       {profileImageUri && profileImageUri.length !== 0 && !profileImageError ? (
         <Image
@@ -803,12 +835,36 @@ const Header = ({
           </Ripple>
         </View>
       )}
+      {showSettings && (
+        <View
+          style={[
+            Styles.heroMenuContainer,
+            {
+              left: Rtl ? wp(2) : undefined,
+              right: Rtl ? undefined : wp(2),
+            },
+          ]}
+        >
+          <Ripple
+            style={Styles.overflowBtn}
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={12}
+            rippleColor={Colors.color2}
+          >
+            <Ionicons
+              name="settings-outline"
+              color={Colors.color2}
+              size={wp(5)}
+            />
+          </Ripple>
+        </View>
+      )}
     </View>
   );
 
   const renderSelfHeader = () => (
     <>
-      {renderHeroPhoto(false, false)}
+      {renderHeroPhoto(false, false, true)}
       <View style={Styles.infoCard}>
         <View style={Styles.profileSummaryRow}>
           <View style={Styles.profileIdentity}>
@@ -827,12 +883,26 @@ const Header = ({
                   rtl={Rtl}
                 />
               </View>
-              <ProfileBadges
-                isSelf={isSelf}
-                variant="pill"
-                userData={userData}
-                containerStyle={Styles.inlineBadges}
-              />
+              <View
+                style={{
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: wp(2),
+                }}
+              >
+                <ProfileBadges
+                  isSelf={isSelf}
+                  variant="pill"
+                  userData={userData}
+                  containerStyle={Styles.inlineBadges}
+                />
+                <ChatCreditsBadge
+                  credits={currentUser?.chat_credits ?? 0}
+                  onPress={onChatCreditsPress}
+                  disabled={isChatCreditsLoading}
+                />
+              </View>
             </View>
             <MetaLine
               age={userData?.age}
@@ -948,6 +1018,63 @@ const Header = ({
             </Text>
           </Ripple>
         </View>
+        <View
+          style={{
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+            alignItems: 'flex-start',
+            backgroundColor: Colors.surface,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: Colors.hairline,
+            padding: wp(4),
+            marginTop: hp(1.2),
+          }}
+        >
+          <Ionicons
+            name={
+              currentUser?.is_approved ? 'checkmark-circle' : 'time-outline'
+            }
+            size={wp(5.5)}
+            color={
+              currentUser?.is_approved ? Colors.verified : Colors.primaryMid
+            }
+          />
+          <View style={{ flex: 1, marginHorizontal: wp(3) }}>
+            <Text
+              style={{
+                fontFamily: Fonts.APPFONT_SB,
+                fontSize: Typography.small2,
+                color: currentUser?.is_approved
+                  ? Colors.verified
+                  : Colors.primaryMid,
+                includeFontPadding: false,
+                marginBottom: hp(0.4),
+              }}
+            >
+              {t(
+                currentUser?.is_approved
+                  ? LanguageKeys.profileApprovedTitle
+                  : LanguageKeys.profileInReview
+              )}
+            </Text>
+            <Text
+              style={{
+                fontFamily: Fonts.APPFONT_R,
+                fontSize: Typography.small,
+                color: Colors.muted,
+                lineHeight: wp(5),
+                includeFontPadding: false,
+                textAlign: Rtl ? 'right' : 'left',
+              }}
+            >
+              {t(
+                currentUser?.is_approved
+                  ? LanguageKeys.profileApprovedDesc
+                  : LanguageKeys.profileInReviewDesc
+              )}
+            </Text>
+          </View>
+        </View>
       </View>
     </>
   );
@@ -961,7 +1088,7 @@ const Header = ({
       ) : (
         <>
           <CheckMembershipStatus />
-          {renderHeroPhoto(true, !isSelf && !isBlockedYou)}
+          {renderHeroPhoto(true, !isSelf && !isBlockedYou, false)}
           <View style={Styles.infoCard}>
             <View
               style={[
