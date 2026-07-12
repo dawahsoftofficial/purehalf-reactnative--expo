@@ -349,7 +349,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     if (status !== '1') return;
 
     const testerForcesRecommendations = Boolean(
-      currentUser?.is_tester && currentUser?.tester_force_recommendations
+      currentUser?.tester_mode_enabled === true &&
+      currentUser?.is_tester &&
+      currentUser?.tester_force_recommendations
     );
     if (testerForcesRecommendations) {
       setShowRecommendationModal(true);
@@ -389,6 +391,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     };
   }, [
     currentUser?.is_tester,
+    currentUser?.tester_mode_enabled,
     currentUser?.tester_force_recommendations,
     dailyRecommendations,
   ]);

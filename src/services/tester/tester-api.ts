@@ -3,9 +3,13 @@ import { Api } from '../api/Middleware';
 export type TesterState = {
   id: number;
   is_tester: boolean;
+  tester_mode_enabled: boolean;
   tester_can_view_private_media: boolean;
   tester_is_invisible: boolean;
   tester_force_recommendations: boolean;
+  tester_show_all_badges: boolean;
+  tester_show_testers_in_daily_recommendations: boolean;
+  tester_show_testers_on_top: boolean;
   gender: 'male' | 'female';
   date_of_birth: string;
   chat_credits: number;
@@ -37,6 +41,9 @@ export const TesterApi = {
         params: { type },
       })
     );
+  },
+  async testers() {
+    return result<any[]>(await Api.get('/auth/tester/users'));
   },
   async media(userId: number) {
     return result<any>(await Api.get(`/auth/tester/users/${userId}/media`));

@@ -1,4 +1,5 @@
 export { default as TesterConsole } from './TesterConsole';
+export { default as TesterDirectory } from './TesterDirectory';
 export { default as TesterGallery } from './TesterGallery';
 export { default as TesterInsights } from './TesterInsights';
 export { default as TesterScreenDirectory } from './TesterScreenDirectory';

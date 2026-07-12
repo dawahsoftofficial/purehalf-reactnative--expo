@@ -2,7 +2,6 @@ import moment from 'moment';
 import React, { useMemo } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import NewBadgeIcon from '../assets/svgs/badges/new-badge.svg';
 import PopularBadgeIcon from '../assets/svgs/badges/popular-badge.svg';
@@ -38,6 +37,7 @@ type ProfileBadgesProps = {
     membership_status?: number | null;
     membership_expiry?: string | null;
     created_at?: string | null;
+    is_tester?: boolean;
   };
   isSelf?: boolean;
   showText?: boolean;
@@ -71,10 +71,19 @@ export function ProfileBadges({
   });
   const [isProfileCompleted, setIsProfileCompleted] = React.useState(false);
   const badgeIconSize = iconSize ?? wp(8);
+  const forceAllBadges = Boolean(
+    currentUser?.tester_mode_enabled === true &&
+    currentUser?.is_tester &&
+    currentUser?.tester_show_all_badges &&
+    (isSelf ? currentUser?.is_tester : userData?.is_tester)
+  );
+  const pillBadgeIconSize = wp(4.2);
 
   const isVisibleByConfig = React.useCallback(
     (key: 'completedProfile' | 'boosted' | 'vipMember' | 'newMember') => {
       const config = badgeConfig?.[key];
+
+      if (forceAllBadges) return true;
 
       // Preserve the three established badges when an older server has not
       // returned the setting yet. New is opt-in because its age rule is new.
@@ -82,10 +91,11 @@ export function ProfileBadges({
 
       return config.enabled && config.visibility?.[surface] !== false;
     },
-    [badgeConfig, surface]
+    [badgeConfig, forceAllBadges, surface]
   );
 
   const isVIP = useMemo(() => {
+    if (forceAllBadges) return true;
     if (!userData) return false;
     if (isSelf) {
       return isPremium();
@@ -99,14 +109,16 @@ export function ProfileBadges({
       return moment(userData.membership_expiry).isAfter(now);
     }
     return false;
-  }, [userData, isSelf, isPremium]);
+  }, [forceAllBadges, userData, isSelf, isPremium]);
 
   const isBoosted = useMemo(() => {
+    if (forceAllBadges) return true;
     if (!userData) return false;
     return Boolean(userData.boosted || userData.is_boosted);
-  }, [userData]);
+  }, [forceAllBadges, userData]);
 
   const isNew = useMemo(() => {
+    if (forceAllBadges) return true;
     if (!userData?.created_at || !isVisibleByConfig('newMember')) return false;
 
     const maxAccountAgeDays = Math.max(
@@ -121,7 +133,12 @@ export function ProfileBadges({
       !createdAt.isAfter(now) &&
       createdAt.isSameOrAfter(now.clone().subtract(maxAccountAgeDays, 'days'))
     );
-  }, [badgeConfig?.newMember?.maxAccountAgeDays, isVisibleByConfig, userData]);
+  }, [
+    badgeConfig?.newMember?.maxAccountAgeDays,
+    forceAllBadges,
+    isVisibleByConfig,
+    userData,
+  ]);
 
   React.useEffect(() => {
     if (isSelf && currentUser) {
@@ -146,7 +163,7 @@ export function ProfileBadges({
   const badges = useMemo(() => {
     const badgeList: Array<{
       icon: React.ReactNode;
-      iconName: string;
+      pillIcon: React.ReactNode;
       label: string;
       tone: 'purple' | 'green' | 'blue';
     }> = [];
@@ -154,7 +171,9 @@ export function ProfileBadges({
     if (isVIP && isVisibleByConfig('vipMember')) {
       badgeList.push({
         icon: <VipBadgeIcon width={badgeIconSize} height={badgeIconSize} />,
-        iconName: 'diamond',
+        pillIcon: (
+          <VipBadgeIcon width={pillBadgeIconSize} height={pillBadgeIconSize} />
+        ),
         label: 'VIP',
         tone: 'purple',
       });
@@ -163,13 +182,21 @@ export function ProfileBadges({
     if (isBoosted && isVisibleByConfig('boosted')) {
       badgeList.push({
         icon: <PopularBadgeIcon width={badgeIconSize} height={badgeIconSize} />,
-        iconName: 'trending-up',
+        pillIcon: (
+          <PopularBadgeIcon
+            width={pillBadgeIconSize}
+            height={pillBadgeIconSize}
+          />
+        ),
         label: 'Boosted',
         tone: 'green',
       });
     }
 
-    if (isProfileCompleted && isVisibleByConfig('completedProfile')) {
+    if (
+      (forceAllBadges || isProfileCompleted) &&
+      isVisibleByConfig('completedProfile')
+    ) {
       badgeList.push({
         icon: (
           <ProfileCompleteBadgeIcon
@@ -177,7 +204,12 @@ export function ProfileBadges({
             height={badgeIconSize}
           />
         ),
-        iconName: 'checkmark-circle',
+        pillIcon: (
+          <ProfileCompleteBadgeIcon
+            width={pillBadgeIconSize}
+            height={pillBadgeIconSize}
+          />
+        ),
         label: 'Complete',
         tone: 'green',
       });
@@ -186,7 +218,9 @@ export function ProfileBadges({
     if (isNew) {
       badgeList.push({
         icon: <NewBadgeIcon width={badgeIconSize} height={badgeIconSize} />,
-        iconName: 'sparkles',
+        pillIcon: (
+          <NewBadgeIcon width={pillBadgeIconSize} height={pillBadgeIconSize} />
+        ),
         label: 'New',
         tone: 'blue',
       });
@@ -195,9 +229,11 @@ export function ProfileBadges({
     return badgeList;
   }, [
     badgeIconSize,
+    pillBadgeIconSize,
     isVIP,
     isBoosted,
     isProfileCompleted,
+    forceAllBadges,
     isNew,
     isVisibleByConfig,
   ]);
@@ -228,17 +264,7 @@ export function ProfileBadges({
                 badge.tone === 'blue' ? Styles.pillIconWrapBlue : null,
               ]}
             >
-              <Ionicons
-                name={badge.iconName}
-                color={
-                  badge.tone === 'purple'
-                    ? Colors.primary
-                    : badge.tone === 'blue'
-                      ? '#287FC2'
-                      : Colors.verified
-                }
-                size={wp(3.4)}
-              />
+              {badge.pillIcon}
             </View>
             <Text
               style={[

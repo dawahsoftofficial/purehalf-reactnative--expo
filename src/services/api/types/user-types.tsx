@@ -18,6 +18,9 @@ export type FcmToken = {
   tester_can_view_private_media: boolean;
   tester_is_invisible: boolean;
   tester_force_recommendations: boolean;
+  tester_show_all_badges: boolean;
+  tester_show_testers_in_daily_recommendations: boolean;
+  tester_show_testers_on_top: boolean;
   device_word: string;
 };
 
@@ -88,6 +91,14 @@ export type LatestTransaction = {
  */
 export type CurrentUserDetail = {
   id: number;
+  is_tester: boolean;
+  tester_mode_enabled: boolean;
+  tester_can_view_private_media: boolean;
+  tester_is_invisible: boolean;
+  tester_force_recommendations: boolean;
+  tester_show_all_badges: boolean;
+  tester_show_testers_in_daily_recommendations: boolean;
+  tester_show_testers_on_top: boolean;
   is_approved: boolean | null;
   rejection_reason: string | null;
   recommend_api_hit_at: string;

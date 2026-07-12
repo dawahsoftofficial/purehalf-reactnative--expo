@@ -20,7 +20,12 @@ const insights = [
 
 export default function TesterProfileTools({ navigation, userId }: any) {
   const { currentUser } = useGlobalContext();
-  if (!currentUser?.is_tester || !userId) return null;
+  if (
+    currentUser?.tester_mode_enabled !== true ||
+    !currentUser?.is_tester ||
+    !userId
+  )
+    return null;
 
   const makeActive = async () => {
     try {

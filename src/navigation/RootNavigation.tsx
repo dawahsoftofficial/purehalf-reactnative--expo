@@ -60,6 +60,7 @@ import {
   SignupStepRadio,
   SingleChat,
   TesterConsole,
+  TesterDirectory,
   TesterGallery,
   TesterInsights,
   TesterScreenDirectory,
@@ -269,6 +270,7 @@ function App() {
           <Stack.Screen name="EditProfileGroup" component={EditProfileGroup} />
           <Stack.Screen name="EditInterests" component={EditInterests} />
           <Stack.Screen name="TesterConsole" component={TesterConsole} />
+          <Stack.Screen name="TesterDirectory" component={TesterDirectory} />
           <Stack.Screen name="TesterScreenInfo" component={TesterScreenInfo} />
           <Stack.Screen
             name="TesterScreenDirectory"

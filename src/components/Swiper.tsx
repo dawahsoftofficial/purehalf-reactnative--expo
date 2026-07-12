@@ -133,17 +133,18 @@ const SwiperComponent = ({
   return (
     <Modal visible={true} transparent={true}>
       <SafeAreaView style={Styles.container}>
-        {currentUser?.is_tester && (
-          <Ripple
-            style={[Styles.resetWrapper, { top: hp(1) + 12 }]}
-            rippleColor={Colors.surface}
-            rippleContainerBorderRadius={wp(5.5)}
-            onPress={resetDeck}
-          >
-            <AntDesign name="reload1" size={wp(4.4)} color={Colors.surface} />
-            <Text style={Styles.resetText}>Reset deck</Text>
-          </Ripple>
-        )}
+        {currentUser?.tester_mode_enabled === true &&
+          currentUser?.is_tester && (
+            <Ripple
+              style={[Styles.resetWrapper, { top: hp(1) + 12 }]}
+              rippleColor={Colors.surface}
+              rippleContainerBorderRadius={wp(5.5)}
+              onPress={resetDeck}
+            >
+              <AntDesign name="reload1" size={wp(4.4)} color={Colors.surface} />
+              <Text style={Styles.resetText}>Reset deck</Text>
+            </Ripple>
+          )}
         <Ripple
           style={[Styles.closeWrapper, { top: hp(1) + 12 }]}
           rippleColor={Colors.surface}

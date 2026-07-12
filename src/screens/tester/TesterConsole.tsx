@@ -650,6 +650,75 @@ export default function TesterConsole({ navigation }: any) {
             disabled={busy}
           />
         </View>
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.label}>Show all badges on testers</Text>
+            <Text style={styles.meta}>
+              Tester profiles display VIP, Boosted, Complete, and New badges.
+            </Text>
+          </View>
+          <Switch
+            value={!!currentUser?.tester_show_all_badges}
+            onValueChange={(value) =>
+              run(
+                () => TesterApi.updateSelf({ tester_show_all_badges: value }),
+                `Tester badge override ${value ? 'enabled' : 'disabled'}.`
+              )
+            }
+            disabled={busy}
+          />
+        </View>
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.label}>
+              Show testers in daily recommendations
+            </Text>
+            <Text style={styles.meta}>
+              Compatible tester accounts are placed first in the daily deck.
+            </Text>
+          </View>
+          <Switch
+            value={!!currentUser?.tester_show_testers_in_daily_recommendations}
+            onValueChange={(value) =>
+              run(
+                () =>
+                  TesterApi.updateSelf({
+                    tester_show_testers_in_daily_recommendations: value,
+                  }),
+                `Daily tester profiles ${value ? 'enabled' : 'disabled'}.`
+              )
+            }
+            disabled={busy}
+          />
+        </View>
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.label}>
+              Show testers at top of Recommendations
+            </Text>
+            <Text style={styles.meta}>
+              Compatible tester accounts are pinned to the first page.
+            </Text>
+          </View>
+          <Switch
+            value={!!currentUser?.tester_show_testers_on_top}
+            onValueChange={(value) =>
+              run(
+                () =>
+                  TesterApi.updateSelf({
+                    tester_show_testers_on_top: value,
+                  }),
+                `Tester priority ${value ? 'enabled' : 'disabled'}.`
+              )
+            }
+            disabled={busy}
+          />
+        </View>
+        <Button
+          label="Show tester accounts"
+          onPress={() => navigation.navigate('TesterDirectory')}
+          disabled={busy}
+        />
         <Button
           label="Reset daily recommendation history"
           onPress={() =>

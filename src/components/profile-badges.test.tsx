@@ -4,6 +4,7 @@ import React from 'react';
 import { ProfileBadges } from './profile-badges';
 
 let mockBadgeSettings: any = null;
+let mockCurrentUser: any = null;
 
 jest.mock('../assets/svgs/badges/new-badge.svg', () => 'NewBadgeIcon');
 jest.mock('../assets/svgs/badges/popular-badge.svg', () => 'PopularBadgeIcon');
@@ -21,7 +22,7 @@ jest.mock('../services', () => ({
     },
   },
   useGlobalContext: () => ({
-    currentUser: null,
+    currentUser: mockCurrentUser,
   }),
 }));
 
@@ -63,6 +64,7 @@ const completeUser = {
 describe('ProfileBadges', () => {
   beforeEach(() => {
     mockBadgeSettings = null;
+    mockCurrentUser = null;
   });
 
   it('renders the detail header badge as a compact text pill', async () => {
@@ -139,5 +141,63 @@ describe('ProfileBadges', () => {
     );
 
     expect(await screen.findByText('New')).toBeTruthy();
+  });
+
+  it('forces every badge on tester profiles for an authorized tester', async () => {
+    mockCurrentUser = {
+      id: 99,
+      is_tester: true,
+      tester_mode_enabled: true,
+      tester_show_all_badges: true,
+    };
+    mockBadgeSettings = {
+      badges: {
+        vipMember: { enabled: false, visibility: { singleProfile: false } },
+        boosted: { enabled: false, visibility: { singleProfile: false } },
+        completedProfile: {
+          enabled: false,
+          visibility: { singleProfile: false },
+        },
+        newMember: { enabled: false, visibility: { singleProfile: false } },
+      },
+    };
+
+    render(
+      <ProfileBadges userData={{ id: 2, is_tester: true }} variant="pill" />
+    );
+
+    expect(await screen.findByText('VIP')).toBeTruthy();
+    expect(screen.getByText('Boosted')).toBeTruthy();
+    expect(screen.getByText('Complete')).toBeTruthy();
+    expect(screen.getByText('New')).toBeTruthy();
+  });
+
+  it('does not force badges when server tester mode is disabled', async () => {
+    mockCurrentUser = {
+      id: 99,
+      is_tester: true,
+      tester_mode_enabled: false,
+      tester_show_all_badges: true,
+    };
+    mockBadgeSettings = {
+      badges: {
+        vipMember: { enabled: false, visibility: { singleProfile: false } },
+        boosted: { enabled: false, visibility: { singleProfile: false } },
+        completedProfile: {
+          enabled: false,
+          visibility: { singleProfile: false },
+        },
+        newMember: { enabled: false, visibility: { singleProfile: false } },
+      },
+    };
+
+    render(
+      <ProfileBadges userData={{ id: 2, is_tester: true }} variant="pill" />
+    );
+
+    await waitFor(() => expect(screen.queryByText('VIP')).toBeNull());
+    expect(screen.queryByText('Boosted')).toBeNull();
+    expect(screen.queryByText('Complete')).toBeNull();
+    expect(screen.queryByText('New')).toBeNull();
   });
 });

@@ -15,7 +15,12 @@ export default function TesterFab() {
   const [capturing, setCapturing] = useState(false);
   const [draft, setDraft] = useState<TesterSnapshotDraft | null>(null);
 
-  if (!currentUser?.is_tester || currentUser?.id === 'guardian') return null;
+  if (
+    currentUser?.tester_mode_enabled !== true ||
+    !currentUser?.is_tester ||
+    currentUser?.id === 'guardian'
+  )
+    return null;
 
   const capture = async () => {
     if (capturing || !navigationRef.isReady()) return;
