@@ -37,12 +37,11 @@ import {
   useGlobalContext,
 } from '../../services';
 import { presentBoostProfilePaywall } from '../../services/paywall-service';
-import { canCollectChatCredits } from '../../services/utils/chat-credits-utils';
 import GiftClaimModal from '../profile/components/gift-claim-modal';
 import Wiggle from '../profile/components/wiggle';
 import { buildUpdatedUserAfterGiftClaim } from '../profile/gift-claim-outcome';
 import { computeGiftStatus } from '../profile/gift-status';
-import { AccountModal, RecommendationHeart } from './components';
+import { RecommendationHeart } from './components';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
@@ -197,7 +196,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
-  const [headerModal, setHeaderModal] = useState<boolean>(false);
   const [boostSuccessModalVisible, setBoostSuccessModalVisible] =
     useState<boolean>(false);
   const [isBoostLoading, setIsBoostLoading] = useState<boolean>(false);
@@ -303,7 +301,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     setOptionTab(item.name);
     setActiveOptionButton(item);
     setUserListPage(1);
-    setHeaderModal(false);
     setUsersList([]);
   }, []);
 
@@ -629,62 +626,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     }, [handleProfileCompleteData, usersList.length, getUsers])
   );
 
-  // Collect chat credits when AccountModal opens (premium members only, once per 24 hours)
-  useEffect(() => {
-    const canCollect = canCollectChatCredits(
-      currentUser?.last_chat_credit_collected_at
-    );
-    console.log(
-      '[Welcome.useEffect] Modal open:',
-      headerModal,
-      'Premium:',
-      isPremiumUser,
-      'Can collect:',
-      canCollect
-    );
-
-    if (headerModal && isPremiumUser && canCollect) {
-      const collectCredits = async () => {
-        try {
-          await ApiServices.collectChatCredits();
-          // Refresh user data to get updated chat credits and last_chat_credit_collected_at
-          // try {
-          //   const refreshedUser =
-          //     (await ApiServices.getCurrentUserDetail()) as typeof currentUser;
-          //   if (refreshedUser) {
-          //     updateCurrentUser(refreshedUser);
-          //     await setData(storageKeys.USER, refreshedUser);
-          //   }
-          // } catch (refreshError) {
-          //   console.error(
-          //     '[Welcome] Error refreshing user data after collect:',
-          //     refreshError
-          //   );
-          // }
-        } catch (error) {
-          // Silently handle error - don't block modal from opening
-          console.error('[Welcome] Error collecting chat credits:', error);
-        }
-      };
-      collectCredits();
-    }
-  }, [
-    headerModal,
-    isPremiumUser,
-    currentUser,
-    updateCurrentUser,
-    setData,
-    storageKeys.USER,
-  ]);
-
-  const onInfoItemPress = useCallback(
-    (item: ProfileProgressItem) => {
-      setHeaderModal(false);
-      navigation.navigate(item.navigation, { scrollTo: item.scrollTo });
-    },
-    [navigation]
-  );
-
   // Show loading state instead of blank screen if premium store hasn't loaded yet
   // if (!loaded) {
   //   return (
@@ -719,7 +660,16 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               </AppText>
             ) : null}
           </View>
-          <View style={Styles.headerRightWrapper}>
+          <View
+            style={[
+              Styles.headerRightWrapper,
+              {
+                flexDirection: Rtl ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: wp(3),
+              },
+            ]}
+          >
             {showRecommendationModal && (
               <RecommendationHeart
                 onPress={() => onRecommendationPress(true)}
@@ -727,8 +677,15 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             )}
             <Ripple
               rippleColor={Colors.primary}
+              style={Styles.searchIconBtn}
+              onPress={() => navigation.navigate('SearchProfiles')}
+            >
+              <Ionicons name="search" size={wp(5.4)} color={Colors.ink} />
+            </Ripple>
+            <Ripple
+              rippleColor={Colors.primary}
               style={Styles.avatarBtn}
-              onPress={() => setHeaderModal(!headerModal)}
+              onPress={() => navigation.navigate('Profile')}
             >
               {currentUser?.media?.un_blur_primary_image ? (
                 <Image
@@ -752,31 +709,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             </Ripple>
           </View>
         </View>
-        {!currentUser?.is_approved && (
-          <Ripple
-            style={[
-              Styles.pendingApprovalBanner,
-              { flexDirection: Rtl ? 'row-reverse' : 'row' },
-            ]}
-            onPress={() => setHeaderModal(true)}
-          >
-            <View style={Styles.pendingIconChip}>
-              <Ionicons
-                name="time-outline"
-                size={wp(4.5)}
-                color={Colors.primary}
-              />
-            </View>
-            <Text style={Styles.pendingApprovalText}>
-              {t(LanguageKeys.profileInReview)}
-            </Text>
-            <Ionicons
-              name={Rtl ? 'chevron-back' : 'chevron-forward'}
-              size={wp(4.5)}
-              color={Colors.primaryMid}
-            />
-          </Ripple>
-        )}
         {!giftStatus.claimed &&
           (profileIncomplete || giftStatus.eligible) &&
           !profileBannerDismissed && (
@@ -833,13 +765,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
           )}
         {!isPremiumUser ? <PremiumButton /> : null}
       </View>
-      <AccountModal
-        visible={headerModal}
-        onClose={() => setHeaderModal(false)}
-        profileCompleteProgress={profileCompleteProgress}
-        onInfoItemPress={onInfoItemPress}
-        currentUser={currentUser}
-      />
       <GiftClaimModal
         visible={giftModalVisible}
         giftCredits={giftCreditsAmount}
@@ -925,6 +850,16 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2.5),
+  },
+  searchIconBtn: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.lavender,
+    borderWidth: 1,
+    borderColor: Colors.primaryRGBA12,
   },
   avatarBtn: {
     width: wp(12),

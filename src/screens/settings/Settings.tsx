@@ -19,6 +19,7 @@ import { useGlobalContext } from '../../services';
 
 type SettingsProps = {
   navigation: {
+    goBack: () => void;
     navigate: (screen: string, params?: object) => void;
   };
 };
@@ -257,7 +258,7 @@ function Settings(props: SettingsProps) {
 
   return (
     <Container style={Styles.container}>
-      <SettingsHeader />
+      <SettingsHeader navigation={props.navigation} />
       <ScrollView
         contentContainerStyle={Styles.innerCon}
         showsVerticalScrollIndicator={false}

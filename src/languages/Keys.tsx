@@ -103,6 +103,8 @@ const Keys = {
   profileInReviewDesc: 'profileInReviewDesc',
   profileApprovedTitle: 'profileApprovedTitle',
   profileApprovedDesc: 'profileApprovedDesc',
+  chatCreditsPurchaseSuccess: 'chatCreditsPurchaseSuccess',
+  chatCreditsPurchaseError: 'chatCreditsPurchaseError',
   myAccount: 'myAccount',
   profileComplete: 'profileComplete',
   profileCompletion: 'profileCompletion',

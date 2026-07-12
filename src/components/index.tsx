@@ -8,6 +8,7 @@ export { default as ImageViewer } from './ImageViewer';
 export * from './inputs';
 export { default as LinearGradient } from './LinearGradient';
 export * from './loaders';
+export { default as PersistentMessagesFab } from './PersistentMessagesFab';
 export * from './pickers';
 export { default as PopupMenuRenderer } from './PopupMenuRenderer';
 export { ProfileBadges } from './profile-badges';

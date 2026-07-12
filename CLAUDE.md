@@ -68,7 +68,7 @@ Point-in-time audit (jest setup, ESLint errors/warnings, `App.tsx` coupling) liv
 
 ## Things to be careful with
 
-- **Guardian / Wali screens are core, not optional.** `src/screens/addWali/`, `src/screens/guardian/` — don't refactor away.
+- **Guardian / Wali role is being REMOVED from this app (decision 2026-07-12).** Guardian logins move to a separate web interface (its own project). All guardian-role code — guardian login, `src/screens/guardian/`, `role === 'guardian'` branches, the legacy Firebase RTDB `ConversationsListener` — is slated for deletion, not migration or extension. What stays (and is partly still to build): the candidate-side flow to add a guardian's email and approve guardian web logins. See the root `CLAUDE.md` Domain-language section for the full picture.
 - **`Services.tsx` is huge.** When changing one endpoint, search by function name; do not "tidy up" the rest unless asked.
 - **Firebase rules + indices live outside this repo** (Firebase console). Adding a new Firestore query that needs a composite index will silently fail in production until the index is created.
 - **`firebase-delete-queries.md`** at the repo root is operator notes for cleaning Firestore data — not application code.

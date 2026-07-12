@@ -700,6 +700,7 @@ const Messages = (props: MessagesProps) => {
   return (
     <Container>
       <Header
+        navigation={props.navigation}
         title={LanguageKeys.messages}
         titleVariant="display"
         customConponent={() => (

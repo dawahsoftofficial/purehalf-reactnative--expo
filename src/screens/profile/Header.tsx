@@ -34,6 +34,7 @@ import {
   ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
+import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
 import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
 import { CheckRtl, LanguageKeys } from '../../languages';
@@ -324,8 +325,10 @@ const Header = ({
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
   const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
+  const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const giftThreshold =
     useSettingsStore().getProfileCompletionThresholdPercent();
   const giftCredits = useSettingsStore().getProfileCompletionGiftCredits();
@@ -600,6 +603,34 @@ const Header = ({
     setBlurModalVisible(true);
   }, []);
 
+  const onChatCreditsPress = useCallback(async () => {
+    setIsChatCreditsLoading(true);
+    try {
+      const result = await presentChatCreditsPaywall();
+      if (result.success) {
+        const refreshedUser =
+          (await ApiServices.getCurrentUserDetail()) as unknown as User;
+        updateCurrentUser(refreshedUser);
+        flashSuccessMessage(t(LanguageKeys.chatCreditsPurchaseSuccess));
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(
+          result.error || t(LanguageKeys.chatCreditsPurchaseError)
+        );
+      }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : t(LanguageKeys.chatCreditsPurchaseError);
+      flashErrorMessage(errorMessage);
+    } finally {
+      setIsChatCreditsLoading(false);
+    }
+  }, [updateCurrentUser, t]);
+
   const closeBlurModal = useCallback(() => {
     setBlurModalVisible(false);
   }, []);
@@ -731,7 +762,11 @@ const Header = ({
 
   // Full-bleed photo hero shared by both the self and other-user headers.
   // The info card is rendered as a sibling below it and pulled up to overlap.
-  const renderHeroPhoto = (showBack: boolean, showMenu: boolean) => (
+  const renderHeroPhoto = (
+    showBack: boolean,
+    showMenu: boolean,
+    showSettings: boolean
+  ) => (
     <View style={Styles.heroWrap}>
       {profileImageUri && profileImageUri.length !== 0 && !profileImageError ? (
         <Image
@@ -803,12 +838,36 @@ const Header = ({
           </Ripple>
         </View>
       )}
+      {showSettings && (
+        <View
+          style={[
+            Styles.heroMenuContainer,
+            {
+              left: Rtl ? wp(2) : undefined,
+              right: Rtl ? undefined : wp(2),
+            },
+          ]}
+        >
+          <Ripple
+            style={Styles.overflowBtn}
+            onPress={() => navigation.navigate('Settings')}
+            hitSlop={12}
+            rippleColor={Colors.color2}
+          >
+            <Ionicons
+              name="settings-outline"
+              color={Colors.color2}
+              size={wp(5)}
+            />
+          </Ripple>
+        </View>
+      )}
     </View>
   );
 
   const renderSelfHeader = () => (
     <>
-      {renderHeroPhoto(false, false)}
+      {renderHeroPhoto(true, false, true)}
       <View style={Styles.infoCard}>
         <View style={Styles.profileSummaryRow}>
           <View style={Styles.profileIdentity}>
@@ -827,12 +886,26 @@ const Header = ({
                   rtl={Rtl}
                 />
               </View>
-              <ProfileBadges
-                isSelf={isSelf}
-                variant="pill"
-                userData={userData}
-                containerStyle={Styles.inlineBadges}
-              />
+              <View
+                style={{
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: wp(2),
+                }}
+              >
+                <ProfileBadges
+                  isSelf={isSelf}
+                  variant="pill"
+                  userData={userData}
+                  containerStyle={Styles.inlineBadges}
+                />
+                <ChatCreditsBadge
+                  credits={currentUser?.chat_credits ?? 0}
+                  onPress={onChatCreditsPress}
+                  disabled={isChatCreditsLoading}
+                />
+              </View>
             </View>
             <MetaLine
               age={userData?.age}
@@ -842,13 +915,11 @@ const Header = ({
           </View>
         </View>
         <Ripple
-          style={[
-            Styles.taglineEditRow,
-            { flexDirection: Rtl ? 'row-reverse' : 'row' },
-          ]}
+          style={Styles.taglineEditRow}
           onPress={onTaglineEditPress}
           rippleColor={Colors.lavender}
         >
+          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
           {tagline && tagline.trim().length ? (
             <ReactText
               style={[
@@ -864,10 +935,9 @@ const Header = ({
               style={[Styles.cardTagline, Styles.cardTaglineMuted, { flex: 1 }]}
               numberOfLines={2}
             >
-              {LanguageKeys.addTagline}
+              {LanguageKeys.enterTagline}
             </Text>
           )}
-          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
         </Ripple>
         {typeof profileStrength === 'number' ? (
           <View style={Styles.strengthWrap}>
@@ -948,6 +1018,21 @@ const Header = ({
             </Text>
           </Ripple>
         </View>
+        {!currentUser?.is_approved ? (
+          <Ripple
+            style={Styles.reviewStatusIcon}
+            onPress={() => setReviewModalVisible(true)}
+            rippleColor={Colors.primaryRGBA12}
+            accessibilityRole="button"
+            accessibilityLabel={t(LanguageKeys.profileInReview)}
+          >
+            <Ionicons
+              name="time-outline"
+              size={wp(5.5)}
+              color={Colors.primaryMid}
+            />
+          </Ripple>
+        ) : null}
       </View>
     </>
   );
@@ -961,7 +1046,7 @@ const Header = ({
       ) : (
         <>
           <CheckMembershipStatus />
-          {renderHeroPhoto(true, !isSelf && !isBlockedYou)}
+          {renderHeroPhoto(true, !isSelf && !isBlockedYou, false)}
           <View style={Styles.infoCard}>
             <View
               style={[
@@ -1319,6 +1404,36 @@ const Header = ({
         </View>
       </Modal>
 
+      <Modal
+        transparent
+        visible={reviewModalVisible}
+        animationType="fade"
+        onRequestClose={() => setReviewModalVisible(false)}
+      >
+        <View style={Styles.taglineModalWrap}>
+          <View style={[Styles.taglineModalCard, Styles.reviewModalCard]}>
+            <View style={Styles.reviewModalIcon}>
+              <Ionicons
+                name="time-outline"
+                size={wp(7)}
+                color={Colors.primary}
+              />
+            </View>
+            <Text style={[Styles.taglineModalTitle, Styles.reviewModalTitle]}>
+              {LanguageKeys.profileInReview}
+            </Text>
+            <Text style={Styles.reviewModalBody}>
+              {LanguageKeys.profileInReviewDesc}
+            </Text>
+            <Button
+              onPress={() => setReviewModalVisible(false)}
+              buttonStyle={Styles.reviewModalButton}
+              text={LanguageKeys.gotIt}
+            />
+          </View>
+        </View>
+      </Modal>
+
       <GiftClaimModal
         visible={giftModalVisible}
         giftCredits={giftCredits}
@@ -1435,6 +1550,16 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2),
     marginTop: hp(1),
+  },
+  reviewStatusIcon: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    marginTop: hp(1.2),
   },
   lastSeenRow: {
     flexDirection: 'row',
@@ -1643,6 +1768,32 @@ const Styles = StyleSheet.create({
     fontSize: Typography.medium1,
     color: Colors.ink,
     marginBottom: hp(1.5),
+  },
+  reviewModalCard: {
+    alignItems: 'center',
+  },
+  reviewModalIcon: {
+    width: wp(15),
+    height: wp(15),
+    borderRadius: wp(7.5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1.5),
+  },
+  reviewModalTitle: {
+    textAlign: 'center',
+  },
+  reviewModalBody: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    lineHeight: wp(5.5),
+    textAlign: 'center',
+  },
+  reviewModalButton: {
+    alignSelf: 'stretch',
+    marginTop: hp(2.5),
   },
   taglineModalInput: {
     minHeight: hp(7),

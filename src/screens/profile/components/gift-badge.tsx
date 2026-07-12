@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { wp } from '../../../global';
 import { Colors } from '../../../res';
@@ -24,7 +25,11 @@ const GiftBadge = ({ eligible, claimed, onPress }: GiftBadgeProps) => {
   if (claimed) {
     return (
       <Ripple style={[Styles.chip, Styles.chipClaimed]} onPress={onPress}>
-        <Ionicons name="gift" size={wp(4.2)} color={Colors.verified} />
+        <MaterialCommunityIcons
+          name="gift-open-outline"
+          size={wp(4.8)}
+          color={Colors.verified}
+        />
       </Ripple>
     );
   }
