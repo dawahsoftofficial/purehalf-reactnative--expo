@@ -492,6 +492,8 @@
     "profileInReviewDesc": "While we review your profile, your visibility is limited. We're making sure everything is top-notch — you'll be notified as soon as it's approved.",
     "profileApprovedTitle": "Your profile is approved",
     "profileApprovedDesc": "You're all set — your profile is live and visible to matches. Keep it fresh to get the best results.",
+    "chatCreditsPurchaseSuccess": "Chat credits added successfully!",
+    "chatCreditsPurchaseError": "Failed to purchase chat credits",
     "myAccount": "My Account",
     "profileComplete": "Profile Complete",
     "profileCompletion": "Profile Completion",

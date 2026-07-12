@@ -610,23 +610,25 @@ const Header = ({
         const refreshedUser =
           (await ApiServices.getCurrentUserDetail()) as unknown as User;
         updateCurrentUser(refreshedUser);
-        flashSuccessMessage('Chat credits added successfully!');
+        flashSuccessMessage(t(LanguageKeys.chatCreditsPurchaseSuccess));
       } else if (
         result.error &&
         result.error !== 'Purchase cancelled by user'
       ) {
-        flashErrorMessage(result.error || 'Failed to purchase chat credits');
+        flashErrorMessage(
+          result.error || t(LanguageKeys.chatCreditsPurchaseError)
+        );
       }
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to purchase chat credits';
+          : t(LanguageKeys.chatCreditsPurchaseError);
       flashErrorMessage(errorMessage);
     } finally {
       setIsChatCreditsLoading(false);
     }
-  }, [updateCurrentUser]);
+  }, [updateCurrentUser, t]);
 
   const closeBlurModal = useCallback(() => {
     setBlurModalVisible(false);

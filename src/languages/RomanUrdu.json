@@ -473,6 +473,8 @@
     "profileInReviewDesc": "Jab tak hum aap ki profile ka jaiza le rahe hain, aap ki visibility mehdood rahegi. Hum har cheez ko behtareen bana rahe hain — approve hotay hi aap ko ittila de di jayegi.",
     "profileApprovedTitle": "Aap ki profile approve ho gayi hai",
     "profileApprovedDesc": "Sab tayyar hai — aap ki profile live hai aur matches ko nazar aa rahi hai. Behtareen results ke liye ise fresh rakhein.",
+    "chatCreditsPurchaseSuccess": "Chat credits kamyabi se shamil kar diye gaye!",
+    "chatCreditsPurchaseError": "Chat credits khareedne mein nakami",
     "myAccount": "Mera account",
     "profileComplete": "Profile complete",
     "profileCompletion": "Profile completion",
