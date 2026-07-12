@@ -180,12 +180,14 @@ const SingleChat = (props: any) => {
   };
 
   useEffect(() => {
-    if (fromMessages) {
+    if (fromMessages && otherUserData?.type === 'User') {
       getOtherUserData();
+    } else if (fromMessages) {
+      setLoader(false);
     } else if (fromNotification) {
       setLoader(false);
     }
-  }, [fromMessages, fromNotification]);
+  }, [fromMessages, fromNotification, otherUserData?.type]);
 
   useEffect(() => {
     const routeConversationData = props?.route?.params?.conversationData;

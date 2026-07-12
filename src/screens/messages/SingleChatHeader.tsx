@@ -52,6 +52,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     setMessages,
   } = props;
 
+  const isSupportParticipant = otherUserData?.type === 'Admin';
+
   const [isBlockedByYou, setIsBlockedByYou] = useState(propsIsBlockedByYou);
   const [isBlockedYou, setIsBlockedYou] = useState(propsIsBlockedYou);
 
@@ -334,10 +336,12 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   const blurText = isBlurred
     ? 'Unblur Profile Picture'
     : 'Blur Profile Picture';
+  const viewProfileOption = isSupportParticipant ? [] : ['View profile'];
+  const viewProfileAction = isSupportParticipant ? [] : [onViewProfilePress];
   if (!conversationData || !Object.keys(conversationData).length) {
     if (isBlockedByYou) {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         // 'Unblock user',
         'Clear chat',
         // blurText,
@@ -345,7 +349,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
       ];
     } else {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         // 'Block user',
         // 'Report and block user',
         'Clear chat',
@@ -356,7 +360,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   } else {
     if (isBlockedByYou) {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         // 'Unblock user',
         'Clear chat',
         'Delete conversation',
@@ -365,7 +369,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
       ];
     } else {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         // 'Block user',
         // 'Report and block user',
         'Clear chat',
@@ -380,18 +384,18 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   if (!conversationData || !Object.keys(conversationData).length) {
     if (isBlockedByYou) {
       actionsArray = [
-        onViewProfilePress,
+        ...viewProfileAction,
         // onBlockUnBlockUserPress,
         showClearChatAlert,
         // onChangeBlur,
       ];
     } else {
-      actionsArray = [onViewProfilePress, showClearChatAlert];
+      actionsArray = [...viewProfileAction, showClearChatAlert];
     }
   } else {
     if (isBlockedByYou) {
       actionsArray = [
-        onViewProfilePress,
+        ...viewProfileAction,
         // onBlockUnBlockUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
@@ -399,7 +403,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
       ];
     } else {
       actionsArray = [
-        onViewProfilePress,
+        ...viewProfileAction,
         // onBlockUnBlockUserPress,
         // onBlockUnBlockAndReportUserPress,
         showClearChatAlert,
@@ -425,11 +429,14 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         />
         <Ripple
           style={Styles.headerInnerCon}
-          onPress={() =>
+          onPress={() => {
+            if (isSupportParticipant) {
+              return;
+            }
             props.navigation.navigate('UserProfile', {
               userData: otherUserData,
-            })
-          }
+            });
+          }}
         >
           <View style={Styles.userImage}>
             {otherUserData?.image && !isBlockedYou ? (
