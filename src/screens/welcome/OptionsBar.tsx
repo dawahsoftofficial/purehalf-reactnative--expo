@@ -27,6 +27,7 @@ const OptionsBar = (props: any) => {
     // Liked-you ('1') and Visitors ('3') are premium-gated in Welcome.onOptionPress
     const isPaid = value === '1' || value === '3';
     const isLocked = isPaid && premiumLoaded && !isPremiumUser;
+    const isPremiumFeature = isPaid && isPremiumUser;
     const counter =
       value === '1'
         ? userStats?.like_you_counter
@@ -40,8 +41,13 @@ const OptionsBar = (props: any) => {
         rippleColor={Colors.primary}
         style={[
           Styles.pill,
+          isPremiumFeature && Styles.premiumPill,
           {
-            backgroundColor: isActive ? Colors.primary : Colors.lavender,
+            backgroundColor: isActive
+              ? Colors.primary
+              : isPremiumFeature
+                ? Colors.primaryMid
+                : Colors.lavender,
             flexDirection: Rtl ? 'row-reverse' : 'row',
           },
         ]}
@@ -50,13 +56,24 @@ const OptionsBar = (props: any) => {
         <Text
           style={{
             ...Styles.pillTxt,
-            color: isActive ? Colors.surface : Colors.muted,
-            fontFamily: isActive ? Fonts.APPFONT_SB : Fonts.APPFONT_M,
+            color: isActive || isPremiumFeature ? Colors.surface : Colors.muted,
+            fontFamily:
+              isActive || isPremiumFeature ? Fonts.APPFONT_SB : Fonts.APPFONT_M,
           }}
         >
           {name}
         </Text>
-        {isLocked ? (
+        {isPremiumFeature ? (
+          <Ionicons
+            name="diamond"
+            size={wp(3.1)}
+            color={Colors.surface}
+            style={{
+              marginLeft: Rtl ? 0 : wp(1.1),
+              marginRight: Rtl ? wp(1.1) : 0,
+            }}
+          />
+        ) : isLocked ? (
           <Ionicons
             name="lock-closed"
             size={wp(3.1)}
@@ -123,6 +140,15 @@ const Styles = StyleSheet.create({
     height: hp(4.2),
     paddingHorizontal: wp(2.8),
     borderRadius: 999,
+  },
+  premiumPill: {
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 5,
+    elevation: 3,
   },
   pillTxt: {
     fontSize: Typography.small,
