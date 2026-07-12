@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import PremiumPaywallScreen from '@/screens/proFeaturesPromotion/PremiumPaywallScreen';
 import { useSettingsStore } from '@/stores';
 
-import { CustomModal, ImageViewer } from '../components';
+import { CustomModal, ImageViewer, PersistentMessagesFab } from '../components';
 import { CheckRtl } from '../languages';
 import DisplayForegroundNotificaton from '../notifications/DisplayForegroundNotificaton';
 import {
@@ -147,6 +147,7 @@ function App() {
     <NavigationContainer ref={navigationRef}>
       <DisplayForegroundNotificaton />
       <CustomModal />
+      {!loader && <PersistentMessagesFab />}
       {!loader && (
         <Stack.Navigator
           screenOptions={() => ({
