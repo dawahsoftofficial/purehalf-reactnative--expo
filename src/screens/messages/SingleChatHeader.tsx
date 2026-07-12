@@ -342,7 +342,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         ...viewProfileOption,
-        // 'Unblock user',
+        'Unblock user',
         'Clear chat',
         // blurText,
         'Cancel',
@@ -350,8 +350,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     } else {
       optionsArray = [
         ...viewProfileOption,
-        // 'Block user',
-        // 'Report and block user',
+        'Block user',
+        'Report and block user',
         'Clear chat',
         // blurText,
         'Cancel',
@@ -361,7 +361,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         ...viewProfileOption,
-        // 'Unblock user',
+        'Unblock user',
         'Clear chat',
         'Delete conversation',
         // blurText,
@@ -370,8 +370,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     } else {
       optionsArray = [
         ...viewProfileOption,
-        // 'Block user',
-        // 'Report and block user',
+        'Block user',
+        'Report and block user',
         'Clear chat',
         'Delete conversation',
         // blurText,
@@ -385,18 +385,23 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       actionsArray = [
         ...viewProfileAction,
-        // onBlockUnBlockUserPress,
+        onBlockUnBlockUserPress,
         showClearChatAlert,
         // onChangeBlur,
       ];
     } else {
-      actionsArray = [...viewProfileAction, showClearChatAlert];
+      actionsArray = [
+        ...viewProfileAction,
+        onBlockUnBlockUserPress,
+        onBlockUnBlockAndReportUserPress,
+        showClearChatAlert,
+      ];
     }
   } else {
     if (isBlockedByYou) {
       actionsArray = [
         ...viewProfileAction,
-        // onBlockUnBlockUserPress,
+        onBlockUnBlockUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
         // onChangeBlur,
@@ -404,8 +409,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     } else {
       actionsArray = [
         ...viewProfileAction,
-        // onBlockUnBlockUserPress,
-        // onBlockUnBlockAndReportUserPress,
+        onBlockUnBlockUserPress,
+        onBlockUnBlockAndReportUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
         // onChangeBlur,
