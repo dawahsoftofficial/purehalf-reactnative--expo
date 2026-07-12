@@ -11,7 +11,11 @@ import { usePremiumStore } from '../../stores';
 import RefineSearch from './RefineSearch';
 import SavedSearches from './SavedSearches';
 
-const SearchProfiles = ({ navigation }: { navigation: any }) => {
+const SearchProfiles = ({
+  navigation,
+}: {
+  navigation: { goBack: () => void };
+}) => {
   const { bottom } = useSafeAreaInsets();
   const refineSearchRef = useRef<{
     onSaveAndSearchPress: () => void;

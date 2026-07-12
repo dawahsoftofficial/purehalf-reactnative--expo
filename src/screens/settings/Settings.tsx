@@ -19,6 +19,7 @@ import { useGlobalContext } from '../../services';
 
 type SettingsProps = {
   navigation: {
+    goBack: () => void;
     navigate: (screen: string, params?: object) => void;
   };
 };

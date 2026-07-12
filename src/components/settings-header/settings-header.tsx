@@ -7,7 +7,11 @@ import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors } from '../../res';
 import Text from '../Text';
 
-function SettingsHeader({ navigation }: { navigation: any }) {
+function SettingsHeader({
+  navigation,
+}: {
+  navigation: { goBack: () => void };
+}) {
   const Rtl = CheckRtl();
 
   return (
