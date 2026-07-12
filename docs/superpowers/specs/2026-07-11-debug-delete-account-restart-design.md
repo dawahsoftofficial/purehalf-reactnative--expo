@@ -31,7 +31,13 @@ Manually testing the signup flow repeatedly requires deleting the test account t
 2. **Location/visibility:** a row in the existing Settings screen (`src/screens/settings/Settings.tsx`), not a floating icon — visible only when logged in (Settings is a post-login screen), which is the only time the action is meaningful anyway.
 3. **Confirmation:** a native confirm `Alert` before the destructive action (one extra tap, not a full re-auth step).
 4. **Gating mechanism:** a new mobile-only `APP_DEBUG` env flag (`app-old/.env`, already set to `true` by the user), read via `react-native-dotenv` / `@env` — independent of `__DEV__` and independent of the backend's own `APP_DEBUG`.
-5. **Backend safety net:** the new hard-delete endpoint additionally gates on Laravel's own `config('app.debug')` (already `true` in `admin/.env` for this environment), so the endpoint 404s in any environment where the backend's `APP_DEBUG` is `false` — regardless of what a given mobile build has baked in for its own `APP_DEBUG`.
+5. **Backend safety net (revised — see Revision history):** the new hard-delete endpoint gates on a dedicated config flag, `config('app.allow_debug_account_delete')` (env `ALLOW_DEBUG_ACCOUNT_DELETE`, default `false` everywhere), independent of `config('app.debug')`.
+
+## Revision history (backend gate)
+
+- 2026-07-11 (original): gated on `config('app.debug')`, reasoning that it would be `false` in any real/shared environment.
+- 2026-07-11 (revised, post final-review): a whole-branch review found this assumption false for this project — the actual staging environment (which mobile builds' `API_BASE_URL` points at) runs with `APP_DEBUG=true`. Gating an irreversible, cascading self-account-deletion endpoint on a flag that's routinely `true` on a shared environment was assessed Critical. Switched to a dedicated, off-by-default flag whose only purpose is this endpoint, so it can never be accidentally live via an unrelated reason to leave general debug output on. **Operational note:** since mobile's `API_BASE_URL` points at staging, using this tool from a real device requires deliberately setting `ALLOW_DEBUG_ACCOUNT_DELETE=true` on staging's backend for the duration of testing, then setting it back to `false` — it is not local-only by design (the user chose the dedicated-flag option over restricting to `app()->environment('local')` specifically so the tool still works against staging).
+- Also added per the same review: an audit log line (`Log::warning`, user id + IP) before the delete, and a `DB::transaction`/try-catch wrapper matching the existing `deleteAccount` method's convention (defense-in-depth; the underlying `forceDelete` cascades are FK-safe either way).
 
 ---
 
@@ -43,17 +49,21 @@ Manually testing the signup flow repeatedly requires deleting the test account t
 
 ### Controller
 
-New `AuthController::forceDeleteAccountDebug()`:
+`AuthController::forceDeleteAccountDebug()` (revised — see Revision history above):
 
-- First line: `if (! config('app.debug')) { abort(404); }` — the endpoint does not exist (404, not 403) in any environment where the backend's `APP_DEBUG` is off.
+- First line: `if (! config('app.allow_debug_account_delete')) { abort(404); }` — the endpoint does not exist (404, not 403) unless the dedicated, off-by-default flag is explicitly on.
+- Logs an audit line before deleting: `Log::warning('Debug force-delete-account triggered', ['user_id' => $currentUser->id, 'ip' => request()->ip()]);` — this is an irreversible action with no other record of who/when.
+- Wrapped in `DB::beginTransaction()` / `commit()` / `catch (Exception $ex) { DB::rollBack(); return $this->error(...); }`, matching the existing `deleteAccount()` method's convention.
 - Resolves the authenticated user's id the same way `deleteAccount()` does.
 - Calls the **already-existing** `BaseRepository::forceDelete($id)`, which already force-deletes `detail`, `media`, and `all_interaction` relations plus the user row itself. No new deletion logic — this method exists today but is currently unused by any route.
 - No OTP, no `purpose_of_leaving` — single call, immediate.
 
+New config key in `config/app.php`, immediately after the existing `'debug'` key: `'allow_debug_account_delete' => (bool) env('ALLOW_DEBUG_ACCOUNT_DELETE', false),`.
+
 ### Backend tests (PHPUnit feature)
 
-- Authenticated user hits the endpoint → user row and its `detail`/`media`/`all_interaction` relations are gone (force-deleted, not soft-deleted).
-- With `config(['app.debug' => false])`, the same request returns 404.
+- Authenticated user hits the endpoint with the flag on → user row and its `detail`/`media`/`all_interaction` relations are gone (force-deleted, not soft-deleted).
+- With `config(['app.allow_debug_account_delete' => false])`, the same request returns 404.
 
 ---
 
