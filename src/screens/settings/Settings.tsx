@@ -257,7 +257,7 @@ function Settings(props: SettingsProps) {
 
   return (
     <Container style={Styles.container}>
-      <SettingsHeader />
+      <SettingsHeader navigation={props.navigation} />
       <ScrollView
         contentContainerStyle={Styles.innerCon}
         showsVerticalScrollIndicator={false}

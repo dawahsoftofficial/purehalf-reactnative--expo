@@ -100,6 +100,7 @@ export function ProfileBadges({
       icon: React.ReactNode;
       iconName: string;
       label: string;
+      tone: 'purple' | 'green';
     }> = [];
 
     if (isVIP) {
@@ -107,6 +108,7 @@ export function ProfileBadges({
         icon: <VipBadgeIcon width={wp(8)} height={wp(8)} />,
         iconName: 'diamond',
         label: 'VIP',
+        tone: 'purple',
       });
     }
 
@@ -115,6 +117,7 @@ export function ProfileBadges({
         icon: <PopularBadgeIcon width={wp(8)} height={wp(8)} />,
         iconName: 'trending-up',
         label: 'Boosted',
+        tone: 'green',
       });
     }
 
@@ -123,6 +126,7 @@ export function ProfileBadges({
         icon: <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />,
         iconName: 'checkmark-circle',
         label: 'Complete',
+        tone: 'green',
       });
     }
 
@@ -140,15 +144,34 @@ export function ProfileBadges({
         style={[Styles.container, Styles.pillContainer, containerStyle]}
       >
         {badges.map((badge, index) => (
-          <View key={index} style={Styles.pillBadge}>
-            <View style={Styles.pillIconWrap}>
+          <View
+            key={index}
+            style={[
+              Styles.pillBadge,
+              badge.tone === 'purple' ? Styles.pillBadgePurple : null,
+            ]}
+          >
+            <View
+              style={[
+                Styles.pillIconWrap,
+                badge.tone === 'purple' ? Styles.pillIconWrapPurple : null,
+              ]}
+            >
               <Ionicons
                 name={badge.iconName}
-                color={Colors.verified}
+                color={
+                  badge.tone === 'purple' ? Colors.primary : Colors.verified
+                }
                 size={wp(3.4)}
               />
             </View>
-            <Text style={Styles.pillLabel} numberOfLines={1}>
+            <Text
+              style={[
+                Styles.pillLabel,
+                badge.tone === 'purple' ? Styles.pillLabelPurple : null,
+              ]}
+              numberOfLines={1}
+            >
               {badge.label}
             </Text>
           </View>
@@ -220,12 +243,22 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: Colors.surface,
   },
+  pillBadgePurple: {
+    backgroundColor: Colors.primaryRGBA12,
+    borderColor: Colors.themeRGBA20,
+  },
+  pillIconWrapPurple: {
+    backgroundColor: Colors.lavender,
+  },
   pillLabel: {
     color: Colors.verified,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.tiny1,
     includeFontPadding: false,
     alignSelf: 'center',
+  },
+  pillLabelPurple: {
+    color: Colors.primary,
   },
   badge: {
     flexDirection: 'row',

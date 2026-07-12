@@ -11,7 +11,7 @@ import { usePremiumStore } from '../../stores';
 import RefineSearch from './RefineSearch';
 import SavedSearches from './SavedSearches';
 
-const SearchProfiles = () => {
+const SearchProfiles = ({ navigation }: { navigation: any }) => {
   const { bottom } = useSafeAreaInsets();
   const refineSearchRef = useRef<{
     onSaveAndSearchPress: () => void;
@@ -47,7 +47,11 @@ const SearchProfiles = () => {
 
   return (
     <Container style={Styles.container}>
-      <Header title={LanguageKeys.searchProfiles} titleVariant="display" />
+      <Header
+        navigation={navigation}
+        title={LanguageKeys.searchProfiles}
+        titleVariant="display"
+      />
       <RNView style={Styles.contentWrapper}>
         <ScrollView
           contentContainerStyle={Styles.innerContainer}

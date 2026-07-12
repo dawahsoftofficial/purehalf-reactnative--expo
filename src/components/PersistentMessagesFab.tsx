@@ -9,32 +9,9 @@ import { navigationRef } from '../navigation/RootNavigation';
 import { Colors } from '../res';
 import { useConversationStore } from '../stores';
 
-// Screens where the FAB would either be redundant (already on Messages) or
-// visually collide with a full-screen auth/onboarding/paywall flow.
-const HIDDEN_ON_ROUTES = new Set([
-  'Messages',
-  'SingleChat',
-  'AuthWelcome',
-  'PhoneNumber',
-  'Otp',
-  'UserInput',
-  'OnboardingProfile',
-  'Location',
-  'ProfilePicture',
-  'SignupPrimer',
-  'WelcomeUser',
-  'ProFeaturesPromotion',
-  'ChatCreditsPaywall',
-  'DiscountProFeaturesPromotion',
-  'MembershipCongrats',
-  'GiftMembershipCongrats',
-  'PaymentOptions',
-  'BankTransfer',
-  'AccountDeletion',
-  'PurposeOfLeaving',
-  'AccountDeleted',
-  'AccountSuspended',
-]);
+// The messages shortcut belongs to Home. Keeping this allow-list small prevents
+// it from leaking onto internal screens as new routes are added.
+const VISIBLE_ON_ROUTES = new Set(['BottomTab', 'Welcome']);
 
 // `useSyncExternalStore` (rather than `useEffect` + `useState`) so the
 // current route is read synchronously on the very first render. React
@@ -60,7 +37,7 @@ function PersistentMessagesFab() {
     getCurrentRouteName
   );
 
-  if (!currentRoute || HIDDEN_ON_ROUTES.has(currentRoute)) {
+  if (!currentRoute || !VISIBLE_ON_ROUTES.has(currentRoute)) {
     return null;
   }
 
@@ -109,7 +86,6 @@ const Styles = StyleSheet.create({
     position: 'absolute',
     right: wp(5),
     zIndex: 20,
-    elevation: 20,
   },
   fab: {
     width: wp(14),
@@ -122,6 +98,7 @@ const Styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    elevation: 5,
   },
   badge: {
     position: 'absolute',

@@ -709,31 +709,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             </Ripple>
           </View>
         </View>
-        {!currentUser?.is_approved && (
-          <Ripple
-            style={[
-              Styles.pendingApprovalBanner,
-              { flexDirection: Rtl ? 'row-reverse' : 'row' },
-            ]}
-            onPress={() => navigation.navigate('Profile')}
-          >
-            <View style={Styles.pendingIconChip}>
-              <Ionicons
-                name="time-outline"
-                size={wp(4.5)}
-                color={Colors.primary}
-              />
-            </View>
-            <Text style={Styles.pendingApprovalText}>
-              {t(LanguageKeys.profileInReview)}
-            </Text>
-            <Ionicons
-              name={Rtl ? 'chevron-back' : 'chevron-forward'}
-              size={wp(4.5)}
-              color={Colors.primaryMid}
-            />
-          </Ripple>
-        )}
         {!giftStatus.claimed &&
           (profileIncomplete || giftStatus.eligible) &&
           !profileBannerDismissed && (
@@ -882,7 +857,9 @@ const Styles = StyleSheet.create({
     borderRadius: wp(5),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.appBg,
+    backgroundColor: Colors.lavender,
+    borderWidth: 1,
+    borderColor: Colors.primaryRGBA12,
   },
   avatarBtn: {
     width: wp(12),

@@ -185,6 +185,7 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
     textAlign: 'center',
+    alignSelf: 'stretch',
     marginTop: hp(1),
   },
   buttonRow: {

@@ -328,6 +328,7 @@ const Header = ({
   const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const giftThreshold =
     useSettingsStore().getProfileCompletionThresholdPercent();
   const giftCredits = useSettingsStore().getProfileCompletionGiftCredits();
@@ -914,13 +915,11 @@ const Header = ({
           </View>
         </View>
         <Ripple
-          style={[
-            Styles.taglineEditRow,
-            { flexDirection: Rtl ? 'row-reverse' : 'row' },
-          ]}
+          style={Styles.taglineEditRow}
           onPress={onTaglineEditPress}
           rippleColor={Colors.lavender}
         >
+          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
           {tagline && tagline.trim().length ? (
             <ReactText
               style={[
@@ -936,10 +935,9 @@ const Header = ({
               style={[Styles.cardTagline, Styles.cardTaglineMuted, { flex: 1 }]}
               numberOfLines={2}
             >
-              {LanguageKeys.addTagline}
+              {LanguageKeys.enterTagline}
             </Text>
           )}
-          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
         </Ripple>
         {typeof profileStrength === 'number' ? (
           <View style={Styles.strengthWrap}>
@@ -1020,63 +1018,21 @@ const Header = ({
             </Text>
           </Ripple>
         </View>
-        <View
-          style={{
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-            alignItems: 'flex-start',
-            backgroundColor: Colors.surface,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: Colors.hairline,
-            padding: wp(4),
-            marginTop: hp(1.2),
-          }}
-        >
-          <Ionicons
-            name={
-              currentUser?.is_approved ? 'checkmark-circle' : 'time-outline'
-            }
-            size={wp(5.5)}
-            color={
-              currentUser?.is_approved ? Colors.verified : Colors.primaryMid
-            }
-          />
-          <View style={{ flex: 1, marginHorizontal: wp(3) }}>
-            <Text
-              style={{
-                fontFamily: Fonts.APPFONT_SB,
-                fontSize: Typography.small2,
-                color: currentUser?.is_approved
-                  ? Colors.verified
-                  : Colors.primaryMid,
-                includeFontPadding: false,
-                marginBottom: hp(0.4),
-              }}
-            >
-              {t(
-                currentUser?.is_approved
-                  ? LanguageKeys.profileApprovedTitle
-                  : LanguageKeys.profileInReview
-              )}
-            </Text>
-            <Text
-              style={{
-                fontFamily: Fonts.APPFONT_R,
-                fontSize: Typography.small,
-                color: Colors.muted,
-                lineHeight: wp(5),
-                includeFontPadding: false,
-                textAlign: Rtl ? 'right' : 'left',
-              }}
-            >
-              {t(
-                currentUser?.is_approved
-                  ? LanguageKeys.profileApprovedDesc
-                  : LanguageKeys.profileInReviewDesc
-              )}
-            </Text>
-          </View>
-        </View>
+        {!currentUser?.is_approved ? (
+          <Ripple
+            style={Styles.reviewStatusIcon}
+            onPress={() => setReviewModalVisible(true)}
+            rippleColor={Colors.primaryRGBA12}
+            accessibilityRole="button"
+            accessibilityLabel={t(LanguageKeys.profileInReview)}
+          >
+            <Ionicons
+              name="time-outline"
+              size={wp(5.5)}
+              color={Colors.primaryMid}
+            />
+          </Ripple>
+        ) : null}
       </View>
     </>
   );
@@ -1448,6 +1404,36 @@ const Header = ({
         </View>
       </Modal>
 
+      <Modal
+        transparent
+        visible={reviewModalVisible}
+        animationType="fade"
+        onRequestClose={() => setReviewModalVisible(false)}
+      >
+        <View style={Styles.taglineModalWrap}>
+          <View style={[Styles.taglineModalCard, Styles.reviewModalCard]}>
+            <View style={Styles.reviewModalIcon}>
+              <Ionicons
+                name="time-outline"
+                size={wp(7)}
+                color={Colors.primary}
+              />
+            </View>
+            <Text style={[Styles.taglineModalTitle, Styles.reviewModalTitle]}>
+              {LanguageKeys.profileInReview}
+            </Text>
+            <Text style={Styles.reviewModalBody}>
+              {LanguageKeys.profileInReviewDesc}
+            </Text>
+            <Button
+              onPress={() => setReviewModalVisible(false)}
+              buttonStyle={Styles.reviewModalButton}
+              text={LanguageKeys.gotIt}
+            />
+          </View>
+        </View>
+      </Modal>
+
       <GiftClaimModal
         visible={giftModalVisible}
         giftCredits={giftCredits}
@@ -1564,6 +1550,16 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2),
     marginTop: hp(1),
+  },
+  reviewStatusIcon: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+    marginTop: hp(1.2),
   },
   lastSeenRow: {
     flexDirection: 'row',
@@ -1772,6 +1768,32 @@ const Styles = StyleSheet.create({
     fontSize: Typography.medium1,
     color: Colors.ink,
     marginBottom: hp(1.5),
+  },
+  reviewModalCard: {
+    alignItems: 'center',
+  },
+  reviewModalIcon: {
+    width: wp(15),
+    height: wp(15),
+    borderRadius: wp(7.5),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(1.5),
+  },
+  reviewModalTitle: {
+    textAlign: 'center',
+  },
+  reviewModalBody: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    lineHeight: wp(5.5),
+    textAlign: 'center',
+  },
+  reviewModalButton: {
+    alignSelf: 'stretch',
+    marginTop: hp(2.5),
   },
   taglineModalInput: {
     minHeight: hp(7),
