@@ -16,6 +16,8 @@ export type FcmToken = {
   status: number;
   is_tester: boolean;
   tester_can_view_private_media: boolean;
+  tester_is_invisible: boolean;
+  tester_force_recommendations: boolean;
   device_word: string;
 };
 

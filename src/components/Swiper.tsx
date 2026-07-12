@@ -1,6 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useRef, useState } from 'react';
-import { Dimensions, Modal, StyleSheet } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import { Alert, Dimensions, Modal, StyleSheet, Text } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Carousel from 'react-native-reanimated-carousel';
 import {
@@ -12,7 +12,13 @@ import AntDesign from 'react-native-vector-icons/AntDesign';
 import { hp, wp } from '../global';
 import { LanguageKeys } from '../languages';
 import { Colors } from '../res';
-import { ApiServices, flashSuccessMessage } from '../services';
+import {
+  ApiServices,
+  flashErrorMessage,
+  flashSuccessMessage,
+  TesterApi,
+  useGlobalContext,
+} from '../services';
 import SliderEntry from './SliderEntry';
 
 const _renderItem = ({
@@ -47,17 +53,49 @@ const SwiperComponent = ({
   const [users, setUsers] = useState<any>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const { currentUser } = useGlobalContext();
+
+  const loadRecommendations = useCallback(() => {
+    setLoading(true);
+    return ApiServices.getRecommendedUser()
+      .then((res: any) => {
+        setUsers([...(Array.isArray(res) ? res : []), { id: null }]);
+        setCurrentIndex(0);
+        swiper.current?.scrollTo({ index: 0, animated: false });
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   useFocusEffect(
     React.useCallback(() => {
-      setLoading(true);
-      ApiServices.getRecommendedUser().then((res: any) => {
-        setUsers([...res, { id: null }]);
-        setLoading(false);
-        setCurrentIndex(0);
-      });
-    }, [])
+      void loadRecommendations();
+    }, [loadRecommendations])
   );
+
+  const resetDeck = () =>
+    Alert.alert(
+      'Reset recommendation deck?',
+      'This clears your stored daily pass history and reloads candidates.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await TesterApi.resetSelfData('daily_recommendations');
+              await loadRecommendations();
+              flashSuccessMessage('Recommendation deck reset.');
+            } catch (error: any) {
+              flashErrorMessage(
+                error?.response?.data?.message ||
+                  'Could not reset recommendations.'
+              );
+            }
+          },
+        },
+      ]
+    );
 
   const swipeNext = () => {
     if (currentIndex < users.length - 1) {
@@ -95,6 +133,17 @@ const SwiperComponent = ({
   return (
     <Modal visible={true} transparent={true}>
       <SafeAreaView style={Styles.container}>
+        {currentUser?.is_tester && (
+          <Ripple
+            style={[Styles.resetWrapper, { top: hp(1) + 12 }]}
+            rippleColor={Colors.surface}
+            rippleContainerBorderRadius={wp(5.5)}
+            onPress={resetDeck}
+          >
+            <AntDesign name="reload1" size={wp(4.4)} color={Colors.surface} />
+            <Text style={Styles.resetText}>Reset deck</Text>
+          </Ripple>
+        )}
         <Ripple
           style={[Styles.closeWrapper, { top: hp(1) + 12 }]}
           rippleColor={Colors.surface}
@@ -164,6 +213,22 @@ const Styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 4,
   },
+  resetWrapper: {
+    position: 'absolute',
+    left: wp(4),
+    zIndex: 10,
+    height: wp(11),
+    borderRadius: wp(5.5),
+    paddingHorizontal: wp(3),
+    backgroundColor: Colors.blackRGBA38,
+    borderWidth: 1,
+    borderColor: Colors.whiteRGBA30,
+    flexDirection: 'row',
+    gap: wp(1.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  resetText: { color: Colors.surface, fontWeight: '700', fontSize: wp(3) },
   slider: {
     // marginTop: 50,
     overflow: 'visible',

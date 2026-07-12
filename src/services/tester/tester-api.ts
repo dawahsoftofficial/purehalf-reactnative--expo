@@ -4,6 +4,8 @@ export type TesterState = {
   id: number;
   is_tester: boolean;
   tester_can_view_private_media: boolean;
+  tester_is_invisible: boolean;
+  tester_force_recommendations: boolean;
   gender: 'male' | 'female';
   date_of_birth: string;
   chat_credits: number;
@@ -42,6 +44,13 @@ export const TesterApi = {
   async makeUserActive(userId: number) {
     return result<{ id: number; last_online_at: string }>(
       await Api.patch(`/auth/tester/users/${userId}/active`)
+    );
+  },
+  async resetSelfData(
+    type: 'daily_recommendations' | 'visits_to_me' | 'liked_by_me' | 'likes_me'
+  ) {
+    return result<{ type: string; cleared_count: number }>(
+      await Api.post('/auth/tester/self/reset', { type })
     );
   },
   async deleteSelf() {

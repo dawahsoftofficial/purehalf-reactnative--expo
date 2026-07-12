@@ -23,6 +23,7 @@ import {
   TesterDiagnostics,
   useGlobalContext,
 } from '../../services';
+import { useUserStatsStore } from '../../stores';
 
 const Button = ({
   label,
@@ -57,6 +58,8 @@ export default function TesterConsole({ navigation, route }: any) {
   const [dob, setDob] = useState(currentUser?.date_of_birth || '');
   const [creditAmount, setCreditAmount] = useState('50');
   const [notes, setNotes] = useState('');
+  const setUserStats = useUserStatsStore((state) => state.setUserStats);
+  const userStats = useUserStatsStore();
   const calls = useMemo(
     () => TesterDiagnostics.forScreen(sourceScreenName),
     [sourceScreenName]
@@ -170,6 +173,51 @@ export default function TesterConsole({ navigation, route }: any) {
     );
 
   const parsedCredits = Number.parseInt(creditAmount, 10);
+
+  const resetData = (
+    type: 'daily_recommendations' | 'visits_to_me' | 'liked_by_me' | 'likes_me',
+    label: string
+  ) =>
+    Alert.alert(label, 'This clears the selected test data from both sides.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Clear',
+        style: 'destructive',
+        onPress: async () => {
+          setBusy(true);
+          try {
+            const result = await TesterApi.resetSelfData(type);
+            if (type === 'visits_to_me') {
+              setUserStats(
+                userStats.like_count,
+                0,
+                userStats.photo_request_count
+              );
+            } else if (type === 'likes_me') {
+              setUserStats(
+                0,
+                userStats.visit_count,
+                userStats.photo_request_count
+              );
+            } else if (type === 'daily_recommendations') {
+              await mergeUser({
+                reviewed_top_picks: null,
+                recommend_api_hit_at: null,
+              });
+            }
+            flashSuccessMessage(
+              `${label}: ${result.cleared_count} record${result.cleared_count === 1 ? '' : 's'} cleared.`
+            );
+          } catch (error: any) {
+            flashErrorMessage(
+              error?.response?.data?.message || 'Could not clear tester data.'
+            );
+          } finally {
+            setBusy(false);
+          }
+        },
+      },
+    ]);
 
   return (
     <Container>
@@ -330,6 +378,75 @@ export default function TesterConsole({ navigation, route }: any) {
             disabled={busy}
           />
         </View>
+
+        <Text style={styles.heading}>Discovery and interactions</Text>
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.label}>Invisible profile visits</Text>
+            <Text style={styles.meta}>
+              Opening another profile will not register a visit.
+            </Text>
+          </View>
+          <Switch
+            value={!!currentUser?.tester_is_invisible}
+            onValueChange={(value) =>
+              run(
+                () => TesterApi.updateSelf({ tester_is_invisible: value }),
+                `Invisible visits ${value ? 'enabled' : 'disabled'}.`
+              )
+            }
+            disabled={busy}
+          />
+        </View>
+        <View style={styles.switchRow}>
+          <View style={styles.switchCopy}>
+            <Text style={styles.label}>Force recommendation heart</Text>
+            <Text style={styles.meta}>
+              Shows the header heart and bypasses the tester time window.
+            </Text>
+          </View>
+          <Switch
+            value={!!currentUser?.tester_force_recommendations}
+            onValueChange={(value) =>
+              run(
+                () =>
+                  TesterApi.updateSelf({
+                    tester_force_recommendations: value,
+                  }),
+                `Recommendation override ${value ? 'enabled' : 'disabled'}.`
+              )
+            }
+            disabled={busy}
+          />
+        </View>
+        <Button
+          label="Reset daily recommendation history"
+          onPress={() =>
+            resetData('daily_recommendations', 'Recommendation history')
+          }
+          disabled={busy}
+        />
+        <Button
+          label="Clear visits to my profile"
+          onPress={() => resetData('visits_to_me', 'Visits to my profile')}
+          disabled={busy}
+        />
+        <Button
+          label="Clear profiles liked by me"
+          onPress={() => resetData('liked_by_me', 'Profiles liked by me')}
+          disabled={busy}
+        />
+        <Button
+          label="Clear people who like me"
+          onPress={() => resetData('likes_me', 'People who like me')}
+          disabled={busy}
+        />
+
+        <Text style={styles.heading}>Navigation</Text>
+        <Button
+          label="All app pages / screen directory"
+          onPress={() => navigation.navigate('TesterScreenDirectory')}
+        />
 
         <Text style={styles.heading}>App flow</Text>
         <Button

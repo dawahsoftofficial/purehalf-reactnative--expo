@@ -62,6 +62,7 @@ import {
   TesterConsole,
   TesterGallery,
   TesterInsights,
+  TesterScreenDirectory,
   TesterScreenInfo,
   TesterSplash,
   UserInput,
@@ -269,6 +270,10 @@ function App() {
           <Stack.Screen name="EditInterests" component={EditInterests} />
           <Stack.Screen name="TesterConsole" component={TesterConsole} />
           <Stack.Screen name="TesterScreenInfo" component={TesterScreenInfo} />
+          <Stack.Screen
+            name="TesterScreenDirectory"
+            component={TesterScreenDirectory}
+          />
           <Stack.Screen name="TesterInsights" component={TesterInsights} />
           <Stack.Screen name="TesterGallery" component={TesterGallery} />
           <Stack.Screen

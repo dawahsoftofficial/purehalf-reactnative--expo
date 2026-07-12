@@ -286,12 +286,21 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   // available" card. Only show either once we know there's really something
   // to see.
   useEffect(() => {
+    setShowRecommendationModal(false);
     if (!dailyRecommendations) return;
 
     const { status, start, end } = dailyRecommendations;
 
     // Check if status is enabled ('1')
     if (status !== '1') return;
+
+    const testerForcesRecommendations = Boolean(
+      currentUser?.is_tester && currentUser?.tester_force_recommendations
+    );
+    if (testerForcesRecommendations) {
+      setShowRecommendationModal(true);
+      return;
+    }
 
     // Get current hour in 24-hour format (0-23)
     const currentHour = new Date().getHours();
@@ -324,7 +333,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     return () => {
       cancelled = true;
     };
-  }, [dailyRecommendations]);
+  }, [
+    currentUser?.is_tester,
+    currentUser?.tester_force_recommendations,
+    dailyRecommendations,
+  ]);
   const applyOptionSelection = useCallback((item: OptionButton) => {
     setOptionTab(item.name);
     setActiveOptionButton(item);
