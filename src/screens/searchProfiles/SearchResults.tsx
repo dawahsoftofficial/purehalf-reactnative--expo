@@ -80,6 +80,7 @@ const SearchResults = (props: any) => {
         data={searchResults}
         navigation={props.navigation}
         onLoadMorePress={onLoadMoreData}
+        badgeSurface="searchResults"
       />
       {loadMoreLoader && (
         <ActivityIndicator

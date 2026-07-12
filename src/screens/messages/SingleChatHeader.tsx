@@ -14,6 +14,7 @@ import {
   DeletePicker,
   ModalLoader,
   PopupMenuRenderer,
+  ProfileBadges,
   ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
@@ -460,9 +461,20 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
               />
             )}
           </View>
-          <Text variant="display" style={Styles.userName} numberOfLines={1}>
-            {otherUserData?.name}
-          </Text>
+          <View style={Styles.titleRow}>
+            <Text variant="display" style={Styles.userName} numberOfLines={1}>
+              {otherUserData?.name}
+            </Text>
+            {!isSupportConversation ? (
+              <ProfileBadges
+                userData={otherUserData}
+                iconOnly
+                surface="chatThread"
+                iconSize={wp(5.5)}
+                containerStyle={Styles.chatBadges}
+              />
+            ) : null}
+          </View>
         </Ripple>
       </View>
       {currentUserId !== 'guardian' && !isSupportConversation && (
@@ -566,7 +578,17 @@ const Styles = StyleSheet.create({
     alignSelf: 'center',
     fontSize: Typography.medium,
     color: Colors.ink,
-    maxWidth: wp(52),
+    maxWidth: wp(36),
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.2),
+    flexShrink: 1,
+  },
+  chatBadges: {
+    flexWrap: 'nowrap',
+    gap: wp(0.6),
   },
   avatarImage: {
     width: '100%',

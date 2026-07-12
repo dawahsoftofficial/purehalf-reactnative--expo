@@ -41,12 +41,13 @@ type MaxChatsPerDay = {
   };
 };
 
-type BadgeVisibility = {
+export type BadgeVisibility = {
   searchResults: boolean;
   singleProfile: boolean;
   chatList: boolean;
   chatThread: boolean;
   homeRecommended: boolean;
+  dailyRecommendations: boolean;
   profileIconPopup: boolean;
 };
 
@@ -67,6 +68,10 @@ type BadgeConfig = {
   visibility: BadgeVisibility;
 };
 
+type NewMemberBadgeConfig = BadgeConfig & {
+  maxAccountAgeDays?: number;
+};
+
 type PaymentWallConfig = {
   enabled: boolean;
   visibility: PaymentWallVisibility;
@@ -77,6 +82,7 @@ type BadgesAndPayments = {
     completedProfile?: BadgeConfig;
     boosted?: BadgeConfig;
     vipMember?: BadgeConfig;
+    newMember?: NewMemberBadgeConfig;
   };
   paymentWalls: {
     buyChatCredits?: PaymentWallConfig;

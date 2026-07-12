@@ -4,6 +4,7 @@ import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import NewBadgeIcon from '../assets/svgs/badges/new-badge.svg';
 import PopularBadgeIcon from '../assets/svgs/badges/popular-badge.svg';
 import ProfileCompleteBadgeIcon from '../assets/svgs/badges/profile-complete-badge.svg';
 import VipBadgeIcon from '../assets/svgs/badges/vip-badge.svg';
@@ -11,7 +12,12 @@ import { hp, Typography, wp } from '../global';
 import { checkProfileCompleted } from '../lib/utils/profile-utils';
 import { Colors, Fonts } from '../res';
 import { StorageManager, useGlobalContext } from '../services';
-import { usePremiumStore } from '../stores';
+import {
+  type BadgesAndPayments,
+  type BadgeVisibility,
+  usePremiumStore,
+  useSettingsStore,
+} from '../stores';
 
 type ProfileBadgesProps = {
   userData?: {
@@ -31,6 +37,7 @@ type ProfileBadgesProps = {
     is_boosted?: boolean;
     membership_status?: number | null;
     membership_expiry?: string | null;
+    created_at?: string | null;
   };
   isSelf?: boolean;
   showText?: boolean;
@@ -38,6 +45,8 @@ type ProfileBadgesProps = {
   iconOnly?: boolean;
   variant?: 'default' | 'pill';
   containerStyle?: StyleProp<ViewStyle>;
+  surface?: keyof BadgeVisibility;
+  iconSize?: number;
 };
 
 export function ProfileBadges({
@@ -48,11 +57,33 @@ export function ProfileBadges({
   iconOnly = false,
   variant = 'default',
   containerStyle,
+  surface = 'singleProfile',
+  iconSize,
 }: ProfileBadgesProps) {
   const { currentUser } = useGlobalContext();
   const { getData, storageKeys } = StorageManager;
   const isPremium = usePremiumStore((state) => state.isPremium);
+  const badgeConfig = useSettingsStore((state) => {
+    const setting = state.settings?.results.find(
+      (item) => item.key === 'badges_and_payments'
+    );
+    return (setting?.value as BadgesAndPayments | undefined)?.badges ?? null;
+  });
   const [isProfileCompleted, setIsProfileCompleted] = React.useState(false);
+  const badgeIconSize = iconSize ?? wp(8);
+
+  const isVisibleByConfig = React.useCallback(
+    (key: 'completedProfile' | 'boosted' | 'vipMember' | 'newMember') => {
+      const config = badgeConfig?.[key];
+
+      // Preserve the three established badges when an older server has not
+      // returned the setting yet. New is opt-in because its age rule is new.
+      if (!config) return key !== 'newMember';
+
+      return config.enabled && config.visibility?.[surface] !== false;
+    },
+    [badgeConfig, surface]
+  );
 
   const isVIP = useMemo(() => {
     if (!userData) return false;
@@ -74,6 +105,23 @@ export function ProfileBadges({
     if (!userData) return false;
     return Boolean(userData.boosted || userData.is_boosted);
   }, [userData]);
+
+  const isNew = useMemo(() => {
+    if (!userData?.created_at || !isVisibleByConfig('newMember')) return false;
+
+    const maxAccountAgeDays = Math.max(
+      1,
+      badgeConfig?.newMember?.maxAccountAgeDays ?? 7
+    );
+    const createdAt = moment(userData.created_at);
+    const now = moment();
+
+    return (
+      createdAt.isValid() &&
+      !createdAt.isAfter(now) &&
+      createdAt.isSameOrAfter(now.clone().subtract(maxAccountAgeDays, 'days'))
+    );
+  }, [badgeConfig?.newMember?.maxAccountAgeDays, isVisibleByConfig, userData]);
 
   React.useEffect(() => {
     if (isSelf && currentUser) {
@@ -100,38 +148,59 @@ export function ProfileBadges({
       icon: React.ReactNode;
       iconName: string;
       label: string;
-      tone: 'purple' | 'green';
+      tone: 'purple' | 'green' | 'blue';
     }> = [];
 
-    if (isVIP) {
+    if (isVIP && isVisibleByConfig('vipMember')) {
       badgeList.push({
-        icon: <VipBadgeIcon width={wp(8)} height={wp(8)} />,
+        icon: <VipBadgeIcon width={badgeIconSize} height={badgeIconSize} />,
         iconName: 'diamond',
         label: 'VIP',
         tone: 'purple',
       });
     }
 
-    if (isBoosted || false) {
+    if (isBoosted && isVisibleByConfig('boosted')) {
       badgeList.push({
-        icon: <PopularBadgeIcon width={wp(8)} height={wp(8)} />,
+        icon: <PopularBadgeIcon width={badgeIconSize} height={badgeIconSize} />,
         iconName: 'trending-up',
         label: 'Boosted',
         tone: 'green',
       });
     }
 
-    if (isProfileCompleted) {
+    if (isProfileCompleted && isVisibleByConfig('completedProfile')) {
       badgeList.push({
-        icon: <ProfileCompleteBadgeIcon width={wp(8)} height={wp(8)} />,
+        icon: (
+          <ProfileCompleteBadgeIcon
+            width={badgeIconSize}
+            height={badgeIconSize}
+          />
+        ),
         iconName: 'checkmark-circle',
         label: 'Complete',
         tone: 'green',
       });
     }
 
+    if (isNew) {
+      badgeList.push({
+        icon: <NewBadgeIcon width={badgeIconSize} height={badgeIconSize} />,
+        iconName: 'sparkles',
+        label: 'New',
+        tone: 'blue',
+      });
+    }
+
     return badgeList;
-  }, [isVIP, isBoosted, isProfileCompleted]);
+  }, [
+    badgeIconSize,
+    isVIP,
+    isBoosted,
+    isProfileCompleted,
+    isNew,
+    isVisibleByConfig,
+  ]);
 
   if (badges.length === 0) {
     return null;
@@ -149,18 +218,24 @@ export function ProfileBadges({
             style={[
               Styles.pillBadge,
               badge.tone === 'purple' ? Styles.pillBadgePurple : null,
+              badge.tone === 'blue' ? Styles.pillBadgeBlue : null,
             ]}
           >
             <View
               style={[
                 Styles.pillIconWrap,
                 badge.tone === 'purple' ? Styles.pillIconWrapPurple : null,
+                badge.tone === 'blue' ? Styles.pillIconWrapBlue : null,
               ]}
             >
               <Ionicons
                 name={badge.iconName}
                 color={
-                  badge.tone === 'purple' ? Colors.primary : Colors.verified
+                  badge.tone === 'purple'
+                    ? Colors.primary
+                    : badge.tone === 'blue'
+                      ? '#287FC2'
+                      : Colors.verified
                 }
                 size={wp(3.4)}
               />
@@ -169,6 +244,7 @@ export function ProfileBadges({
               style={[
                 Styles.pillLabel,
                 badge.tone === 'purple' ? Styles.pillLabelPurple : null,
+                badge.tone === 'blue' ? Styles.pillLabelBlue : null,
               ]}
               numberOfLines={1}
             >
@@ -182,15 +258,30 @@ export function ProfileBadges({
 
   if (iconOnly) {
     return (
-      <View style={[Styles.container, vertical && Styles.containerVertical]}>
+      <View
+        style={[
+          Styles.container,
+          vertical && Styles.containerVertical,
+          containerStyle,
+        ]}
+      >
         {badges.map((badge, index) => (
           <View key={index} style={Styles.iconOnlyBadge}>
             {badge.iconName === 'diamond' ? (
-              <View style={Styles.iconOnlyPremiumBadge}>
+              <View
+                style={[
+                  Styles.iconOnlyPremiumBadge,
+                  {
+                    width: badgeIconSize,
+                    height: badgeIconSize,
+                    borderRadius: badgeIconSize / 2,
+                  },
+                ]}
+              >
                 <Ionicons
                   name="diamond"
                   color={Colors.surface}
-                  size={wp(4.2)}
+                  size={badgeIconSize * 0.525}
                 />
               </View>
             ) : (
@@ -267,8 +358,15 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.primaryRGBA12,
     borderColor: Colors.themeRGBA20,
   },
+  pillBadgeBlue: {
+    backgroundColor: 'rgba(75,159,234,0.1)',
+    borderColor: 'rgba(75,159,234,0.28)',
+  },
   pillIconWrapPurple: {
     backgroundColor: Colors.lavender,
+  },
+  pillIconWrapBlue: {
+    backgroundColor: '#EAF4FF',
   },
   pillLabel: {
     color: Colors.verified,
@@ -279,6 +377,9 @@ const Styles = StyleSheet.create({
   },
   pillLabelPurple: {
     color: Colors.primary,
+  },
+  pillLabelBlue: {
+    color: '#287FC2',
   },
   badge: {
     flexDirection: 'row',

@@ -674,6 +674,19 @@ class GApiServices {
     });
   };
 
+  updateProfilePrivacy = (visibility: Record<string, 'public' | 'private'>) => {
+    return new Promise<{
+      profile_field_visibility?: Record<string, 'public' | 'private'>;
+    }>((resolve, reject) => {
+      Api.patch(EndPoints.updateProfilePrivacy, { visibility })
+        .then((res) => resolve(res?.data?.results))
+        .catch((error) => {
+          flashErrorMessage(error?.response?.data?.message);
+          reject(error?.response?.data);
+        });
+    });
+  };
+
   // Public, unauthenticated live match count for the welcome primer reveal.
   getMatchCount = (params: {
     seeking: string;

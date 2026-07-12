@@ -21,6 +21,7 @@ import {
   useGlobalContext,
 } from '../services';
 import { Button } from './buttons';
+import { ProfileBadges } from './profile-badges';
 import ProfilePhotoPlaceholder from './ProfilePhotoPlaceholder';
 
 const { width: viewportWidth } = Dimensions.get('window');
@@ -99,6 +100,7 @@ const SliderEntry = ({
   const messageIconRef = useRef<any>(null);
 
   const chatUserData = {
+    ...data,
     id: data?.id,
     name: data?.full_name,
     age: data?.age,
@@ -326,6 +328,12 @@ const SliderEntry = ({
           >
             {chatUserData?.name}, {chatUserData?.age}
           </Text>
+          <ProfileBadges
+            userData={data}
+            iconOnly
+            surface="dailyRecommendations"
+            containerStyle={Styles.recommendationBadges}
+          />
           {chatUserData?.city && (
             <View
               style={[
@@ -523,6 +531,10 @@ const Styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 2 },
     textShadowRadius: 12,
     textTransform: 'capitalize',
+  },
+  recommendationBadges: {
+    paddingHorizontal: wp(3),
+    marginTop: hp(0.8),
   },
   locationRow: {
     alignItems: 'center',

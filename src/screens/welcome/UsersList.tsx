@@ -29,7 +29,7 @@ const CARD_H = CARD_W * 1.42;
 // Single grid card. Kept as its own component (not an inline renderItem) so it
 // can hold per-card image-error state: a missing OR broken photo falls back to
 // the on-brand monogram placeholder instead of a grey stock silhouette.
-const UserCard = ({ item, rtl, onPress }: any) => {
+const UserCard = ({ item, rtl, onPress, badgeSurface }: any) => {
   const [imageError, setImageError] = useState(false);
 
   const lastOnlineFromCurrentTime = parseInt(
@@ -70,7 +70,12 @@ const UserCard = ({ item, rtl, onPress }: any) => {
         )}
 
         <View style={Styles.badgesContainer}>
-          <ProfileBadges userData={item} iconOnly vertical />
+          <ProfileBadges
+            userData={item}
+            iconOnly
+            vertical
+            surface={badgeSurface}
+          />
         </View>
 
         <LinearGradient
@@ -111,7 +116,12 @@ const UserCard = ({ item, rtl, onPress }: any) => {
 };
 
 const UsersList = (props: any) => {
-  const { data = [], onLoadMorePress = () => null, optionTab } = props;
+  const {
+    data = [],
+    onLoadMorePress = () => null,
+    optionTab,
+    badgeSurface = 'homeRecommended',
+  } = props;
   const Rtl = CheckRtl();
 
   // M9 fix: FlatList's onEndReached fires on mount when the list doesn't fill
@@ -170,7 +180,12 @@ const UsersList = (props: any) => {
       numColumns={2}
       extraData={data}
       renderItem={({ item }) => (
-        <UserCard item={item} rtl={Rtl} onPress={onUserPress} />
+        <UserCard
+          item={item}
+          rtl={Rtl}
+          onPress={onUserPress}
+          badgeSurface={badgeSurface}
+        />
       )}
       onEndReachedThreshold={0.5}
       onEndReached={handleEndReached}

@@ -3,6 +3,9 @@ import React from 'react';
 
 import { ProfileBadges } from './profile-badges';
 
+let mockBadgeSettings: any = null;
+
+jest.mock('../assets/svgs/badges/new-badge.svg', () => 'NewBadgeIcon');
 jest.mock('../assets/svgs/badges/popular-badge.svg', () => 'PopularBadgeIcon');
 jest.mock(
   '../assets/svgs/badges/profile-complete-badge.svg',
@@ -26,6 +29,20 @@ jest.mock('../stores', () => ({
   usePremiumStore: (
     selector: (state: { isPremium: () => boolean }) => unknown
   ) => selector({ isPremium: () => false }),
+  useSettingsStore: (
+    selector: (state: {
+      settings: unknown;
+      getBadgesAndPayments: () => unknown;
+    }) => unknown
+  ) =>
+    selector({
+      settings: mockBadgeSettings
+        ? {
+            results: [{ key: 'badges_and_payments', value: mockBadgeSettings }],
+          }
+        : null,
+      getBadgesAndPayments: () => mockBadgeSettings,
+    }),
 }));
 
 const completeUser = {
@@ -44,6 +61,10 @@ const completeUser = {
 };
 
 describe('ProfileBadges', () => {
+  beforeEach(() => {
+    mockBadgeSettings = null;
+  });
+
   it('renders the detail header badge as a compact text pill', async () => {
     render(<ProfileBadges userData={completeUser} variant="pill" />);
 
@@ -56,5 +77,67 @@ describe('ProfileBadges', () => {
     render(<ProfileBadges userData={completeUser} iconOnly vertical />);
 
     await waitFor(() => expect(screen.queryByText('Complete')).toBeNull());
+  });
+
+  it('honors the global badge enabled control', async () => {
+    mockBadgeSettings = {
+      badges: {
+        completedProfile: {
+          enabled: false,
+          visibility: { singleProfile: true },
+        },
+      },
+    };
+
+    render(<ProfileBadges userData={completeUser} variant="pill" />);
+
+    await waitFor(() => expect(screen.queryByText('Complete')).toBeNull());
+  });
+
+  it('honors the visibility control for the current surface', async () => {
+    mockBadgeSettings = {
+      badges: {
+        completedProfile: {
+          enabled: true,
+          visibility: { homeRecommended: false },
+        },
+      },
+    };
+
+    render(
+      <ProfileBadges
+        userData={completeUser}
+        variant="pill"
+        surface="homeRecommended"
+      />
+    );
+
+    await waitFor(() => expect(screen.queryByText('Complete')).toBeNull());
+  });
+
+  it('shows New for an account inside the configured age window', async () => {
+    mockBadgeSettings = {
+      badges: {
+        newMember: {
+          enabled: true,
+          maxAccountAgeDays: 7,
+          visibility: { singleProfile: true },
+        },
+      },
+    };
+
+    render(
+      <ProfileBadges
+        userData={{
+          id: 2,
+          created_at: new Date(
+            Date.now() - 2 * 24 * 60 * 60 * 1000
+          ).toISOString(),
+        }}
+        variant="pill"
+      />
+    );
+
+    expect(await screen.findByText('New')).toBeTruthy();
   });
 });

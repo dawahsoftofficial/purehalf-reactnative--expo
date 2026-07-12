@@ -13,6 +13,64 @@ import {
   useGlobalContext,
 } from '../../services';
 import { StorageManager } from '../../services';
+import ProfileData from '../profile/Data';
+
+type VisibilityLevel = 'public' | 'private';
+type ProfileVisibility = Record<string, VisibilityLevel>;
+type ProfileFieldDefinition = {
+  apiKey?: string;
+  title?: string;
+  viewTitle?: string;
+};
+type PrivacyField = {
+  apiKey: string;
+  title: string;
+};
+
+const PROFILE_FIELD_ALIASES: Record<string, string> = {
+  language: 'language_id',
+  nationality: 'nationality_id',
+};
+
+const PROFILE_PRIVACY_GROUPS = [
+  {
+    title: LanguageKeys.basicSettings,
+    fields: [
+      { apiKey: 'tagline', title: LanguageKeys.tagline },
+      {
+        apiKey: 'personality_id',
+        title: LanguageKeys.myInterestAndHobbies,
+      },
+    ],
+  },
+  {
+    title: LanguageKeys.appearanceHealth,
+    fields: ProfileData.appearanceAndHealth,
+  },
+  {
+    title: LanguageKeys.familyBackground,
+    fields: ProfileData.familyBackground,
+  },
+  { title: LanguageKeys.lifeStyle, fields: ProfileData.lifeStyle },
+  {
+    title: LanguageKeys.personalityRequirements,
+    fields: ProfileData.personalityRequirements,
+  },
+  { title: LanguageKeys.islamicValues, fields: ProfileData.islamicValues },
+  { title: LanguageKeys.futurePlans, fields: ProfileData.futurePlan },
+].map((group) => ({
+  ...group,
+  fields: group.fields
+    .filter((field: ProfileFieldDefinition) => Boolean(field.apiKey))
+    .map((field: ProfileFieldDefinition) => {
+      const apiKey = field.apiKey as string;
+
+      return {
+        apiKey: PROFILE_FIELD_ALIASES[apiKey] ?? apiKey,
+        title: field.viewTitle ?? field.title ?? '',
+      };
+    }),
+}));
 
 const PrivacySettings = (props: any) => {
   const { setData, storageKeys } = StorageManager;
@@ -34,6 +92,9 @@ const PrivacySettings = (props: any) => {
   );
   const [smsNotification, setSMSNotification] = useState(
     currentUser?.sms_notification === 1 ? true : false
+  );
+  const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>(
+    currentUser?.detail?.profile_field_visibility ?? {}
   );
 
   const searchVisibilityToggle = () => {
@@ -129,6 +190,39 @@ const PrivacySettings = (props: any) => {
       .catch(hideLoader);
   };
 
+  const toggleProfileField = (field: string) => {
+    const previous = profileVisibility[field] ?? 'public';
+    const next: VisibilityLevel = previous === 'private' ? 'public' : 'private';
+    const optimistic = { ...profileVisibility, [field]: next };
+
+    setProfileVisibility(optimistic);
+    setLoader({ visible: true, message: 'Updating...' });
+
+    ApiServices.updateProfilePrivacy({ [field]: next })
+      .then(
+        async (result: { profile_field_visibility?: ProfileVisibility }) => {
+          const savedVisibility =
+            result?.profile_field_visibility ?? optimistic;
+          const updatedUser = {
+            ...currentUser,
+            detail: {
+              ...(currentUser?.detail ?? {}),
+              profile_field_visibility: savedVisibility,
+            },
+          };
+
+          setProfileVisibility(savedVisibility);
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+          flashSuccessMessage(LanguageKeys.updated);
+        }
+      )
+      .catch(() => {
+        setProfileVisibility({ ...profileVisibility, [field]: previous });
+      })
+      .finally(hideLoader);
+  };
+
   const RenderField = ({
     heading,
     description,
@@ -190,6 +284,41 @@ const PrivacySettings = (props: any) => {
         </View>
 
         <Text style={[Styles.sectionLabel, Styles.sectionLabelSpaced]}>
+          {LanguageKeys.profileInformationSection}
+        </Text>
+        <Text style={Styles.privacyIntro}>
+          {LanguageKeys.profileInformationPrivacyDesc}
+        </Text>
+        {PROFILE_PRIVACY_GROUPS.map((group, groupIndex) => (
+          <View
+            key={group.title}
+            style={groupIndex === 0 ? undefined : Styles.profileGroupSpacing}
+          >
+            <Text style={Styles.profileGroupTitle}>{group.title}</Text>
+            <View style={Styles.groupCard}>
+              {group.fields.map((field: PrivacyField, index: number) => {
+                const isVisible = profileVisibility[field.apiKey] !== 'private';
+
+                return (
+                  <RenderField
+                    key={field.apiKey}
+                    heading={field.title}
+                    description={
+                      isVisible
+                        ? LanguageKeys.profileFieldVisible
+                        : LanguageKeys.profileFieldPrivate
+                    }
+                    switchEnabled={isVisible}
+                    onChangeSwitch={() => toggleProfileField(field.apiKey)}
+                    showDivider={index < group.fields.length - 1}
+                  />
+                );
+              })}
+            </View>
+          </View>
+        ))}
+
+        <Text style={[Styles.sectionLabel, Styles.sectionLabelSpaced]}>
           {LanguageKeys.notificationsSection}
         </Text>
         <View style={Styles.groupCard}>
@@ -241,6 +370,24 @@ const Styles = StyleSheet.create({
   },
   sectionLabelSpaced: {
     marginTop: hp(3),
+  },
+  privacyIntro: {
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.tiny2,
+    color: Colors.muted,
+    lineHeight: 20,
+    marginBottom: hp(2),
+    marginHorizontal: wp(1),
+  },
+  profileGroupTitle: {
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.tiny1,
+    color: Colors.ink,
+    marginBottom: hp(0.8),
+    marginLeft: wp(1),
+  },
+  profileGroupSpacing: {
+    marginTop: hp(2),
   },
   groupCard: {
     backgroundColor: Colors.surface,

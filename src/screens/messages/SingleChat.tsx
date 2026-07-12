@@ -179,7 +179,7 @@ const SingleChat = (props: any) => {
   };
 
   useEffect(() => {
-    if (fromMessages && otherUserData?.type === 'User') {
+    if ((fromMessages || fromNotification) && otherUserData?.type === 'User') {
       getOtherUserData();
     } else if (fromMessages) {
       setLoader(false);

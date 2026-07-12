@@ -3,6 +3,7 @@ const EndPoints = {
   socialAuthenticate: '/socialite/authenticate',
   updateInfo: '/auth/update/info',
   updateDetails: '/auth/update/detail',
+  updateProfilePrivacy: '/auth/profile/privacy',
   claimProfileGift: '/auth/profile/claim-gift',
   getLanguageList: '/auth/list/language',
   getNationalityList: '/auth/list/nationality',

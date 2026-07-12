@@ -341,6 +341,7 @@ const Header = ({
 
   const chatUserData = useMemo(
     () => ({
+      ...userData,
       id: userData?.id,
       name: userData?.full_name,
       image: userData?.primary_image_to_show,

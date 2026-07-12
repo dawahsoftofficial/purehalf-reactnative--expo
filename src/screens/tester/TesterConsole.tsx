@@ -12,6 +12,10 @@ import {
   View,
 } from 'react-native';
 
+import NewBadgeIcon from '../../assets/svgs/badges/new-badge.svg';
+import PopularBadgeIcon from '../../assets/svgs/badges/popular-badge.svg';
+import ProfileCompleteBadgeIcon from '../../assets/svgs/badges/profile-complete-badge.svg';
+import VipBadgeIcon from '../../assets/svgs/badges/vip-badge.svg';
 import { Container, Header } from '../../components';
 import { Colors } from '../../res';
 import {
@@ -21,7 +25,7 @@ import {
   TesterApi,
   useGlobalContext,
 } from '../../services';
-import { useUserStatsStore } from '../../stores';
+import { useSettingsStore, useUserStatsStore } from '../../stores';
 
 const Button = ({
   label,
@@ -159,12 +163,115 @@ function VipPackagesTab() {
   );
 }
 
+const BADGE_PREVIEWS = [
+  {
+    key: 'vipMember',
+    name: 'VIP',
+    Icon: VipBadgeIcon,
+    condition: 'Active paid membership.',
+  },
+  {
+    key: 'boosted',
+    name: 'Boosted',
+    Icon: PopularBadgeIcon,
+    condition: 'The profile payload has boosted or is_boosted set to true.',
+  },
+  {
+    key: 'completedProfile',
+    name: 'Complete',
+    Icon: ProfileCompleteBadgeIcon,
+    condition: 'All required profile-completion fields are present.',
+  },
+  {
+    key: 'newMember',
+    name: 'New',
+    Icon: NewBadgeIcon,
+    condition: 'Account age is inside the configured New-member window.',
+  },
+] as const;
+
+function BadgesTab() {
+  const badgeConfig = useSettingsStore(
+    (state) => state.getBadgesAndPayments()?.badges ?? null
+  );
+  const newMemberDays = badgeConfig?.newMember?.maxAccountAgeDays ?? 7;
+
+  return (
+    <View style={styles.packageList}>
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>Member badge previews</Text>
+        <Text style={styles.infoText}>
+          These are the exact SVG icons used on profile cards. Enablement and
+          surface visibility come from the badges_and_payments admin setting.
+        </Text>
+      </View>
+
+      <View style={styles.badgePreviewGrid}>
+        {BADGE_PREVIEWS.map((badge) => {
+          const config = badgeConfig?.[badge.key];
+          const enabled = config?.enabled ?? badge.key !== 'newMember';
+          const Icon = badge.Icon;
+
+          return (
+            <View key={badge.key} style={styles.badgePreviewCard}>
+              <View style={styles.badgePreviewIcon}>
+                <Icon width={56} height={56} />
+              </View>
+              <View style={styles.badgePreviewCopy}>
+                <View style={styles.badgePreviewTitleRow}>
+                  <Text style={styles.badgePreviewName}>{badge.name}</Text>
+                  <View
+                    style={[
+                      styles.badgeConfigState,
+                      enabled
+                        ? styles.badgeConfigStateEnabled
+                        : styles.badgeConfigStateDisabled,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeConfigStateText,
+                        enabled && styles.badgeConfigStateTextEnabled,
+                      ]}
+                    >
+                      {enabled ? 'Enabled' : 'Disabled'}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.badgePreviewCondition}>
+                  {badge.condition}
+                </Text>
+                {badge.key === 'newMember' ? (
+                  <Text style={styles.badgePreviewMeta}>
+                    Current window: {newMemberDays} day
+                    {newMemberDays === 1 ? '' : 's'}
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.testNote}>
+        <Text style={styles.testNoteTitle}>Surface controls</Text>
+        <Text style={styles.testNoteText}>
+          A badge must be enabled and its current app surface must be switched
+          on. The New badge additionally requires a valid created_at date.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+type TesterTab = 'actions' | 'vip' | 'badges';
+
 function TesterTabs({
   active,
   onChange,
 }: {
-  active: 'actions' | 'vip';
-  onChange: (tab: 'actions' | 'vip') => void;
+  active: TesterTab;
+  onChange: (tab: TesterTab) => void;
 }) {
   return (
     <View style={styles.tabs}>
@@ -172,6 +279,7 @@ function TesterTabs({
         [
           ['actions', 'Test actions'],
           ['vip', 'VIP packages'],
+          ['badges', 'Badges'],
         ] as const
       ).map(([value, label]) => (
         <TouchableOpacity
@@ -196,7 +304,7 @@ export default function TesterConsole({ navigation }: any) {
   const [gender, setGender] = useState(currentUser?.gender || 'male');
   const [dob, setDob] = useState(currentUser?.date_of_birth || '');
   const [creditAmount, setCreditAmount] = useState('50');
-  const [activeTab, setActiveTab] = useState<'actions' | 'vip'>('actions');
+  const [activeTab, setActiveTab] = useState<TesterTab>('actions');
   const setUserStats = useUserStatsStore((state) => state.setUserStats);
   const userStats = useUserStatsStore();
 
@@ -345,6 +453,18 @@ export default function TesterConsole({ navigation }: any) {
         <ScrollView contentContainerStyle={styles.content}>
           <TesterTabs active={activeTab} onChange={setActiveTab} />
           <VipPackagesTab />
+        </ScrollView>
+      </Container>
+    );
+  }
+
+  if (activeTab === 'badges') {
+    return (
+      <Container>
+        <Header navigation={navigation} title="Tester tools" />
+        <ScrollView contentContainerStyle={styles.content}>
+          <TesterTabs active={activeTab} onChange={setActiveTab} />
+          <BadgesTab />
         </ScrollView>
       </Container>
     );
@@ -751,4 +871,57 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     marginTop: 5,
   },
+  badgePreviewGrid: { gap: 10 },
+  badgePreviewCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: '#fff',
+    borderColor: Colors.hairline,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+  },
+  badgePreviewIcon: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.appBg,
+  },
+  badgePreviewCopy: { flex: 1 },
+  badgePreviewTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  badgePreviewName: { color: Colors.ink, fontSize: 16, fontWeight: '800' },
+  badgePreviewCondition: {
+    color: Colors.muted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 5,
+  },
+  badgePreviewMeta: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 5,
+  },
+  badgeConfigState: {
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#F1F1F1',
+  },
+  badgeConfigStateEnabled: { backgroundColor: '#E8F7EE' },
+  badgeConfigStateDisabled: { backgroundColor: '#F1F1F1' },
+  badgeConfigStateText: {
+    color: Colors.muted,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  badgeConfigStateTextEnabled: { color: Colors.verified },
 });
