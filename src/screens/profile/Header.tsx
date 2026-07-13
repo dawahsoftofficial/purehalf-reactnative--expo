@@ -32,6 +32,7 @@ import {
   LinearGradient,
   ProfileBadges,
   ProfilePhotoPlaceholder,
+  TesterProfileTools,
   Text,
 } from '../../components';
 import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
@@ -323,8 +324,6 @@ const Header = ({
   const [blurModalVisible, setBlurModalVisible] = useState<boolean>(false);
   const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
   const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
-  const [menuVisible, setMenuVisible] = useState(false);
-  const [blockPickerRequested, setBlockPickerRequested] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const giftThreshold =
@@ -546,19 +545,10 @@ const Header = ({
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
-  const openMenu = useCallback(() => setMenuVisible(true), []);
-  const closeMenu = useCallback(() => setMenuVisible(false), []);
-  const handleBlockFromMenu = useCallback(() => {
-    setBlockPickerRequested(true);
-    closeMenu();
-  }, [closeMenu]);
-
-  useEffect(() => {
-    if (!blockPickerRequested || menuVisible) return;
-
-    setBlockPickerRequested(false);
-    onBlockPress();
-  }, [blockPickerRequested, menuVisible, onBlockPress]);
+  // The kebab opens the block/report/unblock picker directly. Previously it
+  // opened its own RN Modal menu that then handed off to the picker (a second,
+  // react-native-modal) — presenting the picker while the menu was still
+  // dismissing raced and silently no-opped on iOS, so "Block" did nothing.
 
   const onBlurButtonPress = useCallback(() => {
     setBlurModalVisible(true);
@@ -787,7 +777,7 @@ const Header = ({
         >
           <Ripple
             style={Styles.overflowBtn}
-            onPress={openMenu}
+            onPress={onBlockPress}
             hitSlop={12}
             rippleColor={Colors.color2}
           >
@@ -1008,6 +998,7 @@ const Header = ({
         <>
           <CheckMembershipStatus />
           {renderHeroPhoto(true, !isSelf && !isBlockedYou, false)}
+          <TesterProfileTools navigation={navigation} userId={userData?.id} />
           <View style={Styles.infoCard}>
             <View
               style={[
@@ -1134,38 +1125,6 @@ const Header = ({
           </View>
         </>
       )}
-
-      <Modal
-        transparent
-        visible={menuVisible}
-        animationType="fade"
-        onRequestClose={closeMenu}
-      >
-        <Ripple style={Styles.menuOverlay} onPress={closeMenu}>
-          <View
-            style={{
-              ...Styles.menuCard,
-              alignSelf: Rtl ? 'flex-start' : 'flex-end',
-            }}
-          >
-            <Ripple
-              style={{
-                ...Styles.menuItem,
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-              }}
-              onPress={handleBlockFromMenu}
-              rippleColor={Colors.hairline}
-            >
-              <Ionicons name="ban" color={Colors.color24} size={wp(5)} />
-              <Text style={Styles.menuItemTxt}>
-                {userData?.block_by_you === 1
-                  ? LanguageKeys.unBlock
-                  : LanguageKeys.block}
-              </Text>
-            </Ripple>
-          </View>
-        </Ripple>
-      </Modal>
 
       <Modal
         transparent

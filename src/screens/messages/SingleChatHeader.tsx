@@ -64,6 +64,11 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     setIsBlockedYou(propsIsBlockedYou);
   }, [propsIsBlockedByYou, propsIsBlockedYou]);
 
+  // Block/unblock acts on the conversation pivot, which only needs the
+  // conversation id — not the full conversationData object (which can be sparse
+  // right after opening a chat). Surface block whenever we have an id.
+  const hasConversation = !!conversationId;
+
   const [isBlurred, setIsBlurred] = useState(true);
   const menuRef = useRef<any>(null);
 
@@ -108,7 +113,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
 
   const onBlockUnBlockUserPress = async () => {
     menuRef.current?.close();
-    if (!conversationId || !conversationData?.id) {
+    if (!conversationId) {
       flashErrorMessage('Conversation ID is missing');
       return;
     }
@@ -164,7 +169,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
 
   const onBlockUnBlockAndReportUserPress = async () => {
     menuRef.current?.close();
-    if (!conversationId || !conversationData?.id) {
+    if (!conversationId) {
       flashErrorMessage('Conversation ID is missing');
       return;
     }
@@ -224,7 +229,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   const onClearChatPress = async () => {
     hideDeleteAlert();
 
-    if (!conversationId || !conversationData?.id) {
+    if (!conversationId) {
       flashErrorMessage('Conversation ID is missing');
       return;
     }
@@ -275,7 +280,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   const onDeleteChatPress = async () => {
     hideDeleteAlert();
 
-    if (!conversationId || !conversationData?.id) {
+    if (!conversationId) {
       flashErrorMessage('Conversation ID is missing');
       return;
     }
@@ -350,7 +355,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     : 'Blur Profile Picture';
   const viewProfileOption = isSupportConversation ? [] : ['View profile'];
   const viewProfileAction = isSupportConversation ? [] : [onViewProfilePress];
-  if (!conversationData || !Object.keys(conversationData).length) {
+  if (!hasConversation) {
     if (isBlockedByYou) {
       optionsArray = [
         ...viewProfileOption,
@@ -393,7 +398,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
   }
 
   let actionsArray = [];
-  if (!conversationData || !Object.keys(conversationData).length) {
+  if (!hasConversation) {
     if (isBlockedByYou) {
       actionsArray = [
         ...viewProfileAction,
