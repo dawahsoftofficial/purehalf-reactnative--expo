@@ -1,5 +1,4 @@
 const mockPurchasesLogOut = jest.fn();
-const mockStopConversationsListener = jest.fn();
 const mockPusherDisconnect = jest.fn();
 const mockDeleteAll = jest.fn();
 const mockGetData = jest.fn();
@@ -45,11 +44,6 @@ jest.mock('../stores', () => ({
   },
 }));
 
-jest.mock('./firebase', () => ({
-  stopConversationsListener: (...args: unknown[]) =>
-    mockStopConversationsListener(...args),
-}));
-
 jest.mock('./pusher/pusher-service', () => ({
   disconnect: (...args: unknown[]) => mockPusherDisconnect(...args),
 }));
@@ -82,7 +76,6 @@ describe('cleanupSession', () => {
     mockFirebaseSignOut.mockResolvedValue(undefined);
     mockGoogleSignOut.mockResolvedValue(undefined);
     mockPurchasesLogOut.mockResolvedValue(undefined);
-    mockStopConversationsListener.mockResolvedValue(undefined);
     mockPusherDisconnect.mockResolvedValue(undefined);
     mockDeleteAll.mockResolvedValue(undefined);
     mockGetData.mockResolvedValue('verification-id');

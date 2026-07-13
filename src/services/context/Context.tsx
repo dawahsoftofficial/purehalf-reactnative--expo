@@ -14,8 +14,6 @@ let initialState = {
   direction: 'ltr',
   language: 'en',
   currentUser: null,
-  conversations: [],
-  coversationLoading: true,
   openedConversationId: null,
   customModal: {
     visible: false,
@@ -33,15 +31,6 @@ const AppProvider = ({ children }: any) => {
           visible: visible,
           data: data,
         },
-      },
-    });
-  }, []);
-
-  const updateConversationLoading = useCallback((coversationLoading: any) => {
-    dispatch({
-      type: 'CONVERSATION_LOADING',
-      payload: {
-        coversationLoading: coversationLoading,
       },
     });
   }, []);
@@ -77,22 +66,11 @@ const AppProvider = ({ children }: any) => {
     });
   }, []);
 
-  const updateConversations = useCallback(async (conversations: any) => {
-    dispatch({
-      type: 'UPDATE_CONVERSATIONS',
-      payload: {
-        conversations: conversations,
-      },
-    });
-  }, []);
-
   const contextValue = useMemo(
     () => ({
       ...state,
       updateDirection,
       updateCurrentUser,
-      updateConversations,
-      updateConversationLoading,
       updateOpenedConversationId,
       updateCustomModal,
     }),
@@ -100,8 +78,6 @@ const AppProvider = ({ children }: any) => {
       state,
       updateDirection,
       updateCurrentUser,
-      updateConversations,
-      updateConversationLoading,
       updateOpenedConversationId,
       updateCustomModal,
     ]

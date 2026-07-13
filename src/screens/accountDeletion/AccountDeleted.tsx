@@ -11,8 +11,7 @@ import { cleanupSession, useGlobalContext } from '../../services';
 
 const AccountDeleted = (props: any) => {
   const [loading, setLoading] = useState(false);
-  const { updateCurrentUser, updateConversations, language } =
-    useGlobalContext();
+  const { updateCurrentUser, language } = useGlobalContext();
 
   const onContinuePress = async () => {
     setLoading(true);
@@ -22,7 +21,6 @@ const AccountDeleted = (props: any) => {
     // the deleted user's data.
     await cleanupSession({ language });
     updateCurrentUser(null);
-    updateConversations([]);
     setLoading(false);
     props.navigation.dispatch(
       CommonActions.reset({

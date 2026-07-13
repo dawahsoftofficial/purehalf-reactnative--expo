@@ -1,5 +1,4 @@
 import { CommonActions } from '@react-navigation/native';
-import _ from 'lodash';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -30,7 +29,6 @@ import {
   checkEmpty,
   flashErrorMessage,
   flashSuccessMessage,
-  getConversationsOnce,
   StorageManager,
   useGlobalContext,
 } from '../../services';
@@ -38,8 +36,7 @@ import {
 const GuardianPasswordInput = ({ navigation, route }: any) => {
   const { t } = useTranslation();
   const { getData, storageKeys, setData } = StorageManager;
-  const { updateCurrentUser, updateConversations, updateConversationLoading } =
-    useGlobalContext();
+  const { updateCurrentUser } = useGlobalContext();
   const Rtl = CheckRtl();
   const email = route?.params?.email;
   const [password, setPassword] = useState('');
@@ -59,49 +56,30 @@ const GuardianPasswordInput = ({ navigation, route }: any) => {
     });
   };
 
-  const getConversations = (currentUser: any) => {
+  // Guardian sessions no longer hydrate a Firebase RTDB conversation list on
+  // login (RTDB removed). Persist the session and route to Messages, which
+  // loads conversations from the REST API. Guardian mobile code is slated for
+  // removal — this is left as a safe no-op path, not rebuilt.
+  const persistGuardianSession = async (currentUser: any) => {
     setModalLoader({
       visible: true,
-      message: t(LanguageKeys.gettingConversations),
+      message: t(LanguageKeys.loggingIn),
     });
-    getConversationsOnce(currentUser?.user?.id, async (snapshot: any) => {
-      if (snapshot) {
-        const conversationsData: any = snapshot.val()
-          ? _.orderBy(
-              Object.values(snapshot.val()),
-              ['convDetails.latestMessageCreatedAt'],
-              ['desc']
-            )
-          : [];
-        await setData(storageKeys.CONVERSATIONS, conversationsData)
-          .then(async () => {
-            try {
-              await setData(storageKeys.USER, currentUser);
-              await setData(storageKeys.IS_LOGGED_IN, true);
-              updateCurrentUser(currentUser);
-              updateConversations(conversationsData);
-              updateConversationLoading(false);
-              hideModalLoader();
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 1,
-                  routes: [{ name: 'Messages' }],
-                })
-              );
-            } catch (error) {
-              hideModalLoader();
-              flashErrorMessage();
-            }
-          })
-          .catch(() => {
-            hideModalLoader();
-            flashErrorMessage();
-          });
-      } else {
-        hideModalLoader();
-        flashErrorMessage();
-      }
-    });
+    try {
+      await setData(storageKeys.USER, currentUser);
+      await setData(storageKeys.IS_LOGGED_IN, true);
+      updateCurrentUser(currentUser);
+      hideModalLoader();
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 1,
+          routes: [{ name: 'Messages' }],
+        })
+      );
+    } catch (error) {
+      hideModalLoader();
+      flashErrorMessage();
+    }
   };
 
   const onLoginPress = async () => {
@@ -121,7 +99,7 @@ const GuardianPasswordInput = ({ navigation, route }: any) => {
         response.role = 'guardian';
         flashSuccessMessage(LanguageKeys.loggedInSuccessfully);
         setLoading(false);
-        getConversations(response);
+        persistGuardianSession(response);
       } catch (error) {
         setLoading(false);
       }

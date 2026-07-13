@@ -9,7 +9,6 @@ import {
   useSettingsStore,
   useUserStatsStore,
 } from '../stores';
-import { stopConversationsListener } from './firebase';
 import pusherService from './pusher/pusher-service';
 import { StorageManager } from './storageManager';
 
@@ -32,7 +31,7 @@ type CleanupOptions = {
  * so a single failure does not block the rest.
  *
  * Does NOT touch React context or navigation — the caller is responsible for
- * `updateCurrentUser(null)` / `updateConversations([])` / route reset.
+ * `updateCurrentUser(null)` / route reset.
  */
 export async function cleanupSession(
   options: CleanupOptions = {}
@@ -72,13 +71,6 @@ export async function cleanupSession(
     await GoogleSignin.signOut();
   } catch (error) {
     console.log('[cleanupSession] GoogleSignin.signOut failed:', error);
-  }
-
-  // 3. Firestore / RTDB conversation listener.
-  try {
-    await stopConversationsListener();
-  } catch (error) {
-    console.log('[cleanupSession] stopConversationsListener failed:', error);
   }
 
   // 3. Pusher — disconnect all channels.

@@ -13,13 +13,7 @@ import { useSettingsStore } from '@/stores';
 import { hp, Typography } from '../global';
 import { CheckRtl, LanguageKeys } from '../languages';
 import { Colors, Fonts } from '../res';
-import {
-  ApiServices,
-  Firebase,
-  flashErrorMessage,
-  isIOS,
-  useGlobalContext,
-} from '../services';
+import { ApiServices, isIOS, useGlobalContext } from '../services';
 import { Button } from './buttons';
 import { ProfileBadges } from './profile-badges';
 import ProfilePhotoPlaceholder from './ProfilePhotoPlaceholder';
@@ -86,9 +80,12 @@ const SliderEntry = ({
 
   const Rtl = CheckRtl();
   const displayFont = Rtl ? Fonts.APPFONT_B : Fonts.DISPLAY;
-  const { currentUser, conversations } = useGlobalContext();
+  const { currentUser } = useGlobalContext();
   const navigation: any = useNavigation();
-  const [userConversation, setUserConversation] = useState({
+  // Existing-conversation detection was dropped with the Firebase RTDB removal.
+  // SingleChat ignores route conversationData without a numeric id and resolves
+  // (or creates) the conversation via the REST API on first send.
+  const [userConversation] = useState({
     convDetails: {},
     messages: [],
   });
@@ -114,12 +111,6 @@ const SliderEntry = ({
 
   useFocusEffect(
     React.useCallback(() => {
-      getUserConversation();
-    }, [conversations])
-  );
-
-  useFocusEffect(
-    React.useCallback(() => {
       if (data?.detail?.personality_id_value?.length) {
         setMatchingData(
           data?.detail?.personality_id_value
@@ -131,24 +122,6 @@ const SliderEntry = ({
       }
     }, [data?.detail?.personality_id_value?.length])
   );
-
-  const getUserConversation = () => {
-    const conversationData = conversations?.filter((element: any) => {
-      const deleteFlag = element?.convDetails?.participantsDeleteFlag;
-      return deleteFlag?.hasOwnProperty(JSON.stringify(data?.id));
-    });
-    if (conversationData && conversationData?.length !== 0) {
-      setUserConversation(conversationData[0]);
-    } else {
-      Firebase.getSingleConversation(currentUser?.id, data?.id).then(
-        (data: any) => {
-          if (data && data?.length !== 0) {
-            setUserConversation(data[0]);
-          }
-        }
-      );
-    }
-  };
 
   const isPremiumUser = () => {
     return new Promise((resolve) => {
@@ -181,37 +154,18 @@ const SliderEntry = ({
 
   const onMessagePress = () => {
     messageIconRef.current?.animate(POP, 320);
-    const userConversationDetail: any = userConversation;
-    if (
-      // userConversation?.messages?.length === 0 &&
-      currentUser?.gender === 'male'
-      // && conversations?.length >= 3
-    ) {
+    // Non-premium male users are routed to the pro-features promotion by
+    // isPremiumUser(); everyone else goes straight to the chat. The legacy
+    // Firebase RTDB daily-chat-limit gate was removed — chat gating now lives
+    // in the REST/chat-credits flow (see profile Header.onMessagePress).
+    if (currentUser?.gender === 'male') {
       isPremiumUser().then(() => {
-        Firebase.getNoOfChats(
-          currentUser?.id,
-          userConversationDetail?.convDetails?.id
-        ).then((numberOfChats: any) => {
-          if (numberOfChats < 5) {
-            setProfileImageError(false);
-            navigateToChat();
-          } else {
-            flashErrorMessage(LanguageKeys.conversationLimit);
-          }
-        });
+        setProfileImageError(false);
+        navigateToChat();
       });
     } else {
-      Firebase.getNoOfChats(
-        currentUser?.id,
-        userConversationDetail?.convDetails?.id
-      ).then((numberOfChats: any) => {
-        if (numberOfChats < 5) {
-          setProfileImageError(false);
-          navigateToChat();
-        } else {
-          flashErrorMessage(LanguageKeys.conversationLimit);
-        }
-      });
+      setProfileImageError(false);
+      navigateToChat();
     }
   };
 

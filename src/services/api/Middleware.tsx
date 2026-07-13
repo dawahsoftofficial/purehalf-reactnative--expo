@@ -3,7 +3,6 @@ import axios, { type AxiosResponse } from 'axios';
 
 import { navigationRef } from '../../navigation/RootNavigation';
 import { setGlobalState } from '../context';
-import { stopConversationsListener } from '../firebase';
 import { StorageManager } from '../storageManager';
 import { TesterDiagnostics } from '../tester/tester-diagnostics';
 import BaseUrl from './BaseUrl';
@@ -141,7 +140,6 @@ Api.interceptors.response.use(
         .then(async () => {
           setGlobalState({ currentUser: null });
           await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
-          await stopConversationsListener();
           navigationRef.dispatch(
             CommonActions.reset({
               index: 1,

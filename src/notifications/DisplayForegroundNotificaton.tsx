@@ -34,8 +34,7 @@ const messaging = getMessaging(firebaseApp);
 
 const DisplayForegroundNotification = () => {
   const { getData, setData, storageKeys } = StorageManager;
-  const { currentUser, updateCurrentUser, updateConversations, language } =
-    useGlobalContext();
+  const { currentUser, updateCurrentUser, language } = useGlobalContext();
   const navigation: any = useNavigation();
   const [remoteMessage, setRemoteMessage] = useState<any>(null);
   const [remoteMessageData, setRemoteMessageData] = useState<any>(null);
@@ -111,7 +110,6 @@ const DisplayForegroundNotification = () => {
     // deletion. Preserves language and firebase verification id.
     await cleanupSession({ language });
     updateCurrentUser(null);
-    updateConversations([]);
     navigation.dispatch(
       CommonActionsNav.reset({
         index: 1,

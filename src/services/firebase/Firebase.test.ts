@@ -7,19 +7,6 @@ jest.mock('@react-native-firebase/auth', () => ({
   signInWithPhoneNumber: jest.fn(),
 }));
 
-jest.mock('@react-native-firebase/database', () => ({
-  equalTo: jest.fn(),
-  get: jest.fn(),
-  getDatabase: jest.fn(() => ({})),
-  orderByChild: jest.fn(),
-  query: jest.fn(),
-  ref: jest.fn(),
-  remove: jest.fn(),
-  set: jest.fn(),
-  startAt: jest.fn(),
-  update: jest.fn(),
-}));
-
 jest.mock('@react-native-firebase/functions', () => ({
   getFunctions: jest.fn(() => ({})),
   httpsCallable: jest.fn(),
@@ -64,8 +51,6 @@ jest.mock('../storageManager', () => ({
     },
   },
 }));
-
-jest.mock('./FirebaseConfig', () => 'conversations');
 
 import Firebase from './Firebase';
 

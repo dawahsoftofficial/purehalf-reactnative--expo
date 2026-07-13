@@ -93,7 +93,6 @@ type User = {
 
 type Conversation = {
   convDetails: {
-    participantsDeleteFlag: Record<string, unknown>;
     id?: string;
   };
   messages: unknown[];

@@ -16,7 +16,6 @@ import { Loader, Text } from '../../components';
 import { LanguageKeys } from '../../languages';
 import {
   ApiServices,
-  Firebase,
   flashSuccessMessage,
   StorageManager,
   useGlobalContext,
@@ -74,10 +73,6 @@ type User = {
 };
 
 type Conversation = {
-  convDetails?: {
-    participantsDeleteFlag: Record<string, unknown>;
-    id?: string;
-  };
   id?: string;
 };
 
@@ -94,16 +89,18 @@ const Profile = ({
   userData: propUserData,
   fromUserProfile = false,
 }: ProfileProps) => {
-  const { currentUser, updateCurrentUser, conversations } = useGlobalContext();
+  const { currentUser, updateCurrentUser } = useGlobalContext();
   const scrollViewRef = useRef<ScrollView | null>(null);
   const isFocused = useIsFocused();
   const scrollToTarget = route?.params?.scrollTo;
   const [tagLineInputVisible, setTagLineInputVisible] = useState(false);
   const [tagLineInput, setTagLineInput] = useState('');
   const [error, setError] = useState<boolean>(false);
-  const [userConversation, setUserConversation] = useState<Conversation | null>(
-    null
-  );
+  // Existing-conversation detection was dropped with the Firebase RTDB removal.
+  // The interaction-level block (interactionAction) is the real block; the
+  // conversation-pivot block sync below only runs when a conversation id is
+  // known, which no longer happens from the profile screen.
+  const [userConversation] = useState<Conversation | null>(null);
 
   const [loader, setLoader] = useState<LoaderState>({
     visible: true,
@@ -154,38 +151,6 @@ const Profile = ({
     }
   }, [scrollToTarget]);
 
-  const getUserConversation = useCallback(() => {
-    const conversationData = conversations.filter((element: Conversation) => {
-      const deleteFlag = element.convDetails?.participantsDeleteFlag ?? {};
-      return Object.prototype.hasOwnProperty.call(
-        deleteFlag,
-        JSON.stringify(profileUserId)
-      );
-    });
-    if (conversationData && conversationData.length !== 0) {
-      const conversation = conversationData[0];
-      if (conversation?.convDetails) {
-        setUserConversation(
-          conversation.convDetails as unknown as Conversation
-        );
-      }
-      return;
-    }
-    Firebase.getSingleConversation(currentUser?.id, profileUserId).then(
-      (data: unknown) => {
-        const conversationList = data as Conversation[];
-        if (conversationList && conversationList.length !== 0) {
-          const firstConv = conversationList[0];
-          if (firstConv?.convDetails) {
-            setUserConversation(
-              firstConv.convDetails as unknown as Conversation
-            );
-          }
-        }
-      }
-    );
-  }, [conversations, currentUser?.id, profileUserId]);
-
   useEffect(() => {
     scrollToSection();
   }, [scrollToSection]);
@@ -198,14 +163,6 @@ const Profile = ({
         });
       }
     }, [currentUser?.id, profileUserId])
-  );
-
-  useFocusEffect(
-    React.useCallback(() => {
-      if (fromUserProfile) {
-        getUserConversation();
-      }
-    }, [fromUserProfile, getUserConversation])
   );
 
   // Sync userData with currentUser when viewing own profile for immediate updates
