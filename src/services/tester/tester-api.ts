@@ -17,6 +17,49 @@ export type TesterState = {
   membership_expiry?: string | null;
 };
 
+export type TesterNoteStatus =
+  | 'open'
+  | 'in_progress'
+  | 'resolved'
+  | 'human_required'
+  | 'wont_fix';
+
+export type TesterNoteComment = {
+  id: string;
+  author_type: 'tester' | 'admin' | 'ai';
+  author_id?: number | null;
+  author_name: string;
+  body: string;
+  created_at: string;
+};
+
+export type TesterNoteSummary = {
+  id: number;
+  screen_name: string;
+  notes?: string | null;
+  status: TesterNoteStatus;
+  status_label: string;
+  comment_count: number;
+  last_comment_at?: string | null;
+  has_screenshot: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TesterNote = TesterNoteSummary & {
+  comments: TesterNoteComment[];
+  api_calls: Array<{
+    method?: string;
+    url?: string;
+    status?: number;
+    duration_ms?: number;
+    timestamp?: string;
+  }>;
+  device_context: Record<string, unknown>;
+  screenshot_url?: string | null;
+  status_options: Array<{ value: TesterNoteStatus; label: string }>;
+};
+
 const result = <T>(response: { data?: { results?: T } }): T =>
   response.data?.results as T;
 
@@ -33,7 +76,18 @@ export const TesterApi = {
     );
   },
   async submitNote(data: FormData) {
-    return result(await Api.post('/auth/tester/notes', data));
+    return result<TesterNote>(await Api.post('/auth/tester/notes', data));
+  },
+  async notes() {
+    return result<TesterNoteSummary[]>(await Api.get('/auth/tester/notes'));
+  },
+  async note(noteId: number) {
+    return result<TesterNote>(await Api.get(`/auth/tester/notes/${noteId}`));
+  },
+  async replyToNote(noteId: number, body: string) {
+    return result<TesterNote>(
+      await Api.post(`/auth/tester/notes/${noteId}/comments`, { body })
+    );
   },
   async insights(userId: number, type: string) {
     return result<any>(
