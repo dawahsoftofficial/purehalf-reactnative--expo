@@ -32,7 +32,6 @@ import {
   LinearGradient,
   ProfileBadges,
   ProfilePhotoPlaceholder,
-  TesterProfileTools,
   Text,
 } from '../../components';
 import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
@@ -1004,7 +1003,6 @@ const Header = ({
         <>
           <CheckMembershipStatus />
           {renderHeroPhoto(true, !isSelf && !isBlockedYou, false)}
-          <TesterProfileTools navigation={navigation} userId={userData?.id} />
           <View style={Styles.infoCard}>
             <View
               style={[
