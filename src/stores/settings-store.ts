@@ -150,6 +150,20 @@ const RATING_PROMPT_DEFAULTS: RatingPromptConfig = {
   storeMinStars: 4,
 };
 
+export type MaintenanceMode = {
+  enabled: boolean;
+  message: string;
+  start_at: string | null;
+  end_at: string | null;
+};
+
+const MAINTENANCE_MODE_DEFAULTS: MaintenanceMode = {
+  enabled: false,
+  message: '',
+  start_at: null,
+  end_at: null,
+};
+
 type SettingValue =
   | AuthenticationMethod
   | ChatCredits
@@ -158,6 +172,7 @@ type SettingValue =
   | MaxChatsPerDay
   | BadgesAndPayments
   | DailyRecommendations
+  | MaintenanceMode
   | PackagesAndEntitlements
   | RatingPromptConfig
   | AppLink[];
@@ -196,6 +211,7 @@ type SettingsState = {
   getPackagesAndEntitlements: () => PackagesAndEntitlements | null;
   getAppLinks: () => AppLink[] | null;
   getRatingPrompt: () => RatingPromptConfig;
+  getMaintenanceMode: () => MaintenanceMode;
   getSettingByKey: <T extends SettingValue>(key: string) => T | null;
 };
 
@@ -298,6 +314,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const state = get();
     const value = state.getSettingByKey<RatingPromptConfig>('rating_prompt');
     return { ...RATING_PROMPT_DEFAULTS, ...(value ?? {}) };
+  },
+
+  getMaintenanceMode: () => {
+    const state = get();
+    const value = state.getSettingByKey<MaintenanceMode>('maintenance_mode');
+    return { ...MAINTENANCE_MODE_DEFAULTS, ...(value ?? {}) };
   },
 
   getSettingByKey: <T extends SettingValue>(key: string) => {
