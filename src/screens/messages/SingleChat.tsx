@@ -1615,7 +1615,7 @@ const SingleChat = (props: any) => {
                     fontSize: wp(3.4),
                   }}
                 >
-                  {LanguageKeys.unBlock}
+                  {t(LanguageKeys.unBlock)}
                 </Text>
               </TouchableOpacity>
             </View>
