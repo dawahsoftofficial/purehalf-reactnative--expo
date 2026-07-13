@@ -121,6 +121,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     });
 
     try {
+      const willBlock = !isBlockedByYou;
       const params = {
         type: 7,
         action_user_id: otherUserData?.id,
@@ -133,15 +134,25 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         throw new Error('Invalid conversation ID');
       }
 
-      await messageServices.blockConversationParticipant(
-        conversationIdNum,
-        otherUserData?.id
-      );
+      // Drive the REST conversation pivot (the gate sendMessage() checks).
+      // block sets is_blocked=true, unblock clears it — replacing the legacy
+      // Firebase RTDB block flag.
+      if (willBlock) {
+        await messageServices.blockConversationParticipant(
+          conversationIdNum,
+          otherUserData?.id
+        );
+      } else {
+        await messageServices.unblockConversationParticipant(
+          conversationIdNum,
+          otherUserData?.id
+        );
+      }
 
       flashSuccessMessage(
-        !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
+        willBlock ? LanguageKeys.blocked : LanguageKeys.unBlocked
       );
-      setIsBlockedByYou(!isBlockedByYou);
+      setIsBlockedByYou(willBlock);
       hideModalLoader();
     } catch (error: unknown) {
       const errorMessage =
@@ -166,6 +177,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     });
 
     try {
+      // Block-and-report is always a block action.
       const params = {
         type: 8,
         action_user_id: otherUserData?.id,
@@ -183,10 +195,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
         otherUserData?.id
       );
 
-      flashSuccessMessage(
-        !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-      );
-      setIsBlockedByYou(!isBlockedByYou);
+      flashSuccessMessage(LanguageKeys.blocked);
+      setIsBlockedByYou(true);
       hideModalLoader();
     } catch (error: unknown) {
       const errorMessage =
@@ -363,7 +373,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       optionsArray = [
         ...viewProfileOption,
-        // 'Unblock user',
+        'Unblock user',
         'Clear chat',
         'Delete conversation',
         // blurText,
@@ -372,8 +382,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     } else {
       optionsArray = [
         ...viewProfileOption,
-        // 'Block user',
-        // 'Report and block user',
+        'Block user',
+        'Report and block user',
         'Clear chat',
         'Delete conversation',
         // blurText,
@@ -398,7 +408,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     if (isBlockedByYou) {
       actionsArray = [
         ...viewProfileAction,
-        // onBlockUnBlockUserPress,
+        onBlockUnBlockUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
         // onChangeBlur,
@@ -406,8 +416,8 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
     } else {
       actionsArray = [
         ...viewProfileAction,
-        // onBlockUnBlockUserPress,
-        // onBlockUnBlockAndReportUserPress,
+        onBlockUnBlockUserPress,
+        onBlockUnBlockAndReportUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
         // onChangeBlur,

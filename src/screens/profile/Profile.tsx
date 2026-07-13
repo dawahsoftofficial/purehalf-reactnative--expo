@@ -21,6 +21,7 @@ import {
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
 import PolygamyBadge from './components/polygamy-badge';
 import Header from './Header';
 import InfoCard from './InfoCard';
@@ -459,19 +460,23 @@ const Profile = ({
       };
       ApiServices.interactionAction(params)
         .then(() => {
-          Firebase.blockUnBlockConv(
-            userConversation?.id,
-            userData?.id,
-            !isBlockedByYou
-          )
-            .then(() => {
-              flashSuccessMessage(
-                !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-              );
-            })
-            .catch();
+          // Keep the REST conversation pivot (the gate sendMessage() actually
+          // checks) in sync with the interaction-level block. Replaces the
+          // legacy Firebase RTDB block flag, which never touched the pivot.
+          const willBlock = !isBlockedByYou;
+          const convId = Number(userConversation?.id);
+          const targetId = Number(userData?.id);
+          if (convId && targetId) {
+            (willBlock
+              ? messageServices.blockConversationParticipant(convId, targetId)
+              : messageServices.unblockConversationParticipant(convId, targetId)
+            ).catch(() => {});
+          }
+          flashSuccessMessage(
+            willBlock ? LanguageKeys.blocked : LanguageKeys.unBlocked
+          );
           const nextUser = { ...userData, blocked: value === 'block' ? 1 : 0 };
-          setIsBlockedByYou(!isBlockedByYou);
+          setIsBlockedByYou(willBlock);
           setUserData(nextUser as User);
           hideLoader();
         })
@@ -490,19 +495,18 @@ const Profile = ({
       };
       ApiServices.interactionAction(params)
         .then(() => {
-          Firebase.blockUnBlockConv(
-            userConversation?.id,
-            userData?.id,
-            !isBlockedByYou
-          )
-            .then(() => {
-              flashSuccessMessage(
-                !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-              );
-            })
-            .catch();
+          // Block-and-report is always a block action; mirror it onto the REST
+          // conversation pivot so chat delivery is actually gated.
+          const convId = Number(userConversation?.id);
+          const targetId = Number(userData?.id);
+          if (convId && targetId) {
+            messageServices
+              .blockConversationParticipant(convId, targetId)
+              .catch(() => {});
+          }
+          flashSuccessMessage(LanguageKeys.blocked);
           const nextUser = { ...userData, blocked: 1 };
-          setIsBlockedByYou(!isBlockedByYou);
+          setIsBlockedByYou(true);
           setUserData(nextUser as User);
           hideLoader();
         })

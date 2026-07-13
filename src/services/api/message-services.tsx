@@ -410,6 +410,54 @@ class MessageServices {
   };
 
   /**
+   * Unblocks a participant in a conversation, clearing the pivot is_blocked
+   * flag so the participant can send messages again. Mirror of
+   * blockConversationParticipant.
+   * @param conversationId - Conversation ID
+   * @param participantId - Participant ID to unblock
+   * @returns Promise resolving to void on success
+   */
+  unblockConversationParticipant = (
+    conversationId: number,
+    participantId: number
+  ) => {
+    return new Promise<void>((resolve, reject) => {
+      Api.post(
+        EndPoints.unblockConversationParticipant(conversationId, participantId)
+      )
+        .then((response) => {
+          const data = response.data as StandardResponse;
+
+          if (data?.error === true) {
+            console.error(
+              '[MessageServices.unblockConversationParticipant] API returned error:',
+              data?.message || 'Unknown error'
+            );
+            reject(data?.message || 'Failed to unblock participant');
+            return;
+          }
+
+          resolve();
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to unblock participant';
+          console.error(
+            '[MessageServices.unblockConversationParticipant] Error:',
+            {
+              message: errorMessage,
+              status: error?.response?.status,
+              data: error?.response?.data,
+            }
+          );
+          reject(errorMessage);
+        });
+    });
+  };
+
+  /**
    * Reports a message
    * @param messageId - Message ID to report
    * @param payload - Report payload

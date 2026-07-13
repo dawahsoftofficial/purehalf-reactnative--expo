@@ -507,7 +507,12 @@ const Messages = (props: MessagesProps) => {
       (p) => String(p.id) === currentUserIdStr
     );
     const unReadCount = currentUserParticipant?.unread_count || 0;
-    const isBlockedYou = otherParticipant.is_blocked;
+    // Hide the avatar whenever the thread is blocked in EITHER direction:
+    // the other participant's row blocked => I blocked them; my own row
+    // blocked => they blocked me. (Previously only the former was checked and
+    // it was mislabeled `isBlockedYou`.)
+    const isBlocked =
+      !!otherParticipant?.is_blocked || !!currentUserParticipant?.is_blocked;
 
     const previewText =
       item.last_message_detail?.type === 'audio'
@@ -533,7 +538,7 @@ const Messages = (props: MessagesProps) => {
         rippleColor={Colors.primary}
       >
         <View style={Styles.profilePictureCon}>
-          {otherParticipant?.image && !isBlockedYou ? (
+          {otherParticipant?.image && !isBlocked ? (
             <Image
               source={{ uri: otherParticipant.image }}
               resizeMode="cover"

@@ -318,6 +318,10 @@ export type UnreadConversationCounterEventData = {
  */
 export type ParticipantBlockedEventData = {
   conversation_id: number;
-  blocked_user_id: number;
-  blocked_by_id: number;
+  /** The participant whose block state changed (the target of the action). */
+  blocked_participant_id: number;
+  /** The participant who performed the block/unblock (may be null). */
+  blocked_by_id: number | null;
+  /** New block state: true = blocked, false = unblocked. */
+  is_blocked: boolean;
 };

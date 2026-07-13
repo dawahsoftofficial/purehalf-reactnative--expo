@@ -196,17 +196,26 @@ const SingleChat = (props: any) => {
         setConversationData(routeConversationData);
         setConversationId(routeConversationData.id.toString());
 
-        // Check blocked status from participants
+        // Check blocked status from participants.
+        //
+        // The pivot `is_blocked` flag lives on the row of the participant who
+        // is blocked (i.e. cannot send). So:
+        //   - my own row blocked   => the other user blocked me  => isBlockedYou
+        //   - the other's row blocked => I blocked the other user => isBlockedByYou
+        // The previous code read the other participant's flag into isBlockedYou
+        // (inverted) and never initialised isBlockedByYou from the server.
         const currentUserId =
           currentUser?.id === 'guardian'
             ? currentUser?.user?.id
             : currentUser?.id;
+        const myParticipant = routeConversationData.participants.find(
+          (p: any) => p.id === currentUserId
+        );
         const otherParticipant = routeConversationData.participants.find(
           (p: any) => p.id !== currentUserId
         );
-        if (otherParticipant) {
-          setIsBlockedYou(otherParticipant.is_blocked);
-        }
+        setIsBlockedYou(!!myParticipant?.is_blocked);
+        _setIsBlockedByYou(!!otherParticipant?.is_blocked);
 
         // Keep loader true - it will be set to false after messages are fetched
         // Don't set loader to false here, wait for fetchMessages to complete
@@ -779,15 +788,20 @@ const SingleChat = (props: any) => {
           ? currentUser?.user?.id
           : currentUser?.id;
 
-      // Check if current user was blocked
-      if (data.blocked_user_id === currentUserId) {
-        setIsBlockedYou(true);
-        Alert.alert('Blocked', 'You have been blocked by this user.', [
-          { text: 'OK' },
-        ]);
+      // The event is broadcast toOthers(), so the actor never receives their
+      // own event — in practice only the target (blocked_participant_id) sees
+      // this. `is_blocked` carries the new state so both block and unblock are
+      // handled by the same event.
+      if (data.blocked_participant_id === currentUserId) {
+        setIsBlockedYou(data.is_blocked);
+        if (data.is_blocked) {
+          Alert.alert('Blocked', 'You have been blocked by this user.', [
+            { text: 'OK' },
+          ]);
+        }
       } else if (data.blocked_by_id === currentUserId) {
-        // Current user blocked someone
-        _setIsBlockedByYou(true);
+        // Fallback if the actor ever receives the event (self-view sync).
+        _setIsBlockedByYou(data.is_blocked);
       }
     },
     [currentUser]

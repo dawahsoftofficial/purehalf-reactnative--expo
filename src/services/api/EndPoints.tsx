@@ -64,6 +64,10 @@ const EndPoints = {
     conversationId: number,
     participantId: number
   ) => `/auth/conversations/${conversationId}/block/${participantId}`,
+  unblockConversationParticipant: (
+    conversationId: number,
+    participantId: number
+  ) => `/auth/conversations/${conversationId}/unblock/${participantId}`,
   reportMessage: (messageId: number) =>
     `/auth/conversations/messages/${messageId}/report`,
   markMessageAsRead: (messageId: number) =>
