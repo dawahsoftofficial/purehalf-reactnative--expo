@@ -47,6 +47,7 @@ yarn lint               # eslint  (currently: 20 errors, 853 warnings — see Kn
 yarn lint:fix
 yarn test               # jest  (currently BROKEN — see Known Issues)
 yarn check-all          # lint + type-check + test
+yarn check:release-env  # fails if .env has APP_DEBUG=true (see Release safeguards below)
 ```
 
 Node ≥20. Yarn (not npm) is canonical — `yarn.lock` is committed.
@@ -65,6 +66,18 @@ Node ≥20. Yarn (not npm) is canonical — `yarn.lock` is committed.
 ## Known issues
 
 Point-in-time audit (jest setup, ESLint errors/warnings, `App.tsx` coupling) lives in [AUDIT-2026-05-27.md](AUDIT-2026-05-27.md). Re-run `yarn check-all` for the current state rather than trusting a snapshot.
+
+## Release safeguards
+
+`.env` has a mobile-only `APP_DEBUG` flag (read via `react-native-dotenv`/`@env`) that gates a debug-only "Delete Test Account & Restart" row in Settings — see `docs/superpowers/specs/2026-07-11-debug-delete-account-restart-design.md`. Since `.env` is baked into the JS bundle at build time regardless of build type, leaving `APP_DEBUG=true` in `.env` when cutting a release build would ship that row to real users (forced logout + local wipe on tap; the backend hard-delete stays blocked by its own separate `ALLOW_DEBUG_ACCOUNT_DELETE` gate, off by default).
+
+`scripts/check-release-env.js` fails (non-zero exit) if `.env` resolves `APP_DEBUG` to `"true"`. It's wired in automatically, not just documentation:
+
+- **Android**: `android/app/build.gradle` makes every `assembleRelease`/`bundleRelease` task depend on a `checkReleaseEnv` Gradle task, so it runs whether you invoke Gradle from the CLI or Android Studio.
+- **iOS**: the "Bundle React Native code and images" Xcode build phase runs it first whenever `$CONFIGURATION = Release` (i.e. Archive builds), before the JS bundle step.
+- **Manual**: `yarn check:release-env` runs the same check standalone for a fast pre-flight check without starting a full build.
+
+If it fails, set `APP_DEBUG=false` (or remove the line) in `.env` and rebuild.
 
 ## Things to be careful with
 

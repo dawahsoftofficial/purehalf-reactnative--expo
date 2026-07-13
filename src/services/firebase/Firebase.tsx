@@ -1,5 +1,9 @@
 import { getApp } from '@react-native-firebase/app';
-import { getAuth, signInWithPhoneNumber } from '@react-native-firebase/auth';
+import {
+  getAuth,
+  signInWithPhoneNumber,
+  signOut,
+} from '@react-native-firebase/auth';
 import { getFunctions, httpsCallable } from '@react-native-firebase/functions';
 import {
   AuthorizationStatus,
@@ -180,6 +184,10 @@ class GFirebase {
           );
         });
     });
+  };
+
+  debugSignOut = () => {
+    return signOut(auth);
   };
 }
 

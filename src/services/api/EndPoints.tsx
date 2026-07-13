@@ -31,6 +31,7 @@ const EndPoints = {
   deleteAccountOtp: '/auth/otp/email/send',
   verifyOtp: '/auth/otp/email/verify',
   deleteAccount: '/auth/delete/account',
+  debugForceDeleteAccount: '/auth/debug/force-delete-account',
   user: '/auth/user',
   privateMedia: '/private/media',
   createGuardian: '/auth/guardian/create',
