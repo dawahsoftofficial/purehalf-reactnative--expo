@@ -4,6 +4,7 @@ import FlashMessage from 'react-native-flash-message';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { MenuProvider } from 'react-native-popup-menu';
 
+import ErrorBoundary from './src/components/ErrorBoundary';
 import { REVENUECAT_ENTITLEMENT_ID } from './src/global/Entitlements';
 import { Initialization } from './src/initialization';
 import { usePremiumStore } from './src/stores';
@@ -107,9 +108,11 @@ const AppContent = (): JSX.Element => {
 
 const App = (): JSX.Element => {
   return (
-    <SafeAreaProvider>
-      <AppContent />
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 };
 export default App;
