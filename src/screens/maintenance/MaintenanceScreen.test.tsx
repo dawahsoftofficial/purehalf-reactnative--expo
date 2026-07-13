@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react-native';
+import moment from 'moment';
 import React from 'react';
 
 import MaintenanceScreen from './MaintenanceScreen';
@@ -9,6 +10,13 @@ let mockMaintenanceMode: {
   start_at: string | null;
   end_at: string | null;
 };
+
+jest.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) =>
+      options ? `${key}:${JSON.stringify(options)}` : key,
+  }),
+}));
 
 jest.mock('../../services', () => ({
   ApiServices: {
@@ -58,5 +66,32 @@ describe('MaintenanceScreen', () => {
     };
     render(<MaintenanceScreen />);
     expect(screen.queryByText('Upgrading servers.')).toBeNull();
+  });
+
+  it('renders the translated title', () => {
+    render(<MaintenanceScreen />);
+    expect(screen.getByText('maintenanceTitle')).toBeTruthy();
+  });
+
+  it('renders the translated window text when both start and end are set', () => {
+    render(<MaintenanceScreen />);
+
+    const start = moment(mockMaintenanceMode.start_at).format('MMM D, h:mm A');
+    const end = moment(mockMaintenanceMode.end_at).format('MMM D, h:mm A');
+
+    expect(
+      screen.getByText(`maintenanceWindow:${JSON.stringify({ start, end })}`)
+    ).toBeTruthy();
+  });
+
+  it('omits the window line when start or end is missing', () => {
+    mockMaintenanceMode = {
+      enabled: true,
+      message: 'Upgrading servers.',
+      start_at: '2026-07-13T22:00',
+      end_at: null,
+    };
+    render(<MaintenanceScreen />);
+    expect(screen.queryByText(/^maintenanceWindow:/)).toBeNull();
   });
 });
