@@ -2,6 +2,7 @@ import moment from 'moment';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text as RNText, View } from 'react-native';
+import { useShallow } from 'zustand/react/shallow';
 
 import { hp, wp } from '../../global';
 import { Colors, Fonts } from '../../res';
@@ -23,7 +24,7 @@ const MaintenanceScreen = () => {
     message,
     start_at: startAt,
     end_at: endAt,
-  } = useSettingsStore((state) => state.getMaintenanceMode());
+  } = useSettingsStore(useShallow((state) => state.getMaintenanceMode()));
   const setSettings = useSettingsStore((state) => state.setSettings);
 
   useEffect(() => {

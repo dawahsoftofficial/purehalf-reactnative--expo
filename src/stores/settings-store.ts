@@ -319,7 +319,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   getMaintenanceMode: () => {
     const state = get();
     const value = state.getSettingByKey<MaintenanceMode>('maintenance_mode');
-    return { ...MAINTENANCE_MODE_DEFAULTS, ...(value ?? {}) };
+    return {
+      ...MAINTENANCE_MODE_DEFAULTS,
+      ...(value ?? {}),
+      enabled: value?.enabled === true,
+    };
   },
 
   getSettingByKey: <T extends SettingValue>(key: string) => {

@@ -2,6 +2,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { type JSX, useCallback, useEffect, useState } from 'react';
 import { AppState, Modal, StyleSheet, View } from 'react-native';
 import RNBootSplash from 'react-native-bootsplash';
+import { useShallow } from 'zustand/react/shallow';
 
 import RatingPromptModal from '@/components/rating/RatingPromptModal';
 import { openAppStore } from '@/lib/utils/rate-app';
@@ -34,8 +35,8 @@ const Initialization = (): JSX.Element => {
   // primer), which load asynchronously. Track when they've arrived so we don't
   // reveal the app — and let the router pick a route — before the flags exist.
   const settingsLoaded = useSettingsStore((state) => state.loaded);
-  const maintenanceMode = useSettingsStore((state) =>
-    state.getMaintenanceMode()
+  const maintenanceMode = useSettingsStore(
+    useShallow((state) => state.getMaintenanceMode())
   );
   const [settingsWaitTimedOut, setSettingsWaitTimedOut] = useState(false);
 
@@ -181,7 +182,7 @@ const Initialization = (): JSX.Element => {
         </Modal>
       )}
       {appReady && !maintenanceMode.enabled ? <RootNavigation /> : <View />}
-      <RatingPromptModal />
+      {!maintenanceMode.enabled && <RatingPromptModal />}
     </View>
   );
 };
