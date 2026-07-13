@@ -20,14 +20,10 @@ function ProfilePictureHeader({
         A clear, friendly photo helps you get better matches. You can change it
         anytime.
       </Text>
-      <Ripple
-        style={Styles.guidelinesBtn}
-        onPress={onGuidelinesPress}
-        rippleContainerBorderRadius={999}
-      >
+      <Ripple style={Styles.guidelinesBtn} onPress={onGuidelinesPress}>
         <Ionicons
           name="shield-checkmark-outline"
-          size={wp(4)}
+          size={wp(3.6)}
           color={Colors.primary}
         />
         <Text style={Styles.guidelinesText}>View photo guidelines</Text>
@@ -62,15 +58,12 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(1.5),
-    backgroundColor: Colors.lavender,
-    paddingVertical: hp(1),
-    paddingHorizontal: wp(4),
-    borderRadius: 999,
     marginTop: hp(2),
   },
   guidelinesText: {
     color: Colors.primary,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
+    textDecorationLine: 'underline',
   },
 });
