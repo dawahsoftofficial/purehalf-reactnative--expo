@@ -85,3 +85,4 @@ src/assets/json/serviceAccountKey.json
 .env.local
 .env.*.local
 android/app/release/
+.worktrees/
