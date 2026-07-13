@@ -633,6 +633,8 @@
     "ratingThankYou": "Aap ki feedback ka shukriya!",
     "microphonePermissionDenied": "Voice message record karne ke liye microphone ki ijazat chahiye.",
     "voiceMessage": "Voice message",
-    "recordingVoice": "Voice message record ho raha hai"
+    "recordingVoice": "Voice message record ho raha hai",
+    "maintenanceTitle": "Maintenance Jari Hai",
+    "maintenanceWindow": "Hamein umeed hai {{start}} aur {{end}} ke darmiyan wapas aa jayenge."
   }
 }

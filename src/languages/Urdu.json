@@ -640,6 +640,8 @@
     "ratingThankYou": "آپ کی رائے کا شکریہ!",
     "microphonePermissionDenied": "صوتی پیغام ریکارڈ کرنے کے لیے مائیکروفون کی اجازت درکار ہے۔",
     "voiceMessage": "صوتی پیغام",
-    "recordingVoice": "صوتی پیغام ریکارڈ ہو رہا ہے"
+    "recordingVoice": "صوتی پیغام ریکارڈ ہو رہا ہے",
+    "maintenanceTitle": "زیر مرمت",
+    "maintenanceWindow": "ہم {{start}} اور {{end}} کے درمیان واپس آنے کی امید رکھتے ہیں۔"
   }
 }
