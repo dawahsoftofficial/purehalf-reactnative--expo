@@ -32,6 +32,7 @@ import {
   LinearGradient,
   ProfileBadges,
   ProfilePhotoPlaceholder,
+  TesterProfileTools,
   Text,
 } from '../../components';
 import ChatCreditsBadge from '../../components/badges/chat-credits-badge';
@@ -1003,6 +1004,16 @@ const Header = ({
         <>
           <CheckMembershipStatus />
           {renderHeroPhoto(true, !isSelf && !isBlockedYou, false)}
+          {currentUser?.tester_mode_enabled === true &&
+            currentUser?.is_tester &&
+            userData?.id && (
+              <View style={Styles.testerToolsWrap}>
+                <TesterProfileTools
+                  navigation={navigation}
+                  userId={userData?.id}
+                />
+              </View>
+            )}
           <View style={Styles.infoCard}>
             <View
               style={[
@@ -1367,6 +1378,9 @@ const Styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  testerToolsWrap: {
+    marginBottom: hp(4.5),
   },
   infoCard: {
     marginTop: -hp(4.5),
