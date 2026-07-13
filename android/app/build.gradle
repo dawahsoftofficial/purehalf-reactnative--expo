@@ -155,3 +155,15 @@ dependencies {
     // Required for react-native-image-picker on Android API levels below 30
     implementation("androidx.activity:activity:1.9.+")
 }
+
+// Fails a release build if app-old/.env still has APP_DEBUG=true baked in
+// (that flag gates a debug-only Settings row; see scripts/check-release-env.js
+// and docs/superpowers/specs/2026-07-11-debug-delete-account-restart-design.md).
+tasks.register("checkReleaseEnv", Exec) {
+    description = "Fails the build if .env has APP_DEBUG=true left on for a release build."
+    commandLine "node", file("$rootDir/../scripts/check-release-env.js").absolutePath
+}
+
+tasks.matching { it.name.matches(/(assemble|bundle).*Release/) }.configureEach {
+    dependsOn(tasks.named("checkReleaseEnv"))
+}

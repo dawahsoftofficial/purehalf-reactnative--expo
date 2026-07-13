@@ -9,6 +9,7 @@
     "lint:fix": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --fix --ignore-pattern \"**/node_modules/**\"",
     "lint:errors:files": "eslint \"src/**/*.{js,jsx,ts,tsx}\" --quiet --format json | node -e \"let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const r=JSON.parse(d||'[]');const s=new Set();for(const f of r){if((f.errorCount||0)>0)s.add(f.filePath);}process.stdout.write([...s].join('\\n'));});\"",
     "start": "react-native start",
+    "check:release-env": "node scripts/check-release-env.js",
     "test": "jest",
     "test:ci": "jest --coverage",
     "test:watch": "jest --watch",
