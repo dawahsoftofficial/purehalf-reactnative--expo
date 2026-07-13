@@ -42,7 +42,7 @@ import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
-  capitalize,
+  capitalizeName,
   flashErrorMessage,
   flashSuccessMessage,
   isIOS,
@@ -121,6 +121,7 @@ type NameRowProps = {
   lastName?: string;
   showStatus: boolean;
   statusColor: string;
+  statusLabel?: string;
   rtl: boolean;
 };
 
@@ -129,6 +130,7 @@ const NameRow = React.memo(function NameRow({
   lastName,
   showStatus,
   statusColor,
+  statusLabel,
   rtl,
 }: NameRowProps): ReactElement {
   return (
@@ -139,7 +141,7 @@ const NameRow = React.memo(function NameRow({
         style={[Styles.name, !rtl ? { fontFamily: Fonts.DISPLAY } : null]}
         numberOfLines={1}
       >
-        {capitalize(firstName ?? '') + ' ' + capitalize(lastName ?? '')}
+        {capitalizeName([firstName, lastName].filter(Boolean).join(' '))}
       </ReactText>
       {showStatus && (
         <View
@@ -149,6 +151,11 @@ const NameRow = React.memo(function NameRow({
           }}
         />
       )}
+      {showStatus && statusLabel ? (
+        <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
+          {statusLabel}
+        </ReactText>
+      ) : null}
     </View>
   );
 });
@@ -489,27 +496,26 @@ const Header = ({
 
   const Rtl = CheckRtl();
 
-  const lastOnlineFromCurrentTime = useMemo(() => {
+  const minutesSinceLastOnline = useMemo(() => {
     if (!userData?.last_online_at) {
-      return 0;
+      return Number.POSITIVE_INFINITY;
     }
-    return parseInt(
-      moment
-        .duration(moment(new Date()).diff(moment(userData?.last_online_at)))
-        .asHours()
-        .toFixed()
-    );
+    return moment().diff(moment(userData.last_online_at), 'minutes');
   }, [userData?.last_online_at]);
 
   const onlineStatusColor = useMemo(() => {
-    if (lastOnlineFromCurrentTime === 1) {
+    // Green when online now (same <5min threshold as relativeLastSeen's
+    // "Online now"), yellow when active within the last 12 hours, grey
+    // otherwise. Previously only an exact 1-hour bucket turned green, so a
+    // member online right now (0 hours) showed grey.
+    if (minutesSinceLastOnline < 5) {
       return Colors.color10;
     }
-    if (lastOnlineFromCurrentTime > 1 && lastOnlineFromCurrentTime <= 12) {
+    if (minutesSinceLastOnline <= 12 * 60) {
       return Colors.color19;
     }
     return Colors.color15;
-  }, [lastOnlineFromCurrentTime]);
+  }, [minutesSinceLastOnline]);
 
   const isSelf = currentUser?.id === userData?.id;
   const profileDisplayName =
@@ -1012,6 +1018,7 @@ const Header = ({
                   lastName={userData?.last_name}
                   showStatus={!isBlockedYou}
                   statusColor={onlineStatusColor}
+                  statusLabel={relativeLastSeen}
                   rtl={Rtl}
                 />
                 <View
@@ -1046,23 +1053,6 @@ const Header = ({
               >
                 {`“${tagline}”`}
               </ReactText>
-            ) : null}
-            {!isBlockedYou && relativeLastSeen ? (
-              <View
-                style={[
-                  Styles.lastSeenRow,
-                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
-                ]}
-              >
-                <Ionicons
-                  name="time-outline"
-                  color={Colors.primaryMid}
-                  size={wp(3.8)}
-                />
-                <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
-                  {relativeLastSeen}
-                </ReactText>
-              </View>
             ) : null}
             {!isBlockedYou && (
               <>
@@ -1474,12 +1464,6 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.lavender,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  lastSeenRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(1.4),
-    marginTop: hp(1),
   },
   cardLastSeenTxt: {
     color: Colors.primaryMid,

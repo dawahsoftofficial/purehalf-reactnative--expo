@@ -6,6 +6,7 @@ import Ripple from 'react-native-material-ripple';
 import { ProfilePhotoPlaceholder } from '../../../components';
 import { hp, Typography, wp } from '../../../global';
 import { Colors, Fonts } from '../../../res';
+import { capitalizeName } from '../../../services';
 
 interface MatchIntroCardProps {
   otherUserData: any;
@@ -57,7 +58,7 @@ const MatchIntroCard = ({
         )}
       </View>
       <Text style={Styles.name} numberOfLines={1}>
-        {otherUserData?.name}
+        {capitalizeName(otherUserData?.name)}
       </Text>
       {metaParts.length > 0 && (
         <Text style={Styles.meta} numberOfLines={1}>

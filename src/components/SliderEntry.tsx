@@ -13,7 +13,12 @@ import { useSettingsStore } from '@/stores';
 import { hp, Typography } from '../global';
 import { CheckRtl, LanguageKeys } from '../languages';
 import { Colors, Fonts } from '../res';
-import { ApiServices, isIOS, useGlobalContext } from '../services';
+import {
+  ApiServices,
+  capitalizeName,
+  isIOS,
+  useGlobalContext,
+} from '../services';
 import { Button } from './buttons';
 import { ProfileBadges } from './profile-badges';
 import ProfilePhotoPlaceholder from './ProfilePhotoPlaceholder';
@@ -280,7 +285,7 @@ const SliderEntry = ({
               { fontFamily: displayFont, textAlign: Rtl ? 'right' : 'left' },
             ]}
           >
-            {chatUserData?.name}, {chatUserData?.age}
+            {capitalizeName(chatUserData?.name)}, {chatUserData?.age}
           </Text>
           <ProfileBadges
             userData={data}
