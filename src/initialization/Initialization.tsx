@@ -1,6 +1,6 @@
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import React, { type JSX, useCallback, useEffect, useState } from 'react';
-import { Modal, StyleSheet, View } from 'react-native';
+import { AppState, Modal, StyleSheet, View } from 'react-native';
 import RNBootSplash from 'react-native-bootsplash';
 
 import RatingPromptModal from '@/components/rating/RatingPromptModal';
@@ -11,6 +11,7 @@ import { Button, Text } from '../components';
 import { hp, wp } from '../global';
 import { RootNavigation } from '../navigation';
 import { Colors, Fonts } from '../res';
+import MaintenanceScreen from '../screens/maintenance/MaintenanceScreen';
 import { ApiServices, StorageManager, useGlobalContext } from '../services';
 import type { SettingsResponse } from '../stores/settings-store';
 import { useSettingsStore } from '../stores/settings-store';
@@ -33,6 +34,9 @@ const Initialization = (): JSX.Element => {
   // primer), which load asynchronously. Track when they've arrived so we don't
   // reveal the app — and let the router pick a route — before the flags exist.
   const settingsLoaded = useSettingsStore((state) => state.loaded);
+  const maintenanceMode = useSettingsStore((state) =>
+    state.getMaintenanceMode()
+  );
   const [settingsWaitTimedOut, setSettingsWaitTimedOut] = useState(false);
 
   const checkForMandatoryUpdate = useCallback(async () => {
@@ -89,6 +93,18 @@ const Initialization = (): JSX.Element => {
     checkForMandatoryUpdate();
   }, [checkForMandatoryUpdate]);
 
+  // Re-check /settings whenever the app returns to the foreground, so a user
+  // who backgrounded the app before maintenance started sees the gate on
+  // return without waiting for a fresh cold start.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        checkForMandatoryUpdate();
+      }
+    });
+    return () => subscription.remove();
+  }, [checkForMandatoryUpdate]);
+
   useEffect(() => {
     GoogleSignin.configure({
       webClientId: GOOGLE_WEB_CLIENT_ID,
@@ -137,30 +153,34 @@ const Initialization = (): JSX.Element => {
 
   return (
     <View style={styles.container}>
-      <Modal
-        visible={showUpdateModal}
-        transparent
-        onRequestClose={() => {}}
-        animationType="fade"
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalBody}>
-              <Text style={styles.title}>Update Required</Text>
-              <Text style={styles.description}>
-                A new update is now available. Please update your app to
-                continue using it.
-              </Text>
+      {maintenanceMode.enabled ? (
+        <MaintenanceScreen />
+      ) : (
+        <Modal
+          visible={showUpdateModal}
+          transparent
+          onRequestClose={() => {}}
+          animationType="fade"
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalBody}>
+                <Text style={styles.title}>Update Required</Text>
+                <Text style={styles.description}>
+                  A new update is now available. Please update your app to
+                  continue using it.
+                </Text>
+              </View>
+              <Button
+                buttonStyle={styles.ctaButton}
+                onPress={handleUpdatePress}
+                text="Update Now"
+              />
             </View>
-            <Button
-              buttonStyle={styles.ctaButton}
-              onPress={handleUpdatePress}
-              text="Update Now"
-            />
           </View>
-        </View>
-      </Modal>
-      {appReady ? <RootNavigation /> : <View />}
+        </Modal>
+      )}
+      {appReady && !maintenanceMode.enabled ? <RootNavigation /> : <View />}
       <RatingPromptModal />
     </View>
   );
