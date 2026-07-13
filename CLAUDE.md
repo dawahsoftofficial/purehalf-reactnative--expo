@@ -79,6 +79,8 @@ Point-in-time audit (jest setup, ESLint errors/warnings, `App.tsx` coupling) liv
 
 If it fails, set `APP_DEBUG=false` (or remove the line) in `.env` and rebuild.
 
+To build a release variant locally with the debug row intact (e.g. testing `assembleRelease` itself), set `ALLOW_DEBUG_RELEASE_BUILD=1` in your shell for that one build — it's a per-invocation env var, not a `.env` setting, so it can't linger unnoticed into a real release. Never distribute a build made this way outside the team.
+
 ## Things to be careful with
 
 - **Guardian / Wali role is being REMOVED from this app (decision 2026-07-12).** Guardian logins move to a separate web interface (its own project). All guardian-role code — guardian login, `src/screens/guardian/`, `role === 'guardian'` branches, the legacy Firebase RTDB `ConversationsListener` — is slated for deletion, not migration or extension. What stays (and is partly still to build): the candidate-side flow to add a guardian's email and approve guardian web logins. See the root `CLAUDE.md` Domain-language section for the full picture.
