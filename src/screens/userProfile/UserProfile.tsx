@@ -1,7 +1,6 @@
 import React from 'react';
 import { View } from 'react-native';
 
-import { TesterProfileTools } from '../../components';
 import { Profile } from '../profile';
 
 const UserProfile = (props: any) => {
@@ -9,7 +8,6 @@ const UserProfile = (props: any) => {
 
   return (
     <View style={{ flex: 1 }}>
-      <TesterProfileTools navigation={props.navigation} userId={userData?.id} />
       <Profile
         fromUserProfile={true}
         userData={userData}
