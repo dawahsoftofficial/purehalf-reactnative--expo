@@ -1494,7 +1494,7 @@ const SingleChat = (props: any) => {
         <ScrollView
           horizontal
           scrollEnabled={false}
-          contentContainerStyle={{ flex: 1 }}
+          contentContainerStyle={Styles.chatBody}
         >
           {loader ? (
             <ActivityIndicator
@@ -1510,6 +1510,7 @@ const SingleChat = (props: any) => {
               ref={flatListRef}
               data={messages}
               inverted
+              style={Styles.messagesList}
               renderItem={({ item, index }) => {
                 const currentUserId =
                   currentUser?.id === 'guardian'
@@ -1615,7 +1616,7 @@ const SingleChat = (props: any) => {
                     fontSize: wp(3.4),
                   }}
                 >
-                  {LanguageKeys.unBlock}
+                  {t(LanguageKeys.unBlock)}
                 </Text>
               </TouchableOpacity>
             </View>

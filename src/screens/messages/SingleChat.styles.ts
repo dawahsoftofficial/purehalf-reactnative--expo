@@ -25,7 +25,17 @@ const Styles = StyleSheet.create({
     color: Colors.primary,
     includeFontPadding: false,
   },
+  // Common backdrop wrapping BOTH the messages list and the empty-state intro,
+  // so the chat background is continuous whether or not messages are present.
+  chatBody: {
+    flex: 1,
+    backgroundColor: Colors.appBg,
+  },
+  messagesList: {
+    flex: 1,
+  },
   messagesListContainer: {
+    flexGrow: 1,
     paddingTop: hp(3),
     paddingHorizontal: wp(3),
   },

@@ -44,6 +44,7 @@ import { CommonActions } from '../../navigation';
 import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
+  capitalizeName,
   flashErrorMessage,
   flashSuccessMessage,
   formatDate,
@@ -514,6 +515,10 @@ const Messages = (props: MessagesProps) => {
     const isBlocked =
       !!otherParticipant?.is_blocked || !!currentUserParticipant?.is_blocked;
 
+    // Pure Half Customer Support thread — same detection as SingleChatHeader.
+    const isSupport =
+      item?.type === 'support' || otherParticipant?.type === 'Admin';
+
     const previewText =
       item.last_message_detail?.type === 'audio'
         ? t(LanguageKeys.voiceMessage)
@@ -544,6 +549,8 @@ const Messages = (props: MessagesProps) => {
               resizeMode="cover"
               style={Styles.image}
             />
+          ) : isSupport ? (
+            <Ionicons name="heart" size={AVATAR * 0.5} color={Colors.primary} />
           ) : (
             <ProfilePhotoPlaceholder
               name={otherParticipant?.name}
@@ -559,7 +566,7 @@ const Messages = (props: MessagesProps) => {
           ]}
         >
           <Text variant="display" style={Styles.itemHeading} numberOfLines={1}>
-            {otherParticipant.name}
+            {capitalizeName(otherParticipant.name)}
           </Text>
           {hasLastMessage && (
             <Text

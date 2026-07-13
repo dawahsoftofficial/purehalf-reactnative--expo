@@ -43,6 +43,19 @@ const formatDate = (date: any) => {
 const capitalize = (str: string) =>
   str?.charAt(0)?.toUpperCase() + str?.slice(1);
 
+// Proper Title Case for member names. Handles ALL-CAPS / lowercase values from
+// the DB by lower-casing the remainder of each word. Safe for null/undefined/
+// empty and collapses runs of whitespace. e.g. "HUMMA BUT" -> "Humma But".
+const capitalizeName = (name?: string | null): string => {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const setRevenueCat = (userID: string | number | null = null) => {
   try {
     // m4 fix: was `JSON.stringify(userID)` which produced JSON-quoted strings
@@ -91,6 +104,7 @@ const isIOS = Platform.OS === 'ios';
 
 export {
   capitalize,
+  capitalizeName,
   checkEmpty,
   emailValidation,
   formatDate,

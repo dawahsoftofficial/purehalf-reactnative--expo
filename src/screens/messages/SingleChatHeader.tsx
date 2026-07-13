@@ -20,9 +20,10 @@ import {
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
+  capitalizeName,
   flashErrorMessage,
   flashSuccessMessage,
 } from '../../services';
@@ -468,10 +469,10 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
                 style={Styles.avatarImage}
               />
             ) : isSupportConversation ? (
-              <Image
-                source={Images.logoWithoutTextBlack}
-                resizeMode="contain"
-                style={Styles.avatarImage}
+              <Ionicons
+                name="heart"
+                size={width * 0.055}
+                color={Colors.primary}
               />
             ) : (
               <ProfilePhotoPlaceholder
@@ -483,7 +484,7 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
           </View>
           <View style={Styles.titleRow}>
             <Text variant="display" style={Styles.userName} numberOfLines={1}>
-              {otherUserData?.name}
+              {capitalizeName(otherUserData?.name)}
             </Text>
             {!isSupportConversation ? (
               <ProfileBadges
