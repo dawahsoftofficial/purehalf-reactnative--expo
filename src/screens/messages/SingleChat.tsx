@@ -7,6 +7,7 @@ import {
   AppState,
   type AppStateStatus,
   ScrollView,
+  Text,
   TextInput,
   TouchableOpacity,
   View,
@@ -25,6 +26,7 @@ import {
   ApiServices,
   flashErrorMessage,
   flashInfoMessage,
+  flashSuccessMessage,
   useGlobalContext,
 } from '../../services';
 import messageServices from '../../services/api/message-services';
@@ -84,6 +86,7 @@ const SingleChat = (props: any) => {
   );
   const [isBlockedByYou, _setIsBlockedByYou] = useState(false);
   const [isBlockedYou, setIsBlockedYou] = useState(false);
+  const [isUnblocking, setIsUnblocking] = useState(false);
   const [loader, setLoader] = useState(true);
   const [messagePressedId, setMessagePressedId] = useState<number | null>(null);
   const [quote, setQuote] = useState('');
@@ -1336,10 +1339,34 @@ const SingleChat = (props: any) => {
       const res = await onSendPress(inputMessage);
 
       if (res?.type === 'blockedByYou') {
-        Alert.alert(
-          `You have blocked ${otherUserData?.name} please unblock first to send message`
+        flashErrorMessage(
+          `Unblock ${otherUserData?.name || 'this member'} to send a message.`
         );
       }
+    }
+  };
+
+  // Unblock directly from the inline composer bar shown when you've blocked
+  // this member. Clears the conversation pivot so messaging resumes.
+  const onUnblockFromComposer = async () => {
+    if (isUnblocking) return;
+    const conversationIdNum = parseInt(conversationId, 10);
+    if (!conversationId || isNaN(conversationIdNum) || !otherUserData?.id) {
+      flashErrorMessage(LanguageKeys.somethingWentWrong);
+      return;
+    }
+    setIsUnblocking(true);
+    try {
+      await messageServices.unblockConversationParticipant(
+        conversationIdNum,
+        otherUserData.id
+      );
+      _setIsBlockedByYou(false);
+      flashSuccessMessage(LanguageKeys.unBlocked);
+    } catch {
+      flashErrorMessage(LanguageKeys.somethingWentWrong);
+    } finally {
+      setIsUnblocking(false);
     }
   };
 
@@ -1541,6 +1568,57 @@ const SingleChat = (props: any) => {
               onCancel={cancelVoiceRecording}
               onSend={sendVoiceRecording}
             />
+          ) : isBlockedByYou ? (
+            // You've blocked this member — replace the composer with a clear
+            // inline bar + one-tap Unblock, instead of a native alert on send.
+            <View
+              style={{
+                flexDirection: Rtl ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                paddingVertical: wp(3),
+                paddingHorizontal: wp(4),
+                borderTopWidth: 1,
+                borderTopColor: Colors.hairline,
+                gap: wp(3),
+              }}
+            >
+              <Ionicons name="ban" size={wp(5)} color={Colors.muted} />
+              <Text
+                style={{
+                  flex: 1,
+                  color: Colors.muted,
+                  fontSize: wp(3.4),
+                  textAlign: Rtl ? 'right' : 'left',
+                }}
+                numberOfLines={2}
+              >
+                {`You blocked ${
+                  otherUserData?.name || 'this member'
+                }. Unblock to send messages.`}
+              </Text>
+              <TouchableOpacity
+                onPress={onUnblockFromComposer}
+                disabled={isUnblocking}
+                style={{
+                  paddingVertical: wp(2),
+                  paddingHorizontal: wp(4.5),
+                  borderRadius: wp(6),
+                  backgroundColor: isUnblocking
+                    ? Colors.primaryLite
+                    : Colors.primary,
+                }}
+              >
+                <Text
+                  style={{
+                    color: Colors.color2,
+                    fontWeight: '600',
+                    fontSize: wp(3.4),
+                  }}
+                >
+                  {LanguageKeys.unBlock}
+                </Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             <View
               style={{
@@ -1582,8 +1660,10 @@ const SingleChat = (props: any) => {
                   const res = await onSendPress(inputMessage);
 
                   if (res?.type === 'blockedByYou') {
-                    Alert.alert(
-                      `You have blocked ${otherUserData?.name} please unblock first to send message`
+                    flashErrorMessage(
+                      `Unblock ${
+                        otherUserData?.name || 'this member'
+                      } to send a message.`
                     );
                   }
                 }}
