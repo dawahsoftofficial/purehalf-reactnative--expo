@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import CircularProgress from 'react-native-circular-progress-indicator';
 import Ripple from 'react-native-material-ripple';
+import { Switch } from 'react-native-switch';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -114,6 +115,9 @@ type HeaderProps = {
   onTaglineSubmit?: () => void;
   onTaglineEditPress?: () => void;
   onTaglineCancel?: () => void;
+  taglinePrivacyVisible?: boolean;
+  taglinePrivacyUpdating?: boolean;
+  onTaglinePrivacyChange?: () => void;
 };
 
 type NameRowProps = {
@@ -316,6 +320,9 @@ const Header = ({
   onTaglineSubmit = () => null,
   onTaglineEditPress = () => null,
   onTaglineCancel = () => null,
+  taglinePrivacyVisible = true,
+  taglinePrivacyUpdating = false,
+  onTaglinePrivacyChange = () => null,
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { t } = useTranslation();
@@ -886,31 +893,48 @@ const Header = ({
             />
           </View>
         </View>
-        <Ripple
-          style={Styles.taglineEditRow}
-          onPress={onTaglineEditPress}
-          rippleColor={Colors.lavender}
-        >
-          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
-          {tagline && tagline.trim().length ? (
-            <ReactText
-              style={[
-                Styles.cardTagline,
-                { textAlign: Rtl ? 'right' : 'left', flex: 1 },
-              ]}
-              numberOfLines={2}
-            >
-              {`“${tagline}”`}
-            </ReactText>
-          ) : (
-            <Text
-              style={[Styles.cardTagline, Styles.cardTaglineMuted, { flex: 1 }]}
-              numberOfLines={2}
-            >
-              {LanguageKeys.enterTagline}
-            </Text>
-          )}
-        </Ripple>
+        <View style={Styles.taglinePrivacyRow}>
+          <Ripple
+            style={Styles.taglineEditRow}
+            onPress={onTaglineEditPress}
+            rippleColor={Colors.lavender}
+          >
+            <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
+            {tagline && tagline.trim().length ? (
+              <ReactText
+                style={[
+                  Styles.cardTagline,
+                  { textAlign: Rtl ? 'right' : 'left', flex: 1 },
+                ]}
+                numberOfLines={2}
+              >
+                {`“${tagline}”`}
+              </ReactText>
+            ) : (
+              <Text
+                style={[
+                  Styles.cardTagline,
+                  Styles.cardTaglineMuted,
+                  { flex: 1 },
+                ]}
+                numberOfLines={2}
+              >
+                {LanguageKeys.enterTagline}
+              </Text>
+            )}
+          </Ripple>
+          <Switch
+            value={taglinePrivacyVisible}
+            onValueChange={onTaglinePrivacyChange}
+            disabled={taglinePrivacyUpdating}
+            renderActiveText={false}
+            renderInActiveText={false}
+            circleSize={23}
+            backgroundActive={Colors.primary}
+            backgroundInactive={Colors.color18}
+            innerCircleStyle={Styles.privacySwitchInner}
+          />
+        </View>
         {typeof profileStrength === 'number' ? (
           <View style={Styles.strengthWrap}>
             <View
@@ -1468,6 +1492,16 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2),
     marginTop: hp(1),
+    flex: 1,
+  },
+  taglinePrivacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+  },
+  privacySwitchInner: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   reviewStatusIcon: {
     width: wp(7),

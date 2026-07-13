@@ -2,6 +2,7 @@
 import React, { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import { Switch } from 'react-native-switch';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Text } from '../../components';
@@ -53,11 +54,17 @@ export const CompletionCard = memo(function CompletionCard({
 type InterestsPreviewProps = {
   interests: any[];
   onEdit: () => void;
+  privacyVisible?: boolean;
+  privacyUpdating?: boolean;
+  onPrivacyChange?: () => void;
 };
 
 export const InterestsPreview = memo(function InterestsPreview({
   interests,
   onEdit,
+  privacyVisible = true,
+  privacyUpdating = false,
+  onPrivacyChange,
 }: InterestsPreviewProps) {
   const selected = (interests ?? []).filter((i) => i?.selected).slice(0, 8);
   return (
@@ -66,9 +73,24 @@ export const InterestsPreview = memo(function InterestsPreview({
         <Text style={Styles.cardHeadTxt}>
           {LanguageKeys.myInterestAndHobbies}
         </Text>
-        <Ripple onPress={onEdit} style={Styles.editLink}>
-          <Text style={Styles.editLinkTxt}>{LanguageKeys.update}</Text>
-        </Ripple>
+        <View style={Styles.cardHeadActions}>
+          <Ripple onPress={onEdit} style={Styles.editLink}>
+            <Text style={Styles.editLinkTxt}>{LanguageKeys.update}</Text>
+          </Ripple>
+          {onPrivacyChange ? (
+            <Switch
+              value={privacyVisible}
+              onValueChange={onPrivacyChange}
+              disabled={privacyUpdating}
+              renderActiveText={false}
+              renderInActiveText={false}
+              circleSize={23}
+              backgroundActive={Colors.primary}
+              backgroundInactive={Colors.color18}
+              innerCircleStyle={Styles.switchInner}
+            />
+          ) : null}
+        </View>
       </View>
       {selected.length > 0 ? (
         <View style={Styles.pills}>
@@ -213,9 +235,19 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(0.5),
   },
   cardHeadTxt: {
+    flex: 1,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small3,
     color: Colors.ink,
+  },
+  cardHeadActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
+  },
+  switchInner: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   editLink: {
     paddingVertical: hp(0.5),

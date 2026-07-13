@@ -6,6 +6,8 @@ import { getApp } from '@react-native-firebase/app';
 import {
   AppleAuthProvider,
   getAuth,
+  getIdToken,
+  GoogleAuthProvider,
   signInWithCredential,
 } from '@react-native-firebase/auth';
 import axios from 'axios';
@@ -105,9 +107,23 @@ class GApiServices {
           // Handle response structure - could be direct or wrapped in data
           const idToken = googleRes?.data?.idToken || googleRes?.idToken;
           const userData = googleRes?.data?.user || googleRes?.user;
-          const email = userData?.email;
           const givenName = userData?.givenName;
           const familyName = userData?.familyName;
+
+          if (!idToken) {
+            throw new Error('Google Sign-In did not return an identity token.');
+          }
+
+          const googleCredential = GoogleAuthProvider.credential(idToken);
+          const firebaseCredential = await signInWithCredential(
+            auth,
+            googleCredential
+          );
+          const firebaseIdToken = await getIdToken(
+            firebaseCredential.user,
+            true
+          );
+          const email = firebaseCredential.user.email;
 
           console.log('[socialAuthenticate] Google sign-in successful:', {
             hasIdToken: !!idToken,
@@ -126,16 +142,14 @@ class GApiServices {
             isPlaceholder: fcmToken === 'FcmToken',
           });
           const requestPayload = {
-            token: idToken,
-            email: email,
-            provider,
+            firebase_id_token: firebaseIdToken,
             fcm_token: fcmToken,
             device_type: !isIOS ? 0 : 1,
           };
           console.log('[socialAuthenticate] Calling API with payload:', {
-            hasToken: !!requestPayload.token,
-            email: requestPayload.email,
-            provider: requestPayload.provider,
+            hasFirebaseIdToken: !!requestPayload.firebase_id_token,
+            email,
+            provider,
             hasFcmToken: !!requestPayload.fcm_token,
             deviceType: requestPayload.device_type,
           });
@@ -291,23 +305,22 @@ class GApiServices {
               }
             );
             const fcmToken = await this.getValidFcmToken();
+            const firebaseIdToken = await getIdToken(res.user, true);
             console.log('[socialAppleAuthenticate] FCM token retrieved:', {
               hasToken: !!fcmToken,
               isPlaceholder: fcmToken === 'FcmToken',
             });
 
             const requestPayload = {
-              token: identityToken,
-              email: res?.user?.email,
-              provider,
+              firebase_id_token: firebaseIdToken,
               fcm_token: fcmToken,
               device_type: !isIOS ? 0 : 1,
             };
 
             console.log('[socialAppleAuthenticate] Calling API with payload:', {
-              hasToken: !!requestPayload.token,
-              email: requestPayload.email,
-              provider: requestPayload.provider,
+              hasFirebaseIdToken: !!requestPayload.firebase_id_token,
+              email: res?.user?.email,
+              provider,
               hasFcmToken: !!requestPayload.fcm_token,
               deviceType: requestPayload.device_type,
             });
@@ -674,11 +687,15 @@ class GApiServices {
     });
   };
 
-  updateProfilePrivacy = (visibility: Record<string, 'public' | 'private'>) => {
+  updateProfilePrivacy = (privacy: {
+    visibility?: Record<string, 'public' | 'private'>;
+    profile_visibility?: 'everyone' | 'active_chat' | 'liked';
+  }) => {
     return new Promise<{
       profile_field_visibility?: Record<string, 'public' | 'private'>;
+      profile_visibility?: 'everyone' | 'active_chat' | 'liked';
     }>((resolve, reject) => {
-      Api.patch(EndPoints.updateProfilePrivacy, { visibility })
+      Api.patch(EndPoints.updateProfilePrivacy, privacy)
         .then((res) => resolve(res?.data?.results))
         .catch((error) => {
           flashErrorMessage(error?.response?.data?.message);

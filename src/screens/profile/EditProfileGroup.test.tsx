@@ -1,7 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import React, { type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 
+import { ApiServices } from '../../services';
 import EditProfileGroup from './EditProfileGroup';
 import { updateDetails } from './Funtions';
 
@@ -115,8 +121,11 @@ jest.mock('../../languages', () => ({
     skip: 'Skip',
     update: 'Update',
     updating: 'Updating',
+    updated: 'Updated',
     notYetProvided: 'Not yet provided',
     none: 'None',
+    visibleOnProfile: 'Shown on your profile',
+    hiddenOnProfile: 'Hidden from your profile',
   },
 }));
 
@@ -128,6 +137,7 @@ jest.mock('../../services', () => ({
   ApiServices: {
     getLanguages: jest.fn(),
     getNationality: jest.fn(),
+    updateProfilePrivacy: jest.fn(),
   },
   flashSuccessMessage: jest.fn(),
   StorageManager: {
@@ -135,7 +145,10 @@ jest.mock('../../services', () => ({
     storageKeys: { USER: 'USER' },
   },
   useGlobalContext: () => ({
-    currentUser: { gender: 'female' },
+    currentUser: {
+      gender: 'female',
+      detail: { profile_field_visibility: {} },
+    },
     updateCurrentUser: jest.fn(),
   }),
 }));
@@ -145,6 +158,13 @@ jest.mock('./Funtions', () => ({
 }));
 
 describe('EditProfileGroup', () => {
+  beforeEach(() => {
+    (ApiServices.updateProfilePrivacy as jest.Mock).mockReset();
+    (ApiServices.updateProfilePrivacy as jest.Mock).mockResolvedValue({
+      profile_field_visibility: {},
+    });
+  });
+
   it('does not repeat the section title in the progress label', () => {
     render(
       <EditProfileGroup
@@ -265,6 +285,46 @@ describe('EditProfileGroup', () => {
     expect(screen.getAllByText('Height')).toHaveLength(1);
   });
 
+  it('updates field privacy from the switch beside Height', async () => {
+    (ApiServices.updateProfilePrivacy as jest.Mock).mockResolvedValue({
+      profile_field_visibility: { height: 'private' },
+    });
+
+    render(
+      <EditProfileGroup
+        navigation={{ goBack: jest.fn() }}
+        route={{
+          params: {
+            title: 'Appearance & Health',
+            data: [
+              {
+                title: 'Height',
+                data: [{ scale: 'cm', values: [160, 170] }],
+                type: 'scalling',
+                id: 'height',
+                selected: { scale: 'cm', value: 170 },
+                category: 'appearance-0',
+                apiKey: 'height',
+              },
+            ],
+          },
+        }}
+      />
+    );
+
+    fireEvent(
+      screen.getByTestId('profile-privacy-switch-height'),
+      'valueChange',
+      false
+    );
+
+    await waitFor(() =>
+      expect(ApiServices.updateProfilePrivacy).toHaveBeenCalledWith({
+        visibility: { height: 'private' },
+      })
+    );
+  });
+
   it('shows a tag question title only once', () => {
     render(
       <EditProfileGroup
@@ -281,7 +341,7 @@ describe('EditProfileGroup', () => {
                 ],
                 type: 'dropDown',
                 id: 'dis-0',
-                selected: {},
+                selected: { id: 1, value: 'None' },
                 category: 'appearance-0',
                 apiKey: 'disability_id',
               },
@@ -312,7 +372,7 @@ describe('EditProfileGroup', () => {
                 ],
                 type: 'dropDown',
                 id: 'dis-0',
-                selected: {},
+                selected: { id: 1, value: 'None' },
                 category: 'appearance-0',
                 apiKey: 'disability_id',
               },

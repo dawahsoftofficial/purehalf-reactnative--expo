@@ -12,6 +12,7 @@ import React, {
 import { ScrollView, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
+import { Switch } from 'react-native-switch';
 
 import {
   Button,
@@ -41,6 +42,11 @@ import {
   splitSuggestionValue,
   toggleSuggestionInValue,
 } from '../profile-editor-flow';
+import {
+  type FieldVisibilityLevel,
+  normalizeProfilePrivacyKey,
+  type ProfileFieldVisibility,
+} from '../profile-privacy';
 
 const RULER_TICK_WIDTH = Math.round(wp(2.5));
 
@@ -439,6 +445,9 @@ type ProfileQuestionWizardProps = {
   // Start on the last question instead of the first (used when returning to a
   // previous group via Back, so the user lands where they left off).
   startAtEnd?: boolean;
+  profileFieldVisibility?: ProfileFieldVisibility;
+  privacyUpdatingField?: string;
+  onPrivacyChange?: (apiKey: string, visibility: FieldVisibilityLevel) => void;
 };
 
 const ProfileQuestionWizard = ({
@@ -450,6 +459,9 @@ const ProfileQuestionWizard = ({
   onComplete,
   onBack,
   startAtEnd = false,
+  profileFieldVisibility,
+  privacyUpdatingField = '',
+  onPrivacyChange,
 }: ProfileQuestionWizardProps) => {
   const Rtl = CheckRtl();
 
@@ -676,6 +688,10 @@ const ProfileQuestionWizard = ({
       const activeSuggestions =
         (gender === 'female' ? suggestionsFemale : suggestionsMale) ??
         suggestions;
+      const privacyField = normalizeProfilePrivacyKey(item?.apiKey);
+      const showPrivacyControl = Boolean(onPrivacyChange && privacyField);
+      const isVisible =
+        !privacyField || profileFieldVisibility?.[privacyField] !== 'private';
 
       return (
         <View style={Styles.questionCard}>
@@ -694,7 +710,37 @@ const ProfileQuestionWizard = ({
               ]}
             />
           </View>
-          <Text style={Styles.questionTitle}>{iTitle}</Text>
+          <View style={Styles.questionTitleRow}>
+            <View style={Styles.questionTitleText}>
+              <Text style={Styles.questionTitle}>{iTitle}</Text>
+              {showPrivacyControl ? (
+                <Text style={Styles.privacyStatus}>
+                  {isVisible
+                    ? LanguageKeys.visibleOnProfile
+                    : LanguageKeys.hiddenOnProfile}
+                </Text>
+              ) : null}
+            </View>
+            {showPrivacyControl ? (
+              <Switch
+                testID={`profile-privacy-switch-${privacyField}`}
+                value={isVisible}
+                onValueChange={() =>
+                  onPrivacyChange?.(
+                    privacyField,
+                    isVisible ? 'private' : 'public'
+                  )
+                }
+                disabled={privacyUpdatingField === privacyField}
+                renderActiveText={false}
+                renderInActiveText={false}
+                circleSize={25}
+                backgroundActive={Colors.primary}
+                backgroundInactive={Colors.color18}
+                innerCircleStyle={Styles.switchInner}
+              />
+            ) : null}
+          </View>
 
           <View style={Styles.controlWrap}>
             {type === 'input' ? (
@@ -752,6 +798,9 @@ const ProfileQuestionWizard = ({
       progressLabel,
       activeIndex,
       visibleFields.length,
+      profileFieldVisibility,
+      privacyUpdatingField,
+      onPrivacyChange,
     ]
   );
 
@@ -868,6 +917,25 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.small3,
     lineHeight: wp(6.2),
+  },
+  questionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: wp(3),
+  },
+  questionTitleText: {
+    flex: 1,
+  },
+  privacyStatus: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.tiny2,
+    marginTop: hp(0.3),
+  },
+  switchInner: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   controlWrap: {
     marginTop: hp(2),
