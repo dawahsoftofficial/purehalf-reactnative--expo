@@ -104,17 +104,6 @@ const groups: ScreenGroup[] = [
     screens: [
       { route: 'AddWali', label: 'Add Wali', safe: true },
       { route: 'VerifyWaliCode', label: 'Verify Wali code' },
-      { route: 'GuardianEmailInput', label: 'Guardian email', safe: true },
-      {
-        route: 'GuardianPasswordInput',
-        label: 'Guardian password',
-        safe: true,
-      },
-      {
-        route: 'GuardianChangePassword',
-        label: 'Change guardian password',
-        safe: true,
-      },
     ],
   },
   {

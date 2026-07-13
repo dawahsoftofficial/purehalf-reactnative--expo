@@ -79,8 +79,7 @@ const SingleChat = (props: any) => {
   const fromNotification =
     props?.route?.params?.from === 'notification' ? true : false;
   const fromMessages = props?.route?.params?.from === 'messages' ? true : false;
-  // Only used by the wali/guardian banner, hidden for now (see below).
-  // const guardian = currentUser?.guardian ? currentUser?.guardian : false;
+  const guardian = currentUser?.guardian ? currentUser?.guardian : false;
   const [otherUserData, setOtherUserData] = useState(
     props?.route?.params?.otherUserData
   );
@@ -163,22 +162,12 @@ const SingleChat = (props: any) => {
   }, []);
 
   const getOtherUserData = async () => {
-    if (currentUser?.id === 'guardian') {
-      const response = await ApiServices.getUserDetailGuardian(
-        otherUserData?.id
-      );
+    ApiServices.getUserDetail(otherUserData?.id).then((res: any) => {
       setOtherUserData((prev: any) => ({
         ...prev,
-        ...response,
+        ...res,
       }));
-    } else {
-      ApiServices.getUserDetail(otherUserData?.id).then((res: any) => {
-        setOtherUserData((prev: any) => ({
-          ...prev,
-          ...res,
-        }));
-      });
-    }
+    });
   };
 
   useEffect(() => {
@@ -207,10 +196,7 @@ const SingleChat = (props: any) => {
         //   - the other's row blocked => I blocked the other user => isBlockedByYou
         // The previous code read the other participant's flag into isBlockedYou
         // (inverted) and never initialised isBlockedByYou from the server.
-        const currentUserId =
-          currentUser?.id === 'guardian'
-            ? currentUser?.user?.id
-            : currentUser?.id;
+        const currentUserId = currentUser?.id;
         const myParticipant = routeConversationData.participants.find(
           (p: any) => p.id === currentUserId
         );
@@ -520,10 +506,7 @@ const SingleChat = (props: any) => {
       console.log('[SingleChat] ✅ Subscribed to conversation channel');
 
       // Mark all messages as read after subscription if there are unread messages
-      const currentUserId =
-        currentUser?.id === 'guardian'
-          ? currentUser?.user?.id
-          : currentUser?.id;
+      const currentUserId = currentUser?.id;
       const currentUserIdStr =
         currentUserId != null ? String(currentUserId) : null;
 
@@ -570,10 +553,7 @@ const SingleChat = (props: any) => {
   // Note: messageData is the nested message object from MessageSentEventData
   const handleNewMessage = useCallback(
     (messageData: MessageSentEventData['message']) => {
-      const currentUserId =
-        currentUser?.id === 'guardian'
-          ? currentUser?.user?.id
-          : currentUser?.id;
+      const currentUserId = currentUser?.id;
 
       // Don't add message if it's from current user (already added optimistically)
       if (messageData.sender_id === currentUserId) {
@@ -786,10 +766,7 @@ const SingleChat = (props: any) => {
     (data: ParticipantBlockedEventData) => {
       console.log('[SingleChat] Participant blocked event:', data);
 
-      const currentUserId =
-        currentUser?.id === 'guardian'
-          ? currentUser?.user?.id
-          : currentUser?.id;
+      const currentUserId = currentUser?.id;
 
       // The event is broadcast toOthers(), so the actor never receives their
       // own event — in practice only the target (blocked_participant_id) sees
@@ -1100,10 +1077,7 @@ const SingleChat = (props: any) => {
     useCallback(() => {
       if (!conversationId || messages.length === 0) return;
 
-      const currentUserId =
-        currentUser?.id === 'guardian'
-          ? currentUser?.user?.id
-          : currentUser?.id;
+      const currentUserId = currentUser?.id;
 
       if (!currentUserId) return;
 
@@ -1305,11 +1279,9 @@ const SingleChat = (props: any) => {
     flashInfoMessage(LanguageKeys.disabledChatDescription);
   };
 
-  // Wali/guardian banner hidden for now (comment out only, per explicit
-  // direction -- guardian is core functionality, not being removed).
-  // const onWaliPress = () => {
-  //   props.navigation.navigate('AddWali', { fromSettings: true });
-  // };
+  const onWaliPress = () => {
+    props.navigation.navigate('AddWali', { fromSettings: true });
+  };
 
   const onViewProfilePress = () => {
     props.navigation.navigate('UserProfile', { userData: otherUserData });
@@ -1512,10 +1484,7 @@ const SingleChat = (props: any) => {
               inverted
               style={Styles.messagesList}
               renderItem={({ item, index }) => {
-                const currentUserId =
-                  currentUser?.id === 'guardian'
-                    ? currentUser?.user?.id
-                    : currentUser?.id;
+                const currentUserId = currentUser?.id;
 
                 return (
                   <MessageBubble

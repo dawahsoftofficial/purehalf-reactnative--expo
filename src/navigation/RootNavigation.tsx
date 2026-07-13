@@ -31,9 +31,6 @@ import {
   EditInterests,
   EditProfileGroup,
   GiftMembershipCongrats,
-  GuardianChangePassword,
-  GuardianEmailInput,
-  GuardianPasswordInput,
   Languages,
   Location,
   Map,
@@ -68,7 +65,6 @@ import {
   TesterSplash,
   UserInput,
   UserProfile,
-  VerifyWaliCode,
   Welcome,
   WelcomeUser,
 } from '../screens';
@@ -105,9 +101,7 @@ function App() {
               updateCurrentUser(res);
               // Universal net: flush any pending primer answers once logged in.
               void flushPrimerAnswers();
-              if (res?.id === 'guardian') {
-                setInitialRouteName('Messages');
-              } else if (!res?.latitude || !res?.longitude) {
+              if (!res?.latitude || !res?.longitude) {
                 setInitialRouteName('Location');
               } else if (
                 !res?.first_name ||
@@ -248,20 +242,7 @@ function App() {
           />
           <Stack.Screen name="UserProfile" component={UserProfile} />
           <Stack.Screen name="ContactSupport" component={ContactSupport} />
-          <Stack.Screen
-            name="GuardianEmailInput"
-            component={GuardianEmailInput}
-          />
           <Stack.Screen name="AddWali" component={AddWali} />
-          <Stack.Screen name="VerifyWaliCode" component={VerifyWaliCode} />
-          <Stack.Screen
-            name="GuardianPasswordInput"
-            component={GuardianPasswordInput}
-          />
-          <Stack.Screen
-            name="GuardianChangePassword"
-            component={GuardianChangePassword}
-          />
           <Stack.Screen name="ProfilePicture" component={ProfilePicture} />
           <Stack.Screen name="UserLocation" component={Map} />
           <Stack.Screen name="AccountSuspended" component={AccountSuspended} />
