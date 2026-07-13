@@ -139,7 +139,11 @@ const NameRow = React.memo(function NameRow({
 }: NameRowProps): ReactElement {
   return (
     <View
-      style={{ ...Styles.nameCon, flexDirection: rtl ? 'row-reverse' : 'row' }}
+      style={{
+        ...Styles.nameCon,
+        flexDirection: 'column',
+        alignItems: rtl ? 'flex-end' : 'flex-start',
+      }}
     >
       <ReactText
         style={[Styles.name, !rtl ? { fontFamily: Fonts.DISPLAY } : null]}
@@ -150,16 +154,24 @@ const NameRow = React.memo(function NameRow({
       {showStatus && (
         <View
           style={{
-            ...Styles.onlineStatus,
-            backgroundColor: statusColor,
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            marginTop: hp(0.3),
           }}
-        />
+        >
+          <View
+            style={{
+              ...Styles.onlineStatus,
+              backgroundColor: statusColor,
+            }}
+          />
+          {statusLabel ? (
+            <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
+              {statusLabel}
+            </ReactText>
+          ) : null}
+        </View>
       )}
-      {showStatus && statusLabel ? (
-        <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
-          {statusLabel}
-        </ReactText>
-      ) : null}
     </View>
   );
 });
