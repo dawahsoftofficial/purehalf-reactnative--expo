@@ -1,337 +1,206 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import moment from 'moment';
+import type React from 'react';
+import { useRef, useState } from 'react';
 
-import { ApiServices, Firebase, getTimeStamp } from '../../../services';
-import { containsRestrictedWord } from '../SingleChat.utils';
+import { recordSentMessage } from '@/services/rating/ratingEngagement';
+
+import { flashErrorMessage } from '../../../services';
+import messageServices from '../../../services/api/message-services';
+import type {
+  Conversation,
+  Message,
+} from '../../../services/api/types/message-types';
+import { presentChatCreditsPaywall } from '../../../services/paywall-service';
+
+type OtherUserData = {
+  id: number;
+  [key: string]: unknown;
+};
 
 type UseSendMessageParams = {
-  currentUser: any;
-  otherUserData: any;
-
-  conversationData: any;
-  setConversationData: (v: any) => void;
-
-  messages: any[];
-  setMessages: (v: any) => void;
-
+  otherUserData: OtherUserData;
+  conversationData: Conversation | null | undefined;
+  setConversationData: (conversation: Conversation) => void;
+  messages: Message[];
+  setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
+  conversationId: string;
   setConversationId: (id: string) => void;
-
-  isBlockedYou: boolean;
   isBlockedByYou: boolean;
+  setInputMessage: (message: string) => void;
+};
 
-  setInputMessage: (v: string) => void;
+type SendMessageResult =
+  | { type: 'blockedByYou' }
+  | { type: 'sent' }
+  | { type: 'failed' };
 
-  updateCurrentUser: (v: any) => void;
-  setData: (key: any, value: any) => Promise<unknown>;
+export type AudioSendInput = {
+  type: 'audio';
+  audio: { uri: string; name: string; type: string };
+  duration_seconds: number;
+  waveform_peaks?: number[];
+};
 
-  storageKeys: any;
+export type SendMessageInput = string | AudioSendInput;
 
-  navigation: any;
-  forceUpdate: () => void;
+type UseSendMessageReturn = {
+  onSendPress: (input: SendMessageInput) => Promise<SendMessageResult>;
+  isSending: boolean;
 };
 
 export function useSendMessage({
-  currentUser,
   otherUserData,
-
   conversationData,
   setConversationData,
-
   messages,
   setMessages,
-
+  conversationId,
   setConversationId,
-
-  isBlockedYou,
   isBlockedByYou,
-
   setInputMessage,
+}: UseSendMessageParams): UseSendMessageReturn {
+  const [isSending, setIsSending] = useState(false);
+  // Guards against a double-tap/double-Enter firing two overlapping sends
+  // before the first request resolves (isSending state updates are async
+  // and can't be read synchronously between the two calls).
+  const isSendingRef = useRef(false);
 
-  updateCurrentUser,
-  setData,
-  storageKeys,
-
-  navigation,
-  forceUpdate,
-}: UseSendMessageParams) {
-  const onMessageSendingFailed = (msgs: any[]) => {
-    const next = [...msgs];
-    if (next[0]) next[0] = { ...next[0], status: 'failed' };
-    setMessages(next);
-    forceUpdate();
-  };
-
-  const sendMessageToFirebase = (
-    messageData: any,
-    convData: any,
-    msgs: any[]
-  ) => {
-    Firebase.sendMessage(messageData, convData)
-      .then(() => {
-        const next = [...msgs];
-        if (next[0]) next[0] = { ...next[0], status: 'sent' };
-
-        setMessages(next);
-        forceUpdate();
-
-        const data = {
-          title: currentUser?.full_name,
-          body: messageData?.message,
-          pressAction: 'openChat',
-          data: {
-            user: {
-              image: currentUser?.media?.primary_image,
-              name: currentUser?.full_name,
-              id: currentUser?.id,
-            },
-            conversationId: convData?.id,
-            message: messageData,
-          },
-        };
-
-        const token = otherUserData?.token;
-        Firebase.sendMessageNotification(token, data);
-      })
-      .catch(() => onMessageSendingFailed(msgs));
-  };
-
-  const isPremiumUser = () => {
-    return new Promise<'premiumUser'>((resolve) => {
-      const now = moment();
-      const membershipExpiry = currentUser?.membership_expiry;
-
-      if (membershipExpiry !== null && moment(membershipExpiry).isAfter(now)) {
-        resolve('premiumUser');
-        return;
+  const sendMessage = async (input: SendMessageInput): Promise<boolean> => {
+    // Preserve the typed text so it can be restored if the send fails —
+    // previously it was cleared unconditionally and lost on any error.
+    const originalText = typeof input === 'string' ? input : null;
+    const restoreInputIfText = () => {
+      if (originalText !== null) {
+        setInputMessage(originalText);
       }
-
-      ApiServices.getCurrentUserDetail()
-        .then((res: any) => {
-          const latestExpiry = res?.membership_expiry;
-          updateCurrentUser(res);
-
-          if (latestExpiry === null || moment(latestExpiry).isBefore(now)) {
-            navigation.navigate('ProFeaturesPromotion', {
-              navigateTo: 'goBack',
-            });
-          } else {
-            resolve('premiumUser');
-          }
-        })
-        .catch(() => {});
-    });
-  };
-
-  const sendMessage = async (inputMessage: string) => {
-    // Clear input instantly for UI
+    };
     setInputMessage('');
 
-    const timestamp = await getTimeStamp();
+    // New conversation - check if conversationData is null/undefined or doesn't have an id
+    if (!conversationData || !conversationData.id) {
+      if (typeof input !== 'string') {
+        flashErrorMessage('Please send a text message before voice notes.');
+        return false;
+      }
 
-    const messageData: any = {
-      createdAt: timestamp,
-      id: `id-${timestamp}`,
-      sender: currentUser?.id,
-      message: inputMessage,
-      status: 'sending',
-      readBy: {
-        [currentUser?.id]: { seen: true, seenAt: timestamp },
-        [otherUserData?.id]: { seen: false, seenAt: null },
-      },
-    };
-
-    // mark blocked participants (if user is blocked)
-    if (isBlockedYou) {
-      messageData.blockedParticipants = {
-        ...messageData?.blockedParticipants,
-        [currentUser?.id]: true,
-      };
-    }
-
-    // report chat if contains restricted word
-    if (
-      !currentUser?.is_chat_reported &&
-      containsRestrictedWord(inputMessage)
-    ) {
-      ApiServices.updateUserInfo({ is_chat_reported: true })
-        .then(async (res: any) => {
-          const nextUser = {
-            ...currentUser,
-            is_chat_reported: res?.is_chat_reported,
-          };
-          await setData(storageKeys.USER, nextUser);
-          updateCurrentUser(nextUser);
-        })
-        .catch(() => {});
-    }
-
-    // new conversation
-    if (!conversationData || conversationData?.length === 0) {
-      const nextMsgs = [messageData, ...messages];
-      setMessages(nextMsgs);
-
-      const conversation = {
-        participantsDeleteFlag: {
-          [currentUser?.id]: { deleteStatus: false },
-          [otherUserData?.id]: { deleteStatus: false },
-        },
-        deletedAt: [],
-        createdBy: currentUser?.id,
-        participantsBlockFlag: {
-          [currentUser?.id]: { blockStatus: false },
-          [otherUserData?.id]: { blockStatus: false },
-        },
-        unReadCount: {
-          [currentUser?.id]: 0,
-          [otherUserData?.id]: 1,
-        },
-        participantsData: [
-          {
-            image: currentUser?.media?.primary_image,
-            name: currentUser?.full_name,
-            id: currentUser?.id,
-          },
-          {
-            image: otherUserData?.image,
-            name: otherUserData?.name,
-            id: otherUserData?.id,
-          },
-        ],
-        createdAt: timestamp,
-        id: `id-${timestamp}`,
-        latestMessage: inputMessage,
-        latestMessageCreatedAt: messageData?.createdAt,
-      };
-
-      setConversationId(conversation?.id);
-      setConversationData(conversation);
-
-      Firebase.createChat(conversation).then(() => {
-        sendMessageToFirebase(messageData, conversation, nextMsgs);
-      });
-    } else {
-      // existing conversation
-      const nextMsgs = [messageData, ...messages];
-      setMessages(nextMsgs);
-
-      const nextConversation = {
-        ...conversationData,
-        participantsDeleteFlag: {
-          ...(conversationData?.participantsDeleteFlag || {}),
-          ...(currentUser?.id !== 'guardian' && {
-            [currentUser?.id]: { deleteStatus: false },
-          }),
-          [otherUserData?.id]: { deleteStatus: false },
-        },
-        participantsData: [
-          ...(currentUser?.id !== 'guardian' && currentUser?.id
-            ? [
-                {
-                  image: currentUser?.media?.primary_image,
-                  name: currentUser?.full_name,
-                  id: currentUser?.id,
-                },
-              ]
-            : []),
-          ...(otherUserData?.id
-            ? [
-                {
-                  image: otherUserData?.image,
-                  name: otherUserData?.name,
-                  id: otherUserData?.id,
-                },
-              ]
-            : []),
-          ...(conversationData.participantsData || []).filter(
-            (p: any) => p.id !== currentUser?.id && p.id !== otherUserData?.id
-          ),
-        ],
-        unReadCount: {
-          ...conversationData.unReadCount,
-          [currentUser?.id]: 0,
-          [otherUserData?.id]: isBlockedYou
-            ? conversationData?.unReadCount?.[otherUserData?.id]
-            : (conversationData?.unReadCount?.[otherUserData?.id] || 0) + 1,
-        },
-        latestMessage: isBlockedYou
-          ? conversationData?.lastestMessage
-          : inputMessage,
-        latestMessageCreatedAt: isBlockedYou
-          ? conversationData?.latestMessageCreatedAt
-          : messageData?.createdAt,
-      };
-
-      setConversationData(nextConversation);
-      sendMessageToFirebase(messageData, nextConversation, nextMsgs);
-    }
-
-    // throttle API push (your existing logic)
-    try {
-      const lastMessageTimestamp = await AsyncStorage.getItem(
-        'lastMessageTimestamp'
-      );
-
-      const wordsArray = inputMessage.split(' ');
-      const firstFiveWords = wordsArray.slice(0, 5);
-      const resultWords = firstFiveWords.join(' ');
-
-      if (lastMessageTimestamp !== null) {
-        const lastMessageTime = new Date(parseInt(lastMessageTimestamp, 10));
-        const currentTime = new Date();
-        const timeDifference =
-          (currentTime.getTime() - lastMessageTime.getTime()) / (1000 * 60); // minutes
-
-        if (timeDifference > 1) {
-          await ApiServices.snedMessageNotification({
-            other_user_id: otherUserData?.id,
-            other_username: currentUser?.full_name,
-            country: 'Pakistan',
-            message_first_five_words: resultWords,
+      try {
+        const createdConversation: Conversation =
+          await messageServices.startConversation({
+            receiver_id: otherUserData?.id,
+            body: input,
           });
 
-          await AsyncStorage.setItem(
-            'lastMessageTimestamp',
-            new Date().getTime().toString()
-          );
+        setConversationId(createdConversation.id.toString());
+        setConversationData(createdConversation);
+
+        // Use API message directly without conversion
+        const apiMessage: Message | null =
+          createdConversation.last_message_detail;
+        if (apiMessage) {
+          // Sort messages by created_at (newest first)
+          const allMessages = [apiMessage, ...messages];
+          const sortedMessages = allMessages.sort((a, b) => {
+            const timeA = new Date(a.created_at).getTime();
+            const timeB = new Date(b.created_at).getTime();
+            return timeB - timeA; // Descending order (newest first)
+          });
+          setMessages(sortedMessages);
         }
-      } else {
-        await ApiServices.snedMessageNotification({
-          other_user_id: otherUserData?.id,
-          other_username: otherUserData?.name,
-          country: 'Pakistan',
-          message_first_five_words: resultWords,
-        });
-
-        await AsyncStorage.setItem(
-          'lastMessageTimestamp',
-          new Date().getTime().toString()
-        );
+        return true;
+      } catch (error: unknown) {
+        restoreInputIfText();
+        const errorMessage = error as string;
+        // Check if error is about chat credits
+        if (
+          typeof errorMessage === 'string' &&
+          errorMessage.toLowerCase().includes('you have no chat credits left')
+        ) {
+          flashErrorMessage(errorMessage);
+          // Show chat credits paywall
+          presentChatCreditsPaywall();
+        } else {
+          flashErrorMessage(errorMessage);
+        }
+        return false;
       }
-    } catch (error) {
-      // keep silent, do not break sending
+    }
+
+    // Existing conversation - send message
+    if (!conversationId) {
+      restoreInputIfText();
+      flashErrorMessage('Conversation ID is missing');
+      return false;
+    }
+
+    try {
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) {
+        restoreInputIfText();
+        flashErrorMessage('Invalid conversation ID');
+        return false;
+      }
+
+      const payload = typeof input === 'string' ? { body: input } : input;
+      const sentMessage: Message =
+        await messageServices.sendConversationMessage(
+          conversationIdNum,
+          payload
+        );
+
+      // Add the new message and sort by created_at (newest first)
+      // Use functional update to avoid race conditions
+      setMessages((prevMessages: Message[]) => {
+        // Check if message already exists (might have come via Pusher)
+        const exists = prevMessages.some(
+          (msg: Message) => msg.id === sentMessage.id
+        );
+        if (exists) {
+          console.log('[useSendMessage] Message already exists, skipping');
+          return prevMessages;
+        }
+
+        const allMessages = [sentMessage, ...prevMessages];
+        const sortedMessages = allMessages.sort((a, b) => {
+          const timeA = new Date(a.created_at).getTime();
+          const timeB = new Date(b.created_at).getTime();
+          return timeB - timeA; // Descending order (newest first)
+        });
+        return sortedMessages;
+      });
+      return true;
+    } catch (error: unknown) {
+      restoreInputIfText();
+      flashErrorMessage(error as string);
+      return false;
     }
   };
 
-  const onSendPress = async (inputMessage: string) => {
+  const onSendPress = async (
+    input: SendMessageInput
+  ): Promise<SendMessageResult> => {
     if (isBlockedByYou) {
-      return { type: 'blockedByYou' as const };
+      return { type: 'blockedByYou' };
     }
 
-    const needsPremiumGate =
-      (currentUser?.gender === 'male' &&
-        (currentUser?.membership_status === 0 ||
-          currentUser?.membership_status === null)) ||
-      currentUser?.membership_status === null;
-
-    if (needsPremiumGate) {
-      await isPremiumUser();
-      await sendMessage(inputMessage);
-      return { type: 'sent' as const };
+    // A double-tap/double-Enter before the first request resolves would
+    // otherwise create two identical messages server-side (they get distinct
+    // IDs, so client-side id-based dedup never catches it).
+    if (isSendingRef.current) {
+      return { type: 'failed' };
     }
-
-    await sendMessage(inputMessage);
-    return { type: 'sent' as const };
+    isSendingRef.current = true;
+    setIsSending(true);
+    try {
+      const didSend = await sendMessage(input);
+      if (didSend) {
+        recordSentMessage();
+        return { type: 'sent' };
+      }
+      return { type: 'failed' };
+    } finally {
+      isSendingRef.current = false;
+      setIsSending(false);
+    }
   };
 
-  return { onSendPress };
+  return { onSendPress, isSending };
 }

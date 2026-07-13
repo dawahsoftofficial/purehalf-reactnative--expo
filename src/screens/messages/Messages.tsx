@@ -1,7 +1,11 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { CommonActions as CommonActionsNavigation } from '@react-navigation/native';
-import _ from 'lodash';
-import React, { useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Dimensions,
@@ -12,68 +16,356 @@ import {
   VirtualizedList,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import {
-  Menu,
-  MenuOption,
-  MenuOptions,
-  MenuTrigger,
-} from 'react-native-popup-menu';
-import FontAwesome5 from 'react-native-vector-icons/FontAwesome5';
+import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+import ChatCreditsBadge from '@/components/badges/chat-credits-badge';
+import pusherService from '@/services/pusher';
 
 import {
   AnimatedLoader,
   Container,
   Header,
-  ModalLoader,
-  PremiumButton,
+  ProfilePhotoPlaceholder,
+  PurchaseSuccessModal,
   Text,
 } from '../../components';
-import BlurView from '../../components/BlurView';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { CommonActions } from '../../navigation';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
-  ApiServices,
+  capitalizeName,
+  flashErrorMessage,
+  flashSuccessMessage,
   formatDate,
-  stopConversationsListener,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
+import type {
+  Conversation,
+  ConversationUpdatedEventData,
+  NewConversationCreatedEventData,
+  UnreadConversationCounterEventData,
+} from '../../services/api/types/message-types';
+import { presentChatCreditsPaywall } from '../../services/paywall-service';
+import { useConversationStore } from '../../stores';
+import { isLastMessageReadByParticipant } from './SingleChat.utils';
 
-const Messages = (props: any) => {
+type MessagesProps = {
+  navigation: {
+    navigate: (screen: string, params?: unknown) => void;
+    dispatch: (action: unknown) => void;
+  };
+};
+
+const Messages = (props: MessagesProps) => {
   const { t } = useTranslation();
-  const { deleteAll } = StorageManager;
   const Rtl = CheckRtl();
-  const [modalLoader, setModalLoader] = useState({
-    visible: false,
-    message: '',
-  });
   const [quote, setQuote] = useState('');
+  const [chatCreditsSuccessModalVisible, setChatCreditsSuccessModalVisible] =
+    useState<boolean>(false);
+  const [isChatCreditsLoading, setIsChatCreditsLoading] =
+    useState<boolean>(false);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const { setData, storageKeys } = StorageManager;
-  const {
-    conversations,
-    coversationLoading,
-    currentUser,
-    updateCurrentUser,
-    language,
-  } = useGlobalContext();
+  const { currentUser, updateCurrentUser, language } = useGlobalContext();
+  const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
+  const subscribedUserIdRef = useRef<string | number | null>(null);
 
-  const onItemPress = (item: any, otherUserData: any) => {
-    props.navigation.navigate('SingleChat', {
-      conversationData: item,
-      otherUserData: otherUserData,
-      from: 'messages',
-    });
-  };
+  const fetchConversations = useCallback(async () => {
+    try {
+      const data = await messageServices.getConversationsList();
+      setConversations(data);
+      setIsLoading(false);
+    } catch (error: unknown) {
+      console.error('[Messages.fetchConversations] Error:', error);
+      setIsLoading(false);
+    }
+  }, []);
 
-  const handleNotificationDisplay = async (param: any) => {
-    await setData(storageKeys.OPENED_CONVERSATION_ID, param);
-  };
+  // Get store actions
+  const setUnreadCounts = useConversationStore(
+    (state) => state.setUnreadCounts
+  );
+  // Handle new conversation created event
+  const handleNewConversationCreated = useCallback(
+    (data: NewConversationCreatedEventData) => {
+      const conversationData = data.conversation;
+
+      console.log('[Messages] New conversation created:', conversationData.id);
+
+      // Check if conversation has participants, if not, fetch full list
+      if (
+        !conversationData.participants ||
+        conversationData.participants.length === 0
+      ) {
+        console.log(
+          '[Messages] New conversation missing participants, fetching conversations'
+        );
+        fetchConversations();
+        return;
+      }
+
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+
+        if (exists) {
+          console.log(
+            '[Messages] Conversation already exists, updating:',
+            conversationData.id
+          );
+          return prevConversations
+            .map((c) => (c.id === conversationData.id ? conversationData : c))
+            .sort((a, b) => {
+              // Sort by last message time (most recent first)
+              const timeA = new Date(a.last_message_at).getTime();
+              const timeB = new Date(b.last_message_at).getTime();
+              return timeB - timeA;
+            });
+        }
+
+        // Add new conversation at the top
+        console.log(
+          '[Messages] Adding new conversation to list:',
+          conversationData.id
+        );
+        return [conversationData, ...prevConversations].sort((a, b) => {
+          // Sort by last message time (most recent first)
+          const timeA = new Date(a.last_message_at).getTime();
+          const timeB = new Date(b.last_message_at).getTime();
+          return timeB - timeA;
+        });
+      });
+    },
+    [fetchConversations]
+  );
+
+  // Handle conversation updated event
+  const handleConversationUpdated = useCallback(
+    (data: ConversationUpdatedEventData) => {
+      const conversationData = data.conversation;
+
+      setConversations((prevConversations) => {
+        // Check if conversation already exists
+        const exists = prevConversations.some(
+          (c) => c.id === conversationData.id
+        );
+
+        if (exists) {
+          // Update existing conversation
+          console.log(
+            '[Messages] Updating existing conversation:',
+            conversationData.id,
+            'update_type:',
+            data.update_type
+          );
+          return prevConversations
+            .map((c) => (c.id === conversationData.id ? conversationData : c))
+            .sort((a, b) => {
+              // Sort by last message time (most recent first)
+              const timeA = new Date(a.last_message_at).getTime();
+              const timeB = new Date(b.last_message_at).getTime();
+              return timeB - timeA;
+            });
+        }
+
+        // Add new conversation at the top
+        console.log('[Messages] Adding new conversation:', conversationData.id);
+        return [conversationData, ...prevConversations].sort((a, b) => {
+          // Sort by last message time (most recent first)
+          const timeA = new Date(a.last_message_at).getTime();
+          const timeB = new Date(b.last_message_at).getTime();
+          return timeB - timeA;
+        });
+      });
+    },
+    []
+  );
+
+  // Handle unread conversation counter event
+  const handleUnreadConversationCounter = useCallback(
+    (data: UnreadConversationCounterEventData) => {
+      const { participant } = data;
+      const unreadConversationsCount =
+        participant.unread_conversations_count || 0;
+      const unreadMessagesCount =
+        typeof participant.unread_messages_count === 'string'
+          ? parseInt(participant.unread_messages_count, 10) || 0
+          : participant.unread_messages_count || 0;
+
+      console.log(
+        '[Messages] Unread conversation counter updated:',
+        unreadConversationsCount,
+        'conversations,',
+        unreadMessagesCount,
+        'messages'
+      );
+
+      setUnreadCounts(unreadConversationsCount, unreadMessagesCount);
+    },
+    [setUnreadCounts]
+  );
+
+  // Extract userId using useMemo to avoid unnecessary re-renders
+  const userId = useMemo(() => {
+    return currentUser?.id;
+  }, [currentUser?.id]);
+
+  // Setup Pusher real-time updates for user channel
+  const setupPusherListeners = useCallback(async () => {
+    if (!pusherService.isReady()) {
+      console.log('[Messages] Pusher not ready');
+      return;
+    }
+
+    if (!userId) {
+      console.log('[Messages] No user ID available');
+      // Cleanup if we were subscribed to a different user
+      if (
+        unsubscribeUserChannelRef.current &&
+        subscribedUserIdRef.current !== userId
+      ) {
+        unsubscribeUserChannelRef.current();
+        unsubscribeUserChannelRef.current = null;
+        subscribedUserIdRef.current = null;
+      }
+      return;
+    }
+
+    // If already subscribed to the same user, don't resubscribe
+    if (
+      subscribedUserIdRef.current === userId &&
+      unsubscribeUserChannelRef.current
+    ) {
+      console.log(
+        '[Messages] Already subscribed to inbox channel for user:',
+        userId
+      );
+      return;
+    }
+
+    try {
+      // Cleanup previous subscription if switching users
+      if (
+        unsubscribeUserChannelRef.current &&
+        subscribedUserIdRef.current !== userId
+      ) {
+        console.log(
+          '[Messages] Unsubscribing from previous user:',
+          subscribedUserIdRef.current
+        );
+        unsubscribeUserChannelRef.current();
+        unsubscribeUserChannelRef.current = null;
+      }
+
+      console.log('[Messages] Setting up Pusher for user:', userId);
+
+      // Subscribe to user inbox channel: private-user.inbox.{userId}
+      const inboxChannelName = `private-user.inbox.${userId}`;
+
+      const unsubscribeInbox = await pusherService.subscribeToChannel(
+        inboxChannelName,
+        (event) => {
+          console.log('[Messages] Pusher event received:', event.eventName);
+
+          try {
+            const rawData =
+              typeof event.data === 'string'
+                ? JSON.parse(event.data)
+                : event.data;
+
+            // Extract event type from Laravel event class name or from data.event
+            let eventType = event.eventName;
+            if (eventType.includes('\\')) {
+              // Laravel event class name format: App\Events\Conversation\MessageSent
+              eventType = eventType.split('\\').pop() || eventType;
+            }
+
+            // If data has an 'event' field, use that as the event type
+            if (rawData?.event) {
+              eventType = rawData.event;
+            }
+
+            console.log('[Messages] Normalized event type:', eventType);
+
+            // Handle different event types
+            if (eventType === 'NewConversationCreated') {
+              console.log('[Messages] New conversation created:', rawData);
+              handleNewConversationCreated(
+                rawData as NewConversationCreatedEventData
+              );
+            } else if (eventType === 'ConversationUpdated') {
+              console.log('[Messages] Conversation updated:', rawData);
+              handleConversationUpdated(
+                rawData as ConversationUpdatedEventData
+              );
+            } else if (eventType === 'UnreadConversationCounter') {
+              console.log('[Messages] Unread conversation counter:', rawData);
+              handleUnreadConversationCounter(
+                rawData as UnreadConversationCounterEventData
+              );
+            } else {
+              console.log(
+                '[Messages] Ignoring event on user channel:',
+                eventType
+              );
+            }
+          } catch (error) {
+            console.error('[Messages] Error handling Pusher event:', error);
+          }
+        }
+      );
+
+      unsubscribeUserChannelRef.current = unsubscribeInbox;
+      subscribedUserIdRef.current = userId;
+      console.log('[Messages] ✅ Subscribed to user inbox channel');
+    } catch (error) {
+      console.error('[Messages] Error setting up Pusher:', error);
+      subscribedUserIdRef.current = null;
+    }
+  }, [
+    userId,
+    handleNewConversationCreated,
+    handleConversationUpdated,
+    handleUnreadConversationCounter,
+  ]);
+
+  // Setup Pusher when component mounts and screen is focused
+  useEffect(() => {
+    if (userId) {
+      setupPusherListeners();
+
+      return () => {
+        // Only cleanup on unmount or when userId actually changes
+        // This cleanup will run when the component unmounts or userId changes
+        if (
+          unsubscribeUserChannelRef.current &&
+          subscribedUserIdRef.current !== userId
+        ) {
+          console.log(
+            '[Messages] Cleanup: Unsubscribing from user:',
+            subscribedUserIdRef.current
+          );
+          unsubscribeUserChannelRef.current();
+          unsubscribeUserChannelRef.current = null;
+          subscribedUserIdRef.current = null;
+        }
+      };
+    }
+    // Only depend on userId to avoid resubscribing when currentUser object reference changes
+    // but userId remains the same
+  }, [userId, setupPusherListeners]);
 
   useFocusEffect(
     React.useCallback(() => {
-      handleNotificationDisplay('hide');
+      // Fetch conversations on focus
+      fetchConversations();
+
       const quotes = [
         t('adviceOneText'),
         t('adviceTwoText'),
@@ -90,234 +382,218 @@ const Messages = (props: any) => {
         t('adviceThirteenText'),
       ];
       setQuote([...quotes].sort(() => Math.random() - 0.5)[0]);
-      return () => {
-        handleNotificationDisplay(null);
-      };
-    }, [])
+    }, [fetchConversations, t])
   );
 
-  const hideModalLoader = () => {
-    setModalLoader({
-      visible: false,
-      message: '',
-    });
-  };
-
-  const onLogoutPress = async () => {
-    setModalLoader({
-      visible: true,
-      message: LanguageKeys.loggingOut,
-    });
-    await ApiServices.logoutGuardian().catch(hideModalLoader);
-    await deleteAll()
-      .then(async () => {
-        updateCurrentUser(null);
-        await setData(storageKeys.LANGUAGE, language);
-        await stopConversationsListener();
-        hideModalLoader();
-        props.navigation.dispatch(
-          CommonActionsNavigation.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
-      })
-      .catch(hideModalLoader);
-  };
-
-  const renderConversations = ({ item }: any) => {
-    console.log('first item', JSON.stringify(item, null, 2));
-    const convDetails = item?.convDetails;
-    const currentUserId =
-      currentUser?.id === 'guardian' ? currentUser?.user?.id : currentUser?.id;
-
-    const otherUserData = _.filter(
-      convDetails?.participantsData,
-      (element) => element?.id !== currentUserId
-    )[0];
-
-    const formattedDate = formatDate(convDetails?.latestMessageCreatedAt);
-    const unReadCount = convDetails?.unReadCount?.[currentUser?.id];
-    const isBlockedYou =
-      convDetails?.participantsBlockFlag?.[currentUser?.id]?.blockStatus ===
-      true;
-
-    let hideLatestMessage = false;
-    if (item?.messages) {
-      hideLatestMessage =
-        Object.keys(item?.messages).length === 0 ? true : false;
-    }
-
-    // Check if last message was sent by current user and seen by receiver
-    // Also get the actual latest message text from messages array
-    let isLastMessageSeen = false;
-    let latestMessageText = convDetails?.latestMessage || '';
-
-    if (!hideLatestMessage && item?.messages) {
-      const messagesArray = Object.values(item.messages);
-      if (messagesArray.length > 0) {
-        // Get the last message (most recent)
-        const lastMessage: any = messagesArray[0];
-
-        // Use the actual latest message text from messages array
-        if (lastMessage?.message) {
-          latestMessageText = lastMessage.message;
-        }
-
-        // Check if last message was sent by current user
-        if (lastMessage?.sender === currentUserId) {
-          // Check if receiver has seen it
-          const otherUserId = otherUserData?.id;
-          isLastMessageSeen = lastMessage?.readBy?.[otherUserId]?.seen === true;
-        }
+  const onChatCreditsPress = async () => {
+    setIsChatCreditsLoading(true);
+    try {
+      const result = await presentChatCreditsPaywall();
+      if (result.success) {
+        setChatCreditsSuccessModalVisible(true);
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(result.error || 'Failed to purchase chat bundle');
       }
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to purchase chat bundle';
+      flashErrorMessage(errorMessage);
+    } finally {
+      setIsChatCreditsLoading(false);
+    }
+  };
+
+  const onChatCreditsSuccessCollect = () => {
+    setChatCreditsSuccessModalVisible(false);
+
+    flashSuccessMessage('Your chat bundle is ready.');
+  };
+
+  const onItemPress = (item: Conversation) => {
+    const currentUserId = currentUser?.id;
+    const currentUserIdStr =
+      currentUserId != null ? String(currentUserId) : null;
+
+    const otherParticipant = item?.participants?.find(
+      (p) => String(p.id) !== currentUserIdStr
+    );
+
+    props.navigation.navigate('SingleChat', {
+      conversationData: item,
+      otherUserData: otherParticipant,
+      from: 'messages',
+    });
+  };
+
+  const renderConversations = ({ item }: { item: Conversation }) => {
+    const currentUserId = currentUser?.id;
+    const currentUserIdStr =
+      currentUserId != null ? String(currentUserId) : null;
+
+    const otherParticipant = item?.participants?.find(
+      (p) => String(p.id) !== currentUserIdStr
+    );
+
+    if (!otherParticipant) {
+      return null;
     }
 
+    const formattedDate = formatDate(item.last_message_at);
+    // Get unread count from current user's participant object
+    const currentUserParticipant = item?.participants?.find(
+      (p) => String(p.id) === currentUserIdStr
+    );
+    const unReadCount = currentUserParticipant?.unread_count || 0;
+    // Hide the avatar whenever the thread is blocked in EITHER direction:
+    // the other participant's row blocked => I blocked them; my own row
+    // blocked => they blocked me. (Previously only the former was checked and
+    // it was mislabeled `isBlockedYou`.)
+    const isBlocked =
+      !!otherParticipant?.is_blocked || !!currentUserParticipant?.is_blocked;
+
+    // Pure Half Customer Support thread — same detection as SingleChatHeader.
+    const isSupport =
+      item?.type === 'support' || otherParticipant?.type === 'Admin';
+
+    const previewText =
+      item.last_message_detail?.type === 'audio'
+        ? t(LanguageKeys.voiceMessage)
+        : item.last_message;
+
+    const hasLastMessage = !!previewText && previewText.trim() !== '';
+
+    const isLastMessageSeen = isLastMessageReadByParticipant(
+      item.last_message_detail,
+      otherParticipant,
+      currentUserId
+    );
+
+    const isUnread = unReadCount > 0;
     return (
       <Ripple
         style={[
           Styles.itemContainer,
-          Styles.itemHeight,
           { flexDirection: Rtl ? 'row-reverse' : 'row' },
         ]}
-        onPress={onItemPress.bind(null, item, otherUserData)}
+        onPress={() => onItemPress(item)}
+        rippleColor={Colors.primary}
       >
         <View style={Styles.profilePictureCon}>
-          {otherUserData?.image &&
-          otherUserData?.image?.length !== 0 &&
-          !isBlockedYou ? (
-            <>
-              {otherUserData?.is_blur === 0 ? <BlurView /> : null}
-              <Image
-                source={{ uri: otherUserData.image }}
-                style={Styles.image}
-                resizeMode="cover"
-              />
-            </>
+          {otherParticipant?.image && !isBlocked ? (
+            <Image
+              source={{ uri: otherParticipant.image }}
+              resizeMode="cover"
+              style={Styles.image}
+            />
+          ) : isSupport ? (
+            <Ionicons name="heart" size={AVATAR * 0.5} color={Colors.primary} />
           ) : (
-            <FontAwesome5
-              name="user-alt"
-              size={wp(6.5)}
-              color={Colors.color7}
+            <ProfilePhotoPlaceholder
+              name={otherParticipant?.name}
+              size={AVATAR / 2}
+              centeredInitials
             />
           )}
         </View>
         <View
           style={[
-            Styles.itemInnerCon,
-            Styles.itemHeight,
-            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+            Styles.middleCon,
+            { alignItems: Rtl ? 'flex-end' : 'flex-start' },
           ]}
         >
-          <View style={Styles.nameMsgCon}>
-            <Text style={Styles.itemHeading}>{otherUserData?.name}</Text>
-            {!hideLatestMessage && (
-              <Text style={Styles.itemMessage} numberOfLines={2}>
-                {latestMessageText}
-              </Text>
-            )}
-          </View>
-          <View style={Styles.timeCon}>
-            {!hideLatestMessage && (
-              <ReactText
-                style={[
-                  Styles.itemMessage,
-                  { alignSelf: Rtl ? 'flex-start' : 'flex-end' },
-                ]}
-              >
-                {formattedDate}
-              </ReactText>
-            )}
-            <View
-              style={[
-                Styles.timeAndSeenCon,
-                { flexDirection: Rtl ? 'row-reverse' : 'row' },
-              ]}
+          <Text variant="display" style={Styles.itemHeading} numberOfLines={1}>
+            {capitalizeName(otherParticipant.name)}
+          </Text>
+          {hasLastMessage && (
+            <Text
+              style={[Styles.itemMessage, isUnread && Styles.itemMessageUnread]}
+              numberOfLines={1}
             >
-              {unReadCount && unReadCount !== 0 && !hideLatestMessage ? (
-                <View
-                  style={[
-                    Styles.unReadCountCon,
-                    {
-                      alignSelf: Rtl ? 'flex-start' : 'flex-end',
-                      marginRight: Rtl ? 0 : wp(1.5),
-                      marginLeft: Rtl ? wp(1.5) : 0,
-                    },
-                  ]}
-                >
-                  <ReactText numberOfLines={1} style={Styles.unReadCount}>
-                    {unReadCount}
-                  </ReactText>
-                </View>
-              ) : null}
-              {isLastMessageSeen &&
-              otherUserData?.image &&
-              otherUserData?.image?.length !== 0 &&
-              !isBlockedYou ? (
-                <View
-                  style={[
-                    Styles.seenProfileIconContainer,
-                    {
-                      marginRight: Rtl ? 0 : wp(1),
-                      marginLeft: Rtl ? wp(1) : 0,
-                    },
-                  ]}
-                >
-                  <Image
-                    source={{ uri: otherUserData.image }}
-                    style={Styles.seenProfileIcon}
-                    resizeMode="cover"
-                  />
-                </View>
-              ) : null}
+              {previewText}
+            </Text>
+          )}
+        </View>
+        <View style={Styles.rightCon}>
+          {hasLastMessage && (
+            <ReactText style={Styles.timeTxt}>{formattedDate}</ReactText>
+          )}
+          {isUnread ? (
+            <View style={Styles.unReadCountCon}>
+              <ReactText style={Styles.unReadCount}>{unReadCount}</ReactText>
             </View>
-          </View>
+          ) : isLastMessageSeen ? (
+            <Ionicons
+              name="checkmark-done"
+              size={wp(4)}
+              color={Colors.primaryMid}
+              style={Styles.seenTick}
+            />
+          ) : null}
         </View>
       </Ripple>
     );
   };
 
   const renderEmptyList = () => {
+    const quoteMain = quote?.split('|')[0];
+    const quoteAttr = quote?.split('|')[1];
     return (
       <View style={Styles.textContainer}>
-        <Image
-          source={Images.quotesIcon}
-          resizeMode="contain"
-          style={Styles.logo}
-        />
-        <View>
-          <Text style={Styles.subText}>{quote?.split('|')[0]}</Text>
-          <Text style={[Styles.subText, { fontWeight: 'bold' }]}>
-            {quote?.split('|')[1]}
-          </Text>
+        <View style={Styles.emptyIconCircle}>
+          <Ionicons
+            name="chatbubbles-outline"
+            size={wp(11)}
+            color={Colors.primaryLite}
+          />
         </View>
+        <Text variant="display" style={Styles.emptyTitle}>
+          {LanguageKeys.noConversationsYet}
+        </Text>
+        {quoteMain ? <Text style={Styles.quoteText}>{quoteMain}</Text> : null}
+        {quoteAttr ? (
+          <Text style={[Styles.quoteText, Styles.quoteAttr]}>{quoteAttr}</Text>
+        ) : null}
+        <Ripple
+          style={[
+            Styles.emptyCtaBtn,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+          onPress={onFindMatchPress}
+          rippleColor={Colors.color2}
+        >
+          <Ionicons name="search" size={wp(4.4)} color={Colors.color2} />
+          <Text style={Styles.emptyCtaTxt}>{LanguageKeys.discoverMatches}</Text>
+        </Ripple>
       </View>
     );
   };
 
-  const keyExtractor = (item: any) => item?.convDetails?.id;
-  const getItemCount = () => conversations?.length;
-  const getItem = (data: any, index: any) => data[index];
-
-  const onChangePasswordPress = () => {
-    props.navigation.navigate('GuardianChangePassword');
-  };
+  const keyExtractor = (item: Conversation) => item.id.toString();
 
   const onWaliPress = () => {
     props.navigation.navigate('AddWali', { fromSettings: true });
   };
 
+  const onFindMatchPress = () => {
+    props.navigation.navigate('SearchProfiles');
+    // props.navigation.navigate('SingleChat', {
+    //   conversationData: null,
+    //   otherUserData: { id: 3640 },
+    //   from: 'messages',
+    // });
+  };
+
   return (
     <Container>
-      {(currentUser?.membership_status === 0 ||
-        currentUser?.membership_status === null) && (
-        <PremiumButton
-          heading={LanguageKeys.goPremiumButtonHeadingOne}
-          description={LanguageKeys.goPremiumButtonHeadingTwo}
-        />
-      )}
       <Header
+        navigation={props.navigation}
         title={LanguageKeys.messages}
+        titleVariant="display"
         customConponent={() => (
           <View
             style={[
@@ -325,107 +601,64 @@ const Messages = (props: any) => {
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            {currentUser?.chat_credits !== undefined &&
-              currentUser?.chat_credits !== null && (
-                <View
-                  style={[
-                    Styles.chatCreditsContainer,
-                    {
-                      marginRight: Rtl ? 0 : wp(2),
-                      marginLeft: Rtl ? wp(2) : 0,
-                    },
-                  ]}
-                >
-                  <Text style={Styles.chatCreditsLabel}>
-                    {LanguageKeys.chatCredits}:
-                  </Text>
-                  <Text style={Styles.chatCreditsValue}>
-                    {currentUser?.chat_credits}
-                  </Text>
-                </View>
-              )}
-            {currentUser?.role === 'guardian' && (
-              <View style={[Styles.gaurdianHeader]}>
-                <Menu>
-                  <MenuTrigger>
-                    <Image
-                      source={Images.verticalDots}
-                      style={Styles.menuBtn}
-                      resizeMode="contain"
-                    />
-                  </MenuTrigger>
-                  <MenuOptions
-                    optionsContainerStyle={Styles.menuOptionsContainer}
-                  >
-                    <MenuOption
-                      onSelect={onChangePasswordPress}
-                      text={t(LanguageKeys.changePassword)}
-                    />
-                    <MenuOption
-                      onSelect={onLogoutPress}
-                      text={t(LanguageKeys.logOut)}
-                      style={Styles.destructiveOption}
-                    />
-                  </MenuOptions>
-                </Menu>
-              </View>
-            )}
+            <ChatCreditsBadge
+              onPress={onChatCreditsPress}
+              disabled={isChatCreditsLoading}
+              credits={currentUser?.chat_credits || 0}
+            />
           </View>
         )}
       />
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
+          <Ionicons
+            name="shield-checkmark"
+            size={wp(4)}
+            color={Colors.primary}
+          />
           <Text style={Styles.guardianText}>{t('monitoredByWali')}</Text>
         </Ripple>
       ) : currentUser?.gender === 'female' ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
+          <Ionicons
+            name="add-circle-outline"
+            size={wp(4)}
+            color={Colors.primary}
+          />
           <Text style={Styles.guardianText}>{t('addAWali')}</Text>
         </Ripple>
       ) : null}
-      {currentUser?.role === 'guardian' && (
-        <CommonActions
-          navigation={props.navigation}
-          userId={currentUser?.user?.id}
-        />
-      )}
+      <PurchaseSuccessModal
+        visible={chatCreditsSuccessModalVisible}
+        onCollect={onChatCreditsSuccessCollect}
+        title="Chats added!"
+        message="Your chat bundle is ready."
+      />
       <View style={Styles.contentContainer}>
-        {coversationLoading ? (
+        {isLoading ? (
           <AnimatedLoader
             text={LanguageKeys.loading}
             visible={true}
             style={{ height: hp(60) }}
           />
-        ) : conversations?.length ? (
+        ) : conversations.length ? (
           <VirtualizedList
             initialNumToRender={10}
             windowSize={15}
             data={conversations}
-            getItemCount={getItemCount}
-            getItem={getItem}
+            getItemCount={(data) => data.length}
+            getItem={(data, index) => data[index]}
             renderItem={renderConversations}
             ListEmptyComponent={renderEmptyList}
             keyExtractor={keyExtractor}
           />
         ) : (
-          <View style={Styles.textContainer}>
-            <Image
-              source={Images.quotesIcon}
-              resizeMode="contain"
-              style={Styles.logo}
-            />
-            <View>
-              <Text style={Styles.subText}>{quote?.split('|')[0]}</Text>
-              <Text style={[Styles.subText, { fontWeight: 'bold' }]}>
-                {quote?.split('|')[1]}
-              </Text>
-            </View>
-          </View>
+          renderEmptyList()
         )}
       </View>
-      <ModalLoader
-        visible={modalLoader.visible}
-        message={modalLoader.message}
-      />
+      <Ripple style={Styles.btnPlus} onPress={onFindMatchPress}>
+        <AntDesign name="plus" size={wp(8)} color={Colors.color2} />
+      </Ripple>
     </Container>
   );
 };
@@ -433,145 +666,93 @@ const Messages = (props: any) => {
 export default Messages;
 
 const { width } = Dimensions.get('window');
+const AVATAR = width * 0.135;
 
 const Styles = StyleSheet.create({
   contentContainer: {
     flex: 1,
+    backgroundColor: Colors.surface,
   },
-  textContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    textAlign: 'center',
-  },
-  mainText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_B,
-    color: Colors.color1,
-  },
-  subText: {
-    width: wp(80),
-    textAlign: 'center',
-    fontSize: Typography.small1,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color4,
-    marginTop: 10,
-  },
-  itemHeight: {
-    height: width * 1 * 0.18,
-  },
+  // conversation row
   itemContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 0.7,
-    borderBottomColor: Colors.color7,
-    backgroundColor: Colors.color56,
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.5),
   },
   profilePictureCon: {
-    borderWidth: 1,
-    borderColor: Colors.color7,
-    width: width * 0.135,
-    height: width * 1 * 0.135,
-    borderRadius: (width * 1 * 0.135) / 2,
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color18,
-    marginHorizontal: wp(3),
+    backgroundColor: Colors.lavender,
     overflow: 'hidden',
-    marginTop: hp(1),
   },
   image: {
-    width: width * 0.13,
-    height: width * 1 * 0.13,
-    borderRadius: (width * 1 * 0.13) / 2,
+    width: '100%',
+    height: '100%',
   },
-  itemInnerCon: {
-    paddingTop: hp(1),
-    width: wp(81),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  nameMsgCon: {
-    width: wp(47),
-  },
-  timeCon: {
-    width: wp(34),
-    alignItems: 'flex-end',
-    paddingHorizontal: wp(4),
+  middleCon: {
+    flex: 1,
+    marginHorizontal: wp(3),
+    justifyContent: 'center',
   },
   itemHeading: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
+    color: Colors.ink,
+    fontSize: Typography.small3,
     includeFontPadding: false,
   },
   itemMessage: {
-    color: Colors.color35,
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small,
     includeFontPadding: false,
+    marginTop: hp(0.3),
   },
-  unReadCountCon: {
-    marginTop: hp(1),
-    minWidth: width * 0.05,
-    minHeight: width * 1 * 0.052,
-    borderRadius: (width * 1 * 0.05) / 2,
-    backgroundColor: Colors.theme,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: wp(1.5),
-  },
-  unReadCount: {
-    color: Colors.color2,
+  itemMessageUnread: {
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
+  },
+  rightCon: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: wp(13),
+  },
+  timeTxt: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.tiny2,
     includeFontPadding: false,
   },
-  logoutBtn: {
-    position: 'absolute',
-    flexDirection: 'row',
-    right: wp(4),
+  seenTick: {
+    marginTop: hp(0.6),
   },
-  logoutTxt: {
-    color: Colors.color1,
+  unReadCountCon: {
+    marginTop: hp(0.6),
+    minWidth: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: wp(1.4),
+  },
+  unReadCount: {
+    color: Colors.color2,
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
-    marginHorizontal: wp(2),
+    fontSize: Typography.tiny2,
+    includeFontPadding: false,
   },
-  logoutIcon: {
-    width: width * 0.05,
-    height: width * 0.05 * 1,
-  },
+  // header right + guardian menu
   headerRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     justifyContent: 'flex-end',
-  },
-  chatCreditsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.theme,
-    paddingHorizontal: wp(3),
-    paddingVertical: hp(0.8),
-    borderRadius: wp(4),
-  },
-  chatCreditsLabel: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small,
-    includeFontPadding: false,
-    marginRight: wp(1),
-  },
-  chatCreditsValue: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small1,
-    includeFontPadding: false,
   },
   gaurdianHeader: {
     paddingHorizontal: wp(1),
@@ -582,39 +763,111 @@ const Styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   menuOptionsContainer: {
-    borderRadius: wp(2),
-    paddingVertical: hp(0.5),
+    borderRadius: 14,
+    paddingVertical: hp(0.6),
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    marginTop: hp(1),
   },
   destructiveOption: {
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.surface,
   },
+  // guardian banner
   guardianTextWrapper: {
-    backgroundColor: Colors.color55,
-    paddingHorizontal: wp(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.lavender,
+    paddingVertical: hp(0.9),
+    paddingHorizontal: wp(4),
   },
   guardianText: {
-    width: wp(100),
-    fontSize: Typography.small2,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color2,
+    fontSize: Typography.small,
+    fontFamily: Fonts.APPFONT_M,
+    color: Colors.primary,
+    alignSelf: 'center',
+    marginHorizontal: wp(2),
+    includeFontPadding: false,
   },
-  timeAndSeenCon: {
+  // empty state
+  textContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginTop: hp(0.5),
+    paddingHorizontal: wp(8),
   },
-  seenProfileIconContainer: {
-    width: wp(5),
-    height: wp(5),
-    borderRadius: wp(2.5),
-    borderWidth: 1,
-    borderColor: Colors.color2,
-    overflow: 'hidden',
-    backgroundColor: Colors.color18,
+  emptyIconCircle: {
+    width: wp(22),
+    height: wp(22),
+    borderRadius: wp(11),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: hp(2.2),
   },
-  seenProfileIcon: {
-    width: wp(5),
-    height: wp(5),
-    borderRadius: wp(2.5),
+  emptyTitle: {
+    color: Colors.ink,
+    fontSize: Typography.medium,
+    alignSelf: 'center',
+    textAlign: 'center',
+    marginBottom: hp(1.4),
+    includeFontPadding: false,
+  },
+  quoteText: {
+    alignSelf: 'stretch',
+    textAlign: 'center',
+    fontSize: Typography.small1,
+    fontFamily: Fonts.APPFONT_R,
+    color: Colors.muted,
+    fontStyle: 'italic',
+    lineHeight: wp(5.6),
+  },
+  quoteAttr: {
+    fontFamily: Fonts.APPFONT_SB,
+    color: Colors.ink,
+    fontStyle: 'normal',
+    marginTop: hp(0.8),
+  },
+  emptyCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: wp(2),
+    backgroundColor: Colors.primary,
+    borderRadius: 999,
+    paddingVertical: hp(1.3),
+    paddingHorizontal: wp(7),
+    marginTop: hp(3.2),
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  emptyCtaTxt: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    alignSelf: 'center',
+    includeFontPadding: false,
+  },
+  // FAB
+  btnPlus: {
+    position: 'absolute',
+    bottom: hp(2.5),
+    right: wp(6),
+    backgroundColor: Colors.primary,
+    borderRadius: wp(8),
+    width: wp(15),
+    height: wp(15),
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 8,
+    zIndex: 1000,
   },
 });

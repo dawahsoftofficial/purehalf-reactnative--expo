@@ -1,15 +1,35 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { hp, Typography } from '../../global';
-import { LanguageKeys } from '../../languages';
-import { Colors, Fonts } from '../../res';
+import { hp, Typography, wp } from '../../global';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { Colors } from '../../res';
 import Text from '../Text';
 
-function SettingsHeader() {
+function SettingsHeader({
+  navigation,
+}: {
+  navigation: { goBack: () => void };
+}) {
+  const Rtl = CheckRtl();
+
   return (
     <View style={Styles.container}>
-      <Text style={Styles.title}>{LanguageKeys.generalSettings}</Text>
+      <TouchableOpacity
+        style={[Styles.backButton, Rtl ? Styles.backButtonRtl : null]}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.7}
+      >
+        <AntDesign
+          name={Rtl ? 'arrowright' : 'arrowleft'}
+          color={Colors.ink}
+          size={wp(6)}
+        />
+      </TouchableOpacity>
+      <Text variant="display" style={Styles.title}>
+        {LanguageKeys.generalSettings}
+      </Text>
     </View>
   );
 }
@@ -18,12 +38,28 @@ export default SettingsHeader;
 
 const Styles = StyleSheet.create({
   container: {
-    paddingBottom: hp(0.5),
+    paddingTop: hp(1),
+    paddingBottom: hp(1.5),
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: wp(4),
+    minHeight: hp(6),
+  },
+  backButton: {
+    position: 'absolute',
+    left: wp(4),
+    zIndex: 1,
+    padding: wp(1),
+  },
+  backButtonRtl: {
+    left: undefined,
+    right: wp(4),
   },
   title: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_B,
-    color: Colors.color1,
+    fontSize: Typography.large1,
+    color: Colors.ink,
+    alignSelf: 'stretch',
+    marginHorizontal: wp(10),
+    textAlign: 'center',
   },
 });

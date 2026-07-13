@@ -1,13 +1,8 @@
 import React, { memo, useMemo } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  StyleSheet,
-  View,
-} from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
@@ -15,37 +10,33 @@ import { Colors, Fonts } from '../../res';
 import Text from '../Text';
 
 type SettingsButtonProps = {
-  icon: number;
+  iconName: string;
   name: string;
   onPress: () => void;
   loading?: boolean;
-  iconStyle?: object;
   disabled?: boolean;
   accessibilityLabel?: string;
+  showDivider?: boolean;
 };
 
-const { width } = Dimensions.get('window');
-
 function SettingsButton({
-  icon,
+  iconName,
   name,
   onPress,
   loading = false,
-  iconStyle,
   disabled = false,
   accessibilityLabel,
+  showDivider = false,
 }: SettingsButtonProps) {
   const Rtl = CheckRtl();
 
   const iconElement = useMemo(
     () => (
-      <Image
-        source={icon}
-        resizeMode="contain"
-        style={[Styles.btnIcon, iconStyle]}
-      />
+      <View style={Styles.iconChip}>
+        <Ionicons name={iconName} size={wp(5)} color={Colors.primary} />
+      </View>
     ),
-    [icon, iconStyle]
+    [iconName]
   );
 
   const nameElement = useMemo(
@@ -61,8 +52,8 @@ function SettingsButton({
     () => (
       <AntDesign
         name={Rtl ? 'arrowleft' : 'arrowright'}
-        color={Colors.color1}
-        size={wp(6)}
+        color={Colors.primaryLite}
+        size={wp(5)}
       />
     ),
     [Rtl]
@@ -70,7 +61,7 @@ function SettingsButton({
 
   return (
     <Ripple
-      style={Styles.btnCon}
+      style={[Styles.btnCon, showDivider && Styles.divider]}
       onPress={onPress}
       disabled={disabled}
       hitSlop={Styles.hitSlop}
@@ -97,30 +88,35 @@ export default memo(SettingsButton);
 
 const Styles = StyleSheet.create({
   btnCon: {
-    borderRadius: 8,
-    backgroundColor: Colors.color16,
-    paddingVertical: width * 0.04,
+    paddingVertical: wp(3.4),
     paddingHorizontal: wp(4),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: width * 0.04,
+  },
+  divider: {
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
   },
   btnConInner: {
     width: wp(75),
     flexDirection: 'row',
     alignItems: 'center',
   },
-  btnIcon: {
-    width: width * 0.05,
-    height: width * 0.05,
+  iconChip: {
+    width: wp(9.5),
+    height: wp(9.5),
+    borderRadius: 11,
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   btnTxt: {
     fontSize: Typography.small2,
     alignSelf: 'center',
     fontFamily: Fonts.APPFONT_M,
     marginHorizontal: wp(3),
-    color: Colors.color1,
+    color: Colors.ink,
     includeFontPadding: false,
   },
   hitSlop: {

@@ -25,7 +25,7 @@ const ProfileComplete = () => {
   const [profileCompleteProgress, setProfileCompleteProgress] = useState([
     {
       label: LanguageKeys.profileImage,
-      id: 'primary_image',
+      id: 'primary_image_to_show',
       navigation: 'PhotosAndVideos',
       completed: false,
     },
@@ -119,7 +119,7 @@ const ProfileComplete = () => {
 
   const handleProfileCompleteData = async () => {
     const keysData: any = {
-      primary_image: currentUser?.media?.primary_image ? true : false,
+      primary_image_to_show: currentUser?.primary_image_to_show ? true : false,
       cover_image: currentUser?.media?.cover_image ? true : false,
       tagline: currentUser?.detail?.tagline ? true : false,
       'appearance-0': true,

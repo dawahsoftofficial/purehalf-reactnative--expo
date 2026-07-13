@@ -21,5 +21,11 @@
     "lint-staged.config.js",
     "**/Pods"
   ],
-  "include": ["src/**/*", "index.ts", "index.tsx", "jest-setup.ts"]
+  "include": [
+    "src/**/*",
+    "index.ts",
+    "index.tsx",
+    "jest-setup.ts",
+    "src/types/**/*"
+  ]
 }

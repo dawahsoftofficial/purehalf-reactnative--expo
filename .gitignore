@@ -66,6 +66,9 @@ yarn-error.log
 # testing
 /coverage
 
+# Local brainstorming companion artifacts
+.superpowers/
+
 # Yarn
 .yarn/*
 !.yarn/patches
@@ -81,3 +84,5 @@ src/assets/json/serviceAccountKey.json
 .env
 .env.local
 .env.*.local
+android/app/release/
+.worktrees/

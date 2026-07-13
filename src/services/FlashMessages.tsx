@@ -3,14 +3,10 @@ import { t } from 'i18next';
 import { FlashMessage } from '../components';
 import { LanguageKeys } from '../languages';
 
-const flashErrorMessage = (
-  message = LanguageKeys.commonErrorMessage,
-  top = 2
-) => {
+const flashErrorMessage = (message = LanguageKeys.commonErrorMessage) => {
   return FlashMessage({
     type: 'danger',
     message: t(message),
-    top,
   });
 };
 

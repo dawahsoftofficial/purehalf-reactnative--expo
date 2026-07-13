@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Picker, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -55,14 +55,10 @@ const AgeRange = (props: any) => {
     if (pickerVisible.button === 'start') {
       setMinAge(item.value);
       closePicker();
-      if (props?.onMinAgeChange) {
-        props.onMinAgeChange(item.value);
-      }
+      props?.onMinAgeChange?.(item.value);
     } else {
       setMaxAge(item.value);
-      if (props?.onMaxAgeChange) {
-        props.onMaxAgeChange(item.value);
-      }
+      props?.onMaxAgeChange?.(item.value);
       closePicker();
     }
   };
@@ -74,34 +70,52 @@ const AgeRange = (props: any) => {
     });
   };
 
-  const RenderDropDownBtn = ({ text, onPress }: any) => (
-    <Ripple style={Styles.ageDropDownBtn} onPress={onPress}>
-      <Text style={Styles.ageDropDownTxt}>{text}</Text>
-      <AntDesign name="down" color={Colors.color1} size={wp(3)} />
-    </Ripple>
-  );
+  const hasSelection =
+    minAge !== LanguageKeys.any || maxAge !== LanguageKeys.any;
 
-  const RenderAgeRange = () => (
-    <View
+  const RenderSelector = ({ value, onPress }: any) => (
+    <Ripple
       style={{
-        ...Styles.ageRangeCon,
+        ...Styles.selector,
         flexDirection: Rtl ? 'row-reverse' : 'row',
       }}
+      onPress={onPress}
+      hitSlop={6}
+      rippleColor={Colors.primary}
     >
-      <Text style={Styles.fieldDesc}>{LanguageKeys.between}</Text>
-      <RenderDropDownBtn
-        text={minAge}
-        onPress={openPicker.bind(null, 'start')}
-      />
-      <Text style={Styles.fieldDesc}>{LanguageKeys.and}</Text>
-      <RenderDropDownBtn text={maxAge} onPress={openPicker.bind(null, 'end')} />
-    </View>
+      <Text style={Styles.selectorTxt}>{value}</Text>
+      <Ionicons name="chevron-down" color={Colors.muted} size={wp(4)} />
+    </Ripple>
   );
 
   return (
     <View style={Styles.container}>
-      <Text style={Styles.fieldHeading}>{LanguageKeys.ageRange}</Text>
-      <RenderAgeRange />
+      <View
+        style={{
+          ...Styles.headerRow,
+          flexDirection: Rtl ? 'row-reverse' : 'row',
+        }}
+      >
+        <Text style={Styles.label}>{LanguageKeys.ageRange}</Text>
+        {hasSelection && (
+          <Ripple onPress={onClearPress} hitSlop={16} style={Styles.clearLink}>
+            <Text style={Styles.clearTxt}>{LanguageKeys.clear}</Text>
+          </Ripple>
+        )}
+      </View>
+      <View
+        style={{
+          ...Styles.selectorsRow,
+          flexDirection: Rtl ? 'row-reverse' : 'row',
+        }}
+      >
+        <RenderSelector
+          value={minAge}
+          onPress={openPicker.bind(null, 'start')}
+        />
+        <View style={Styles.dash} />
+        <RenderSelector value={maxAge} onPress={openPicker.bind(null, 'end')} />
+      </View>
       <Picker
         visible={pickerVisible.visible}
         onClose={closePicker}
@@ -109,15 +123,6 @@ const AgeRange = (props: any) => {
         data={ageRange}
         headerTitle={LanguageKeys.ageRange}
       />
-      <Ripple
-        style={{
-          ...Styles.clearButton,
-          alignSelf: Rtl ? 'flex-start' : 'flex-end',
-        }}
-        onPress={onClearPress}
-      >
-        <Text style={Styles.clearButtonText}>{LanguageKeys.clear}</Text>
-      </Ripple>
     </View>
   );
 };
@@ -127,57 +132,55 @@ export default AgeRange;
 const Styles = StyleSheet.create({
   container: {
     paddingHorizontal: wp(4),
-    paddingVertical: hp(2),
+    paddingVertical: hp(1.8),
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
   },
-  fieldHeading: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
-    includeFontPadding: false,
-  },
-  fieldDesc: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.small1,
-    lineHeight: wp(4.5),
-    alignSelf: 'center',
-  },
-  ageRangeCon: {
-    paddingTop: hp(1),
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  ageDropDownBtn: {
-    borderWidth: 0.5,
-    borderColor: Colors.color27,
-    paddingVertical: hp(0.5),
-    paddingHorizontal: wp(1),
-    borderRadius: 4,
-    backgroundColor: Colors.color2,
-    marginHorizontal: wp(3),
-    flexDirection: 'row',
+  headerRow: {
     alignItems: 'center',
     justifyContent: 'space-between',
-    height: hp(4),
   },
-  ageDropDownTxt: {
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.small1,
-    color: Colors.color1,
-    marginHorizontal: wp(1),
+  label: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  clearLink: {
+    paddingHorizontal: wp(1),
+  },
+  clearTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    color: Colors.primaryMid,
+    includeFontPadding: false,
+  },
+  selectorsRow: {
+    alignItems: 'center',
+    marginTop: hp(1.2),
+  },
+  dash: {
+    width: wp(4),
+    height: 1.4,
+    backgroundColor: Colors.hairline,
+    marginHorizontal: wp(2),
+  },
+  selector: {
+    flex: 1,
+    height: hp(5.6),
+    borderRadius: 12,
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.surface,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: wp(3.5),
+  },
+  selectorTxt: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
     includeFontPadding: false,
     alignSelf: 'center',
-    textAlign: 'center',
-  },
-  clearButton: {
-    position: 'absolute',
-    top: '35%',
-    paddingHorizontal: wp(3),
-  },
-  clearButtonText: {
-    fontFamily: Fonts.APPFONT_L,
-    fontSize: Typography.tiny2,
-    color: Colors.theme,
-    includeFontPadding: false,
   },
 });

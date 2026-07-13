@@ -14,7 +14,13 @@ import {
 import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { Button, ButtonPicker, ModalLoader, Text } from '../../components';
+import {
+  Button,
+  ButtonPicker,
+  ModalLoader,
+  ProfilePhotoPlaceholder,
+  Text,
+} from '../../components';
 import { Constants, hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
@@ -39,25 +45,39 @@ const RequestedList = (props: any) => {
     from: '',
   });
 
-  const pickerData = [
-    {
-      label: 'Delete',
-      value: 'delete',
-      buttonStyle: { backgroundColor: Colors.color24 },
-      buttonTextStyle: { color: Colors.color2 },
-    },
-    {
-      label: 'Cancel',
-      value: 'cancel',
-    },
-  ];
-
   const {
     data = [],
     onLoadMorePress = () => null,
     loadMoreLoader = false,
     from = '',
   } = props;
+
+  const showConfirmation = (userId: number, value: string, title: string) => {
+    setButtonPickerVisible({
+      visible: true,
+      userId,
+      from: value,
+      pickerData: [
+        {
+          label:
+            value === 'revoke'
+              ? LanguageKeys.revokePhotoAccess
+              : value === 'accept'
+                ? LanguageKeys.accept
+                : value === 'reject'
+                  ? LanguageKeys.reject
+                  : LanguageKeys.delete,
+          value,
+          buttonStyle:
+            value === 'accept'
+              ? undefined
+              : { backgroundColor: Colors.color24 },
+        },
+        { label: LanguageKeys.cancel, value: 'cancel' },
+      ],
+      pickerHeaderTitle: title,
+    });
+  };
 
   const RenderItemContent = ({ item }: any) => {
     return (
@@ -82,47 +102,50 @@ const RequestedList = (props: any) => {
             {item?.city && `${item.city},`} {item?.country}
           </ReactText>
         )}
+        <View
+          style={[
+            Styles.statusPill,
+            item?.photo_access_status
+              ? Styles.statusPillGranted
+              : Styles.statusPillPending,
+          ]}
+        >
+          <Text
+            style={[
+              Styles.statusPillText,
+              item?.photo_access_status
+                ? Styles.statusPillTextGranted
+                : Styles.statusPillTextPending,
+            ]}
+          >
+            {item?.photo_access_status
+              ? LanguageKeys.photoAccessGranted
+              : LanguageKeys.photoAccessPending}
+          </Text>
+        </View>
       </View>
     );
   };
 
   const onDeletePress = (item: any) => {
-    setButtonPickerVisible({
-      visible: true,
-      userId: item?.id,
-      from: 'delete',
-      pickerData: pickerData,
-      pickerHeaderTitle: LanguageKeys.sureDeleteDes,
-    });
+    showConfirmation(item?.id, 'delete', LanguageKeys.sureDeleteDes);
   };
 
   const onAcceptPress = (item: any) => {
-    pickerData[0].label = LanguageKeys.accept;
-    pickerData[0].value = 'accept';
-    setButtonPickerVisible({
-      visible: true,
-      userId: item?.id,
-      from: 'accept',
-      pickerData: pickerData,
-      pickerHeaderTitle: LanguageKeys.sureAcceptDes,
-    });
+    showConfirmation(item?.id, 'accept', LanguageKeys.sureAcceptDes);
   };
 
   const onRejectPress = (item: any) => {
-    pickerData[0].label = LanguageKeys.reject;
-    pickerData[0].value = 'reject';
-    setButtonPickerVisible({
-      visible: true,
-      userId: item?.id,
-      from: 'reject',
-      pickerData: pickerData,
-      pickerHeaderTitle: LanguageKeys.sureRejectDes,
-    });
+    showConfirmation(item?.id, 'reject', LanguageKeys.sureRejectDes);
+  };
+
+  const onRevokePress = (item: any) => {
+    showConfirmation(item?.id, 'revoke', LanguageKeys.sureRevokePhotoAccess);
   };
 
   const RenderSignleButton = ({ name, onPress }: any) => (
     <Ripple style={Styles.buttonCon} onPress={onPress}>
-      <AntDesign name={name} color={Colors.color1} size={wp(5)} />
+      <AntDesign name={name} color={Colors.primary} size={wp(5)} />
     </Ripple>
   );
   const RenderButtons = ({ item }: any) =>
@@ -133,14 +156,32 @@ const RequestedList = (props: any) => {
           flexDirection: Rtl ? 'row-reverse' : 'row',
         }}
       >
-        <RenderSignleButton
-          name="close"
-          onPress={onRejectPress.bind(null, item)}
-        />
-        <RenderSignleButton
-          name="check"
-          onPress={onAcceptPress.bind(null, item)}
-        />
+        {item?.photo_access_status ? (
+          <Ripple
+            style={Styles.revokeButton}
+            onPress={onRevokePress.bind(null, item)}
+          >
+            <AntDesign
+              name="closecircle"
+              color={Colors.color24}
+              size={wp(3.6)}
+            />
+            <Text style={Styles.revokeButtonText}>
+              {LanguageKeys.revokePhotoAccess}
+            </Text>
+          </Ripple>
+        ) : (
+          <>
+            <RenderSignleButton
+              name="close"
+              onPress={onRejectPress.bind(null, item)}
+            />
+            <RenderSignleButton
+              name="check"
+              onPress={onAcceptPress.bind(null, item)}
+            />
+          </>
+        )}
       </View>
     ) : (
       <View
@@ -169,41 +210,37 @@ const RequestedList = (props: any) => {
   const renderList = ({ item }: any) => {
     return (
       <TouchableOpacity
-        style={Styles.itemCon}
+        style={[Styles.itemCon, { flexDirection: Rtl ? 'row-reverse' : 'row' }]}
         activeOpacity={Constants.btnActiveOpacity}
         onPress={onItemPress.bind(null, item)}
       >
-        {item?.media?.primary_image ? (
-          <View style={Styles.itemImage}>
-            <Image
-              source={{ uri: item.media.primary_image }}
-              resizeMode="cover"
-              style={Styles.itemImage}
-              onLoadStart={onImageLoadStart}
-              onLoadEnd={onImageLoadEnd}
-            />
-            {imageLoader && (
-              <ActivityIndicator
-                color={Colors.theme}
-                size={wp(5)}
-                style={{ position: 'absolute' }}
+        <View style={Styles.avatar}>
+          {item?.primary_image_to_show ? (
+            <>
+              <Image
+                source={{ uri: item.primary_image_to_show }}
+                resizeMode="cover"
+                style={Styles.avatarImg}
+                onLoadStart={onImageLoadStart}
+                onLoadEnd={onImageLoadEnd}
               />
-            )}
-          </View>
-        ) : (
-          <View style={Styles.itemImage}>
-            <Image source={Images.user} resizeMode="contain" />
-          </View>
-        )}
-        <View
-          style={{
-            ...Styles.itemContentCon,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-          }}
-        >
-          <RenderItemContent item={item} />
-          <RenderButtons item={item} />
+              {imageLoader && (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size={wp(4)}
+                  style={Styles.avatarLoader}
+                />
+              )}
+            </>
+          ) : (
+            <ProfilePhotoPlaceholder
+              name={item?.full_name}
+              size={AVATAR * 0.5}
+            />
+          )}
         </View>
+        <RenderItemContent item={item} />
+        <RenderButtons item={item} />
       </TouchableOpacity>
     );
   };
@@ -277,9 +314,10 @@ const RequestedList = (props: any) => {
       const userId = buttonPickerVisible.userId;
       ApiServices.privatePhotoAcceptRequest(userId)
         .then(() => {
-          _.remove(data, function (n: any) {
-            return n.id === userId;
-          });
+          const approvedRequest = data.find(
+            (request: any) => request.id === userId
+          );
+          if (approvedRequest) approvedRequest.photo_access_status = true;
           forceUpdate();
           hideModalLoader();
           flashSuccessMessage(LanguageKeys.accepted);
@@ -299,6 +337,22 @@ const RequestedList = (props: any) => {
           forceUpdate();
           hideModalLoader();
           flashSuccessMessage(LanguageKeys.rejected);
+        })
+        .catch(hideModalLoader);
+    } else if (value === 'revoke') {
+      setModalLoader({
+        visible: true,
+        message: LanguageKeys.revokingPhotoAccess,
+      });
+      const userId = buttonPickerVisible.userId;
+      ApiServices.privatePhotoRevokeAccess(userId)
+        .then(() => {
+          _.remove(data, function (n: any) {
+            return n.id === userId;
+          });
+          forceUpdate();
+          hideModalLoader();
+          flashSuccessMessage(LanguageKeys.photoAccessRevoked);
         })
         .catch(hideModalLoader);
     }
@@ -335,6 +389,7 @@ const RequestedList = (props: any) => {
 export default RequestedList;
 
 const { width } = Dimensions.get('window');
+const AVATAR = width * 0.14;
 const Styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: wp(4),
@@ -342,41 +397,70 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(15),
   },
   itemCon: {
-    borderTopRightRadius: 4,
-    borderTopLeftRadius: 4,
-    marginBottom: hp(4),
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    padding: wp(3),
+    marginBottom: hp(1.4),
   },
-  itemImage: {
-    width: '100%',
-    height: width * 1 * 0.5,
-    borderTopRightRadius: 4,
-    borderTopLeftRadius: 4,
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color18,
   },
-  itemContentCon: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: hp(1),
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarLoader: {
+    position: 'absolute',
   },
   itemInnerCon: {
-    width: wp(55),
+    flex: 1,
+    marginHorizontal: wp(3),
   },
   itemName: {
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium,
-    color: Colors.color1,
+    color: Colors.ink,
     includeFontPadding: false,
-    // maxWidth: wp(45),
   },
   itemLocation: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.medium,
-    color: Colors.color1,
-    lineHeight: wp(5.5),
-    maxWidth: wp(45),
+    fontSize: Typography.small1,
+    color: Colors.muted,
+    marginTop: hp(0.2),
+  },
+  statusPill: {
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    marginTop: hp(0.9),
+    paddingHorizontal: wp(2.1),
+    paddingVertical: hp(0.35),
+  },
+  statusPillGranted: {
+    backgroundColor: '#E5F4EC',
+  },
+  statusPillPending: {
+    backgroundColor: Colors.lavender,
+  },
+  statusPillText: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    includeFontPadding: false,
+  },
+  statusPillTextGranted: {
+    color: '#237A4B',
+  },
+  statusPillTextPending: {
+    color: Colors.primary,
   },
   requestedOnView: {
     flexDirection: 'row',
@@ -392,19 +476,32 @@ const Styles = StyleSheet.create({
     marginHorizontal: wp(1),
   },
   buttonsOuterCon: {
-    width: wp(20),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: hp(1),
+    gap: wp(2),
   },
   buttonCon: {
     width: width * 0.09,
     height: width * 1 * 0.09,
     borderRadius: (width * 1 * 0.09) / 2,
-    backgroundColor: Colors.color17,
+    backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  revokeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.color24,
+    borderRadius: 999,
+    paddingHorizontal: wp(2.3),
+    paddingVertical: hp(0.8),
+    gap: wp(1.2),
+  },
+  revokeButtonText: {
+    color: Colors.color24,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
   },
   emptyListContainer: {
     marginVertical: hp(20),
@@ -416,7 +513,7 @@ const Styles = StyleSheet.create({
     opacity: 0.2,
   },
   emptyListText: {
-    color: Colors.color22,
+    color: Colors.muted,
     includeFontPadding: false,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.medium,
@@ -424,6 +521,7 @@ const Styles = StyleSheet.create({
     marginTop: 30,
     paddingHorizontal: wp(10),
   },
+
   loadMoreBtn: {
     alignSelf: 'center',
     width: wp(45),

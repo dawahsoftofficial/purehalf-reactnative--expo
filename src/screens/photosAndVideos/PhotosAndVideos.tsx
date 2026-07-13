@@ -1,13 +1,14 @@
 import _ from 'lodash';
-import React, { useEffect, useReducer, useState } from 'react';
+import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text as ReactText,
   View,
 } from 'react-native';
@@ -29,7 +30,6 @@ import {
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
-import { Images } from '../../res';
 import {
   ApiServices,
   flashErrorMessage,
@@ -75,6 +75,7 @@ const PhotosAndVideos = (props: any) => {
   const [profileImageLoader, setProfileImageLoader] = useState(false);
   const [uploadingProfileLoader, setUploadingProfileLoader] = useState(false);
   const [toolTipVisible, setToolTipVisible] = useState<boolean>(false);
+  const [isUpdatingBlur, setIsUpdatingBlur] = useState(false);
 
   const Rtl = CheckRtl();
   const [youtubeURL, setYoutubeURL] = useState('');
@@ -85,53 +86,56 @@ const PhotosAndVideos = (props: any) => {
   const [publicPhotos, setPublicPhotos] = useState<any>([]);
   const [privatePhotos, setPrivatePhotos] = useState<any>([]);
 
-  const setUserData = async () => {
+  const setUserData = useCallback(async () => {
     const { media } = currentUser;
-    if (media) {
-      const {
-        cover_image,
-        youtube_url,
-        primary_image,
-        public_gallery,
-        private_gallery,
-      } = media;
-      if (cover_image) {
-        setCoverImage(cover_image);
-      }
-      if (primary_image) {
-        setProfileImage(primary_image);
-      }
-      if (youtube_url) {
-        setYoutubeURL(youtube_url);
-      }
-      if (public_gallery && public_gallery.length !== 0) {
-        const publicPhotosData: any = [];
-        for await (const element of public_gallery) {
-          const data = {
-            uri: element,
-            uploadSuccessful: true,
-          };
-          publicPhotosData.push(data);
-        }
-        setPublicPhotos(publicPhotosData);
-      }
-      if (private_gallery && private_gallery.length !== 0) {
-        const privatePhotosData: any = [];
-        for await (const element of private_gallery) {
-          const data = {
-            uri: element,
-            uploadSuccessful: true,
-          };
-          privatePhotosData.push(data);
-        }
-        setPrivatePhotos(privatePhotosData);
-      }
+    if (!media) {
+      return;
     }
-  };
+
+    const {
+      cover_image,
+      youtube_url,
+      public_gallery,
+      private_gallery,
+      un_blur_primary_image,
+      primary_image_to_show,
+      primary_image,
+    } = media as any;
+
+    if (cover_image) {
+      setCoverImage(cover_image);
+    }
+
+    const nextProfileImage =
+      un_blur_primary_image ?? primary_image_to_show ?? primary_image ?? '';
+    if (nextProfileImage) {
+      setProfileImage(nextProfileImage);
+    }
+
+    if (youtube_url) {
+      setYoutubeURL(youtube_url);
+    }
+
+    if (public_gallery && public_gallery.length !== 0) {
+      const publicPhotosData: any = [];
+      for await (const element of public_gallery) {
+        publicPhotosData.push({ uri: element, uploadSuccessful: true });
+      }
+      setPublicPhotos(publicPhotosData);
+    }
+
+    if (private_gallery && private_gallery.length !== 0) {
+      const privatePhotosData: any = [];
+      for await (const element of private_gallery) {
+        privatePhotosData.push({ uri: element, uploadSuccessful: true });
+      }
+      setPrivatePhotos(privatePhotosData);
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     setUserData();
-  }, []);
+  }, [setUserData]);
 
   const hideLoader = () => {
     setLoader({
@@ -140,9 +144,72 @@ const PhotosAndVideos = (props: any) => {
     });
   };
 
-  const RenderHeadingDes = ({ heading, description }: any) => (
+  const blurOn = !!currentUser?.is_blur;
+  const onToggleBlur = async () => {
+    if (isUpdatingBlur) {
+      return;
+    }
+    const newBlurValue = !currentUser?.is_blur;
+    setIsUpdatingBlur(true);
+    try {
+      const res: any = await ApiServices.updateUserInfo({
+        is_blur: newBlurValue ? 1 : 0,
+      });
+      const updatedUser = {
+        ...currentUser,
+        ...res,
+        is_blur: newBlurValue ? 1 : 0,
+      };
+      await setData(storageKeys.USER, updatedUser);
+      updateCurrentUser(updatedUser);
+      flashSuccessMessage(
+        newBlurValue ? LanguageKeys.turnOnBlur : LanguageKeys.turnOffBlur
+      );
+    } catch {
+      // error already flashed by updateUserInfo
+    } finally {
+      setIsUpdatingBlur(false);
+    }
+  };
+
+  const RenderHeadingDes = ({
+    heading,
+    description,
+    count,
+    max,
+    lock,
+  }: any) => (
     <View style={Styles.headingDesCon}>
-      <Text style={Styles.heading}>{heading}</Text>
+      <View
+        style={{
+          ...Styles.headingRow,
+          flexDirection: Rtl ? 'row-reverse' : 'row',
+        }}
+      >
+        <View
+          style={{
+            ...Styles.headingTitleCon,
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+          }}
+        >
+          {lock ? (
+            <AntDesign
+              name="lock"
+              color={Colors.ink}
+              size={wp(4)}
+              style={Styles.lockIcon}
+            />
+          ) : null}
+          <Text style={Styles.heading}>{heading}</Text>
+        </View>
+        {count !== undefined ? (
+          <View style={Styles.countChip}>
+            <ReactText
+              style={Styles.countChipTxt}
+            >{`${count} / ${max}`}</ReactText>
+          </View>
+        ) : null}
+      </View>
       <Text style={Styles.description}>{description}</Text>
     </View>
   );
@@ -308,8 +375,8 @@ const PhotosAndVideos = (props: any) => {
       <View
         style={{
           ...Styles.itemOuterCon,
-          paddingRight: Rtl ? 0 : wp(6),
-          paddingLeft: Rtl ? wp(6) : 0,
+          paddingRight: Rtl ? 0 : wp(4),
+          paddingLeft: Rtl ? wp(4) : 0,
         }}
       >
         <View style={Styles.itemCon}>
@@ -346,7 +413,7 @@ const PhotosAndVideos = (props: any) => {
               style={Styles.upBtn}
               onPress={onArrowUpPress.bind(null, item, from)}
             >
-              <AntDesign name="arrowup" color={Colors.color2} size={wp(5)} />
+              <AntDesign name="arrowup" color={Colors.color2} size={wp(4)} />
             </Ripple>
           </View>
         ) : null}
@@ -361,7 +428,7 @@ const PhotosAndVideos = (props: any) => {
               style={Styles.upBtn}
               onPress={onArrowUpPress.bind(null, item, from)}
             >
-              <AntDesign name="arrowup" color={Colors.color2} size={wp(5)} />
+              <AntDesign name="arrowup" color={Colors.color2} size={wp(4)} />
             </Ripple>
           </View>
         ) : null}
@@ -378,7 +445,7 @@ const PhotosAndVideos = (props: any) => {
               style={Styles.downBtn}
               onPress={onArrowDownPress.bind(null, item, from)}
             >
-              <AntDesign name="arrowdown" color={Colors.color2} size={wp(5)} />
+              <AntDesign name="arrowdown" color={Colors.color2} size={wp(4)} />
             </Ripple>
           </View>
         ) : null}
@@ -394,7 +461,7 @@ const PhotosAndVideos = (props: any) => {
             <Entypo
               name="dots-three-vertical"
               color={Colors.color2}
-              size={wp(6)}
+              size={wp(4.5)}
             />
           </Ripple>
         )}
@@ -402,129 +469,110 @@ const PhotosAndVideos = (props: any) => {
     );
   };
 
-  const onUpoadPicture = (imageObj: {
-    height: number | string;
-    width: number | string;
-    uri: string;
-    name: string;
-    size: number | string;
-  }) => {
-    showUploadingLoader();
+  const onUpoadPicture = (
+    imageObj: {
+      height: number | string;
+      width: number | string;
+      uri: string;
+      name: string;
+      size: number | string;
+    },
+    fromKey?: string
+  ) => {
+    const uploadKey = fromKey ?? imagePicker.from;
+    const apiKey =
+      uploadKey === 'primary_image_to_show' ? 'primary_image' : uploadKey;
+    showUploadingLoader(uploadKey);
     hideImagePicker();
-    ApiServices.imageUpload(imageObj, imagePicker.from, youtubeURL)
+    ApiServices.imageUpload(imageObj, apiKey, youtubeURL)
       .then(async (res: any) => {
         if (res) {
-          const { cover_image, primary_image } = res;
-          if (cover_image) {
-            setCoverImage(cover_image);
+          const nextProfileImage =
+            res?.un_blur_primary_image ??
+            res?.primary_image_to_show ??
+            res?.primary_image ??
+            '';
+          if (nextProfileImage) {
+            setProfileImage(nextProfileImage);
           }
-          if (primary_image) {
-            setProfileImage(primary_image);
-          }
-          currentUser.media = res;
-          await setData(storageKeys.USER, currentUser);
-          hideUploadingLoader();
+
+          const updatedUser = { ...(currentUser as any), media: res };
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+          hideUploadingLoader(uploadKey);
         }
       })
-      .catch(hideUploadingLoader);
+      .catch(() => hideUploadingLoader(uploadKey));
   };
 
   const onAddPofilePress = () => {
     setImagePicker({
       visible: true,
-      from: 'primary_image',
+      from: 'primary_image_to_show',
     });
   };
 
   const AddProfilePictureBtn = () => (
     <View
       style={{
-        ...Styles.addProfilePicBtnCon,
-        alignItems: Rtl ? 'flex-end' : 'flex-start',
+        ...Styles.profileRow,
+        flexDirection: Rtl ? 'row-reverse' : 'row',
       }}
     >
       {uploadingProfileLoader ? (
-        <View
-          style={{
-            ...Styles.addPhotoBtn,
-            marginVertical: 0,
-            marginLeft: wp(4),
-            marginRight: wp(4),
-          }}
-        >
-          <AnimatedLoader text="Uploading..." visible={true} />
+        <View style={Styles.profileCircle}>
+          <AnimatedLoader visible={true} />
         </View>
       ) : profileImage.length === 0 ? (
         <Ripple
-          style={{
-            ...Styles.addPhotoBtn,
-            marginVertical: 0,
-            marginLeft: wp(4),
-            marginRight: wp(4),
-          }}
+          style={{ ...Styles.profileCircle, ...Styles.profileCircleEmpty }}
           onPress={onAddPofilePress}
         >
-          <Image
-            source={Images.camera}
-            resizeMode="contain"
-            style={Styles.cameraIcon}
-          />
+          <AntDesign name="camerao" size={wp(6.5)} color={Colors.primary} />
         </Ripple>
       ) : (
-        <View style={Styles.profileImageCon}>
+        <Ripple style={Styles.profileCircle} onPress={onAddPofilePress}>
           <Image
             source={{ uri: profileImage }}
             resizeMode="cover"
-            style={Styles.itemCon}
+            style={Styles.profileCircleImg}
             onLoadStart={onProfileImageLoadStart}
             onLoadEnd={onProfileImageLoadEnd}
+            onError={onProfileImageError}
           />
           <View
             style={{
-              ...Styles.downBtnConProfile,
-              top: hp(-2),
-              alignItems: Rtl ? 'flex-start' : 'flex-end',
+              ...Styles.editBadge,
+              ...(Rtl ? { left: 0 } : { right: 0 }),
             }}
           >
-            <Ripple
-              style={{ ...Styles.deleteCoverBtn, ...Styles.shadow }}
-              onPress={onProfileDeletePress}
-            >
-              <AntDesign name="delete" color={Colors.color1} size={wp(4.5)} />
-            </Ripple>
+            <Entypo name="pencil" size={wp(3)} color={Colors.color2} />
           </View>
-          {publicPhotos?.length < 10 ? (
-            <View
-              style={{
-                ...Styles.downBtnConProfile,
-                alignItems: Rtl ? 'flex-start' : 'flex-end',
-              }}
-            >
-              <Ripple
-                style={Styles.downBtn}
-                onPress={onArrowDownPress.bind(
-                  null,
-                  { uri: profileImage },
-                  'primary_image'
-                )}
-              >
-                <AntDesign
-                  name="arrowdown"
-                  color={Colors.color2}
-                  size={wp(5)}
-                />
-              </Ripple>
-            </View>
-          ) : null}
-          {profileImageLoader && (
-            <ActivityIndicator
-              color={Colors.theme}
-              size={wp(5)}
-              style={{ position: 'absolute' }}
-            />
-          )}
-        </View>
+        </Ripple>
       )}
+      <View style={Styles.blurCol}>
+        <View
+          style={{
+            ...Styles.blurRow,
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+          }}
+        >
+          <Entypo
+            name={blurOn ? 'eye-with-line' : 'eye'}
+            size={wp(4.5)}
+            color={Colors.primary}
+          />
+          <Text style={Styles.blurLbl}>{LanguageKeys.blurMyPhoto}</Text>
+          <Switch
+            value={blurOn}
+            onValueChange={onToggleBlur}
+            disabled={isUpdatingBlur}
+            trackColor={{ false: Colors.hairline, true: Colors.primary }}
+            thumbColor={Colors.color2}
+          />
+        </View>
+        <Text style={Styles.blurHint}>{LanguageKeys.blurPhotoHint}</Text>
+      </View>
     </View>
   );
 
@@ -540,24 +588,27 @@ const PhotosAndVideos = (props: any) => {
       <Ripple
         style={{
           ...Styles.addPhotoBtn,
-          marginRight: Rtl ? 0 : wp(6),
-          marginLeft: Rtl ? wp(6) : 0,
+          marginRight: Rtl ? 0 : wp(4),
+          marginLeft: Rtl ? wp(4) : 0,
         }}
         onPress={onAddPublicPrivatePress.bind(null, from)}
       >
-        <Image
-          source={Images.camera}
-          resizeMode="contain"
-          style={Styles.cameraIcon}
-        />
+        <AntDesign name="camerao" size={wp(6.5)} color={Colors.primary} />
+        <Text style={Styles.addPhotoLbl}>{LanguageKeys.addPhoto}</Text>
       </Ripple>
     );
   };
 
-  const RenderList = ({ heading, description, data, from }: any) => {
+  const RenderList = ({ heading, description, data, from, lock }: any) => {
     return (
       <View style={Styles.listOuterCon}>
-        <RenderHeadingDes heading={heading} description={description} />
+        <RenderHeadingDes
+          heading={heading}
+          description={description}
+          count={data?.length ?? 0}
+          max={10}
+          lock={lock}
+        />
         <FlatList
           horizontal
           data={data}
@@ -604,7 +655,7 @@ const PhotosAndVideos = (props: any) => {
     };
     ApiServices.deleteImage(params)
       .then(() => {
-        currentUser.media.primary_image = null;
+        currentUser.primary_image_to_show = null;
         setProfileImage('');
         hideLoader();
         setData(storageKeys.USER, currentUser);
@@ -626,7 +677,7 @@ const PhotosAndVideos = (props: any) => {
   const onProfileDeletePress = () => {
     setButtonPickerVisible({
       visible: true,
-      from: 'primary_image',
+      from: 'primary_image_to_show',
       item: profileImage,
       pickerData: deletePickerData,
       pickerHeaderTitle: LanguageKeys.sureDeleteDes,
@@ -650,43 +701,49 @@ const PhotosAndVideos = (props: any) => {
     });
   };
 
-  const showUploadingLoader = () => {
-    if (imagePicker.from === 'cover_image') {
+  const showUploadingLoader = (key?: string) => {
+    const fromKey = key ?? imagePicker.from;
+    if (fromKey === 'cover_image') {
       setUploadingCoverLoader(true);
-    } else if (imagePicker.from === 'primary_image') {
+    } else if (fromKey === 'primary_image_to_show') {
       setUploadingProfileLoader(true);
     }
   };
 
-  const hideUploadingLoader = () => {
-    if (imagePicker.from === 'cover_image') {
+  const hideUploadingLoader = (key?: string) => {
+    const fromKey = key ?? imagePicker.from;
+    if (fromKey === 'cover_image') {
       setUploadingCoverLoader(false);
-    } else if (imagePicker.from === 'primary_image') {
+    } else if (fromKey === 'primary_image_to_show') {
       setUploadingProfileLoader(false);
     }
   };
 
-  const onImageProfileCoverSelection = (images: any) => {
-    if (images.length !== 0) {
-      ImagePickCrop.openCropper({
-        writeTempFile: true,
-        path: images[0]?.uri,
-        mediaType: images[0]?.type,
-        width: imagePicker.from === 'cover_image' ? 600 : 450,
-        height: imagePicker.from === 'cover_image' ? 300 : 450,
-      })
-        .then((image) => {
-          const resizedImageObj = {
-            height: image?.height,
-            width: image?.width,
-            uri: image?.path,
-            name: image?.path?.split('/')[image?.path?.split('/')?.length - 1],
-            size: image?.size,
-          };
-          onUpoadPicture(resizedImageObj);
-        })
-        .catch(hideUploadingLoader);
+  const onImageProfileCoverSelection = (images: any, fromKey?: string) => {
+    const key = fromKey ?? imagePicker.from;
+    const first = Array.isArray(images) ? images[0] : images;
+    const imagePath = first?.uri ?? first?.path;
+    if (!imagePath) {
+      return;
     }
+    ImagePickCrop.openCropper({
+      writeTempFile: true,
+      path: imagePath,
+      mediaType: 'photo',
+      width: key === 'cover_image' ? 600 : 450,
+      height: key === 'cover_image' ? 300 : 450,
+    })
+      .then((image) => {
+        const resizedImageObj = {
+          height: image?.height,
+          width: image?.width,
+          uri: image?.path,
+          name: image?.path?.split('/')[image?.path?.split('/')?.length - 1],
+          size: image?.size,
+        };
+        onUpoadPicture(resizedImageObj, key);
+      })
+      .catch(() => hideUploadingLoader(key));
   };
 
   const onImagePublicPrivateSelection = (images: any) => {
@@ -812,7 +869,7 @@ const PhotosAndVideos = (props: any) => {
       deleteCoverImage();
     } else if (
       value === 'delete' &&
-      buttonPickerVisible.from === 'primary_image'
+      buttonPickerVisible.from === 'primary_image_to_show'
     ) {
       deleteProfileImage();
     }
@@ -831,6 +888,10 @@ const PhotosAndVideos = (props: any) => {
   };
 
   const onProfileImageLoadEnd = () => {
+    setProfileImageLoader(false);
+  };
+
+  const onProfileImageError = () => {
     setProfileImageLoader(false);
   };
 
@@ -917,60 +978,103 @@ const PhotosAndVideos = (props: any) => {
       <ModalLoader visible={loader.visible} message={loader.message} />
       <Header
         title={LanguageKeys.photosAndVideos}
+        titleVariant="display"
         navigation={props.navigation}
         customConponent={() => (
-          <View style={{ flex: 1 }}>
+          <View
+            style={{
+              ...Styles.headerRight,
+              alignItems: Rtl ? 'flex-start' : 'flex-end',
+            }}
+          >
             <Ripple
-              style={Styles.tooltipWrapper}
+              style={Styles.infoBtn}
               onPress={() => setToolTipVisible(true)}
             >
-              <Image source={Images.infoIcon} style={Styles.infoIcon} />
+              <AntDesign
+                name="infocirlceo"
+                size={wp(5)}
+                color={Colors.primary}
+              />
             </Ripple>
-            <Modal visible={toolTipVisible}>
-              <View style={Styles.modalWrapper}>
-                <Ripple
-                  style={Styles.closeWrapper}
-                  onPress={() => setToolTipVisible(false)}
-                >
-                  <AntDesign name="close" size={wp(6)} color={Colors.color1} />
-                </Ripple>
-                <View style={Styles.tootltipTextWrapper}>
-                  <Image source={Images.quotesIcon} style={Styles.quotesIcon} />
-                  <Text style={Styles.tootltipTitle}>
-                    Honoring Islamic Values
-                  </Text>
-                  <Text style={Styles.tootltipDesc}>
-                    We request you to uphold modesty, inviting blessings and
-                    mercy from Allah. Female profile pictures are blurred by
-                    default. They can decide who gets to see their images.
-                  </Text>
-                  <Text style={Styles.tootltipTitle}>Quranic Versed:</Text>
-                  <Text style={Styles.tootltipText}>
-                    {
-                      "And tell the believing women to lower their gaze and guard their private parts and not expose their adornment except that which (necessarily)... (Qur'an 24:31)"
-                    }
-                  </Text>
-                  <ReactText style={[Styles.tootltipTitle, { marginTop: 30 }]}>
-                    Hadith:
-                  </ReactText>
-                  <Text style={Styles.tootltipText}>
-                    {
-                      'Modesty is part of faith and faith is in Paradise, but obscenity is a part of hardness of the heart and hardness of the heart is in Hell. (Sahih Muslim)'
-                    }
-                  </Text>
-                </View>
-
-                <Button
-                  onPress={() => setToolTipVisible(false)}
-                  buttonStyle={Styles.closeBtn}
-                  text={'Close'}
-                  textStyle={Styles.closeBtnText}
-                />
-              </View>
-            </Modal>
           </View>
         )}
       />
+      <Modal
+        visible={toolTipVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setToolTipVisible(false)}
+      >
+        <View style={Styles.sheetBackdrop}>
+          <Pressable
+            style={Styles.sheetDismissArea}
+            onPress={() => setToolTipVisible(false)}
+          />
+          <View style={Styles.sheet}>
+            <View style={Styles.sheetHandle} />
+            <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
+              <View
+                style={{
+                  ...Styles.sheetOrnament,
+                  alignSelf: Rtl ? 'flex-end' : 'flex-start',
+                }}
+              >
+                <AntDesign name="staro" size={wp(5.5)} color={Colors.primary} />
+              </View>
+              <Text variant="display" style={Styles.sheetTitle}>
+                {LanguageKeys.honoringIslamicValues}
+              </Text>
+              <Text style={Styles.sheetLead}>
+                We request you to uphold modesty, inviting blessings and mercy
+                from Allah. Profile pictures can be blurred for privacy — you
+                decide who gets to see your images.
+              </Text>
+              <View
+                style={{
+                  ...Styles.quoteCard,
+                  ...(Rtl
+                    ? { borderRightWidth: 3, borderRightColor: Colors.primary }
+                    : { borderLeftWidth: 3, borderLeftColor: Colors.primary }),
+                }}
+              >
+                <Text style={Styles.quoteLabel}>
+                  {LanguageKeys.quranicVerse}
+                </Text>
+                <Text style={Styles.quoteText}>
+                  {
+                    '“And tell the believing women to lower their gaze and guard their private parts and not expose their adornment except that which (necessarily) appears…”'
+                  }
+                </Text>
+                <Text style={Styles.quoteSource}>{"— Qur'an 24:31"}</Text>
+              </View>
+              <View
+                style={{
+                  ...Styles.quoteCard,
+                  ...(Rtl
+                    ? { borderRightWidth: 3, borderRightColor: Colors.primary }
+                    : { borderLeftWidth: 3, borderLeftColor: Colors.primary }),
+                }}
+              >
+                <Text style={Styles.quoteLabel}>
+                  {LanguageKeys.hadithLabel}
+                </Text>
+                <Text style={Styles.quoteText}>
+                  {
+                    '“Modesty is part of faith and faith is in Paradise, but obscenity is a part of hardness of the heart and hardness of the heart is in Hell.”'
+                  }
+                </Text>
+                <Text style={Styles.quoteSource}>— Sahih Muslim</Text>
+              </View>
+            </ScrollView>
+            <Button
+              onPress={() => setToolTipVisible(false)}
+              buttonStyle={Styles.understoodBtn}
+              text={LanguageKeys.understood}
+            />
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         contentContainerStyle={Styles.contentContainer}
         showsVerticalScrollIndicator={false}
@@ -1006,11 +1110,36 @@ const PhotosAndVideos = (props: any) => {
             <Text style={Styles.videoVoiceIconText}>My audio</Text>
           </Ripple>
         </View> */}
+        <Ripple
+          style={{
+            ...Styles.valuesBanner,
+            flexDirection: Rtl ? 'row-reverse' : 'row',
+          }}
+          onPress={() => setToolTipVisible(true)}
+        >
+          <View style={{ ...Styles.valuesBannerMark, ...Styles.shadow }}>
+            <AntDesign name="staro" size={wp(4.5)} color={Colors.primary} />
+          </View>
+          <View style={Styles.valuesBannerTxtCon}>
+            <Text style={Styles.valuesBannerTitle}>
+              {LanguageKeys.honoringIslamicValues}
+            </Text>
+            <Text style={Styles.valuesBannerDes}>
+              {LanguageKeys.valuesBannerDes}
+            </Text>
+          </View>
+          <AntDesign
+            name={Rtl ? 'left' : 'right'}
+            size={wp(3.5)}
+            color={Colors.primaryMid}
+          />
+        </Ripple>
         <RenderHeadingDes
           heading={LanguageKeys.profilePhotoHeading}
-          description={LanguageKeys.profilePhotoDes}
+          description={LanguageKeys.profilePhotoShownDes}
         />
         {AddProfilePictureBtn()}
+        <View style={Styles.divider} />
         {/* <View style={{ flexDirection: Rtl ? 'row-reverse' : 'row' }}>
           <IconInput
             label={LanguageKeys.youTubeVideoHeading}
@@ -1031,32 +1160,31 @@ const PhotosAndVideos = (props: any) => {
 
         <RenderList
           heading={LanguageKeys.publicPhotosHeading}
-          description={LanguageKeys.publicPhotosDes}
+          description={LanguageKeys.publicPhotosVisibility}
           data={publicPhotos}
           from={'public_gallery'}
         />
+        <View style={Styles.divider} />
         <RenderList
           heading={LanguageKeys.privatePhotosHeading}
-          description={LanguageKeys.privatePhotosDes}
+          description={LanguageKeys.privatePhotosVisibility}
           data={privatePhotos}
           from={'private_gallery'}
+          lock={true}
         />
       </ScrollView>
       <ImagePicker
         visible={imagePicker.visible}
         from={imagePicker.from}
         onImageSelection={(res: any) => {
+          const fromKey = imagePicker.from;
           hideImagePicker();
-          if (
-            imagePicker.from === 'public_gallery' ||
-            imagePicker.from === 'private_gallery'
-          ) {
+          if (fromKey === 'public_gallery' || fromKey === 'private_gallery') {
             onImagePublicPrivateSelection(res);
           } else {
+            const selection = Array.isArray(res) ? res : res ? [res] : [];
             setTimeout(
-              () => {
-                onImageProfileCoverSelection(res);
-              },
+              () => onImageProfileCoverSelection(selection, fromKey),
               isIOS ? 1000 : 0
             );
           }
@@ -1081,82 +1209,169 @@ const { width } = Dimensions.get('window');
 const Styles = StyleSheet.create({
   contentContainer: {
     flexGrow: 1,
-    paddingBottom: hp(10),
+    paddingBottom: hp(4),
   },
   headingDesCon: {
-    paddingVertical: hp(4),
+    paddingVertical: hp(1.2),
     paddingHorizontal: wp(4),
   },
+  headingRow: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headingTitleCon: {
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  lockIcon: {
+    marginHorizontal: wp(1),
+  },
   heading: {
-    color: Colors.color1,
+    color: Colors.ink,
     fontSize: Typography.medium,
     fontFamily: Fonts.APPFONT_B,
-    lineHeight: wp(5),
+    lineHeight: wp(5.5),
+    includeFontPadding: false,
   },
   description: {
-    color: Colors.color1,
-    fontSize: Typography.medium,
+    color: Colors.muted,
+    fontSize: Typography.small2,
     fontFamily: Fonts.APPFONT_R,
     lineHeight: wp(5),
-    marginTop: hp(0.5),
+    marginTop: hp(0.3),
   },
-  modalWrapper: {
+  countChip: {
+    backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(0.3),
+  },
+  countChipTxt: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    includeFontPadding: false,
+  },
+  headerRight: {
     flex: 1,
-    padding: 10,
-    backgroundColor: Colors.color2,
   },
-  tooltipWrapper: {
-    position: 'absolute',
-    right: 10,
-    top: -15,
-    backgroundColor: Colors.color3,
-    borderRadius: 50,
-    padding: 5,
-  },
-  infoIcon: {
-    width: 25,
-    height: 25,
-  },
-  quotesIcon: {
-    width: 80,
-    height: 80,
-    opacity: 0.3,
-  },
-  tootltipTextWrapper: {
-    flex: 1,
+  infoBtn: {
+    width: wp(9.5),
+    height: wp(9.5),
+    borderRadius: wp(4.75),
+    backgroundColor: Colors.lavender,
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    alignItems: 'center',
   },
-  closeWrapper: {
-    alignSelf: 'flex-end',
-    paddingRight: 15,
-    marginTop: isIOS ? 40 : 2,
-  },
-  tootltipTitle: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    marginTop: 20,
-  },
-  tootltipText: {
-    color: Colors.color1,
-    fontSize: Typography.small3,
-    fontFamily: Fonts.APPFONT_R,
-  },
-  tootltipDesc: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small3,
-    color: Colors.color1,
-  },
-  closeBtn: {
-    backgroundColor: Colors.color2,
+  valuesBanner: {
+    marginHorizontal: wp(4),
+    marginTop: hp(1.5),
+    backgroundColor: Colors.appBg,
     borderWidth: 1,
-    borderColor: Colors.greyRGBA61,
-    marginBottom: hp(2),
-    marginHorizontal: wp(5),
+    borderColor: Colors.hairline,
+    borderRadius: 14,
+    padding: wp(3),
+    alignItems: 'center',
   },
-  closeBtnText: {
-    color: Colors.blackRGBA70,
+  valuesBannerMark: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  valuesBannerTxtCon: {
+    flex: 1,
+    marginHorizontal: wp(3),
+  },
+  valuesBannerTitle: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  valuesBannerDes: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    lineHeight: wp(4.4),
+    marginTop: hp(0.2),
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: Colors.blackRGBA50,
+  },
+  sheetDismissArea: {
+    flex: 1,
+  },
+  sheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    paddingHorizontal: wp(5),
+    paddingTop: hp(1),
+    paddingBottom: hp(3),
+    maxHeight: hp(85),
+  },
+  sheetHandle: {
+    width: wp(10),
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: Colors.hairline,
+    alignSelf: 'center',
+    marginBottom: hp(1.5),
+  },
+  sheetOrnament: {
+    width: wp(11),
+    height: wp(11),
+    borderRadius: wp(5.5),
+    backgroundColor: Colors.appBg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hp(1.2),
+  },
+  sheetTitle: {
+    color: Colors.primary,
+    fontSize: Typography.large,
+    lineHeight: wp(7.5),
+    marginBottom: hp(1),
+  },
+  sheetLead: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    lineHeight: wp(5.5),
+    marginBottom: hp(1.8),
+  },
+  quoteCard: {
+    backgroundColor: Colors.appBg,
+    borderRadius: 12,
+    padding: wp(3.5),
+    marginBottom: hp(1.2),
+  },
+  quoteLabel: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: hp(0.5),
+  },
+  quoteText: {
+    color: Colors.ink,
+    fontFamily: Fonts.DISPLAY_R,
+    fontSize: Typography.small3,
+    lineHeight: wp(6),
+    marginBottom: hp(0.8),
+  },
+  quoteSource: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+  },
+  understoodBtn: {
+    marginTop: hp(1.5),
   },
   italic: { fontStyle: 'italic' },
   coverPhoto: {
@@ -1194,10 +1409,6 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small2,
   },
-  cameraIcon: {
-    width: wp(15),
-    height: hp(6),
-  },
   uploadPhoto: {
     color: Colors.color1,
     fontFamily: Fonts.APPFONT_SB,
@@ -1234,34 +1445,46 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
   },
   addPhotoBtn: {
-    borderRadius: 8,
-    backgroundColor: Colors.color21,
-    width: wp(32),
-    height: hp(17),
+    borderRadius: 14,
+    backgroundColor: Colors.appBg,
+    borderWidth: 1.5,
+    borderColor: Colors.primaryLite,
+    borderStyle: 'dashed',
+    width: wp(22),
+    height: hp(12),
     justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: hp(2),
+    marginVertical: hp(1.5),
+  },
+  addPhotoLbl: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small,
+    marginTop: hp(0.5),
+    alignSelf: 'center',
+    textAlign: 'center',
+    includeFontPadding: false,
   },
   itemOuterCon: {
-    paddingVertical: hp(2),
+    paddingVertical: hp(1.5),
   },
   itemCon: {
-    borderRadius: 8,
-    backgroundColor: Colors.color21,
-    width: wp(32),
-    height: hp(17),
+    borderRadius: 14,
+    backgroundColor: Colors.appBg,
+    width: wp(22),
+    height: hp(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
   upBtnCon: {
     position: 'absolute',
     top: 0,
-    width: wp(36.5),
+    width: wp(26),
   },
   upBtn: {
-    width: width * 0.09,
-    height: width * 0.09 * 1,
-    borderRadius: (width * 0.09 * 1) / 2,
+    width: width * 0.075,
+    height: width * 0.075,
+    borderRadius: (width * 0.075) / 2,
     backgroundColor: Colors.theme,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1269,23 +1492,77 @@ const Styles = StyleSheet.create({
   downBtnCon: {
     position: 'absolute',
     bottom: 0,
-    width: wp(36.5),
+    width: wp(26),
   },
   downBtn: {
-    width: width * 0.09,
-    height: width * 0.09 * 1,
-    borderRadius: (width * 0.09 * 1) / 2,
+    width: width * 0.075,
+    height: width * 0.075,
+    borderRadius: (width * 0.075) / 2,
     backgroundColor: Colors.theme,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addProfilePicBtnCon: {
-    paddingBottom: hp(2),
-  },
-  profileImageCon: {
+  profileRow: {
     paddingHorizontal: wp(4),
+    paddingBottom: hp(1.5),
+    alignItems: 'center',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.hairline,
+    marginHorizontal: wp(4),
+  },
+  profileCircle: {
+    width: wp(20),
+    height: wp(20),
+    borderRadius: wp(10),
+    backgroundColor: Colors.appBg,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  profileCircleEmpty: {
+    borderWidth: 1.5,
+    borderColor: Colors.primaryLite,
+    borderStyle: 'dashed',
+  },
+  profileCircleImg: {
+    width: wp(20),
+    height: wp(20),
+    borderRadius: wp(10),
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    width: wp(6),
+    height: wp(6),
+    borderRadius: wp(3),
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: Colors.surface,
+  },
+  blurCol: {
+    flex: 1,
+    marginHorizontal: wp(4),
+  },
+  blurRow: {
+    alignItems: 'center',
+  },
+  blurLbl: {
+    flex: 1,
+    marginHorizontal: wp(2),
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  blurHint: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    lineHeight: wp(4.4),
+    marginTop: hp(0.6),
   },
   downBtnConProfile: {
     position: 'absolute',
@@ -1336,8 +1613,8 @@ const Styles = StyleSheet.create({
   },
   menuButtonCon: {
     position: 'absolute',
-    top: hp(2),
-    paddingVertical: hp(1),
+    top: hp(1.5),
+    paddingVertical: hp(0.6),
     backgroundColor: Colors.blackRGBA15,
     borderBottomRightRadius: 10,
     borderTopLeftRadius: 10,

@@ -1,6 +1,8 @@
 import moment from 'moment';
 import { Platform } from 'react-native';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Purchases from 'react-native-purchases';
+
+import { usePremiumStore } from '../stores';
 
 const checkEmpty = (value: any) => {
   if (typeof value === 'string') {
@@ -19,7 +21,8 @@ const emailValidation = (email: any) => {
 };
 
 const formatDate = (date: any) => {
-  const inputDate = moment(date);
+  // Parse UTC timestamp from backend and convert to user's local timezone
+  const inputDate = moment.utc(date).local();
   const today = moment();
 
   const yesterday = moment().subtract(1, 'day');
@@ -40,25 +43,51 @@ const formatDate = (date: any) => {
 const capitalize = (str: string) =>
   str?.charAt(0)?.toUpperCase() + str?.slice(1);
 
-const setRevenueCat = async (userID = null) => {
+// Proper Title Case for member names. Handles ALL-CAPS / lowercase values from
+// the DB by lower-casing the remainder of each word. Safe for null/undefined/
+// empty and collapses runs of whitespace. e.g. "HUMMA BUT" -> "Humma But".
+const capitalizeName = (name?: string | null): string => {
+  if (!name) return '';
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+const setRevenueCat = (userID: string | number | null = null) => {
   try {
-    const userIDString = (await JSON.stringify(userID)) || null;
-    if (userIDString) {
-      Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
-      if (Platform.OS === 'ios') {
-        await Purchases.configure({
-          apiKey: 'appl_QVhBMyOFJKhfsiWaYPwcpMFLXQW',
-          appUserID: userIDString,
-        });
-      } else if (Platform.OS === 'android') {
-        await Purchases.configure({
-          apiKey: 'goog_bNKRQVnCPRZBhpImNqqFhIubskO',
-          appUserID: userIDString,
-        });
-      }
+    // m4 fix: was `JSON.stringify(userID)` which produced JSON-quoted strings
+    // (e.g. "123") instead of the raw "123" RevenueCat expects for appUserID.
+    // Affected subscription linking across reinstalls and account switches.
+    if (userID === null || userID === undefined) return;
+    const appUserID = String(userID);
+    if (!appUserID) return;
+
+    // m3 fix: only enable DEBUG-level RC logging in dev. Was always-on,
+    // which polluted production native logs.
+    if (__DEV__) {
+      Purchases.setLogLevel(Purchases.LOG_LEVEL.DEBUG);
     }
+
+    if (Platform.OS === 'ios') {
+      Purchases.configure({
+        apiKey: 'appl_QVhBMyOFJKhfsiWaYPwcpMFLXQW',
+        appUserID,
+      });
+    } else if (Platform.OS === 'android') {
+      Purchases.configure({
+        apiKey: 'goog_bNKRQVnCPRZBhpImNqqFhIubskO',
+        appUserID,
+      });
+    }
+    // Mark RevenueCat as configured and trigger refresh
+    usePremiumStore.getState().setRevenueCatConfigured(true);
+    // Trigger initial refresh after configuration
+    usePremiumStore.getState().refresh();
   } catch (error) {
-    console.error('Error in setRevenueCat:', error);
+    console.warn('RevenueCat configuration failed:', error);
   }
 };
 
@@ -75,6 +104,7 @@ const isIOS = Platform.OS === 'ios';
 
 export {
   capitalize,
+  capitalizeName,
   checkEmpty,
   emailValidation,
   formatDate,

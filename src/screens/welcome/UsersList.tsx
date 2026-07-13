@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -9,87 +9,154 @@ import {
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Animation } from '../../animations';
-import { Text } from '../../components';
+import {
+  LinearGradient,
+  ProfileBadges,
+  ProfilePhotoPlaceholder,
+  Text,
+} from '../../components';
 import { hp, Typography, wp } from '../../global';
-import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { CheckRtl, LanguageKeys } from '../../languages';
+import { Colors, Fonts } from '../../res';
+
+const { width } = Dimensions.get('window');
+const CARD_W = (width - wp(6) - wp(3)) / 2;
+const CARD_H = CARD_W * 1.42;
+
+// Single grid card. Kept as its own component (not an inline renderItem) so it
+// can hold per-card image-error state: a missing OR broken photo falls back to
+// the on-brand monogram placeholder instead of a grey stock silhouette.
+const UserCard = ({ item, rtl, onPress, badgeSurface }: any) => {
+  const [imageError, setImageError] = useState(false);
+
+  const lastOnlineFromCurrentTime = parseInt(
+    moment
+      .duration(moment(new Date()).diff(moment(item?.last_online_at)))
+      .asHours()
+      .toFixed()
+  );
+  const isOnline = lastOnlineFromCurrentTime === 1;
+  const locationText = [item?.city, item?.country].filter(Boolean).join(', ');
+  const fullName = [item?.first_name, item?.last_name]
+    .filter(Boolean)
+    .join(' ');
+  const showImage = Boolean(item?.primary_image_to_show) && !imageError;
+
+  return (
+    <Animation animation="zoomIn" style={Styles.itemContainer}>
+      <Ripple
+        style={Styles.card}
+        rippleColor={Colors.primary}
+        onPress={() => onPress(item)}
+      >
+        {showImage ? (
+          <Image
+            source={{ uri: item?.primary_image_to_show }}
+            resizeMode="cover"
+            style={Styles.userImage}
+            onError={() => setImageError(true)}
+          />
+        ) : (
+          <ProfilePhotoPlaceholder name={fullName} size={wp(16)} rounded />
+        )}
+
+        {isOnline && (
+          <View style={Styles.onlinePill}>
+            <View style={Styles.onlineDot} />
+          </View>
+        )}
+
+        <View style={Styles.badgesContainer}>
+          <ProfileBadges
+            userData={item}
+            iconOnly
+            vertical
+            surface={badgeSurface}
+          />
+        </View>
+
+        <LinearGradient
+          colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.82)']}
+          style={Styles.scrim}
+        >
+          <ReactText
+            style={[Styles.name, { textAlign: rtl ? 'right' : 'left' }]}
+            numberOfLines={1}
+          >
+            {item?.first_name} {item?.last_name}
+            {item?.age ? `, ${item.age}` : ''}
+          </ReactText>
+          {locationText ? (
+            <View
+              style={[
+                Styles.locationRow,
+                { flexDirection: rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <Ionicons
+                name="location-sharp"
+                size={wp(3.2)}
+                color={Colors.whiteRGBA90}
+              />
+              <ReactText
+                style={[Styles.location, { textAlign: rtl ? 'right' : 'left' }]}
+                numberOfLines={1}
+              >
+                {locationText}
+              </ReactText>
+            </View>
+          ) : null}
+        </LinearGradient>
+      </Ripple>
+    </Animation>
+  );
+};
 
 const UsersList = (props: any) => {
-  const { data = [], onLoadMorePress = () => null, optionTab } = props;
+  const {
+    data = [],
+    onLoadMorePress = () => null,
+    optionTab,
+    badgeSurface = 'homeRecommended',
+  } = props;
+  const Rtl = CheckRtl();
+
+  // M9 fix: FlatList's onEndReached fires on mount when the list doesn't fill
+  // the viewport, then keeps firing on scroll. Guard against:
+  //   1. firing when the list is empty (would spam pagination on an empty result)
+  //   2. firing before there's content to scroll past
+  const handleEndReached = () => {
+    if (!data || data.length === 0) return;
+    onLoadMorePress();
+  };
 
   const onUserPress = (item: any) =>
     props.navigation.navigate('UserProfile', {
       userData: item,
     });
 
-  const RenderUsers = ({ item }: any) => {
-    const lastOnlineFromCurrentTime = parseInt(
-      moment
-        .duration(moment(new Date()).diff(moment(item?.last_online_at)))
-        .asHours()
-        .toFixed()
-    );
-
-    return (
-      <Animation animation="zoomIn">
-        <Ripple
-          style={Styles.itemContainer}
-          onPress={onUserPress.bind(null, item)}
-        >
-          <View style={Styles.userImageView}>
-            {/* {item?.is_blur === 1 ? <BlurView /> : null} */}
-            <Image
-              source={
-                item?.media?.primary_image
-                  ? { uri: item?.media?.primary_image }
-                  : Images.userTwo
-              }
-              resizeMode="cover"
-              style={Styles.userImage}
-            />
-            {lastOnlineFromCurrentTime === 1 && (
-              <View style={Styles.onlineStatus} />
-            )}
-            {item?.membership_expiry !== null &&
-              moment(item?.membership_expiry).isAfter(moment()) && (
-                <View style={Styles.premiumBadge}>
-                  <Image
-                    source={Images.membershipWhite}
-                    resizeMode="contain"
-                    style={Styles.premiumBadgeIcon}
-                  />
-                </View>
-              )}
-          </View>
-          <ReactText style={Styles.name} numberOfLines={2}>
-            {item?.first_name} {item?.last_name}, {item?.age}
-          </ReactText>
-          {(item?.city || item?.country) && (
-            <ReactText style={Styles.location} numberOfLines={1}>
-              {item?.city && `${item.city},`} {item?.country}
-            </ReactText>
-          )}
-        </Ripple>
-      </Animation>
-    );
-  };
-
   const renderEmptyList = () => {
     let emptyText = '';
+    let emptyIcon: 'heart-outline' | 'eye-outline' | 'sparkles-outline' =
+      'sparkles-outline';
     switch (optionTab) {
       case 'recommended':
         emptyText = LanguageKeys.noRecommendation;
         break;
       case 'likedByYou':
         emptyText = LanguageKeys.noLiked;
+        emptyIcon = 'heart-outline';
         break;
       case 'likedYou':
         emptyText = LanguageKeys.noLike;
+        emptyIcon = 'heart-outline';
         break;
       case 'visitors':
         emptyText = LanguageKeys.noVisiter;
+        emptyIcon = 'eye-outline';
         break;
       default:
         emptyText = LanguageKeys.noRecommendation;
@@ -97,10 +164,11 @@ const UsersList = (props: any) => {
     }
     return (
       <View style={Styles.emptyListCon}>
-        <Image
-          source={Images.logoWithoutTextBlack}
-          style={Styles.emptyListIcon}
-        />
+        <View style={Styles.emptyIconHalo}>
+          <View style={Styles.emptyIconCircle}>
+            <Ionicons name={emptyIcon} size={wp(7)} color={Colors.primary} />
+          </View>
+        </View>
         <Text style={Styles.emptyListText}>{emptyText}</Text>
       </View>
     );
@@ -109,108 +177,155 @@ const UsersList = (props: any) => {
   return (
     <FlatList
       data={data}
-      renderItem={RenderUsers}
       numColumns={2}
-      showsVerticalScrollIndicator={false}
-      keyExtractor={(item, index) => index.toString()}
-      contentContainerStyle={Styles.container}
-      onEndReached={onLoadMorePress}
+      extraData={data}
+      renderItem={({ item }) => (
+        <UserCard
+          item={item}
+          rtl={Rtl}
+          onPress={onUserPress}
+          badgeSurface={badgeSurface}
+        />
+      )}
       onEndReachedThreshold={0.5}
+      onEndReached={handleEndReached}
       ListEmptyComponent={renderEmptyList}
+      showsVerticalScrollIndicator={false}
+      style={Styles.list}
+      contentContainerStyle={[
+        Styles.container,
+        data.length === 0 && Styles.emptyContent,
+      ]}
+      columnWrapperStyle={Styles.columnWrapper}
+      keyExtractor={(item, index) => `${item?.id}-${index}`}
     />
   );
 };
 
 export default UsersList;
 
-const { width } = Dimensions.get('window');
 const Styles = StyleSheet.create({
   container: {
-    paddingTop: hp(2),
-    alignItems: 'center',
+    paddingHorizontal: wp(3),
+    paddingTop: hp(1.2),
+    paddingBottom: hp(2),
+  },
+  list: {
+    flex: 1,
+  },
+  emptyContent: {
+    flexGrow: 1,
+  },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    marginBottom: hp(1.6),
   },
   itemContainer: {
-    width: wp(45),
-    marginHorizontal: 5.5,
-    marginBottom: hp(2),
-    alignItems: 'center',
-    overflow: 'hidden',
+    width: CARD_W,
   },
-  userImageView: {
-    borderRadius: 5,
-    width: '100%',
-    height: 190,
-    backgroundColor: Colors.color21,
-    justifyContent: 'center',
-    alignItems: 'center',
+  card: {
+    width: CARD_W,
+    height: CARD_H,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: Colors.lavender,
   },
   userImage: {
-    borderRadius: 5,
     width: '100%',
-    height: 190,
+    height: '100%',
   },
-  onlineStatus: {
-    width: width * 0.03,
-    height: width * 0.03 * 1,
-    borderRadius: (width * 0.03 * 1) / 2,
+  onlinePill: {
     position: 'absolute',
-    top: hp(0.5),
-    right: wp(1),
-    zIndex: 1,
-    backgroundColor: Colors.color52,
-  },
-  premiumBadge: {
-    width: width * 0.058,
-    height: width * 0.058 * 1,
-    borderRadius: (width * 0.058 * 1) / 2,
-    backgroundColor: Colors.color47,
+    top: hp(1),
+    right: wp(2.5),
+    width: wp(3.6),
+    height: wp(3.6),
+    borderRadius: wp(1.8),
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    position: 'absolute',
-    bottom: hp(0.7),
-    right: wp(1.4),
+    zIndex: 2,
   },
-  premiumBadgeIcon: {
-    width: 14,
-    height: 14,
+  onlineDot: {
+    width: wp(2.2),
+    height: wp(2.2),
+    borderRadius: wp(1.1),
+    backgroundColor: Colors.verified,
+  },
+  badgesContainer: {
+    position: 'absolute',
+    top: hp(1),
+    left: wp(2.5),
+    zIndex: 2,
+  },
+  scrim: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: wp(2.8),
+    paddingTop: hp(3),
+    paddingBottom: hp(1.4),
+    justifyContent: 'flex-end',
   },
   name: {
-    color: Colors.color1,
+    color: Colors.surface,
     fontFamily: Fonts.APPFONT_SB,
-    fontSize: wp(3),
+    fontSize: Typography.small2,
     includeFontPadding: false,
-    alignSelf: 'center',
-    textAlign: 'center',
-    maxWidth: wp(43),
-    marginTop: 4,
     textTransform: 'capitalize',
   },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1),
+    marginTop: hp(0.3),
+  },
   location: {
-    color: Colors.color1,
+    flex: 1,
+    color: Colors.whiteRGBA90,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: wp(2.6),
+    fontSize: Typography.tiny1,
     includeFontPadding: false,
-    alignSelf: 'center',
-    textAlign: 'center',
-    maxWidth: wp(43),
   },
   emptyListCon: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: hp(20),
+    paddingHorizontal: wp(8),
+    paddingBottom: hp(10),
   },
-  emptyListIcon: {
-    width: 90,
-    height: 77,
-    opacity: 0.2,
+  emptyIconHalo: {
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    backgroundColor: Colors.primaryRGBA12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIconCircle: {
+    width: wp(17),
+    height: wp(17),
+    borderRadius: wp(8.5),
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   emptyListText: {
-    color: Colors.color22,
+    color: Colors.muted,
     includeFontPadding: false,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.medium,
+    fontSize: Typography.small3,
     textAlign: 'center',
-    marginTop: 30,
-    marginHorizontal: 30,
+    lineHeight: wp(5.6),
+    marginTop: hp(2),
+    maxWidth: wp(72),
   },
 });

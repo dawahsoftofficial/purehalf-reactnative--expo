@@ -1,5 +1,3 @@
-import { getApp } from '@react-native-firebase/app';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { CommonActions } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
@@ -9,46 +7,27 @@ import { Button, Container, ModalLoader, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
-import { StorageManager, useGlobalContext } from '../../services';
-
-const firebaseApp = getApp();
-const auth = getAuth(firebaseApp);
+import { cleanupSession, useGlobalContext } from '../../services';
 
 const AccountDeleted = (props: any) => {
-  const { deleteAll, setData, storageKeys } = StorageManager;
   const [loading, setLoading] = useState(false);
   const { updateCurrentUser, language } = useGlobalContext();
 
-  const hideLoader = () => setLoading(false);
-
   const onContinuePress = async () => {
     setLoading(true);
-    try {
-      await signOut(auth);
-      await deleteAll().then(async () => {
-        updateCurrentUser(null);
-        await setData(storageKeys.LANGUAGE, language);
-        hideLoader();
-        props.navigation.dispatch(
-          CommonActions.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
-      });
-    } catch {
-      await deleteAll().then(async () => {
-        updateCurrentUser(null);
-        await setData(storageKeys.LANGUAGE, language);
-        hideLoader();
-        props.navigation.dispatch(
-          CommonActions.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
-      });
-    }
+    // M13 fix: account deletion now uses the same full cleanup as logout —
+    // previously this path only signed out of Firebase and wiped MMKV, leaving
+    // Pusher subscribed, RevenueCat linked, and Zustand stores populated with
+    // the deleted user's data.
+    await cleanupSession({ language });
+    updateCurrentUser(null);
+    setLoading(false);
+    props.navigation.dispatch(
+      CommonActions.reset({
+        index: 1,
+        routes: [{ name: 'AuthWelcome' }],
+      })
+    );
   };
 
   return (

@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -17,6 +16,7 @@ import {
   Container,
   Header,
   ModalLoader,
+  ProfilePhotoPlaceholder,
   Text,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -119,10 +119,12 @@ const BlockedList = (props: any) => {
       ApiServices.interactionAction(params)
         .then(() => {
           flashSuccessMessage(LanguageKeys.unBlocked);
-          _.remove(blockedList, function (n: any) {
-            return userId === n?.id;
-          });
-          setBlockedList(blockedList);
+          // M15 fix: build a new array. Mutating in place and passing the same
+          // reference to setState skipped the re-render, so the unblocked user
+          // stayed visible until the screen was remounted.
+          setBlockedList((prev: any[]) =>
+            (prev || []).filter((n: any) => n?.id !== userId)
+          );
           hideModalLoader();
         })
         .catch(hideLoader);
@@ -151,55 +153,55 @@ const BlockedList = (props: any) => {
 
   const renderBlockedList = ({ item }: any) => {
     const { full_name, city, country } = item;
+    const locationText = [city, country].filter(Boolean).join(', ');
+    const hasLocation = locationText.length > 0;
     return (
-      <View style={Styles.itemCon}>
-        {item?.media?.cover_image ? (
-          <View style={Styles.itemImage}>
-            <Image
-              source={{ uri: item.media.cover_image }}
-              resizeMode="cover"
-              style={Styles.itemImage}
-              onLoadStart={onImageLoadStart}
-              onLoadEnd={onImageLoadEnd}
-            />
-            {imageLoader && (
-              <ActivityIndicator
-                color={Colors.theme}
-                size={wp(5)}
-                style={{ position: 'absolute' }}
+      <View
+        style={[Styles.itemCon, { flexDirection: Rtl ? 'row-reverse' : 'row' }]}
+      >
+        <View style={Styles.avatar}>
+          {item?.primary_image_to_show ? (
+            <>
+              <Image
+                source={{ uri: item?.primary_image_to_show }}
+                resizeMode="cover"
+                style={Styles.avatarImg}
+                onLoadStart={onImageLoadStart}
+                onLoadEnd={onImageLoadEnd}
               />
-            )}
-          </View>
-        ) : (
-          <View style={Styles.itemImage}>
-            <Image source={Images.user} resizeMode="contain" />
-          </View>
-        )}
-        <View
-          style={{
-            ...Styles.itemContentCon,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-          }}
-        >
-          <View style={Styles.itemInnerCon}>
-            <Text style={Styles.itemName} numberOfLines={1}>
-              {full_name}
-            </Text>
-            <Text style={Styles.itemLocation} numberOfLines={1}>
-              {city} , {country}
-            </Text>
-          </View>
-          <Ripple
-            style={Styles.leftDownArrowCon}
-            onPress={onUnblockPress.bind(null, item)}
-          >
-            <Image
-              source={Images.leftDownArrow}
-              resizeMode="contain"
-              style={Styles.leftDownArrow}
-            />
-          </Ripple>
+              {imageLoader && (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size={wp(4)}
+                  style={Styles.avatarLoader}
+                />
+              )}
+            </>
+          ) : (
+            <ProfilePhotoPlaceholder name={full_name} size={AVATAR * 0.5} />
+          )}
         </View>
+        <View
+          style={[
+            Styles.itemInnerCon,
+            { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+          ]}
+        >
+          <Text variant="display" style={Styles.itemName} numberOfLines={1}>
+            {full_name}
+          </Text>
+          {hasLocation && (
+            <Text style={Styles.itemLocation} numberOfLines={1}>
+              {locationText}
+            </Text>
+          )}
+        </View>
+        <Ripple
+          style={Styles.unblockBtn}
+          onPress={onUnblockPress.bind(null, item)}
+        >
+          <Text style={Styles.unblockTxt}>{LanguageKeys.unBlock}</Text>
+        </Ripple>
       </View>
     );
   };
@@ -221,15 +223,19 @@ const BlockedList = (props: any) => {
         source={Images.logoWithoutTextBlack}
         style={Styles.emptyListIcon}
       />
+      <Text variant="display" style={Styles.emptyTitle}>
+        {LanguageKeys.noBlockedTitle}
+      </Text>
       <Text style={Styles.emptyListText}>{LanguageKeys.noBlocked}</Text>
     </View>
   );
 
   return (
-    <Container>
+    <Container style={Styles.screen}>
       <Header
         title={LanguageKeys.blockedContacts}
         navigation={props.navigation}
+        titleVariant="display"
       />
       <ModalLoader
         visible={modalLoader.visible}
@@ -265,72 +271,66 @@ const BlockedList = (props: any) => {
 export default BlockedList;
 
 const { width } = Dimensions.get('window');
+const AVATAR = width * 0.14;
 const Styles = StyleSheet.create({
+  screen: {
+    backgroundColor: Colors.appBg,
+  },
   listContainer: {
     paddingHorizontal: wp(4),
     paddingVertical: hp(2),
   },
   itemCon: {
-    borderTopRightRadius: 4,
-    borderTopLeftRadius: 4,
-    marginBottom: hp(4),
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    padding: wp(3),
+    marginBottom: hp(1.4),
   },
-  itemImage: {
-    width: '100%',
-    height: width * 1 * 0.5,
-    borderTopRightRadius: 4,
-    borderTopLeftRadius: 4,
+  avatar: {
+    width: AVATAR,
+    height: AVATAR,
+    borderRadius: AVATAR / 2,
+    backgroundColor: Colors.lavender,
+    overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color18,
   },
-  itemContentCon: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: hp(1),
-    paddingHorizontal: wp(4),
+  avatarImg: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarLoader: {
+    position: 'absolute',
   },
   itemInnerCon: {
-    maxWidth: wp(70),
+    flex: 1,
+    marginHorizontal: wp(3),
   },
   itemName: {
-    fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium,
-    color: Colors.color1,
-    lineHeight: wp(5.5),
-    maxWidth: wp(70),
+    color: Colors.ink,
+    includeFontPadding: false,
   },
   itemLocation: {
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.medium,
-    color: Colors.color1,
-    lineHeight: wp(5.5),
-    maxWidth: wp(70),
-  },
-  requestedOnView: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  requestedOn: {
-    fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small1,
-    color: Colors.color1,
-    alignSelf: 'center',
-    marginHorizontal: wp(4),
-    lineHeight: wp(5),
+    color: Colors.muted,
+    marginTop: hp(0.2),
   },
-  leftDownArrowCon: {
-    width: width * 0.1,
-    height: width * 1 * 0.1,
-    borderRadius: (width * 1 * 0.1) / 2,
-    backgroundColor: Colors.color17,
-    marginVertical: hp(1),
-    justifyContent: 'center',
-    alignItems: 'center',
+  unblockBtn: {
+    backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    paddingVertical: hp(0.9),
+    paddingHorizontal: wp(4),
   },
-  leftDownArrow: {
-    width: width * 0.05,
-    height: width * 1 * 0.05,
+  unblockTxt: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    color: Colors.primary,
   },
   loader: {
     marginTop: hp(30),
@@ -341,21 +341,29 @@ const Styles = StyleSheet.create({
     height: hp(5),
   },
   emptyListCon: {
-    marginVertical: hp(30),
+    marginVertical: hp(24),
     alignItems: 'center',
   },
   emptyListIcon: {
     width: 90,
     height: 77,
-    opacity: 0.2,
+    opacity: 0.18,
+  },
+  emptyTitle: {
+    fontSize: Typography.medium1,
+    color: Colors.ink,
+    marginTop: 24,
+    textAlign: 'center',
+    alignSelf: 'center',
   },
   emptyListText: {
-    color: Colors.color22,
+    color: Colors.muted,
     includeFontPadding: false,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.medium,
+    fontSize: Typography.small2,
     textAlign: 'center',
-    marginTop: 30,
+    alignSelf: 'center',
+    marginTop: 6,
     marginHorizontal: 30,
   },
 });

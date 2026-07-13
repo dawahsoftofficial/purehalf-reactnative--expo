@@ -73,7 +73,7 @@ const TempData = [
     media: {
       id: 10,
       user_id: 2,
-      primary_image: 'https://api.lorem.space/image/face?w=150&h=150',
+      primary_image_to_show: 'https://api.lorem.space/image/face?w=150&h=150',
       cover_image: 'https://api.lorem.space/image/face?w=150&h=150',
       youtube_url: 'http://tess.ocm',
       private_gallery: [

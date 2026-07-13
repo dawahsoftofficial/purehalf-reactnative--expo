@@ -12,29 +12,33 @@ import type { ScrollView } from 'react-native';
 import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Loader, PremiumButton, Text } from '../../components';
-import { CheckRtl, LanguageKeys } from '../../languages';
+import { Loader, Text } from '../../components';
+import { LanguageKeys } from '../../languages';
 import {
   ApiServices,
-  Firebase,
   flashSuccessMessage,
   StorageManager,
   useGlobalContext,
 } from '../../services';
-import EditInfoCardModal from './EditInfoCardModal';
-import EditInterestCardModal from './EditInterestCardModal';
+import messageServices from '../../services/api/message-services';
+import PolygamyBadge from './components/polygamy-badge';
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
-import InterestAndHobbyCardStatic from './InterestAndHobbyCardStatic';
 import {
   type BlockPickerOption,
   BlockPickerSheet,
   ContentScroll,
   ErrorRetry,
   ScreenLoader,
-  TaglineSection,
 } from './profile-components';
+import {
+  computeCompletion,
+  DetailSectionList,
+  type GroupMeta,
+  InterestsPreview,
+  SectionLabel,
+} from './profile-hub';
 import Styles from './Styles';
 
 type LoaderState = { visible: boolean; message: string };
@@ -54,8 +58,8 @@ type UserDetail = {
   height?: number;
   weight_scale?: string;
   weight?: number;
-  personality_id_value?: unknown;
   gender?: string;
+  open_for_polygamy?: boolean | number | null;
 };
 
 type User = {
@@ -64,13 +68,11 @@ type User = {
   blocked?: number;
   blocked_you?: number;
   match_percentage?: number;
+  is_blur?: boolean;
+  gender?: string;
 };
 
 type Conversation = {
-  convDetails?: {
-    participantsDeleteFlag: Record<string, unknown>;
-    id?: string;
-  };
   id?: string;
 };
 
@@ -81,33 +83,24 @@ type ProfileProps = {
   fromUserProfile?: boolean;
 };
 
-type EditPayload = {
-  data: unknown;
-  from: string;
-};
-
-type EditCardState = {
-  visible: boolean;
-  data: any;
-  from: string;
-};
-
 const Profile = ({
   navigation,
   route,
   userData: propUserData,
   fromUserProfile = false,
 }: ProfileProps) => {
-  const { currentUser, updateCurrentUser, conversations } = useGlobalContext();
+  const { currentUser, updateCurrentUser } = useGlobalContext();
   const scrollViewRef = useRef<ScrollView | null>(null);
-  const Rtl = CheckRtl();
   const isFocused = useIsFocused();
+  const scrollToTarget = route?.params?.scrollTo;
   const [tagLineInputVisible, setTagLineInputVisible] = useState(false);
   const [tagLineInput, setTagLineInput] = useState('');
   const [error, setError] = useState<boolean>(false);
-  const [userConversation, setUserConversation] = useState<Conversation | null>(
-    null
-  );
+  // Existing-conversation detection was dropped with the Firebase RTDB removal.
+  // The interaction-level block (interactionAction) is the real block; the
+  // conversation-pivot block sync below only runs when a conversation id is
+  // known, which no longer happens from the profile screen.
+  const [userConversation] = useState<Conversation | null>(null);
 
   const [loader, setLoader] = useState<LoaderState>({
     visible: true,
@@ -124,26 +117,14 @@ const Profile = ({
 
   const { getData, storageKeys, setData } = StorageManager;
 
-  const [editInfoCard, setEditInfoCard] = useState<EditCardState>({
-    visible: false,
-    data: [],
-    from: '',
-  });
-
-  const [editInterestCard, setEditInterestCard] = useState<EditCardState>({
-    visible: false,
-    data: [],
-    from: '',
-  });
-
   const [userData, setUserData] = useState<User>(
     propUserData ? propUserData : currentUser
   );
+  const profileUserId = userData?.id;
   const [interestAndHobbies, setIinterestAndHobbies] = useState<any[]>([]);
   const [isBlockedByYou, setIsBlockedByYou] = useState(false);
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
-  const [matchingData, setMatchingData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
 
   const blockPickerData: BlockPickerOption[] = useMemo(
@@ -162,45 +143,13 @@ const Profile = ({
   );
 
   const scrollToSection = useCallback(() => {
-    if (route?.params?.scrollTo && scrollViewRef.current) {
+    if (scrollToTarget && scrollViewRef.current) {
       scrollViewRef.current.scrollTo({
-        y: route.params.scrollTo,
+        y: scrollToTarget,
         animated: true,
       });
     }
-  }, [route?.params?.scrollTo]);
-
-  const getUserConversation = useCallback(() => {
-    const conversationData = conversations.filter((element: Conversation) => {
-      const deleteFlag = element.convDetails?.participantsDeleteFlag ?? {};
-      return Object.prototype.hasOwnProperty.call(
-        deleteFlag,
-        JSON.stringify(userData?.id)
-      );
-    });
-    if (conversationData && conversationData.length !== 0) {
-      const conversation = conversationData[0];
-      if (conversation?.convDetails) {
-        setUserConversation(
-          conversation.convDetails as unknown as Conversation
-        );
-      }
-      return;
-    }
-    Firebase.getSingleConversation(currentUser?.id, userData?.id).then(
-      (data: unknown) => {
-        const conversationList = data as Conversation[];
-        if (conversationList && conversationList.length !== 0) {
-          const firstConv = conversationList[0];
-          if (firstConv?.convDetails) {
-            setUserConversation(
-              firstConv.convDetails as unknown as Conversation
-            );
-          }
-        }
-      }
-    );
-  }, [conversations, currentUser?.id, userData?.id]);
+  }, [scrollToTarget]);
 
   useEffect(() => {
     scrollToSection();
@@ -208,21 +157,42 @@ const Profile = ({
 
   useFocusEffect(
     React.useCallback(() => {
-      if (userData?.id !== currentUser?.id) {
-        ApiServices.getUserDetail(userData?.id).then((res) => {
+      if (profileUserId !== currentUser?.id) {
+        ApiServices.getUserDetail(profileUserId).then((res) => {
           setUserData(res as User);
         });
       }
-    }, [currentUser?.id, userData?.id])
+    }, [currentUser?.id, profileUserId])
   );
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (fromUserProfile) {
-        getUserConversation();
-      }
-    }, [fromUserProfile, getUserConversation])
-  );
+  // Sync userData with currentUser when viewing own profile for immediate updates
+  useEffect(() => {
+    if (
+      !fromUserProfile &&
+      currentUser?.id === profileUserId &&
+      currentUser?.detail
+    ) {
+      const timeout = setTimeout(() => {
+        setUserData((prevUserData) => ({
+          ...prevUserData,
+          detail: currentUser.detail,
+          is_blur: currentUser.is_blur,
+        }));
+        if (currentUser?.detail?.tagline) {
+          setTagLineInput(currentUser.detail.tagline);
+        }
+      }, 0);
+
+      return () => clearTimeout(timeout);
+    }
+    return undefined;
+  }, [
+    currentUser?.detail,
+    currentUser?.id,
+    currentUser?.is_blur,
+    fromUserProfile,
+    profileUserId,
+  ]);
 
   const hideButtonPicker = useCallback(() => {
     setButtonPickerVisible({
@@ -234,37 +204,19 @@ const Profile = ({
     });
   }, []);
 
-  const closeEditInfoCard = useCallback(() => {
-    setEditInfoCard({
-      visible: false,
-      data: [],
-      from: '',
-    });
-  }, []);
+  const onOpenGroup = useCallback(
+    (group: GroupMeta) => {
+      navigation.navigate('EditProfileGroup', {
+        title: group.title,
+        data: categoriesData?.[group.key] ?? [],
+      });
+    },
+    [navigation, categoriesData]
+  );
 
-  const onInfoCardEdit = ({ data, from }: EditPayload) => {
-    setEditInfoCard({
-      visible: true,
-      data: data,
-      from: from,
-    });
-  };
-
-  const closeEditInterestCard = useCallback(() => {
-    setEditInterestCard({
-      visible: false,
-      data: [],
-      from: '',
-    });
-  }, []);
-
-  const onInterestCardEdit = ({ data, from }: EditPayload) => {
-    setEditInterestCard({
-      visible: true,
-      data: data,
-      from: from,
-    });
-  };
+  const onEditInterests = useCallback(() => {
+    navigation.navigate('EditInterests', { data: interestAndHobbies });
+  }, [navigation, interestAndHobbies]);
 
   const getAttribute = useCallback(
     (Data: any, nextUserData: User) => {
@@ -337,6 +289,7 @@ const Profile = ({
             });
             catData[child] = Data[child];
           }
+          console.log('catData', catData);
           setCategoriesData(catData);
           setDataLoader(false);
         }
@@ -344,6 +297,13 @@ const Profile = ({
     },
     [getData, storageKeys.ATTRIBUTE]
   );
+
+  const hideLoader = useCallback(() => {
+    setLoader({
+      visible: false,
+      message: '',
+    });
+  }, []);
 
   const fetchData = useCallback(async () => {
     const data = await getData(storageKeys.PROFILE_DETAIL_LOCAL);
@@ -355,14 +315,13 @@ const Profile = ({
             visible: true,
             message: LanguageKeys.loading,
           });
-          const user = (await ApiServices.getUserDetail(userData?.id)) as User;
+          const user = (await ApiServices.getUserDetail(profileUserId)) as User;
           setUserData(user);
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
           setIsBlockedByYou(user?.blocked === 1);
           setIsBlockedYou(user?.blocked_you === 1);
-          setMatchingData(user?.detail?.personality_id_value);
           if (user?.blocked_you !== 1) {
             getAttribute(data, user);
           } else {
@@ -379,7 +338,13 @@ const Profile = ({
             visible: true,
             message: LanguageKeys.loading,
           });
-          const user = (await ApiServices.getCurrentUserDetail()) as User;
+          const userData = await ApiServices.getCurrentUserDetail();
+          const user: User = {
+            ...userData,
+            is_blur: userData.is_blur === 1,
+            detail: userData.detail ?? undefined,
+            match_percentage: userData.match_percentage ?? undefined,
+          };
           setUserData(user);
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
@@ -398,12 +363,17 @@ const Profile = ({
     fromUserProfile,
     getAttribute,
     getData,
+    hideLoader,
+    profileUserId,
     storageKeys.PROFILE_DETAIL_LOCAL,
-    userData?.id,
   ]);
 
   useEffect(() => {
-    fetchData();
+    const timeout = setTimeout(() => {
+      void fetchData();
+    }, 0);
+
+    return () => clearTimeout(timeout);
   }, [fetchData, isFocused]);
 
   const onBlockPress = useCallback(() => {
@@ -430,13 +400,6 @@ const Profile = ({
     });
   };
 
-  const hideLoader = () => {
-    setLoader({
-      visible: false,
-      message: '',
-    });
-  };
-
   const onButtonPickerButtonPress = (item: BlockPickerOption) => {
     hideButtonPicker();
     const { value } = item;
@@ -454,19 +417,23 @@ const Profile = ({
       };
       ApiServices.interactionAction(params)
         .then(() => {
-          Firebase.blockUnBlockConv(
-            userConversation?.id,
-            userData?.id,
-            !isBlockedByYou
-          )
-            .then(() => {
-              flashSuccessMessage(
-                !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-              );
-            })
-            .catch();
+          // Keep the REST conversation pivot (the gate sendMessage() actually
+          // checks) in sync with the interaction-level block. Replaces the
+          // legacy Firebase RTDB block flag, which never touched the pivot.
+          const willBlock = !isBlockedByYou;
+          const convId = Number(userConversation?.id);
+          const targetId = Number(userData?.id);
+          if (convId && targetId) {
+            (willBlock
+              ? messageServices.blockConversationParticipant(convId, targetId)
+              : messageServices.unblockConversationParticipant(convId, targetId)
+            ).catch(() => {});
+          }
+          flashSuccessMessage(
+            willBlock ? LanguageKeys.blocked : LanguageKeys.unBlocked
+          );
           const nextUser = { ...userData, blocked: value === 'block' ? 1 : 0 };
-          setIsBlockedByYou(!isBlockedByYou);
+          setIsBlockedByYou(willBlock);
           setUserData(nextUser as User);
           hideLoader();
         })
@@ -485,19 +452,18 @@ const Profile = ({
       };
       ApiServices.interactionAction(params)
         .then(() => {
-          Firebase.blockUnBlockConv(
-            userConversation?.id,
-            userData?.id,
-            !isBlockedByYou
-          )
-            .then(() => {
-              flashSuccessMessage(
-                !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-              );
-            })
-            .catch();
+          // Block-and-report is always a block action; mirror it onto the REST
+          // conversation pivot so chat delivery is actually gated.
+          const convId = Number(userConversation?.id);
+          const targetId = Number(userData?.id);
+          if (convId && targetId) {
+            messageServices
+              .blockConversationParticipant(convId, targetId)
+              .catch(() => {});
+          }
+          flashSuccessMessage(LanguageKeys.blocked);
           const nextUser = { ...userData, blocked: 1 };
-          setIsBlockedByYou(!isBlockedByYou);
+          setIsBlockedByYou(true);
           setUserData(nextUser as User);
           hideLoader();
         })
@@ -534,7 +500,7 @@ const Profile = ({
   return (
     <SafeAreaView style={Styles.container}>
       <ScreenLoader visible={loader.visible} message={loader.message} />
-      {currentUser?.membership_status === 0 && <PremiumButton />}
+      {/* {currentUser?.membership_status === 0 && <PremiumButton />} */}
       <View style={{ flex: 1 }}>
         <ContentScroll scrollRef={scrollViewRef}>
           <Header
@@ -544,89 +510,89 @@ const Profile = ({
             onBlockPress={onBlockPress}
             onLikeUnlikePress={onLikeUnlikePress}
             isBlockedYou={isBlockedYou}
+            profileStrength={
+              isOwnProfile
+                ? computeCompletion({
+                    categoriesData,
+                    interests: interestAndHobbies,
+                    tagline: userData?.detail?.tagline,
+                    gender: userData?.detail?.gender ?? userData?.gender,
+                  })
+                : undefined
+            }
+            tagline={userData?.detail?.tagline}
+            taglineEditing={tagLineInputVisible}
+            taglineInput={tagLineInput}
+            onTaglineChange={onChangeTagLine}
+            onTaglineSubmit={onTagLineSubmit}
+            onTaglineEditPress={showTagLineInput}
+            onTaglineCancel={hideTagLineInput}
           />
-          {/* {
-                        fromUserProfile &&
-                        <View style={{ marginBottom: hp(5) }} />
-                    } */}
           {isBlockedYou ? (
             <Text style={Styles.userNotAvailDes}>
               {LanguageKeys.userBlockedYouDes}
             </Text>
           ) : (
             <>
-              <TaglineSection
-                rtl={Rtl}
-                tagline={userData?.detail?.tagline}
-                isEditing={tagLineInputVisible}
-                inputValue={tagLineInput}
-                onChange={onChangeTagLine}
-                onSubmit={onTagLineSubmit}
-                onEditPress={showTagLineInput}
-                onCancel={hideTagLineInput}
-                isOwnProfile={isOwnProfile}
-              />
               {dataLoader ? (
                 <Loader />
               ) : (
                 <View>
                   {error ? (
                     <ErrorRetry onRetry={fetchData} />
+                  ) : isOwnProfile ? (
+                    <>
+                      <SectionLabel label={LanguageKeys.aboutSectionLabel} />
+                      <InterestsPreview
+                        interests={interestAndHobbies}
+                        onEdit={onEditInterests}
+                      />
+                      <SectionLabel label={LanguageKeys.profileDetailsLabel} />
+                      <DetailSectionList
+                        categoriesData={categoriesData}
+                        gender={userData?.detail?.gender ?? userData?.gender}
+                        onOpenGroup={onOpenGroup}
+                      />
+                      <View style={{ height: 28 }} />
+                    </>
                   ) : (
                     <>
-                      <InterestAndHobbyCardStatic
-                        data={matchingData}
-                        headerHeading={LanguageKeys.matching}
-                        fromUserProfile={fromUserProfile}
-                        matchPercentage={userData?.match_percentage}
-                      />
+                      {userData?.detail?.open_for_polygamy ? (
+                        <PolygamyBadge />
+                      ) : null}
                       <InterestAndHobbyCard
                         data={interestAndHobbies}
                         headerHeading={LanguageKeys.myInterestAndHobbies}
-                        onEditPress={onInterestCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.appearanceAndHealth}
                         headerHeading={LanguageKeys.appearanceHealth}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.familyBackground}
                         headerHeading={LanguageKeys.familyBackground}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.lifeStyle}
                         headerHeading={LanguageKeys.lifeStyle}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.personalityRequirements}
                         headerHeading={LanguageKeys.personalityRequirements}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
-                      />
-                      <InfoCard
-                        data={categoriesData?.waliInformation}
-                        headerHeading={LanguageKeys.waliInformation}
-                        onEditPress={onInfoCardEdit}
-                        fromUserProfile={fromUserProfile}
-                        from={'waliInformation'}
                       />
                       <InfoCard
                         data={categoriesData?.islamicValues}
                         headerHeading={LanguageKeys.islamicValues}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                       />
                       <InfoCard
                         data={categoriesData?.futurePlan}
                         headerHeading={LanguageKeys.futurePlans}
-                        onEditPress={onInfoCardEdit}
                         fromUserProfile={fromUserProfile}
                         userData={{ gender: userData?.detail?.gender }}
                       />
@@ -637,13 +603,6 @@ const Profile = ({
             </>
           )}
         </ContentScroll>
-
-        <EditInfoCardModal details={editInfoCard} onClose={closeEditInfoCard} />
-        <EditInterestCardModal
-          fetchData={fetchData}
-          details={editInterestCard}
-          onClose={closeEditInterestCard}
-        />
       </View>
 
       <BlockPickerSheet

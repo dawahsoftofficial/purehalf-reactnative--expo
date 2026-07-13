@@ -4,19 +4,21 @@ import { StyleSheet, View } from 'react-native';
 import { AlertContainer, Button, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts } from '../../res';
+import { Colors } from '../../res';
 
 const ConfirmAlert = (props: any) => {
   const { visible = false, onClose = () => null, onPress = () => null } = props;
   return (
     <AlertContainer visible={visible} onClose={onClose}>
-      <Text style={Styles.heading}>{LanguageKeys.saveSearchSureAlert}</Text>
+      <Text variant="display" style={Styles.heading}>
+        {LanguageKeys.saveSearchSureAlert}
+      </Text>
       <View style={Styles.btnsCon}>
         <Button
+          variant="outline"
           text={LanguageKeys.cancel}
-          buttonStyle={{ ...Styles.btn, backgroundColor: Colors.color8 }}
+          buttonStyle={Styles.btn}
           onPress={onClose}
-          textStyle={{ color: Colors.color1, fontFamily: Fonts.APPFONT_R }}
         />
         <Button
           text={LanguageKeys.yes}
@@ -32,22 +34,23 @@ export default ConfirmAlert;
 
 const Styles = StyleSheet.create({
   heading: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    color: Colors.color1,
+    fontSize: Typography.medium1,
+    color: Colors.ink,
     includeFontPadding: false,
     alignSelf: 'center',
+    textAlign: 'center',
   },
   btn: {
     marginTop: hp(3),
-    marginBottom: hp(2),
-    width: wp(25),
+    marginBottom: hp(1),
+    flex: 1,
+    marginHorizontal: wp(1.5),
   },
   btnsCon: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: wp(15),
+    paddingHorizontal: wp(6),
     paddingTop: hp(1),
   },
 });

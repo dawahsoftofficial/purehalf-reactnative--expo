@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -6,7 +5,6 @@ import {
   Image,
   ImageBackground,
   Linking,
-  LogBox,
   StatusBar,
   StyleSheet,
   Text as RText,
@@ -30,7 +28,6 @@ import {
 import PaymentMethodList from './PaymentMethodList';
 
 const DiscountProFeaturesPromotion = (props: any) => {
-  LogBox.ignoreAllLogs(true);
   const Rtl = CheckRtl();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
@@ -74,7 +71,9 @@ const DiscountProFeaturesPromotion = (props: any) => {
 
   useEffect(() => {
     const getTime = async () => {
-      const membershipTime = await AsyncStorage.getItem('membership_discount');
+      const membershipTime = StorageManager.getString(
+        StorageManager.storageKeys.MEMBERSHIP_DISCOUNT
+      );
       if (membershipTime) {
         const storedTime = parseInt(membershipTime, 10);
         const currentTime = Date.now();

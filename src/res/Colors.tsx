@@ -1,11 +1,11 @@
 const Colors = {
-  theme: '#66298E',
-  themeLight: '#F5F5F5',
+  theme: '#4B2E83',
+  themeLight: '#F6F5FA',
   color1: '#000',
   color2: '#fff',
   color3: '#F9F9F9',
   color4: '#656565',
-  color5: '#620A8E',
+  color5: '#5A3B93',
   color6: '#FFD81459',
   color7: '#F2F2F2',
   color8: '#E8E8E8',
@@ -58,13 +58,14 @@ const Colors = {
   color55: '#059688',
   color56: '#fafafa',
   color57: '#ede9cd',
-  color58: '#FEEBFF',
-  color59: '#CF9FFF',
+  color58: '#ECE9F6',
+  color59: '#9B84C9',
   color60: '#D34836',
   color61: '#eceae4',
 
   whiteRGBA18: 'rgba(255,255,255,0.18)',
   whiteRGBA10: 'rgba(255,255,255,0.1)',
+  whiteRGBA30: 'rgba(255,255,255,0.30)',
   whiteRGBA90: 'rgba(255,255,255,0.9)',
   blackRGBA25: 'rgba(0,0,0,0.25)',
   blackRGBA38: 'rgba(0,0,0,0.38)',
@@ -75,10 +76,25 @@ const Colors = {
   greyRGBA61: 'rgba(61, 61, 61, .85)',
   blackRGBA15: 'rgba(0,0,0,0.15)',
   blackRGBA0: 'rgba(0, 0, 0, 0)',
-  themeRGBA50: 'rgba(142, 7, 152, 0.5)',
-  themeRGBA20: 'rgba(142, 7, 152, 0.2)',
+  themeRGBA50: 'rgba(75, 46, 131, 0.5)',
+  themeRGBA20: 'rgba(75, 46, 131, 0.2)',
   randomRGBA70: 'rgba(143,188,143,0.7)',
   random1RGBA50: 'rgba(178,34,34,0.5)',
+
+  // --- Brand refresh semantic tokens (deeper · cooler · neutral) ---
+  primary: '#4B2E83', // deep cool violet — CTAs, active states
+  primaryPress: '#3A2266', // pressed / darker
+  primaryMid: '#6E51A8', // accents, links, icons
+  primaryLite: '#9B84C9', // borders, inactive icons
+  lavender: '#ECE9F6', // pills, soft fills, avatar bg
+  ink: '#241A38', // headings / primary text (cool near-black)
+  muted: '#6B6478', // secondary text
+  hairline: '#E4E0EE', // dividers, input borders
+  surface: '#FFFFFF', // cards
+  appBg: '#F6F5FA', // app background
+  verified: '#2E9E5B', // success / verified
+  primaryRGBA12: 'rgba(75, 46, 131, 0.12)', // focus ring / faint wash
+  attention: '#D34836', // urgent accent — draws the eye (e.g. eligible gift)
 };
 
 export default Colors;

@@ -30,23 +30,61 @@ if (!isIOS) {
 }
 
 const onMessageReceived = async (message) => {
-  const { title, body, pressAction } = message.data;
+  const { title, body, pressAction } = message.data || {};
+
+  // Parse nested data field - handle double-stringified JSON
   let data = {};
   if (message?.data?.data) {
-    data = JSON.parse(message?.data?.data);
+    try {
+      const dataString = message.data.data;
+      // Check if it's a string that needs parsing
+      if (typeof dataString === 'string') {
+        // Try parsing once - if it's still a string, parse again (double-stringified)
+        let parsed = JSON.parse(dataString);
+        if (typeof parsed === 'string') {
+          // Double-stringified, parse again
+          parsed = JSON.parse(parsed);
+        }
+        // Ensure parsed result is an object
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          data = parsed;
+        }
+      } else if (dataString && typeof dataString === 'object') {
+        // Already an object
+        data = dataString;
+      }
+    } catch (error) {
+      console.error(
+        '[onMessageReceived] Error parsing notification data:',
+        error
+      );
+      // Keep data as empty object if parsing fails
+      data = {};
+    }
   }
-  data.pressAction = pressAction;
+
+  // Ensure data is always an object (notifee requirement)
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    data = {};
+  }
+
+  // Add pressAction to data object
+  if (pressAction) {
+    data.pressAction = pressAction;
+  }
+
   await notifee.displayNotification({
-    title: `${title} ${pressAction === 'openChat' ? '💬' : pressAction === 'my_liked_you_tab' ? '👍' : ''}`,
-    body: body,
+    title: `${title || ''} ${pressAction === 'openChat' ? '💬' : pressAction === 'my_liked_you_tab' ? '👍' : ''}`,
+    body: body || '',
     data: data,
     android: {
       channelId: 'default',
       pressAction: {
-        id: pressAction,
+        id: pressAction || 'default',
         launchActivity: 'default',
       },
-      smallIcon: 'icon',
+      // Use ic_notification drawable (references monochrome icon for proper notification display)
+      smallIcon: 'ic_launcher',
       largeIcon: data?.user?.image ? data?.user?.image : Images.userTwo,
       circularLargeIcon: true,
       vibrate: true,

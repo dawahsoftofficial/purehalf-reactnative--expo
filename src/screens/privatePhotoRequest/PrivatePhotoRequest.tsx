@@ -27,14 +27,16 @@ const RenderTopBarButton = ({
     style={{
       ...Styles.topBarBtn,
       backgroundColor:
-        selectedTopBarBtn === btnType ? Colors.theme : Colors.color2,
+        selectedTopBarBtn === btnType ? Colors.theme : 'transparent',
     }}
     onPress={() => onTopBarPress(btnType)}
   >
     <Text
       style={{
         ...Styles.topBarBtnTxt,
-        color: selectedTopBarBtn === btnType ? Colors.color2 : Colors.color1,
+        fontFamily:
+          selectedTopBarBtn === btnType ? Fonts.APPFONT_SB : Fonts.APPFONT_R,
+        color: selectedTopBarBtn === btnType ? Colors.color2 : Colors.ink,
       }}
     >
       {label}
@@ -117,8 +119,12 @@ const PrivatePhotoRequest = (props: any) => {
   };
 
   return (
-    <Container>
-      <Header title="Private Photo request" navigation={props.navigation} />
+    <Container style={Styles.screen}>
+      <Header
+        title="Private Photo request"
+        navigation={props.navigation}
+        titleVariant="display"
+      />
       <View style={Styles.container}>
         <View style={Styles.topBarContainer}>
           <RenderTopBarButton
@@ -161,29 +167,32 @@ export default PrivatePhotoRequest;
 const { width } = Dimensions.get('window');
 
 const Styles = StyleSheet.create({
+  screen: {
+    backgroundColor: Colors.appBg,
+  },
   container: {
     paddingHorizontal: wp(4),
   },
   topBarContainer: {
-    marginVertical: hp(1),
+    marginVertical: hp(1.5),
     borderRadius: 30,
-    paddingVertical: hp(1),
-    backgroundColor: Colors.color13,
+    padding: wp(1.2),
+    backgroundColor: Colors.lavender,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   topBarBtn: {
-    width: wp(40),
+    width: wp(43),
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 30,
-    paddingVertical: hp(0.3),
-    backgroundColor: Colors.color2,
-    marginHorizontal: wp(2),
+    paddingVertical: hp(0.9),
+    backgroundColor: 'transparent',
+    marginHorizontal: wp(1),
   },
   topBarBtnTxt: {
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small1,
     marginBottom: Constants.fontFamilyMarginBottom,

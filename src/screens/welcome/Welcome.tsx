@@ -1,47 +1,59 @@
 import notifee from '@notifee/react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import moment from 'moment';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
-import type { TextStyle, ViewStyle } from 'react-native';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Modal from 'react-native-modal';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import Entypo from 'react-native-vector-icons/Entypo';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+} from 'react-native-popup-menu';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+import { usePremiumStore, useSettingsStore, useUserStatsStore } from '@/stores';
 
 import {
   CheckMembershipStatus,
   Container,
   Loader,
   ModalLoader,
+  PurchaseSuccessModal,
   Swiper,
+  Text as AppText,
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { CommonActions } from '../../navigation';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
+  flashErrorMessage,
   flashSuccessMessage,
   isIOS,
   StorageManager,
   useGlobalContext,
 } from '../../services';
+import { presentBoostProfilePaywall } from '../../services/paywall-service';
+import GiftClaimModal from '../profile/components/gift-claim-modal';
+import Wiggle from '../profile/components/wiggle';
+import { buildUpdatedUserAfterGiftClaim } from '../profile/gift-claim-outcome';
+import { computeGiftStatus } from '../profile/gift-status';
+import { RecommendationHeart } from './components';
+import DailyVipRewardModal, {
+  type DailyVipReward,
+} from './components/daily-vip-reward-modal';
 import OptionsBar from './OptionsBar';
 import PremiumButton from './PremiumButton';
 import PrivatePhotoAccessBtn from './PrivatePhotoAccessBtn';
-import RecommendationButton from './RecommendationButton';
 import UsersList from './UsersList';
 
 type OptionButton = {
@@ -55,11 +67,6 @@ type ProfileProgressItem = {
   navigation: string;
   scrollTo?: number;
   completed: boolean;
-};
-
-type UserStats = {
-  photo_requested_you_counter?: number;
-  [key: string]: unknown;
 };
 
 type WelcomeRouteParams = {
@@ -76,12 +83,13 @@ const sortByCompletion = (
   b: ProfileProgressItem
 ): number => Number(b.completed) - Number(a.completed);
 
-const { width } = Dimensions.get('window');
-
 // Module-level flag to prevent multiple initial fetches across remounts
 let hasInitializedUsers = false;
+let dailyRewardPromptedFor: string | null = null;
 
 const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
+  const { t } = useTranslation();
+  const Rtl = CheckRtl();
   const optionBarList = useMemo<OptionButton[]>(
     () => [
       {
@@ -106,12 +114,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const profileProgressTemplate = useMemo<ProfileProgressItem[]>(
     () => [
-      {
-        label: LanguageKeys.profileImage,
-        id: 'primary_image',
-        navigation: 'PhotosAndVideos',
-        completed: false,
-      },
+      // {
+      //   label: LanguageKeys.profileImage,
+      //   id: 'primary_image_to_show',
+      //   navigation: 'PhotosAndVideos',
+      //   completed: false,
+      // },
       // Currently not entertaining cover photo
       // {
       //   label: LanguageKeys.coverImage,
@@ -179,35 +187,218 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     []
   );
 
-  const { t } = useTranslation();
-  const Rtl = CheckRtl();
+  const { loaded, isPremium } = usePremiumStore();
+  const isPremiumUser = isPremium();
+  const accountMenuItems = [
+    {
+      label: t(LanguageKeys.viewProfile),
+      icon: 'person-outline',
+      screen: 'Profile',
+    },
+    {
+      label: t(LanguageKeys.myPhotos),
+      icon: 'images-outline',
+      screen: 'PhotosAndVideos',
+    },
+    {
+      label: t(LanguageKeys.membershipInformation),
+      icon: 'diamond-outline',
+      screen: 'MembershipInfo',
+    },
+    {
+      label: t(LanguageKeys.generalSettings),
+      icon: 'settings-outline',
+      screen: 'Settings',
+    },
+  ];
+
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, getData, storageKeys } = StorageManager;
   const [loader, setLoader] = useState(true);
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
   const [modalLoader, setModalLoader] = useState(false);
-  const [userStats, setUserStats] = useState<UserStats>({});
+  // Get user stats from Pusher store (updated via counterUpdate events)
+  const { like_count, visit_count, photo_request_count } = useUserStatsStore();
   const [activeOptionButton, setActiveOptionButton] = useState<OptionButton>(
     optionBarList[0]
   );
   const [optionTab, setOptionTab] = useState<string>('');
   const [usersList, setUsersList] = useState<any[]>([]);
   const [userListPage, setUserListPage] = useState(1);
-  console.log('userListPage', userListPage);
+
   const [recommendationModal, setRecommendationModal] =
     useState<boolean>(false);
-  const [headerModal, setHeaderModal] = useState<boolean>(false);
+  const [boostSuccessModalVisible, setBoostSuccessModalVisible] =
+    useState<boolean>(false);
+  const [isBoostLoading, setIsBoostLoading] = useState<boolean>(false);
   const [profileCompleteProgress, setProfileCompleteProgress] = useState<
     ProfileProgressItem[]
   >(() => profileProgressTemplate.map((item) => ({ ...item })));
   const [showRecommendationModal, setShowRecommendationModal] =
     useState<boolean>(false);
+  const dailyRecommendations = useSettingsStore().getDailyRecommendations();
+  const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
+  const profileIncomplete =
+    profileCompleteProgress.length > 0 &&
+    profileCompleteProgress.filter((i) => i.completed).length <
+      profileCompleteProgress.length;
 
+  const giftThreshold =
+    useSettingsStore().getProfileCompletionThresholdPercent();
+  const giftCreditsAmount =
+    useSettingsStore().getProfileCompletionGiftCredits();
+  const giftStatus = useMemo(
+    () => computeGiftStatus(currentUser, giftThreshold),
+    [currentUser, giftThreshold]
+  );
+  const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [dailyReward, setDailyReward] = useState<DailyVipReward | null>(null);
+  const [dailyRewardVisible, setDailyRewardVisible] = useState(false);
+  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
+  const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+
+  // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
+  // so callers cast at the call site — same idiom used by OnboardingProfile
+  // and Header for this exact endpoint.
+  const claimGift = useCallback(
+    () =>
+      ApiServices.claimProfileGift() as unknown as Promise<{
+        status: string;
+        awarded: number;
+        new_balance: number;
+        multiplier: number;
+      }>,
+    []
+  );
+
+  const onGiftClaimed = useCallback(
+    (result: any) => {
+      // GiftClaimModal shows its own confetti/"You earned" celebration
+      // before calling this (for a fresh claim) or hands off immediately
+      // (for an already-claimed race) — either way, no separate toast here,
+      // just persisting the result on currentUser.
+      setGiftModalVisible(false);
+      const updatedUser = buildUpdatedUserAfterGiftClaim(currentUser, result);
+      setData(storageKeys.USER, updatedUser);
+      updateCurrentUser(updatedUser);
+    },
+    [currentUser, setData, storageKeys.USER, updateCurrentUser]
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!currentUser?.id) return;
+
+      let active = true;
+      ApiServices.getDailyChatCreditReward()
+        .then((result: any) => {
+          if (!active || !result?.available) return;
+
+          const promptKey = `${currentUser.id}:${currentUser.last_chat_credit_collected_at ?? 'never'}:${result.eligible_days}`;
+          setDailyReward(result as DailyVipReward);
+          if (dailyRewardPromptedFor !== promptKey) {
+            dailyRewardPromptedFor = promptKey;
+            setRecommendationModal(false);
+            setDailyRewardVisible(true);
+          }
+        })
+        .catch(() => {
+          // A reward popup is celebratory, not a reason to block the home feed.
+        });
+
+      return () => {
+        active = false;
+      };
+    }, [currentUser?.id, currentUser?.last_chat_credit_collected_at])
+  );
+
+  const claimDailyReward = useCallback(
+    () =>
+      ApiServices.collectChatCredits() as unknown as Promise<{
+        user: any;
+        reward: DailyVipReward;
+      }>,
+    []
+  );
+
+  const onDailyRewardClaimed = useCallback(
+    (result: { user: any; reward: DailyVipReward }) => {
+      setDailyRewardVisible(false);
+      setDailyReward(null);
+      if (result.user) {
+        updateCurrentUser(result.user);
+        setData(storageKeys.USER, result.user);
+      }
+    },
+    [setData, storageKeys.USER, updateCurrentUser]
+  );
+
+  // Check if recommendation modal should be shown based on daily
+  // recommendations settings. The time-window check alone isn't enough --
+  // it used to show the heart/modal even when there were zero actual
+  // recommendations for this user's location, landing on a bare "no options
+  // available" card. Only show either once we know there's really something
+  // to see.
+  useEffect(() => {
+    setShowRecommendationModal(false);
+    if (!dailyRecommendations) return;
+
+    const { status, start, end } = dailyRecommendations;
+
+    // Check if status is enabled ('1')
+    if (status !== '1') return;
+
+    const testerForcesRecommendations = Boolean(
+      currentUser?.tester_mode_enabled === true &&
+      currentUser?.is_tester &&
+      currentUser?.tester_force_recommendations
+    );
+    if (testerForcesRecommendations) {
+      setShowRecommendationModal(true);
+      return;
+    }
+
+    // Get current hour in 24-hour format (0-23)
+    const currentHour = new Date().getHours();
+    const startHour = parseInt(start, 10);
+    const endHour = parseInt(end, 10);
+
+    // Check if current time is between start and end hours
+    // If end is 24, it means until 23:59 (end of day), so check >= startHour
+    const shouldShow =
+      endHour === 24
+        ? currentHour >= startHour
+        : currentHour >= startHour && currentHour < endHour;
+
+    if (!shouldShow) return;
+
+    let cancelled = false;
+    ApiServices.getRecommendedUser()
+      .then((res: any) => {
+        if (cancelled) return;
+        if (Array.isArray(res) && res.length > 0) {
+          setShowRecommendationModal(true);
+          setRecommendationModal(true);
+        }
+      })
+      .catch(() => {
+        // Silently skip -- absence of the heart/modal is an acceptable
+        // fallback for a feature that's already best-effort.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    currentUser?.is_tester,
+    currentUser?.tester_mode_enabled,
+    currentUser?.tester_force_recommendations,
+    dailyRecommendations,
+  ]);
   const applyOptionSelection = useCallback((item: OptionButton) => {
     setOptionTab(item.name);
     setActiveOptionButton(item);
     setUserListPage(1);
-    setHeaderModal(false);
     setUsersList([]);
   }, []);
 
@@ -221,11 +412,17 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     });
   }, [getData, setData, storageKeys]);
 
+  // Tracks whether a users fetch is in flight. A ref (not loader state) so a
+  // fetch that returns an empty deck can't flip a dependency of the focus
+  // effect below and spin into an infinite refetch loop (server then 429s).
+  const usersFetchInFlightRef = useRef(false);
+
   const getUsers = useCallback(
     (
       params: { page: number; type: number | string } = { page: 1, type: -1 },
       replace = false
     ) => {
+      usersFetchInFlightRef.current = true;
       ApiServices.getUsers(params)
         .then((res) => {
           const list = Array.isArray(res) ? res : [];
@@ -233,6 +430,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         })
         .catch(() => {})
         .finally(() => {
+          usersFetchInFlightRef.current = false;
           setLoader(false);
           setLoadMoreLoader(false);
         });
@@ -240,13 +438,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     []
   );
 
-  const getUserStats = useCallback(() => {
-    ApiServices.getUserStats()
-      .then((res: any) => {
-        setUserStats(res);
-      })
-      .catch(() => {});
-  }, []);
+  // getUserStats removed - counters now come from Pusher events via useUserStatsStore
 
   const ensureActiveMembership = useCallback(async (): Promise<boolean> => {
     const now = moment();
@@ -284,12 +476,12 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       setLoader(true);
 
       if (value === '1' || value === '3') {
-        const hasMembership = await ensureActiveMembership();
-        if (!hasMembership) {
+        // const hasMembership = await ensureActiveMembership();
+        if (!isPremiumUser) {
           const defaultOption = optionBarList[0];
           applyOptionSelection(defaultOption);
           getUsers({ page: 1, type: defaultOption.value }, true);
-          getUserStats();
+
           navigation.navigate('ProFeaturesPromotion', {
             navigateTo: 'BottomTab',
           });
@@ -299,16 +491,9 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
       applyOptionSelection(item);
       getUsers({ page: 1, type: value }, true);
-      getUserStats();
+      // Counters now come from Pusher events, no API call needed
     },
-    [
-      applyOptionSelection,
-      ensureActiveMembership,
-      getUserStats,
-      getUsers,
-      navigation,
-      optionBarList,
-    ]
+    [applyOptionSelection, getUsers, isPremiumUser, navigation, optionBarList]
   );
 
   const onLoadMorePress = useCallback(() => {
@@ -387,7 +572,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const handleProfileCompleteData = useCallback(async () => {
     const baseState: Record<string, boolean> = {
-      primary_image: Boolean(currentUser?.media?.primary_image),
+      primary_image_to_show: Boolean(currentUser?.primary_image_to_show),
       // Currently not entertaining cover photo
       // cover_image: Boolean(currentUser?.media?.cover_image),
       tagline: Boolean(currentUser?.detail?.tagline),
@@ -443,26 +628,28 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       }));
       return updated.sort(sortByCompletion);
     });
-  }, [getData, profileProgressTemplate, storageKeys.PROFILE_DETAIL_LOCAL]);
+  }, [
+    currentUser,
+    getData,
+    profileProgressTemplate,
+    storageKeys.PROFILE_DETAIL_LOCAL,
+  ]);
 
-  const checkNewTransaction = useCallback(() => {
-    if (currentUser?.latest_transaction?.paid_tracking === 0) {
-      navigation.navigate('MembershipCongrats', {
-        isNewTransaction: true,
-        title: currentUser?.latest_transaction?.name,
-        amount: currentUser?.latest_transaction?.amount,
-      });
-    }
-  }, [currentUser?.latest_transaction, navigation]);
-
-  // Call getAttribute and getUsers once on mount only (using module-level flag to prevent refetch on remount)
+  // Call getAttribute and getUsers on mount
   useEffect(() => {
     getAttribute();
+    // Always fetch users on mount, reset flag on unmount to allow refetch on remount
     if (!hasInitializedUsers) {
       hasInitializedUsers = true;
       getUsers(undefined, true);
     }
-  }, []);
+
+    return () => {
+      // Reset flag on unmount to allow fresh fetch if component remounts
+      // This ensures users are fetched after profile picture upload/navigation
+      hasInitializedUsers = false;
+    };
+  }, [getUsers, getAttribute]);
 
   useEffect(() => {
     getInitialNotification();
@@ -470,17 +657,47 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
       notifeeBackForHandler
     );
     notifee.onBackgroundEvent(notifeeBackForHandler);
-    const timer = setTimeout(() => {
-      checkNewTransaction();
-    }, 100);
 
     return () => {
       if (typeof unsubscribeForeground === 'function') {
         unsubscribeForeground();
       }
-      clearTimeout(timer);
     };
-  }, [checkNewTransaction, getInitialNotification, notifeeBackForHandler]);
+  }, [getInitialNotification, notifeeBackForHandler]);
+
+  const onBoostProfilePress = useCallback(async () => {
+    setIsBoostLoading(true);
+    try {
+      const result = await presentBoostProfilePaywall();
+      if (result.success) {
+        setBoostSuccessModalVisible(true);
+      } else if (
+        result.error &&
+        result.error !== 'Purchase cancelled by user'
+      ) {
+        flashErrorMessage(result.error || 'Failed to purchase boost');
+      }
+    } catch (error: any) {
+      flashErrorMessage(error.message || 'Failed to purchase boost');
+    } finally {
+      setIsBoostLoading(false);
+    }
+  }, []);
+
+  const onBoostSuccessCollect = useCallback(async () => {
+    setBoostSuccessModalVisible(false);
+    // Boost credit is granted server-side by the RevenueCat purchase webhook
+    // (assignBoostPack), not by this handler. Just refresh the local user so
+    // the new chat_credits balance is reflected in the UI.
+    try {
+      const refreshedUser: any = await ApiServices.getCurrentUserDetail();
+      updateCurrentUser(refreshedUser);
+      setData(storageKeys.USER, refreshedUser);
+    } catch (error) {
+      console.log('error while refreshing user after boost purchase =>', error);
+    }
+    flashSuccessMessage('Boost profile activated successfully!');
+  }, [setData, storageKeys.USER, updateCurrentUser]);
 
   const onRecommendationPress = useCallback((value?: boolean) => {
     if (value) {
@@ -493,311 +710,231 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      getUserStats();
+      // Counters now come from Pusher events, no API call needed
       handleProfileCompleteData();
-    }, [])
-  );
 
-  useFocusEffect(
-    React.useCallback(() => {
-      if (showRecommendationModal && route?.params?.openRecommendationModal) {
-        onRecommendationPress(true);
+      // Fetch users on focus when the deck is empty and no fetch is in flight.
+      // Guarded by a ref rather than `loader` state: an empty or failed fetch
+      // must not flip a dependency and re-run this effect, or it loops until
+      // the server throttles the endpoint (429).
+      if (usersList.length === 0 && !usersFetchInFlightRef.current) {
+        setLoader(true);
+        getUsers(undefined, true);
       }
-    }, [
-      onRecommendationPress,
-      route?.params?.openRecommendationModal,
-      showRecommendationModal,
-    ])
+    }, [handleProfileCompleteData, usersList.length, getUsers])
   );
 
-  const isPremiumUser = useMemo(() => {
-    const now = moment();
-    const membershipExpiry = currentUser?.membership_expiry;
-    return (
-      membershipExpiry !== null &&
-      membershipExpiry !== undefined &&
-      moment(membershipExpiry).isAfter(now)
-    );
-  }, [currentUser?.membership_expiry]);
+  // Show loading state instead of blank screen if premium store hasn't loaded yet
+  // if (!loaded) {
+  //   return (
+  //     <Container style={Styles.container}>
+  //       <Loader />
+  //     </Container>
+  //   );
+  // }
 
-  const onInfoItemPress = useCallback(
-    (item: ProfileProgressItem) => {
-      setHeaderModal(false);
-      navigation.navigate(item.navigation, { scrollTo: item.scrollTo });
-    },
-    [navigation]
-  );
-
-  const AccordionItem: React.FC<{
-    children: React.ReactNode;
-    title: string;
-    count?: React.ReactNode;
-    type?: 'profile';
-    titleStyle?: TextStyle;
-    counterWrapperStyle?: ViewStyle;
-    counterTextStyle?: TextStyle;
-    accordionContainerStyle?: ViewStyle;
-  }> = ({
-    children,
-    title,
-    count = 0,
-    type,
-    titleStyle,
-    counterWrapperStyle,
-    accordionContainerStyle,
-    counterTextStyle,
-  }) => {
-    const [expanded, setExpanded] = useState(false);
-
-    const toggleItem = () => {
-      setExpanded((prev) => !prev);
-    };
-
-    return (
-      <View style={[Styles.accordContainer, accordionContainerStyle]}>
-        <Ripple
-          rippleColor={Colors.theme}
-          style={Styles.accordHeader}
-          onPress={toggleItem}
-        >
-          <View style={Styles.headerListLeftWrapper}>
-            {count !== undefined && count !== 0 && (
-              <View
-                style={[Styles.headerlistCounterWrapper, counterWrapperStyle]}
-              >
-                {typeof count === 'string' || typeof count === 'number' ? (
-                  <Text
-                    style={[Styles.headerlistCounterText, counterTextStyle]}
-                  >
-                    {count}
-                  </Text>
-                ) : (
-                  count
-                )}
-              </View>
-            )}
-            <View style={{}}>
-              <Text style={[Styles.accordTitle, titleStyle]}>{title}</Text>
-            </View>
-          </View>
-          <Entypo
-            name={expanded ? 'chevron-up' : 'chevron-down'}
-            size={wp(6)}
-          />
-        </Ripple>
-        {expanded && (
-          <View style={Styles.accordBody}>
-            {type === 'profile' && (
-              <View style={{ flexDirection: 'row', marginLeft: 23 }}>
-                {profileCompleteProgress?.map((item, ind) => (
-                  <View
-                    key={ind}
-                    style={{
-                      ...Styles.profileComDot,
-                      marginRight: Rtl ? 0 : wp(1),
-                      marginLeft: Rtl ? wp(1) : 1,
-                      backgroundColor: item.completed
-                        ? Colors.color53
-                        : Colors.color46,
-                    }}
-                  />
-                ))}
-              </View>
-            )}
-            {children}
-          </View>
-        )}
-      </View>
-    );
-  };
-
+  if (!isPremiumUser) {
+    // navigation.replace('ProFeaturesPromotion');
+  }
   return (
-    <Container style={Styles.container}>
+    <Container style={Styles.container} barBg={Colors.appBg}>
       <View style={Styles.paddingH}>
         <CheckMembershipStatus />
         <ModalLoader visible={modalLoader} useModalLayout={true} />
         <CommonActions navigation={navigation} userId={currentUser?.id} />
-        <View style={Styles.headerWrapper}>
-          {!isPremiumUser ? (
-            <PremiumButton />
-          ) : (
-            <TouchableOpacity
-              activeOpacity={0.6}
-              onPress={() => {
-                flashSuccessMessage('You are already a premium member');
-              }}
-              style={Styles.headerIconWrapper}
-            >
-              <Image source={Images.membership} style={Styles.headerIcon} />
-            </TouchableOpacity>
-          )}
-          <View style={Styles.headerRightWrapper}>
+        <View
+          style={[
+            Styles.headerWrapper,
+            { flexDirection: Rtl ? 'row-reverse' : 'row' },
+          ]}
+        >
+          <View style={Styles.greetingBlock}>
+            <AppText style={Styles.greetingEyebrow}>
+              {LanguageKeys.assalamuAlaikum}
+            </AppText>
+            {currentUser?.first_name ? (
+              <AppText variant="display" style={Styles.greetingName}>
+                {currentUser.first_name}
+              </AppText>
+            ) : null}
+          </View>
+          <View
+            style={[
+              Styles.headerRightWrapper,
+              {
+                flexDirection: Rtl ? 'row-reverse' : 'row',
+                alignItems: 'center',
+                gap: wp(3),
+              },
+            ]}
+          >
             {showRecommendationModal && (
-              <Ripple
-                style={Styles.headerIconWrapper}
+              <RecommendationHeart
                 onPress={() => onRecommendationPress(true)}
-              >
-                <Image
-                  source={Images.recommendationIcon}
-                  style={[Styles.headerIcon, { width: 25, height: 25 }]}
-                />
-              </Ripple>
+              />
             )}
             <Ripple
-              style={[
-                Styles.headerIconWrapper,
-                { backgroundColor: Colors.color7 },
-              ]}
-              onPress={() => setHeaderModal(!headerModal)}
+              rippleColor={Colors.primary}
+              style={Styles.searchIconBtn}
+              onPress={() => navigation.navigate('SearchProfiles')}
             >
-              {currentUser?.media?.primary_image &&
-              currentUser?.media?.primary_image?.length ? (
-                <Image
-                  source={{ uri: currentUser.media.primary_image }}
-                  style={[
-                    Styles.headerIcon,
-                    { width: 45, height: 45, borderRadius: 25 },
-                  ]}
-                />
-              ) : (
-                <Text style={Styles.headerText}>
-                  {currentUser?.first_name?.slice(0, 1)}
-                </Text>
-              )}
-              {isPremiumUser ? (
-                <View style={Styles.premiumBadge}>
-                  <Image
-                    source={Images.membership}
-                    style={Styles.premiumBadgeIcon}
-                  />
-                </View>
-              ) : null}
+              <Ionicons name="search" size={wp(5.8)} color={Colors.ink} />
             </Ripple>
+            <Menu>
+              <MenuTrigger>
+                <View style={Styles.avatarBtn}>
+                  {currentUser?.media?.un_blur_primary_image ? (
+                    <Image
+                      source={{
+                        uri: currentUser?.media?.un_blur_primary_image,
+                      }}
+                      style={Styles.avatarImg}
+                    />
+                  ) : (
+                    <Text style={Styles.headerText}>
+                      {currentUser?.first_name?.slice(0, 1)}
+                    </Text>
+                  )}
+                  {isPremiumUser ? (
+                    <View style={Styles.premiumBadge}>
+                      <Ionicons
+                        name="diamond"
+                        size={wp(2.6)}
+                        color={Colors.surface}
+                      />
+                    </View>
+                  ) : null}
+                </View>
+              </MenuTrigger>
+              <MenuOptions optionsContainerStyle={Styles.accountMenuOptions}>
+                {accountMenuItems.map((item) => (
+                  <MenuOption
+                    key={item.screen}
+                    onSelect={() => navigation.navigate(item.screen)}
+                    style={Styles.accountMenuOption}
+                  >
+                    <View
+                      style={[
+                        Styles.accountMenuOptionContent,
+                        { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                      ]}
+                    >
+                      <Ionicons
+                        name={item.icon as any}
+                        size={wp(4.6)}
+                        color={Colors.primary}
+                      />
+                      <Text
+                        style={[
+                          Styles.accountMenuOptionText,
+                          {
+                            marginLeft: Rtl ? 0 : wp(2.8),
+                            marginRight: Rtl ? wp(2.8) : 0,
+                          },
+                        ]}
+                      >
+                        {item.label}
+                      </Text>
+                    </View>
+                  </MenuOption>
+                ))}
+              </MenuOptions>
+            </Menu>
           </View>
         </View>
-      </View>
-      <Modal
-        isVisible={headerModal}
-        style={Styles.modal}
-        onBackdropPress={() => setHeaderModal(false)}
-      >
-        <View style={Styles.modalContent}>
-          <View style={Styles.modalHeader}>
-            <View style={Styles.modalHeaderContent}>
-              <View style={Styles.modalHeaderTextWrapper}>
-                <Text style={Styles.modalHeaderTitle}>
-                  {t(LanguageKeys.myAccount)}
+        {!giftStatus.claimed &&
+          (profileIncomplete || giftStatus.eligible) &&
+          !profileBannerDismissed && (
+            <Ripple
+              style={[
+                Styles.pendingApprovalBanner,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+              onPress={() =>
+                giftStatus.eligible
+                  ? openGiftModal()
+                  : navigation.navigate('OnboardingProfile', {
+                      from: 'Home',
+                    })
+              }
+            >
+              <View
+                style={[
+                  Styles.pendingIconChip,
+                  giftStatus.eligible && Styles.pendingIconChipReady,
+                ]}
+              >
+                <Wiggle active={giftStatus.eligible}>
+                  <Ionicons
+                    name={giftStatus.eligible ? 'gift' : 'gift-outline'}
+                    size={wp(4.5)}
+                    color={giftStatus.eligible ? Colors.color2 : Colors.primary}
+                  />
+                </Wiggle>
+              </View>
+              <View style={Styles.completeBannerTextWrap}>
+                <Text style={Styles.completeBannerTitle}>
+                  {t(
+                    giftStatus.eligible
+                      ? LanguageKeys.giftReadyTitle
+                      : LanguageKeys.completeProfileCta
+                  )}
                 </Text>
-                <Text style={Styles.modalHeaderSubTitle}>
-                  {t(LanguageKeys.profileComplete)}
+                <Text style={Styles.completeBannerSub}>
+                  {t(
+                    giftStatus.eligible
+                      ? LanguageKeys.giftReadyBody
+                      : LanguageKeys.completeProfileBannerBody
+                  )}
                 </Text>
               </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => setHeaderModal(false)}
-              style={Styles.modalCloseBtn}
-            >
-              <Entypo name="cross" size={wp(6)} />
-            </TouchableOpacity>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <View style={Styles.modalBody}>
-              <AccordionItem
-                title={`${t(LanguageKeys.profileCompletion)} (${profileCompleteProgress.filter((item) => item.completed).length} out of ${profileCompleteProgress.length})`}
-                type="profile"
-                count={
-                  <Image
-                    source={Images.userCircle}
-                    style={Styles.modalHeaderIcon}
-                  />
-                }
-                counterWrapperStyle={{
-                  borderWidth: 0,
-                  width: wp(7),
-                  height: wp(7),
-                }}
+              <Ripple
+                onPress={() => setProfileBannerDismissed(true)}
+                style={Styles.bannerDismiss}
               >
-                <View style={Styles.completeProfileWrapper}>
-                  {profileCompleteProgress?.map((item, ind) => (
-                    <Ripple
-                      key={ind}
-                      style={{
-                        ...Styles.infoItemCon,
-                        flexDirection: Rtl ? 'row-reverse' : 'row',
-                      }}
-                      onPress={() => onInfoItemPress(item)}
-                    >
-                      <View
-                        style={{
-                          ...Styles.checkCircle,
-                          backgroundColor: item.completed
-                            ? Colors.color10
-                            : Colors.color46,
-                        }}
-                      />
-                      <Text style={Styles.infoItemText}>{t(item.label)}</Text>
-                    </Ripple>
-                  ))}
-                </View>
-              </AccordionItem>
-              {!currentUser?.is_approved ? (
-                <AccordionItem
-                  title={t(LanguageKeys.profileInReview)}
-                  accordionContainerStyle={{ marginBottom: 0 }}
-                  count={
-                    <MaterialCommunityIcons
-                      name="information-variant"
-                      size={wp(5)}
-                    />
-                  }
-                  titleStyle={{ color: Colors.color25 }}
-                  counterWrapperStyle={{ borderColor: Colors.color25 }}
-                  counterTextStyle={{ color: Colors.color25 }}
-                >
-                  <View style={Styles.completeProfileWrapper}>
-                    <Text style={Styles.completeProfileText}>
-                      Your profile is being reviewed! During this brief period,
-                      visibility will be limited. We are just making sure
-                      everything is top-notch to ensure the best experience to
-                      all our members. You will be notified upon approval.
-                    </Text>
-                  </View>
-                </AccordionItem>
-              ) : (
-                <AccordionItem
-                  title="Your profile has been approved!"
-                  count={<AntDesign name="check" size={wp(5)} />}
-                  titleStyle={{ color: Colors.color10 }}
-                  counterWrapperStyle={{ borderColor: Colors.color10 }}
-                  counterTextStyle={{ color: Colors.color10 }}
-                  accordionContainerStyle={{ marginBottom: 0 }}
-                >
-                  <View style={Styles.completeProfileWrapper}>
-                    <Text style={Styles.completeProfileText}>
-                      Your profile is being reviewed! During this brief period,
-                      visibility will be limited. We are just making sure
-                      everything is top-notch to ensure the best experience to
-                      all our members. You will be notified upon approval.
-                    </Text>
-                  </View>
-                </AccordionItem>
-              )}
-            </View>
-          </ScrollView>
-        </View>
-      </Modal>
-      <RecommendationButton onPress={onRecommendationPress} />
-      {recommendationModal ? <Swiper onPress={onRecommendationPress} /> : null}
-      {userStats?.photo_requested_you_counter &&
-      userStats?.photo_requested_you_counter >= 1 ? (
+                <Ionicons name="close" size={wp(4.5)} color={Colors.muted} />
+              </Ripple>
+            </Ripple>
+          )}
+        {!isPremiumUser ? <PremiumButton /> : null}
+      </View>
+      <GiftClaimModal
+        visible={giftModalVisible}
+        giftCredits={giftCreditsAmount}
+        onClose={closeGiftModal}
+        onClaimed={onGiftClaimed}
+        claim={claimGift}
+      />
+      <DailyVipRewardModal
+        visible={dailyRewardVisible}
+        reward={dailyReward}
+        onClose={() => setDailyRewardVisible(false)}
+        claim={claimDailyReward}
+        onClaimed={onDailyRewardClaimed}
+      />
+      {/* <RecommendationButton onPress={onRecommendationPress} /> */}
+      {recommendationModal && !dailyRewardVisible ? (
+        <Swiper onPress={onRecommendationPress} />
+      ) : null}
+      {photo_request_count && photo_request_count >= 1 ? (
         <PrivatePhotoAccessBtn
           navigation={navigation}
-          photoRequests={userStats?.photo_requested_you_counter}
+          photoRequests={photo_request_count}
         />
       ) : null}
+      <PurchaseSuccessModal
+        visible={boostSuccessModalVisible}
+        onCollect={onBoostSuccessCollect}
+        title="Boost Profile Purchased!"
+        message="Your profile boost has been activated successfully."
+      />
       <OptionsBar
         onPress={onOptionPress}
-        userStats={userStats}
+        userStats={{
+          like_you_counter: like_count,
+          visit_you_counter: visit_count,
+          photo_requested_you_counter: photo_request_count,
+        }}
         activeOptionButton={activeOptionButton}
         options={optionBarList}
       />
@@ -812,7 +949,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         />
       )}
       {loadMoreLoader && (
-        <ActivityIndicator color={Colors.theme} size="small" />
+        <ActivityIndicator color={Colors.primary} size="small" />
       )}
     </Container>
   );
@@ -823,189 +960,150 @@ export default Welcome;
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.appBg,
   },
   paddingH: {
     paddingHorizontal: wp(3),
   },
-  headerWrapper: { flexDirection: 'row', justifyContent: 'space-between' },
-  headerIconWrapper: {
-    width: 45,
-    height: 45,
+  headerWrapper: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: hp(1),
+  },
+  greetingBlock: {
+    flex: 1,
+    paddingRight: wp(2),
+  },
+  greetingEyebrow: {
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+    color: Colors.muted,
+    includeFontPadding: false,
+  },
+  greetingName: {
+    fontSize: Typography.large1,
+    color: Colors.ink,
+    textTransform: 'capitalize',
+    marginTop: hp(0.2),
+    includeFontPadding: false,
+  },
+  headerRightWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2.5),
+  },
+  searchIconBtn: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.lavender,
     borderWidth: 1,
-    borderColor: Colors.color47,
-    borderRadius: 25,
+    borderColor: Colors.primaryRGBA12,
+  },
+  avatarBtn: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerIcon: {
-    width: 20,
-    height: 20,
+  avatarImg: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
   },
-  headerRightWrapper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   headerText: {
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large3,
-    color: Colors.color1,
+    fontSize: Typography.large1,
+    color: Colors.primary,
     textTransform: 'capitalize',
-    top: 3,
   },
   premiumBadge: {
-    width: width * 0.05,
-    height: width * 0.05,
-    borderRadius: 50,
-    backgroundColor: Colors.color47,
+    width: wp(5),
+    height: wp(5),
+    borderRadius: wp(2.5),
+    backgroundColor: Colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    top: -5,
-    left: -3,
+    bottom: -2,
+    right: -2,
+    borderWidth: 1.5,
+    borderColor: Colors.surface,
   },
-  premiumBadgeIcon: {
-    width: 10,
-    height: 10,
+  accountMenuOptions: {
+    width: wp(53),
+    marginTop: hp(1),
+    paddingVertical: hp(0.6),
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  headerCounterWrapper: {
-    width: width * 0.04,
-    height: width * 0.04,
-    borderRadius: 50,
-    backgroundColor: Colors.color50,
-    justifyContent: 'center',
+  accountMenuOption: {
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.4),
+  },
+  accountMenuOptionContent: {
     alignItems: 'center',
-    position: 'absolute',
-    top: -7,
-    right: -7,
   },
-  headerCounterText: {
-    fontFamily: Fonts.APPFONT_R,
+  accountMenuOptionText: {
+    flex: 1,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
-    color: Colors.color2,
   },
-  modal: {
-    marginHorizontal: hp(2),
-    // justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: Colors.color2,
-    borderRadius: 10,
-    padding: hp(2),
-    maxHeight: hp(80),
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: hp(2),
-  },
-  modalCloseBtn: {
-    padding: wp(1),
-  },
-  modalHeaderContent: {
-    flex: 1,
+  pendingApprovalBanner: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(1.3),
+    borderRadius: 14,
+    marginTop: hp(1.4),
+    gap: wp(3),
   },
-  modalHeaderIconWrapper: {
-    width: wp(12),
-    height: wp(12),
-    borderRadius: wp(6),
-    backgroundColor: Colors.themeLight,
+  pendingIconChip: {
+    width: wp(9),
+    height: wp(9),
+    borderRadius: wp(4.5),
+    backgroundColor: Colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: wp(3),
   },
-  modalHeaderIcon: {
-    width: wp(7),
-    height: wp(7),
+  pendingIconChipReady: {
+    backgroundColor: Colors.attention,
   },
-  modalHeaderTextWrapper: {
+  pendingApprovalText: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    color: Colors.ink,
     flex: 1,
   },
-  modalHeaderTitle: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large2,
-    color: Colors.color1,
+  completeBannerTextWrap: {
+    flex: 1,
   },
-  modalHeaderSubTitle: {
+  completeBannerTitle: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    color: Colors.ink,
+  },
+  completeBannerSub: {
+    color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small,
-    color: Colors.color28,
+    marginTop: hp(0.2),
   },
-  modalBody: {
-    // paddingBottom: hp(2),
-  },
-  accordContainer: {
-    marginBottom: hp(2),
-    borderRadius: wp(2),
-    borderWidth: 1,
-    borderColor: Colors.themeLight,
-    overflow: 'hidden',
-  },
-  accordHeader: {
-    paddingVertical: hp(2),
-    paddingHorizontal: wp(4),
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerListLeftWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerlistCounterWrapper: {
-    width: wp(8),
-    height: wp(8),
-    borderRadius: wp(4),
-    borderWidth: 1,
-    borderColor: Colors.color47,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: wp(3),
-  },
-  headerlistCounterText: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  accordTitle: {
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  accordBody: {
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(2),
-    gap: hp(1.2),
-  },
-  profileComDot: {
-    width: wp(2.5),
-    height: wp(2.5),
-    borderRadius: wp(1.25),
-    marginBottom: hp(1),
-  },
-  completeProfileWrapper: {
-    marginTop: hp(2),
-  },
-  infoItemCon: {
-    paddingVertical: hp(1.5),
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.color46,
-    alignItems: 'center',
-  },
-  checkCircle: {
-    width: wp(3),
-    height: wp(3),
-    borderRadius: wp(1.5),
-    marginRight: wp(2),
-  },
-  infoItemText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    color: Colors.color1,
-  },
-  completeProfileText: {
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    color: Colors.color1,
-    lineHeight: Typography.large1,
+  bannerDismiss: {
+    padding: wp(1.5),
   },
 });

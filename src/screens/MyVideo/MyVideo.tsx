@@ -136,7 +136,7 @@ const MyVideo = (props: any) => {
       message: 'Deleting profile image...',
     });
     const params = {
-      key: 'primary_image',
+      key: 'primary_image_to_show',
       file_path: profileImage,
     };
     ApiServices.deleteImage(params)
@@ -145,7 +145,7 @@ const MyVideo = (props: any) => {
           ...currentUser,
           media: {
             ...currentUser.media,
-            primary_image: null,
+            primary_image_to_show: null,
           },
         };
         setProfileImage('');
@@ -273,7 +273,7 @@ const MyVideo = (props: any) => {
       deleteCoverImage();
     } else if (
       value === 'delete' &&
-      buttonPickerVisible.from === 'primary_image'
+      buttonPickerVisible.from === 'primary_image_to_show'
     ) {
       deleteProfileImage();
     }

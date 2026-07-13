@@ -25,7 +25,7 @@ const PickerButton = (props: any) => {
   );
 
   const RenderDownBtn = () => (
-    <AntDesign name="down" color={Colors.color1} size={wp(3.5)} />
+    <AntDesign name="down" color={Colors.muted} size={wp(3.5)} />
   );
   return (
     <View style={[Styles.container, outerContainerStyle]}>
@@ -56,25 +56,28 @@ export default PickerButton;
 const Styles = StyleSheet.create({
   container: {},
   outerLabel: {
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.small2,
     lineHeight: wp(4.5),
   },
   buttonContainer: {
-    paddingVertical: hp(1.5),
-    backgroundColor: Colors.color3,
+    paddingVertical: hp(1.6),
+    backgroundColor: Colors.surface,
     paddingHorizontal: wp(3),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderBottomWidth: 1,
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
     marginTop: hp(1),
   },
   buttonText: {
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
     lineHeight: wp(4.5),
+    alignSelf: 'center',
   },
 });

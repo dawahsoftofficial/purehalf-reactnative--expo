@@ -1,13 +1,5 @@
-import _ from 'lodash';
-import React, { useEffect, useState } from 'react';
-import {
-  Dimensions,
-  Image,
-  Keyboard,
-  StyleSheet,
-  Text as ReactText,
-  View,
-} from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Dimensions, Image, Keyboard, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import {
   Menu,
@@ -16,38 +8,70 @@ import {
   MenuTrigger,
 } from 'react-native-popup-menu';
 import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { DeletePicker, ModalLoader } from '../../components';
+import {
+  DeletePicker,
+  ModalLoader,
+  PopupMenuRenderer,
+  ProfileBadges,
+  ProfilePhotoPlaceholder,
+  Text,
+} from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
-  Firebase,
+  capitalizeName,
+  flashErrorMessage,
   flashSuccessMessage,
-  StorageManager,
-  useGlobalContext,
 } from '../../services';
+import messageServices from '../../services/api/message-services';
+import type { Message } from '../../services/api/types/message-types';
 
-const SingleChatHeader = (props: any) => {
-  const { setData, storageKeys } = StorageManager;
-  const { currentUser, conversations, updateConversations } =
-    useGlobalContext();
+type SingleChatHeaderProps = {
+  navigation: any;
+  otherUserData: any;
+  messages: Message[];
+  conversationData: any;
+  conversationId: string;
+  currentUserId: string | number;
+  isBlockedByYou: boolean;
+  isBlockedYou: boolean;
+  setMessages: (messages: Message[]) => void;
+};
 
-  const [isBlockedByYou, setIsBlockedByYou] = useState(props?.isBlockedByYou);
-  const [isBlockedYou, setIsBlockedYou] = useState(props?.isBlockedYou);
+const SingleChatHeader = (props: SingleChatHeaderProps) => {
+  const {
+    navigation,
+    conversationData,
+    conversationId,
+    otherUserData,
+    currentUserId,
+    isBlockedByYou: propsIsBlockedByYou,
+    isBlockedYou: propsIsBlockedYou,
+    setMessages,
+  } = props;
 
-  const setBlockedStatus = () => {
-    setIsBlockedByYou(props?.isBlockedByYou);
-    setIsBlockedYou(props?.isBlockedYou);
-  };
+  const isSupportConversation =
+    conversationData?.type === 'support' || otherUserData?.type === 'Admin';
+
+  const [isBlockedByYou, setIsBlockedByYou] = useState(propsIsBlockedByYou);
+  const [isBlockedYou, setIsBlockedYou] = useState(propsIsBlockedYou);
+
   useEffect(() => {
-    setTimeout(() => {
-      setBlockedStatus();
-    }, 0);
-  }, []); // run once only
+    setIsBlockedByYou(propsIsBlockedByYou);
+    setIsBlockedYou(propsIsBlockedYou);
+  }, [propsIsBlockedByYou, propsIsBlockedYou]);
+
+  // Block/unblock acts on the conversation pivot, which only needs the
+  // conversation id — not the full conversationData object (which can be sparse
+  // right after opening a chat). Surface block whenever we have an id.
+  const hasConversation = !!conversationId;
 
   const [isBlurred, setIsBlurred] = useState(true);
+  const menuRef = useRef<any>(null);
 
   const [deleteAlert, setDeleteAlert] = useState({
     visible: false,
@@ -57,14 +81,6 @@ const SingleChatHeader = (props: any) => {
     visible: false,
     message: 'Loading...',
   });
-
-  const {
-    navigation = {},
-    messages = [],
-    conversationData = {},
-    otherUserData = {},
-    currentUserId = '',
-  } = props;
 
   const onBackPress = () => navigation.goBack();
 
@@ -92,10 +108,17 @@ const SingleChatHeader = (props: any) => {
   }, []);
 
   const onViewProfilePress = () => {
+    menuRef.current?.close();
     navigation.navigate('UserProfile', { userData: otherUserData });
   };
 
-  const onBlockUnBlockUserPress = () => {
+  const onBlockUnBlockUserPress = async () => {
+    menuRef.current?.close();
+    if (!conversationId) {
+      flashErrorMessage('Conversation ID is missing');
+      return;
+    }
+
     setModalLoader({
       visible: true,
       message: !isBlockedByYou
@@ -103,32 +126,55 @@ const SingleChatHeader = (props: any) => {
         : LanguageKeys.unBlockingUser,
     });
 
-    const params = {
-      type: 7,
-      action_user_id: otherUserData?.id,
-      allow_photo_request: 0,
-    };
-    ApiServices.interactionAction(params)
-      .then(() => {
-        Firebase.blockUnBlockConv(
-          conversationData?.id,
-          otherUserData?.id,
-          !isBlockedByYou
-        )
-          .then(() => {
-            flashSuccessMessage(
-              !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-            );
-            hideModalLoader();
-          })
-          .catch(hideModalLoader);
-        setIsBlockedByYou(!isBlockedByYou);
-        hideModalLoader();
-      })
-      .catch(hideModalLoader);
+    try {
+      const willBlock = !isBlockedByYou;
+      const params = {
+        type: 7,
+        action_user_id: otherUserData?.id,
+        allow_photo_request: 0,
+      };
+      await ApiServices.interactionAction(params);
+
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) {
+        throw new Error('Invalid conversation ID');
+      }
+
+      // Drive the REST conversation pivot (the gate sendMessage() checks).
+      // block sets is_blocked=true, unblock clears it — replacing the legacy
+      // Firebase RTDB block flag.
+      if (willBlock) {
+        await messageServices.blockConversationParticipant(
+          conversationIdNum,
+          otherUserData?.id
+        );
+      } else {
+        await messageServices.unblockConversationParticipant(
+          conversationIdNum,
+          otherUserData?.id
+        );
+      }
+
+      flashSuccessMessage(
+        willBlock ? LanguageKeys.blocked : LanguageKeys.unBlocked
+      );
+      setIsBlockedByYou(willBlock);
+      hideModalLoader();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to block/unblock user';
+      flashErrorMessage(errorMessage);
+      hideModalLoader();
+    }
   };
 
-  const onBlockUnBlockAndReportUserPress = () => {
+  const onBlockUnBlockAndReportUserPress = async () => {
+    menuRef.current?.close();
+    if (!conversationId) {
+      flashErrorMessage('Conversation ID is missing');
+      return;
+    }
+
     setModalLoader({
       visible: true,
       message: !isBlockedByYou
@@ -136,30 +182,36 @@ const SingleChatHeader = (props: any) => {
         : LanguageKeys.unBlockingUser,
     });
 
-    const params = {
-      type: 8,
-      action_user_id: otherUserData?.id,
-      allow_photo_request: 0,
-    };
+    try {
+      // Block-and-report is always a block action.
+      const params = {
+        type: 8,
+        action_user_id: otherUserData?.id,
+        allow_photo_request: 0,
+      };
+      await ApiServices.interactionAction(params);
 
-    ApiServices.interactionAction(params)
-      .then(() => {
-        Firebase.blockUnBlockConv(
-          conversationData?.id,
-          otherUserData?.id,
-          !isBlockedByYou
-        )
-          .then(() => {
-            flashSuccessMessage(
-              !isBlockedByYou ? LanguageKeys.blocked : LanguageKeys.unBlocked
-            );
-            hideModalLoader();
-          })
-          .catch(hideModalLoader);
-        setIsBlockedByYou(!isBlockedByYou);
-        hideModalLoader();
-      })
-      .catch(hideModalLoader);
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) {
+        throw new Error('Invalid conversation ID');
+      }
+
+      await messageServices.blockConversationParticipant(
+        conversationIdNum,
+        otherUserData?.id
+      );
+
+      flashSuccessMessage(LanguageKeys.blocked);
+      setIsBlockedByYou(true);
+      hideModalLoader();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to block and report user';
+      flashErrorMessage(errorMessage);
+      hideModalLoader();
+    }
   };
 
   const conversationDeleteSuccess = () => {
@@ -171,35 +223,36 @@ const SingleChatHeader = (props: any) => {
   const conversationClearSuccess = () => {
     hideModalLoader();
     flashSuccessMessage(LanguageKeys.chatCleared);
-    navigation.goBack();
+    // Clear messages in the parent component
+    setMessages([]);
   };
 
-  const onClearChatPress = () => {
+  const onClearChatPress = async () => {
     hideDeleteAlert();
+
+    if (!conversationId) {
+      flashErrorMessage('Conversation ID is missing');
+      return;
+    }
+
     setModalLoader({
       visible: true,
       message: LanguageKeys.clearingChat,
     });
-    if (messages?.length !== 0) {
-      const lastMessage: any = _.first(messages);
-      if (lastMessage) {
-        Firebase.clearChat(conversationData?.id, lastMessage?.id, currentUserId)
-          .then(async () => {
-            const updatedConv = _.map(conversations, (conversation) => {
-              if (conversation?.convDetails?.id === conversationData?.id) {
-                return { ...conversation, messages: {} };
-              } else {
-                return conversation;
-              }
-            });
-            updateConversations(updatedConv);
-            await setData(storageKeys.CONVERSATIONS, updatedConv);
-            conversationClearSuccess();
-          })
-          .catch(hideModalLoader);
+
+    try {
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) {
+        throw new Error('Invalid conversation ID');
       }
-    } else {
+
+      await messageServices.clearConversation(conversationIdNum);
       conversationClearSuccess();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to clear conversation';
+      flashErrorMessage(errorMessage);
+      hideModalLoader();
     }
   };
 
@@ -211,7 +264,14 @@ const SingleChatHeader = (props: any) => {
   };
 
   const onDeleteAlertDeletePress = () => {
-    if (deleteAlert?.from === 'chat') {
+    // Capture the alert type before closing modal
+    const alertType = deleteAlert?.from;
+
+    // Close modal immediately
+    hideDeleteAlert();
+
+    // Execute action after modal closes
+    if (alertType === 'chat') {
       onDeleteChatPress();
     } else {
       onClearChatPress();
@@ -220,35 +280,37 @@ const SingleChatHeader = (props: any) => {
 
   const onDeleteChatPress = async () => {
     hideDeleteAlert();
+
+    if (!conversationId) {
+      flashErrorMessage('Conversation ID is missing');
+      return;
+    }
+
     setModalLoader({
       visible: true,
       message: LanguageKeys.deleting,
     });
 
-    const updatedConversations = await _.filter(
-      conversations,
-      (conversation) => conversation?.convDetails?.id !== conversationData?.id
-    );
-    updateConversations(updatedConversations);
-    await setData(storageKeys.CONVERSATIONS, updatedConversations);
-
-    if (messages?.length !== 0) {
-      const lastMessage: any = _.first(messages);
-      if (lastMessage) {
-        Firebase.updateMessageDeletedBy(
-          conversationData?.id,
-          lastMessage?.id,
-          currentUserId
-        )
-          .then(conversationDeleteSuccess)
-          .catch(hideModalLoader);
+    try {
+      const conversationIdNum = parseInt(conversationId, 10);
+      if (isNaN(conversationIdNum)) {
+        throw new Error('Invalid conversation ID');
       }
-    } else {
+
+      await messageServices.deleteConversation(conversationIdNum);
       conversationDeleteSuccess();
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to delete conversation';
+      flashErrorMessage(errorMessage);
+      hideModalLoader();
     }
   };
 
   const showClearChatAlert = () => {
+    menuRef.current?.close();
     Keyboard.dismiss();
     setDeleteAlert({
       visible: true,
@@ -257,6 +319,7 @@ const SingleChatHeader = (props: any) => {
   };
 
   const showDeleteChatAlert = () => {
+    menuRef.current?.close();
     Keyboard.dismiss();
     setDeleteAlert({
       visible: true,
@@ -265,13 +328,14 @@ const SingleChatHeader = (props: any) => {
   };
 
   const onChangeBlur = () => {
+    menuRef.current?.close();
     const newParams = {
       type: '9',
       action_user_id: otherUserData?.id,
     };
 
     ApiServices.interactionAction(newParams)
-      .then(async (res) => {
+      .then(async () => {
         setModalLoader({
           visible: false,
           message: LanguageKeys.updating,
@@ -290,77 +354,84 @@ const SingleChatHeader = (props: any) => {
   const blurText = isBlurred
     ? 'Unblur Profile Picture'
     : 'Blur Profile Picture';
-  if (!Object.keys(conversationData).length) {
+  const viewProfileOption = isSupportConversation ? [] : ['View profile'];
+  const viewProfileAction = isSupportConversation ? [] : [onViewProfilePress];
+  if (!hasConversation) {
     if (isBlockedByYou) {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         'Unblock user',
         'Clear chat',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     } else {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         'Block user',
         'Report and block user',
         'Clear chat',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     }
   } else {
     if (isBlockedByYou) {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         'Unblock user',
         'Clear chat',
         'Delete conversation',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     } else {
       optionsArray = [
-        'View profile',
+        ...viewProfileOption,
         'Block user',
         'Report and block user',
         'Clear chat',
         'Delete conversation',
-        blurText,
+        // blurText,
         'Cancel',
       ];
     }
   }
 
   let actionsArray = [];
-  if (!Object.keys(conversationData).length) {
+  if (!hasConversation) {
     if (isBlockedByYou) {
       actionsArray = [
-        onViewProfilePress,
+        ...viewProfileAction,
         onBlockUnBlockUserPress,
         showClearChatAlert,
-        onChangeBlur,
+        // onChangeBlur,
       ];
     } else {
-      actionsArray = [onViewProfilePress, showClearChatAlert, onChangeBlur];
+      actionsArray = [
+        ...viewProfileAction,
+        onBlockUnBlockUserPress,
+        onBlockUnBlockAndReportUserPress,
+        showClearChatAlert,
+      ];
     }
   } else {
     if (isBlockedByYou) {
       actionsArray = [
-        onViewProfilePress,
+        ...viewProfileAction,
         onBlockUnBlockUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
-        onChangeBlur,
+        // onChangeBlur,
       ];
     } else {
       actionsArray = [
-        onViewProfilePress,
+        ...viewProfileAction,
         onBlockUnBlockUserPress,
         onBlockUnBlockAndReportUserPress,
         showClearChatAlert,
         showDeleteChatAlert,
-        onChangeBlur,
+        // onChangeBlur,
       ];
     }
   }
@@ -375,44 +446,68 @@ const SingleChatHeader = (props: any) => {
       <View style={Styles.headerInnerCon}>
         <AntDesign
           name="arrowleft"
-          color={Colors.color1}
+          color={Colors.ink}
           size={wp(6)}
           onPress={onBackPress}
         />
         <Ripple
           style={Styles.headerInnerCon}
-          onPress={() =>
+          onPress={() => {
+            if (isSupportConversation) {
+              return;
+            }
             props.navigation.navigate('UserProfile', {
               userData: otherUserData,
-            })
-          }
+            });
+          }}
         >
           <View style={Styles.userImage}>
             {otherUserData?.image && !isBlockedYou ? (
               <Image
                 source={{ uri: otherUserData.image }}
                 resizeMode="cover"
-                style={Styles.userImage}
+                style={Styles.avatarImage}
+              />
+            ) : isSupportConversation ? (
+              <Ionicons
+                name="heart"
+                size={width * 0.055}
+                color={Colors.primary}
               />
             ) : (
-              <Image
-                source={Images.user}
-                resizeMode="cover"
-                style={Styles.userIcon}
+              <ProfilePhotoPlaceholder
+                name={otherUserData?.name}
+                size={width * 0.05}
+                centeredInitials
               />
             )}
           </View>
-          <ReactText style={Styles.userName}>{otherUserData?.name}</ReactText>
+          <View style={Styles.titleRow}>
+            <Text variant="display" style={Styles.userName} numberOfLines={1}>
+              {capitalizeName(otherUserData?.name)}
+            </Text>
+            {!isSupportConversation ? (
+              <ProfileBadges
+                userData={otherUserData}
+                iconOnly
+                surface="chatThread"
+                iconSize={wp(5.5)}
+                containerStyle={Styles.chatBadges}
+              />
+            ) : null}
+          </View>
         </Ripple>
       </View>
-      {currentUserId !== 'guardian' && (
-        <Menu>
+      {currentUserId !== 'guardian' && !isSupportConversation && (
+        <Menu ref={menuRef} renderer={PopupMenuRenderer}>
           <MenuTrigger>
-            <Image
-              source={Images.verticalDots}
-              style={Styles.menuBtn}
-              resizeMode="contain"
-            />
+            <View style={Styles.menuBtn}>
+              <Ionicons
+                name="ellipsis-vertical"
+                size={wp(5)}
+                color={Colors.ink}
+              />
+            </View>
           </MenuTrigger>
           <MenuOptions optionsContainerStyle={Styles.menuOptionsContainer}>
             {optionsArray.map((option, index) => {
@@ -433,12 +528,17 @@ const SingleChatHeader = (props: any) => {
                 <MenuOption
                   key={`${option}-${index}`}
                   onSelect={() => {
+                    menuRef.current?.close();
                     if (action) {
                       action();
                     }
                   }}
                   text={option}
-                  style={isDestructive ? Styles.destructiveOption : undefined}
+                  customStyles={{
+                    optionText: isDestructive
+                      ? Styles.menuTextDestructive
+                      : Styles.menuText,
+                  }}
                 />
               );
             })}
@@ -460,7 +560,7 @@ const SingleChatHeader = (props: any) => {
         onClose={hideDeleteAlert}
         onDeletePress={onDeleteAlertDeletePress}
         onCancelPress={hideDeleteAlert}
-        useCustomModal={true}
+        useCustomModal={false}
       />
     </View>
   );
@@ -475,19 +575,15 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.surface,
     paddingVertical: hp(1),
     paddingHorizontal: wp(3),
-    borderBottomWidth: 0.7,
-    borderBottomColor: Colors.color27,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
   },
   headerInnerCon: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  userIcon: {
-    width: width * 0.05,
-    height: width * 0.05 * 1,
   },
   userImage: {
     width: width * 0.1,
@@ -495,25 +591,57 @@ const Styles = StyleSheet.create({
     borderRadius: (width * 0.1 * 1) / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color8,
+    backgroundColor: Colors.lavender,
     marginHorizontal: wp(2),
+    overflow: 'hidden',
   },
   userName: {
     alignSelf: 'center',
     fontSize: Typography.medium,
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_M,
+    color: Colors.ink,
+    maxWidth: wp(36),
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.2),
+    flexShrink: 1,
+  },
+  chatBadges: {
+    flexWrap: 'nowrap',
+    gap: wp(0.6),
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   menuBtn: {
-    width: wp(8),
-    height: hp(3.5),
-    resizeMode: 'contain',
+    width: wp(9),
+    height: wp(9),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   menuOptionsContainer: {
-    borderRadius: wp(2),
-    paddingVertical: hp(0.5),
+    borderRadius: 14,
+    paddingVertical: hp(0.6),
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    marginTop: hp(1),
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  destructiveOption: {
-    backgroundColor: Colors.color2,
+  menuText: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+  },
+  menuTextDestructive: {
+    color: Colors.color24,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
   },
 });

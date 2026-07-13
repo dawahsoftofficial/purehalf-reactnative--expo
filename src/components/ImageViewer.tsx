@@ -1,256 +1,575 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
   FlatList,
   Image,
   StatusBar,
   StyleSheet,
   View,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
 import { SwiperFlatList } from 'react-native-swiper-flatlist';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { Animation } from '../animations';
 import { hp, Typography, wp } from '../global';
-import { LanguageKeys } from '../languages';
+import { CheckRtl, LanguageKeys } from '../languages';
 import { Colors, Fonts } from '../res';
 import { ApiServices, useGlobalContext } from '../services';
 import { PrivacyProtectedAlert, RequestSentAlert } from './alerts';
+import {
+  buildGalleryItems,
+  type GalleryItem,
+  type GalleryMedia,
+  type PhotoAccessAction,
+} from './image-viewer/gallery-items';
 import ModalLoader from './loaders/ModalLoader';
 import Text from './Text';
 
-const ImageViewer = (props: any) => {
+type ImageViewerUser = {
+  first_name?: string | null;
+  full_name?: string | null;
+  id?: number | string;
+  media?: GalleryMedia | null;
+  photo_access_action?: PhotoAccessAction;
+};
+
+type ImageViewerProps = {
+  navigation: {
+    goBack: () => void;
+  };
+  route?: {
+    params?: {
+      userData?: ImageViewerUser;
+    };
+  };
+};
+
+type PrivateMediaResponse = {
+  private_gallery?: string[] | null;
+};
+
+type SliderRef = {
+  getCurrentIndex: () => number;
+  getPrevIndex: () => number;
+  goToFirstIndex: () => void;
+  goToLastIndex: () => void;
+  scrollToIndex: (params: { animated?: boolean; index: number }) => void;
+};
+
+const ImageViewer = (props: ImageViewerProps) => {
   const { currentUser } = useGlobalContext();
   const [userData, setUserData] = useState(props?.route?.params?.userData);
-
-  const [images, setImages] = useState([]);
-
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [loader, setLoader] = useState({
     visible: true,
     message: LanguageKeys.loading,
   });
-
-  const sliderRef: any = useRef<any>(null);
-  const dotsRef: any = useRef<any>(null);
-
   const [privacyProtectedAlertVisible, setPrivacyProtectedAlertVisible] =
     useState(false);
   const [requestSentAlertVisible, setRequestSentAlertVisible] = useState(false);
-  const [imageLoader, setImageLoader] = useState(false);
-  const [activeIndex, setActiveIndex] = useState({ index: 0, prevIndex: 0 });
+  const [hasLoadedGallery, setHasLoadedGallery] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [loadingImageIds, setLoadingImageIds] = useState<
+    Record<string, boolean>
+  >({});
+  const [failedImageIds, setFailedImageIds] = useState<Record<string, boolean>>(
+    {}
+  );
 
-  const onBackPress = () => props.navigation.goBack();
-  const closePrivacyProtectedAlert = () =>
-    setPrivacyProtectedAlertVisible(false);
-  const openPrivacyProtectedAlert = () => setPrivacyProtectedAlertVisible(true);
-  const closeRequestSentAlert = () => setRequestSentAlertVisible(false);
+  const sliderRef = useRef<SliderRef>(null);
+  const thumbnailRef = useRef<FlatList<GalleryItem>>(null);
+  const rtl = CheckRtl();
+  const insets = useSafeAreaInsets();
 
-  const onPPAlertRequestAccessPress = () => {
-    setPrivacyProtectedAlertVisible(false);
-    setLoader({
-      visible: true,
-      message: LanguageKeys.sendingRequest,
-    });
-    ApiServices.privatePhotoAccessRequest(userData?.id)
-      .then(() => {
-        setRequestSentAlertVisible(true);
-        const updatedUserData = { ...userData, photo_access_action: 0 };
-        setUserData(updatedUserData);
-        hideLoader();
-      })
-      .catch(hideLoader);
-  };
+  const activeItem = galleryItems[activeIndex];
+  const hasSingleGalleryItem = galleryItems.length === 1;
+  const currentPosition = galleryItems.length === 0 ? 0 : activeIndex + 1;
+  const galleryTitle = LanguageKeys.photosAndVideos;
+  const galleryContext =
+    activeItem?.type === 'locked-private'
+      ? LanguageKeys.privatePhotoDes
+      : LanguageKeys.photosAndVideos;
 
-  const dotScrollToIndex = (index: any) => {
-    dotsRef.current.scrollToIndex({ animated: true, index: index });
-  };
+  const onBackPress = useCallback(
+    () => props.navigation.goBack(),
+    [props.navigation]
+  );
+  const closePrivacyProtectedAlert = useCallback(
+    () => setPrivacyProtectedAlertVisible(false),
+    []
+  );
+  const openPrivacyProtectedAlert = useCallback(
+    () => setPrivacyProtectedAlertVisible(true),
+    []
+  );
+  const closeRequestSentAlert = useCallback(
+    () => setRequestSentAlertVisible(false),
+    []
+  );
 
-  const onImageLoadStart = () => setImageLoader(true);
-  const onImageLoadEnd = () => setImageLoader(false);
-
-  const onSliderIndexChange = (data: any) => {
-    setActiveIndex(data);
-    if (data.index >= 11 || data.index < activeIndex.index) {
-      dotScrollToIndex(data.index);
-    }
-  };
-
-  const onLeftPress = () => {
-    sliderRef.current.scrollToIndex({
-      animated: true,
-      index: activeIndex.index === 0 ? 0 : activeIndex.index - 1,
-    });
-  };
-
-  const onRightPress = () => {
-    sliderRef.current.scrollToIndex({
-      animated: true,
-      index:
-        activeIndex.index === images.length - 1
-          ? activeIndex.index
-          : activeIndex.index + 1,
-    });
-  };
-
-  const hideLoader = () => {
+  const hideLoader = useCallback(() => {
     setLoader({
       visible: false,
       message: LanguageKeys.loading,
     });
-  };
+  }, []);
 
-  const getPhotos = async () => {
-    const { media, photo_access_action } = userData;
+  const scrollThumbnailsToIndex = useCallback(
+    (index: number, itemCount: number) => {
+      if (itemCount === 0 || index < 0 || index >= itemCount) {
+        return;
+      }
 
-    const isCurrentUser = userData?.id === currentUser?.id ? true : false;
-    if (media) {
-      const { public_gallery, private_photo_count, private_gallery } = media;
-      let allPhotos: any = [];
-      if (public_gallery && public_gallery?.length !== 0) {
-        allPhotos = public_gallery;
-        setImages(public_gallery);
+      thumbnailRef.current?.scrollToIndex({
+        animated: true,
+        index,
+        viewPosition: 0.5,
+      });
+    },
+    []
+  );
+
+  const syncGalleryIndex = useCallback(
+    (index: number, itemCount: number, animated = true) => {
+      if (itemCount === 0) {
+        setActiveIndex(0);
+        return;
       }
-      if (
-        private_photo_count > 0 &&
-        (photo_access_action === 0 || photo_access_action === 1) &&
-        !isCurrentUser
-      ) {
-        if (!allPhotos?.includes('privateImage')) {
-          allPhotos.push('privateImage');
-        }
-        setImages(allPhotos);
+
+      const nextIndex = Math.min(Math.max(index, 0), itemCount - 1);
+      setActiveIndex(nextIndex);
+      try {
+        sliderRef.current?.scrollToIndex({ animated, index: nextIndex });
+        scrollThumbnailsToIndex(nextIndex, itemCount);
+      } catch {
+        setTimeout(() => {
+          try {
+            sliderRef.current?.scrollToIndex({
+              animated,
+              index: nextIndex,
+            });
+            scrollThumbnailsToIndex(nextIndex, itemCount);
+          } catch {
+            // The next user scroll or thumbnail tap will resync once measured.
+          }
+        }, 100);
       }
-      if (private_gallery && private_gallery.length !== 0 && isCurrentUser) {
-        allPhotos.push(...private_gallery);
-        setImages(allPhotos);
-      }
-      if (photo_access_action === 2 && !isCurrentUser) {
-        await ApiServices.viewPrivateMedia(userData?.id)
-          .then((res: any) => {
-            const { private_gallery } = res;
-            if (private_gallery && private_gallery?.length !== 0) {
-              allPhotos.push(...private_gallery);
-              setImages(allPhotos);
-            }
-          })
-          .catch(hideLoader);
-      }
+    },
+    [scrollThumbnailsToIndex]
+  );
+
+  const applyGalleryItems = useCallback(
+    (items: GalleryItem[]) => {
+      setGalleryItems(items);
+      setHasLoadedGallery(true);
+      syncGalleryIndex(0, items.length, false);
+      setTimeout(() => syncGalleryIndex(0, items.length, false), 0);
+    },
+    [syncGalleryIndex]
+  );
+
+  const getPhotos = useCallback(async () => {
+    const media = userData?.media;
+    const photoAccessAction = userData?.photo_access_action;
+    const isCurrentUser = userData?.id === currentUser?.id;
+
+    if (!media) {
+      applyGalleryItems([]);
       hideLoader();
-    } else {
-      hideLoader();
+      return;
     }
-  };
+
+    if (photoAccessAction === 2 && !isCurrentUser) {
+      try {
+        const res = (await ApiServices.viewPrivateMedia(
+          userData?.id
+        )) as PrivateMediaResponse;
+        applyGalleryItems(
+          buildGalleryItems({
+            grantedPrivateGallery: res?.private_gallery,
+            isCurrentUser,
+            media,
+            photoAccessAction,
+          })
+        );
+      } catch {
+        applyGalleryItems(
+          buildGalleryItems({
+            isCurrentUser,
+            media,
+            photoAccessAction,
+          })
+        );
+      } finally {
+        hideLoader();
+      }
+      return;
+    }
+
+    applyGalleryItems(
+      buildGalleryItems({
+        isCurrentUser,
+        media,
+        photoAccessAction,
+      })
+    );
+    hideLoader();
+  }, [applyGalleryItems, currentUser?.id, hideLoader, userData]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       getPhotos();
     }, 0);
+
     return () => clearTimeout(timer);
+  }, [getPhotos]);
+
+  const onPPAlertRequestAccessPress = useCallback(() => {
+    setPrivacyProtectedAlertVisible(false);
+    setLoader({
+      visible: true,
+      message: LanguageKeys.sendingRequest,
+    });
+
+    ApiServices.privatePhotoAccessRequest(userData?.id)
+      .then(() => {
+        setRequestSentAlertVisible(true);
+        setUserData((previous) =>
+          previous
+            ? {
+                ...previous,
+                photo_access_action: 1,
+              }
+            : previous
+        );
+        hideLoader();
+      })
+      .catch(hideLoader);
+  }, [hideLoader, userData?.id]);
+
+  const setImageLoading = useCallback((id: string, isLoading: boolean) => {
+    setLoadingImageIds((previous) => ({
+      ...previous,
+      [id]: isLoading,
+    }));
   }, []);
 
-  const renderList = ({ item }: any) => {
+  const setImageFailed = useCallback(
+    (id: string) => {
+      setFailedImageIds((previous) => ({
+        ...previous,
+        [id]: true,
+      }));
+      setImageLoading(id, false);
+    },
+    [setImageLoading]
+  );
+
+  const onSliderIndexChange = useCallback(
+    ({ index }: { index: number; prevIndex: number }) => {
+      if (index < 0 || index >= galleryItems.length) {
+        return;
+      }
+
+      syncGalleryIndex(index, galleryItems.length);
+    },
+    [galleryItems.length, syncGalleryIndex]
+  );
+
+  const onThumbnailPress = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= galleryItems.length) {
+        return;
+      }
+
+      syncGalleryIndex(index, galleryItems.length);
+    },
+    [galleryItems.length, syncGalleryIndex]
+  );
+
+  const renderImageFallback = () => (
+    <View style={Styles.imageFallback}>
+      <Ionicons name="image-outline" color={Colors.whiteRGBA90} size={wp(13)} />
+      <Text style={Styles.imageFallbackText}>{LanguageKeys.tryAgain}</Text>
+    </View>
+  );
+
+  const renderLockedPrivatePanel = () => {
+    const alreadyRequested = userData?.photo_access_action === 1;
+
     return (
-      <View style={Styles.itemContainer}>
-        {item === 'privateImage' ? (
-          <View style={Styles.lockCon}>
-            <Ionicons
-              name="lock-closed-outline"
-              color={Colors.color2}
-              size={wp(15)}
-            />
-            <Text style={Styles.privatePhotoDes}>
-              {LanguageKeys.privatePhotoDesTwo}
-            </Text>
-            <Ripple
-              onPress={openPrivacyProtectedAlert}
-              disabled={userData?.photo_access_action === 1}
-            >
-              {userData?.photo_access_action === 1 ? (
-                <Text style={Styles.openButton}>
-                  {LanguageKeys.privatePhotoAlreadyRequested}
-                </Text>
-              ) : (
-                <Text style={Styles.openButton}>
-                  {LanguageKeys.requestAccess}
-                </Text>
-              )}
-            </Ripple>
-          </View>
+      <View
+        testID="locked-private-panel"
+        style={[
+          Styles.lockedSlide,
+          {
+            paddingBottom: insets.bottom + hp(18),
+            paddingTop: insets.top + hp(12),
+          },
+        ]}
+      >
+        <View style={Styles.lockedIconWrap}>
+          <Ionicons
+            name="lock-closed-outline"
+            color={Colors.color2}
+            size={wp(10)}
+          />
+        </View>
+        <Text testID="locked-private-title" style={Styles.lockedTitle}>
+          {LanguageKeys.privacyProtected}
+        </Text>
+        <Text style={Styles.lockedDescription}>
+          {LanguageKeys.privatePhotoDesTwo}
+        </Text>
+        <Ripple
+          style={[
+            Styles.requestAccessButton,
+            alreadyRequested && Styles.requestAccessButtonDisabled,
+          ]}
+          onPress={openPrivacyProtectedAlert}
+          disabled={alreadyRequested}
+          rippleColor={Colors.primaryLite}
+        >
+          <Text
+            style={[
+              Styles.requestAccessText,
+              alreadyRequested && Styles.requestAccessTextDisabled,
+            ]}
+            numberOfLines={1}
+          >
+            {alreadyRequested
+              ? LanguageKeys.privatePhotoAlreadyRequested
+              : LanguageKeys.requestAccess}
+          </Text>
+        </Ripple>
+      </View>
+    );
+  };
+
+  const renderSlide = ({ item }: { item: GalleryItem }) => {
+    if (item.type === 'locked-private') {
+      return (
+        <View style={Styles.slide}>
+          <LinearGradient
+            colors={[Colors.ink, Colors.theme, Colors.color1]}
+            style={StyleSheet.absoluteFill}
+          />
+          {renderLockedPrivatePanel()}
+        </View>
+      );
+    }
+
+    const isLoading = loadingImageIds[item.id];
+    const hasFailed = failedImageIds[item.id];
+
+    return (
+      <View style={Styles.slide}>
+        {hasFailed ? (
+          renderImageFallback()
         ) : (
           <Image
-            resizeMode="contain"
-            source={{ uri: item }}
-            style={Styles.itemImage}
-            onLoadStart={onImageLoadStart}
-            onLoadEnd={onImageLoadEnd}
+            resizeMode="cover"
+            source={{ uri: item.uri }}
+            style={Styles.slideImage}
+            onLoadEnd={() => setImageLoading(item.id, false)}
+            onLoadStart={() => setImageLoading(item.id, true)}
+            onError={() => setImageFailed(item.id)}
           />
         )}
-        {imageLoader && (
+        <LinearGradient
+          colors={[
+            Colors.blackRGBA70,
+            Colors.blackRGBA0,
+            Colors.blackRGBA25,
+            Colors.blackRGBA80,
+          ]}
+          locations={[0, 0.32, 0.62, 1]}
+          style={StyleSheet.absoluteFill}
+        />
+        {isLoading && !hasFailed && (
           <View style={Styles.imageLoaderCon}>
-            <ActivityIndicator color={Colors.theme} size={wp(10)} />
+            <ActivityIndicator color={Colors.color2} size={wp(8)} />
           </View>
         )}
       </View>
     );
   };
 
+  const renderTopBar = () => (
+    <View
+      style={[
+        Styles.topOverlay,
+        { top: Math.max(insets.top + hp(1), hp(3.2)) },
+      ]}
+    >
+      <Ripple
+        style={Styles.iconButton}
+        onPress={onBackPress}
+        hitSlop={12}
+        rippleColor={Colors.whiteRGBA30}
+      >
+        <AntDesign
+          name={rtl ? 'arrowright' : 'arrowleft'}
+          color={Colors.color2}
+          size={wp(6)}
+        />
+      </Ripple>
+      <View style={Styles.titleWrap}>
+        <Text style={Styles.viewerTitle} numberOfLines={1}>
+          {galleryTitle}
+        </Text>
+        <Text style={Styles.viewerSubtitle} numberOfLines={1}>
+          {galleryContext}
+        </Text>
+      </View>
+      <View style={Styles.countPill}>
+        <Text style={Styles.countText}>
+          {galleryItems.length
+            ? `${currentPosition} / ${galleryItems.length}`
+            : '0 / 0'}
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderThumbnail = ({
+    index,
+    item,
+  }: {
+    index: number;
+    item: GalleryItem;
+  }) => {
+    const isActive = index === activeIndex;
+    const thumbnailStyle = [
+      Styles.thumbnailButton,
+      isActive && Styles.thumbnailButtonActive,
+      index === galleryItems.length - 1 && Styles.thumbnailButtonLast,
+    ];
+
+    return (
+      <Ripple
+        style={thumbnailStyle}
+        onPress={() => onThumbnailPress(index)}
+        rippleColor={Colors.whiteRGBA30}
+      >
+        {item.type === 'locked-private' ? (
+          <View style={Styles.lockedThumbnail}>
+            <Ionicons
+              name="lock-closed-outline"
+              color={Colors.color2}
+              size={wp(4.8)}
+            />
+          </View>
+        ) : failedImageIds[item.id] ? (
+          <View style={Styles.lockedThumbnail}>
+            <Ionicons
+              name="image-outline"
+              color={Colors.whiteRGBA90}
+              size={wp(4.8)}
+            />
+          </View>
+        ) : (
+          <Image
+            resizeMode="cover"
+            source={{ uri: item.uri }}
+            style={Styles.thumbnailImage}
+          />
+        )}
+      </Ripple>
+    );
+  };
+
+  const renderThumbnailRail = () => {
+    if (!galleryItems.length) {
+      return null;
+    }
+
+    return (
+      <View
+        testID="thumbnail-rail"
+        style={[
+          Styles.bottomOverlay,
+          {
+            bottom: Math.max(insets.bottom + hp(1.2), hp(2)),
+          },
+          hasSingleGalleryItem && Styles.bottomOverlaySingle,
+        ]}
+      >
+        <FlatList
+          testID="thumbnail-list"
+          ref={thumbnailRef}
+          data={galleryItems}
+          horizontal
+          keyExtractor={(item) => item.id}
+          renderItem={renderThumbnail}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[
+            Styles.thumbnailList,
+            hasSingleGalleryItem && Styles.thumbnailListSingle,
+          ]}
+          onScrollToIndexFailed={({ index }) => {
+            setTimeout(
+              () => scrollThumbnailsToIndex(index, galleryItems.length),
+              100
+            );
+          }}
+        />
+      </View>
+    );
+  };
+
   const renderEmptyList = () => (
     <View style={Styles.emptyListCon}>
+      <Ripple
+        style={[Styles.iconButton, Styles.emptyBackButton]}
+        onPress={onBackPress}
+        rippleColor={Colors.whiteRGBA30}
+      >
+        <AntDesign
+          name={rtl ? 'arrowright' : 'arrowleft'}
+          color={Colors.color2}
+          size={wp(6)}
+        />
+      </Ripple>
+      <View style={Styles.emptyIconWrap}>
+        <Ionicons
+          name="images-outline"
+          color={Colors.primaryLite}
+          size={wp(16)}
+        />
+      </View>
       <Text style={Styles.emptyListText}>{LanguageKeys.noImagesFound}</Text>
     </View>
   );
 
-  const renderDots = ({ index }: any) => {
-    return index === activeIndex.index ? (
-      <Animation style={Styles.activeDot} animation={'zoomIn'} duration={500} />
-    ) : (
-      <View style={Styles.inActiveDot} />
-    );
-  };
   return (
-    <SafeAreaView style={Styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={Styles.container}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.color1} />
       <ModalLoader visible={loader.visible} message={loader.message} />
-      <AntDesign
-        name="left"
-        color={Colors.color2}
-        size={wp(5)}
-        style={Styles.headerBack}
-        onPress={onBackPress}
-      />
-      <SwiperFlatList
-        index={0}
-        data={images}
-        renderItem={renderList}
-        ref={sliderRef}
-        contentContainerStyle={Styles.sliderContainer}
-        showPagination={false}
-        onChangeIndex={onSliderIndexChange}
-        ListEmptyComponent={renderEmptyList}
-      />
-      {images?.length !== 0 && images[0] !== 'privateImage' && (
-        <View style={Styles.dotsBtnOuterCon}>
-          <Ripple style={Styles.leftRightBtnCon} onPress={onLeftPress}>
-            <AntDesign name="left" color={Colors.color2} size={wp(8)} />
-          </Ripple>
-          <View>
-            <FlatList
-              ref={dotsRef}
-              data={images}
-              renderItem={renderDots}
-              horizontal
-              style={Styles.dotsContainer}
-              contentContainerStyle={{ alignItems: 'center' }}
-            />
-          </View>
-          <Ripple style={Styles.leftRightBtnCon} onPress={onRightPress}>
-            <AntDesign name="right" color={Colors.color2} size={wp(8)} />
-          </Ripple>
-        </View>
+      {galleryItems.length ? (
+        <>
+          <SwiperFlatList
+            index={0}
+            data={galleryItems}
+            renderItem={renderSlide}
+            ref={sliderRef}
+            contentContainerStyle={Styles.sliderContainer}
+            showPagination={false}
+            onChangeIndex={onSliderIndexChange}
+          />
+          {renderTopBar()}
+          {renderThumbnailRail()}
+        </>
+      ) : hasLoadedGallery && !loader.visible ? (
+        renderEmptyList()
+      ) : (
+        <View style={Styles.loadingBackground} />
       )}
       <PrivacyProtectedAlert
         visible={privacyProtectedAlertVisible}
@@ -268,106 +587,238 @@ const ImageViewer = (props: any) => {
 
 export default ImageViewer;
 
-const { width } = Dimensions.get('window');
 const Styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.color1,
-  },
-  headerBack: {
-    marginTop: hp(6),
-    marginHorizontal: wp(2),
-    paddingHorizontal: wp(2),
-    alignSelf: 'flex-start',
-  },
-  sliderContainer: {
-    height: hp(70),
-    marginTop: hp(2),
-  },
-  itemContainer: {
-    width: wp(100),
-    height: hp(70),
-  },
-  itemImage: {
-    width: wp(100),
-    height: hp(70),
-  },
-  lockCon: {
-    width: wp(100),
-    height: hp(70),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imageLoaderCon: {
-    width: wp(100),
-    height: hp(70),
-    justifyContent: 'center',
-    alignItems: 'center',
+  bottomOverlay: {
+    backgroundColor: Colors.blackRGBA50,
+    borderColor: Colors.whiteRGBA18,
+    borderRadius: wp(6),
+    borderWidth: 1,
+    bottom: hp(2),
+    left: wp(3),
+    paddingVertical: hp(1.2),
     position: 'absolute',
+    right: wp(3),
   },
-  dotsBtnOuterCon: {
-    width: wp(100),
-    height: hp(10),
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  leftRightBtnCon: {
-    width: wp(15),
-    height: hp(10),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dotsContainer: {
+  bottomOverlaySingle: {
     alignSelf: 'center',
-    maxWidth: wp(61),
-    paddingLeft: wp(1),
-    height: hp(10),
-    overflow: 'hidden',
-    borderWidth: 0,
-    borderColor: 'red',
+    left: undefined,
+    right: undefined,
+    width: wp(22),
   },
-  activeDot: {
-    width: width * 0.04,
-    height: width * 1 * 0.04,
-    borderRadius: (width * 1 * 0.04) / 2,
-    backgroundColor: Colors.color2,
-    marginRight: wp(3),
+  container: {
+    backgroundColor: Colors.color1,
+    flex: 1,
   },
-  inActiveDot: {
-    width: width * 0.025,
-    height: width * 1 * 0.025,
-    borderRadius: (width * 1 * 0.025) / 2,
-    backgroundColor: Colors.color2,
-    marginRight: wp(3),
+  countPill: {
+    alignItems: 'center',
+    backgroundColor: Colors.blackRGBA50,
+    borderColor: Colors.whiteRGBA18,
+    borderRadius: wp(5),
+    borderWidth: 1,
+    height: wp(10.5),
+    justifyContent: 'center',
+    minWidth: wp(15),
+    paddingHorizontal: wp(3),
   },
-  openButton: {
+  countText: {
     color: Colors.color2,
-    marginVertical: hp(2),
     fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium,
-    lineHeight: wp(5),
+    fontSize: Typography.small,
+  },
+  emptyBackButton: {
+    left: wp(4),
+    position: 'absolute',
+    top: hp(2),
+  },
+  emptyIconWrap: {
+    alignItems: 'center',
+    backgroundColor: Colors.whiteRGBA10,
+    borderColor: Colors.whiteRGBA18,
+    borderRadius: wp(12),
+    borderWidth: 1,
+    height: wp(24),
+    justifyContent: 'center',
+    marginBottom: hp(2),
+    width: wp(24),
   },
   emptyListCon: {
-    flex: 1,
-    width: wp(100),
-    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: Colors.color1,
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: wp(10),
   },
   emptyListText: {
     color: Colors.color2,
-    alignSelf: 'center',
-    textAlign: 'center',
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium,
-  },
-  privatePhotoDes: {
-    color: Colors.color2,
-    alignSelf: 'center',
     textAlign: 'center',
-    marginHorizontal: wp(20),
-    marginTop: hp(2),
+  },
+  iconButton: {
+    alignItems: 'center',
+    backgroundColor: Colors.whiteRGBA18,
+    borderColor: Colors.whiteRGBA18,
+    borderRadius: wp(5.5),
+    borderWidth: 1,
+    height: wp(11),
+    justifyContent: 'center',
+    overflow: 'hidden',
+    width: wp(11),
+  },
+  imageFallback: {
+    alignItems: 'center',
+    backgroundColor: Colors.ink,
+    flex: 1,
+    justifyContent: 'center',
+    width: wp(100),
+  },
+  imageFallbackText: {
+    color: Colors.whiteRGBA90,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small2,
+    marginTop: hp(1),
+  },
+  imageLoaderCon: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingBackground: {
+    backgroundColor: Colors.color1,
+    flex: 1,
+  },
+  lockedDescription: {
+    alignSelf: 'center',
+    color: Colors.whiteRGBA90,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
+    lineHeight: wp(5),
+    marginTop: hp(1.2),
+    paddingHorizontal: wp(8),
+    textAlign: 'center',
+    width: '100%',
+  },
+  lockedIconWrap: {
+    alignItems: 'center',
+    backgroundColor: Colors.whiteRGBA18,
+    borderColor: Colors.whiteRGBA30,
+    borderRadius: wp(13),
+    borderWidth: 1,
+    height: wp(26),
+    justifyContent: 'center',
+    width: wp(26),
+  },
+  lockedSlide: {
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: wp(8),
+    width: wp(100),
+  },
+  lockedThumbnail: {
+    alignItems: 'center',
+    backgroundColor: Colors.themeRGBA50,
+    flex: 1,
+    justifyContent: 'center',
+  },
+  lockedTitle: {
+    alignSelf: 'center',
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium,
+    marginTop: hp(2),
+    textAlign: 'center',
+    width: '100%',
+  },
+  requestAccessButton: {
+    alignItems: 'center',
+    backgroundColor: Colors.color2,
+    borderRadius: wp(6),
+    justifyContent: 'center',
+    marginTop: hp(2.4),
+    minHeight: hp(5.4),
+    paddingHorizontal: wp(6),
+  },
+  requestAccessButtonDisabled: {
+    backgroundColor: Colors.whiteRGBA18,
+    borderColor: Colors.whiteRGBA30,
+    borderWidth: 1,
+  },
+  requestAccessText: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.small2,
+    maxWidth: wp(68),
+  },
+  requestAccessTextDisabled: {
+    color: Colors.color2,
+  },
+  slide: {
+    backgroundColor: Colors.color1,
+    flex: 1,
+    height: '100%',
+    width: wp(100),
+  },
+  slideImage: {
+    height: '100%',
+    width: wp(100),
+  },
+  sliderContainer: {
+    flexGrow: 1,
+  },
+  thumbnailButton: {
+    backgroundColor: Colors.blackRGBA50,
+    borderColor: Colors.whiteRGBA18,
+    borderRadius: wp(3.5),
+    borderWidth: 1,
+    height: hp(8),
+    marginRight: wp(2),
+    overflow: 'hidden',
+    width: wp(14),
+  },
+  thumbnailButtonActive: {
+    borderColor: Colors.color2,
+    borderWidth: 2,
+  },
+  thumbnailButtonLast: {
+    marginRight: 0,
+  },
+  thumbnailImage: {
+    height: '100%',
+    width: '100%',
+  },
+  thumbnailList: {
+    paddingHorizontal: wp(3),
+  },
+  thumbnailListSingle: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  titleWrap: {
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: wp(3),
+    minWidth: 0,
+  },
+  topOverlay: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    left: wp(4),
+    position: 'absolute',
+    right: wp(4),
+    top: hp(3.2),
+  },
+  viewerSubtitle: {
+    color: Colors.whiteRGBA90,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small,
+    marginTop: hp(0.4),
+    textAlign: 'center',
+  },
+  viewerTitle: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.medium,
+    textAlign: 'center',
   },
 });

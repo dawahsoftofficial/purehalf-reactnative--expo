@@ -19,6 +19,10 @@ import { StorageManager } from '../storageManager';
 import BaseUrl from './BaseUrl';
 import EndPoints from './EndPoints';
 import { Api } from './Middleware';
+import type {
+  CurrentUserDetail,
+  GetCurrentUserDetailResponse,
+} from './types/user-types';
 
 const { storageKeys, setData, getData } = StorageManager;
 
@@ -26,6 +30,70 @@ const firebaseApp = getApp();
 const auth = getAuth(firebaseApp);
 
 class GApiServices {
+  /**
+   * Gets a valid FCM token from storage, or fetches a fresh one if the stored token is a placeholder
+   * @returns Promise<string> - A valid FCM token or placeholder 'FcmToken' for iOS emulator
+   */
+  private async getValidFcmToken(): Promise<string> {
+    try {
+      const storedToken = (await getData(storageKeys.FCM_TOKEN)) as
+        | string
+        | null
+        | undefined;
+
+      // If stored token is valid and not a placeholder, use it
+      if (storedToken && storedToken !== 'FcmToken' && storedToken.length > 0) {
+        return storedToken;
+      }
+
+      // If stored token is the placeholder 'FcmToken' or empty, try to get a fresh token
+      try {
+        const freshToken = (await Firebase.getFcmToken()) as
+          | string
+          | null
+          | undefined;
+        if (freshToken && freshToken !== 'FcmToken' && freshToken.length > 0) {
+          // Save the fresh token for future use
+          await setData(storageKeys.FCM_TOKEN, freshToken);
+          return freshToken;
+        }
+      } catch (error) {
+        // Silently handle error - permissions might not be granted yet
+        // This is expected behavior and not a critical error
+        console.log(
+          '[getValidFcmToken] Could not fetch fresh FCM token (permissions may not be granted):',
+          error instanceof Error ? error.message : String(error)
+        );
+      }
+
+      // Return stored token if exists, otherwise return placeholder
+      return storedToken || 'FcmToken';
+    } catch (error) {
+      console.error(
+        '[getValidFcmToken] Error retrieving FCM token from storage:',
+        error
+      );
+      // Try to get a fresh token as fallback
+      try {
+        const freshToken = (await Firebase.getFcmToken()) as
+          | string
+          | null
+          | undefined;
+        if (freshToken && freshToken.length > 0) {
+          return freshToken;
+        }
+      } catch (fallbackError) {
+        // Silently handle fallback error
+        console.log(
+          '[getValidFcmToken] Could not fetch fresh FCM token in fallback:',
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : String(fallbackError)
+        );
+      }
+      return 'FcmToken';
+    }
+  }
   socialAuthenticate = (provider: string) => {
     return new Promise(async (resolve, reject) => {
       console.log(
@@ -52,20 +120,11 @@ class GApiServices {
               hasDirectUser: !!googleRes?.user,
             },
           });
-          let fcmToken;
-          try {
-            fcmToken = await getData(storageKeys.FCM_TOKEN);
-            console.log(
-              '[socialAuthenticate] FCM token retrieved:',
-              !!fcmToken
-            );
-          } catch (error) {
-            console.error(
-              '[socialAuthenticate] Error retrieving FCM token:',
-              error
-            );
-            fcmToken = 'defaultFCMToken';
-          }
+          const fcmToken = await this.getValidFcmToken();
+          console.log('[socialAuthenticate] FCM token retrieved:', {
+            hasToken: !!fcmToken,
+            isPlaceholder: fcmToken === 'FcmToken',
+          });
           const requestPayload = {
             token: idToken,
             email: email,
@@ -149,7 +208,7 @@ class GApiServices {
                 errorData?.results?.[0]?.message ||
                 error?.message ||
                 'Authentication failed';
-              flashErrorMessage(errorMessage, 4);
+              flashErrorMessage(errorMessage);
               reject(error);
             });
         })
@@ -183,8 +242,7 @@ class GApiServices {
           );
           error.name = 'AppleSignInNotSupported';
           flashErrorMessage(
-            'Apple Sign In is not available on this device. Please use another login method.',
-            4
+            'Apple Sign In is not available on this device. Please use another login method.'
           );
           reject(error);
           return;
@@ -232,20 +290,11 @@ class GApiServices {
                 userId: res?.user?.uid,
               }
             );
-            let fcmToken;
-            try {
-              fcmToken = await getData(storageKeys.FCM_TOKEN);
-              console.log(
-                '[socialAppleAuthenticate] FCM token retrieved:',
-                !!fcmToken
-              );
-            } catch (error) {
-              console.error(
-                '[socialAppleAuthenticate] Error retrieving FCM token:',
-                error
-              );
-              fcmToken = 'defaultFCMToken';
-            }
+            const fcmToken = await this.getValidFcmToken();
+            console.log('[socialAppleAuthenticate] FCM token retrieved:', {
+              hasToken: !!fcmToken,
+              isPlaceholder: fcmToken === 'FcmToken',
+            });
 
             const requestPayload = {
               token: identityToken,
@@ -350,7 +399,7 @@ class GApiServices {
                   errorData?.results?.[0]?.message ||
                   error?.message ||
                   'Authentication failed';
-                flashErrorMessage(errorMessage, 4);
+                flashErrorMessage(errorMessage);
                 reject(error);
               });
           })
@@ -422,8 +471,7 @@ class GApiServices {
           );
           configError.name = 'AppleSignInConfigurationError';
           flashErrorMessage(
-            'Apple Sign In is not properly configured. Please use another login method or contact support.',
-            4
+            'Apple Sign In is not properly configured. Please use another login method or contact support.'
           );
           reject(configError);
         } else {
@@ -438,8 +486,7 @@ class GApiServices {
           );
           authError.name = 'AppleSignInError';
           flashErrorMessage(
-            'Apple sign in failed. Please try again or use another method.',
-            4
+            'Apple sign in failed. Please try again or use another method.'
           );
           reject(authError);
         }
@@ -449,13 +496,7 @@ class GApiServices {
 
   loginUser = async (phoneNumber: any, onLogin: any) => {
     return new Promise(async (resolve, reject) => {
-      let fcmToken;
-      try {
-        fcmToken = await getData(storageKeys.FCM_TOKEN);
-      } catch (error) {
-        console.error('Error retrieving FCM token:', error);
-        fcmToken = 'defaultFCMToken';
-      }
+      const fcmToken = await this.getValidFcmToken();
       Api.post(EndPoints.authenticate, {
         phone_number: phoneNumber,
         fcm_token: fcmToken,
@@ -528,7 +569,7 @@ class GApiServices {
         })
         .catch((error) => {
           const errorMessage = error?.response?.data?.results;
-          if (errorMessage && errorMessage?.length !== 0) {
+          if (errorMessage?.length) {
             flashErrorMessage(errorMessage[0]);
           } else {
             flashErrorMessage();
@@ -539,12 +580,17 @@ class GApiServices {
     });
   };
 
-  getButtonsActiveStatus = () => {
+  getAppSettings = () => {
     return new Promise((resolve, reject) => {
-      Api.get(EndPoints.getButtonsActiveStatus)
+      Api.get(EndPoints.getAppSettings)
         .then((data: any) => {
-          const results = data?.data?.results || [];
-          resolve({ results });
+          const response = {
+            message: data?.data?.message || '',
+            error: data?.data?.error || false,
+            code: data?.data?.code || 200,
+            results: data?.data?.results || [],
+          };
+          resolve(response);
         })
         .catch((error) => {
           console.log('error while getting Button Status =>', error);
@@ -552,6 +598,7 @@ class GApiServices {
         });
     });
   };
+
   getLanguages = () => {
     return new Promise((resolve, reject) => {
       Api.get(EndPoints.getLanguageList)
@@ -583,11 +630,7 @@ class GApiServices {
   ) => {
     return new Promise((resolve, reject) => {
       const { page, type } = params;
-      console.log('[getUsers] API call initiated:', {
-        page,
-        type,
-        stack: new Error().stack,
-      });
+
       Api.get(`${EndPoints.getUsers}?page=${page}&type=${type}`)
         .then((data) => {
           if (Array.isArray(data?.data?.results)) {
@@ -631,6 +674,48 @@ class GApiServices {
     });
   };
 
+  updateProfilePrivacy = (visibility: Record<string, 'public' | 'private'>) => {
+    return new Promise<{
+      profile_field_visibility?: Record<string, 'public' | 'private'>;
+    }>((resolve, reject) => {
+      Api.patch(EndPoints.updateProfilePrivacy, { visibility })
+        .then((res) => resolve(res?.data?.results))
+        .catch((error) => {
+          flashErrorMessage(error?.response?.data?.message);
+          reject(error?.response?.data);
+        });
+    });
+  };
+
+  // Public, unauthenticated live match count for the welcome primer reveal.
+  getMatchCount = (params: {
+    seeking: string;
+    min_age?: number;
+    max_age?: number;
+    country?: string;
+  }) => {
+    return new Promise((resolve, reject) => {
+      const parts = [`seeking=${encodeURIComponent(params.seeking)}`];
+      if (params.min_age != null) parts.push(`min_age=${params.min_age}`);
+      if (params.max_age != null) parts.push(`max_age=${params.max_age}`);
+      if (params.country) {
+        parts.push(`country=${encodeURIComponent(params.country)}`);
+      }
+      Api.get(`${EndPoints.matchCount}?${parts.join('&')}`)
+        .then((data) => resolve(data?.data?.results))
+        .catch((error) => reject(error?.response?.data));
+    });
+  };
+
+  // Commit the primer's collected answers to the account after auth.
+  commitIntroAnswers = (payload: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.introCommit, payload)
+        .then((data) => resolve(data?.data?.results))
+        .catch((error) => reject(error?.response?.data));
+    });
+  };
+
   getUserDetail = (id: any) => {
     return new Promise((resolve, reject) => {
       Api.get(`${EndPoints.getUserDetail}/${id}/detail`)
@@ -666,13 +751,7 @@ class GApiServices {
   logout = () => {
     return new Promise(async (resolve, reject) => {
       // const fcmToken = await getData(storageKeys.FCM_TOKEN)
-      let fcmToken;
-      try {
-        fcmToken = await getData(storageKeys.FCM_TOKEN);
-      } catch (error) {
-        console.error('Error retrieving FCM token:', error);
-        fcmToken = 'defaultFCMToken';
-      }
+      const fcmToken = await this.getValidFcmToken();
       Api.post(EndPoints.logout, {
         fcm_token: fcmToken,
       })
@@ -686,45 +765,60 @@ class GApiServices {
     });
   };
 
-  imageUpload = (file: any, key: any, youtubeURL: any) => {
-    return new Promise(async (resolve, reject) => {
-      const myHeaders = new Headers();
-      myHeaders.append(
-        'Authorization',
-        `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`
-      );
-      myHeaders.append('Content-Type', 'multipart/form-data');
+  imageUpload = async (file: any, key: any, youtubeURL: any) => {
+    const formData = new FormData();
+    // Android: cropper/resizer often return `path`; RN FormData requires `uri` on the file object
+    const fileUri = file?.uri ?? file?.path;
+    if (fileUri && key) {
+      formData.append('file', {
+        uri: fileUri,
+        type: file?.type ?? 'image/jpeg',
+        name: file?.name ?? 'image.jpg',
+      } as any);
+      formData.append('key', key);
+    }
+    if (youtubeURL?.length !== 0) {
+      formData.append('youtube_url', youtubeURL);
+    }
 
-      const formdata = new FormData();
-      if (file?.uri && key) {
-        formdata.append('file', {
-          uri: file.uri,
-          type: file?.type ? file.type : 'image/jpeg',
-          name: file.name,
-        });
-        formdata.append('key', key);
-      }
+    // Use fetch instead of axios: React Native's fetch handles FormData on Android
+    // correctly; axios often causes ERR_NETWORK with multipart on Android.
+    const token = await getData(storageKeys.USER_TOKEN);
+    const url = `${BaseUrl}${EndPoints.mediaUpload}`;
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      Authorization: token ? `Bearer ${token}` : '',
+    };
+    // Do not set Content-Type; let the runtime set multipart/form-data; boundary=...
 
-      if (youtubeURL?.length !== 0) {
-        formdata.append('youtube_url', youtubeURL);
-      }
-
-      const requestOptions = {
-        method: 'POST',
-        headers: myHeaders,
-        body: formdata,
-        redirect: 'follow',
-      };
-      fetch(`${BaseUrl}/auth/media/upload`, requestOptions)
-        .then((response) => response.text())
-        .then((result) => {
-          resolve(JSON.parse(result).results);
-        })
-        .catch((error) => {
-          reject('');
-          console.log('error while uploading image =>', error);
-        });
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
     });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      let errData: unknown;
+      try {
+        errData = errBody ? JSON.parse(errBody) : null;
+      } catch {
+        errData = errBody;
+      }
+      console.log(
+        'error while uploading image =>',
+        (errData as any)?.response ?? errData
+      );
+      const error = new Error(
+        (errData as any)?.message ?? `Upload failed: ${response.status}`
+      ) as Error & { response?: { data?: unknown }; status?: number };
+      (error as any).response = { data: errData };
+      (error as any).status = response.status;
+      throw error;
+    }
+
+    const data = await response.json();
+    return data?.results ?? data;
   };
 
   deleteImage = (params: any) => {
@@ -768,6 +862,22 @@ class GApiServices {
           reject('');
           console.log(
             'error while hiting intreaction action api =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
+  storeRating = (params: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.storeRating, params)
+        .then((res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          reject(error?.response?.data?.message || '');
+          console.log(
+            'error while hiting rating store api =>',
             error?.response?.data
           );
         });
@@ -855,6 +965,23 @@ class GApiServices {
     });
   };
 
+  privatePhotoRevokeAccess = (userId: any) => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.privatePhotoRevokeAccess, { action_user_id: userId })
+        .then(async (res) => {
+          resolve(res?.data?.results);
+        })
+        .catch((error) => {
+          flashErrorMessage();
+          reject('');
+          console.log(
+            'error while revoking private photo access =>',
+            error?.response?.data
+          );
+        });
+    });
+  };
+
   privatePhotoRemoveRequest = (userId: any) => {
     return new Promise((resolve, reject) => {
       Api.post(EndPoints.privatePhotoRemoveRequest, { action_user_id: userId })
@@ -879,8 +1006,9 @@ class GApiServices {
           resolve(data?.data);
         })
         .catch((error) => {
-          if (error?.response?.data?.results.length !== 0) {
-            flashErrorMessage(error?.response?.data?.results[0]);
+          const results = error?.response?.data?.results;
+          if (results?.length) {
+            flashErrorMessage(results[0]);
           }
           console.log(
             'error while running search filter API  =>',
@@ -984,20 +1112,59 @@ class GApiServices {
     });
   };
 
-  getCurrentUserDetail = () => {
-    return new Promise((resolve, reject) => {
-      Api.get(`${EndPoints.getCurrentUserDetail}`)
-        .then(async (data) => {
-          await setData(storageKeys.USER, data?.data?.results);
-          resolve(data?.data?.results);
+  debugForceDeleteAccount = () => {
+    return new Promise(async (resolve, reject) => {
+      const config = {
+        method: 'delete',
+        maxBodyLength: Infinity,
+        url: `${BaseUrl}${EndPoints.debugForceDeleteAccount}`,
+        headers: {
+          Authorization: `Bearer ${await StorageManager.getData(StorageManager.storageKeys.USER_TOKEN)}`,
+          'Content-Type': 'application/json',
+        },
+      };
+      axios
+        .request(config)
+        .then(() => {
+          resolve('');
         })
         .catch((error) => {
+          reject(error);
+          console.log('error while debug force-deleting account =>', error);
+        });
+    });
+  };
+
+  getCurrentUserDetail = (): Promise<CurrentUserDetail> => {
+    return new Promise((resolve, reject) => {
+      Api.get(`${EndPoints.getCurrentUserDetail}`)
+        .then(async (response) => {
+          const data = response.data as GetCurrentUserDetailResponse;
+          if (data?.error === false && data?.results) {
+            await setData(storageKeys.USER, data.results);
+            resolve(data.results);
+          } else {
+            const errorMessage =
+              data?.message || 'Failed to get current user detail';
+            console.error(
+              '[ApiServices.getCurrentUserDetail] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to get current user detail';
           flashErrorMessage();
-          console.log(
-            'error while getting current user detail  =>',
+          console.error(
+            '[ApiServices.getCurrentUserDetail] Error:',
+            errorMessage,
             error?.response?.data
           );
-          reject('');
+          reject(errorMessage);
         });
     });
   };
@@ -1016,9 +1183,105 @@ class GApiServices {
             resolve(null);
           }
         })
-        .catch((error: any) => {
-          console.log('error while getting membership info =>', error);
+        .catch(() => {
           reject('');
+        });
+    });
+  };
+
+  /**
+   * Collect chat credits (premium members only)
+   * This endpoint is only available for premium members
+   * @returns Promise resolving to user object with updated data
+   */
+  collectChatCredits = () => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.collectChatCredit)
+        .then((response) => {
+          const data = response?.data;
+          if (data?.error === false && data?.results) {
+            resolve(data.results);
+          } else {
+            const errorMessage =
+              data?.message || 'Failed to collect chat credits';
+            console.error(
+              '[ApiServices.collectChatCredits] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to collect chat credits';
+          console.error('[ApiServices.collectChatCredits] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          reject(errorMessage);
+        });
+    });
+  };
+
+  /** Get the server-authoritative VIP daily gift without claiming it. */
+  getDailyChatCreditReward = () => {
+    return new Promise((resolve, reject) => {
+      Api.get(EndPoints.dailyChatCreditReward)
+        .then((response) => {
+          const data = response?.data;
+          if (data?.error === false && data?.results) {
+            resolve(data.results);
+          } else {
+            reject(data?.message || 'Failed to load daily gift');
+          }
+        })
+        .catch((error) =>
+          reject(
+            error?.response?.data?.message ||
+              error?.message ||
+              'Failed to load daily gift'
+          )
+        );
+    });
+  };
+
+  /**
+   * Claim the one-time profile-completion gift. Only succeeds once the
+   * backend independently confirms the profile is at/above the completion
+   * threshold; a second call after a successful claim resolves with
+   * status 'already_claimed' rather than rejecting.
+   * @returns Promise resolving to { status, awarded, new_balance, multiplier }
+   */
+  claimProfileGift = () => {
+    return new Promise((resolve, reject) => {
+      Api.post(EndPoints.claimProfileGift)
+        .then((response) => {
+          const data = response?.data;
+          if (data?.error === false && data?.results) {
+            resolve(data.results);
+          } else {
+            const errorMessage = data?.message || 'Failed to claim gift';
+            console.error(
+              '[ApiServices.claimProfileGift] API returned error:',
+              errorMessage
+            );
+            reject(errorMessage);
+          }
+        })
+        .catch((error) => {
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            'Failed to claim gift';
+          console.error('[ApiServices.claimProfileGift] Error:', {
+            message: errorMessage,
+            status: error?.response?.status,
+            data: error?.response?.data,
+          });
+          reject(errorMessage);
         });
     });
   };
@@ -1085,115 +1348,29 @@ class GApiServices {
     });
   };
 
-  resendWaliVerificationCode = () => {
-    return new Promise((resolve, reject) => {
-      Api.get(`${EndPoints.resendOtp}`)
-        .then(async (data) => {
-          resolve(data);
-          flashSuccessMessage(LanguageKeys.codeSentToWali);
-        })
-        .catch((error) => {
-          flashErrorMessage();
-          console.log(
-            'error while resending otp to wali email  =>',
-            error?.response?.data
-          );
-          reject('');
-        });
-    });
-  };
-
-  authenticateGuardian = async (params: any) => {
-    try {
-      const response = await Api.post(
-        `${EndPoints.authenticateGuardian}`,
-        params
-      );
-      await setData(storageKeys.USER_TOKEN, response?.data?.bearer_token);
-      return response?.data?.results;
-    } catch (error: any) {
-      const errorDetail = error?.response?.data;
-      if (errorDetail?.message) {
-        flashErrorMessage(errorDetail?.message);
-      } else {
-        flashErrorMessage();
-      }
-
-      console.log('error while logging in guardian =>', errorDetail);
-      throw error;
-    }
-  };
-
-  verifyWaliCode = async (otp: any) => {
-    try {
-      const response = await Api.post(`${EndPoints.verifyGuardian}`, { otp });
-      return response;
-    } catch (error: any) {
-      error = error?.response?.data;
-      if (error?.code === 422) {
-        flashErrorMessage(LanguageKeys.otpMismatchedError);
-      } else if (error?.error) {
-        flashErrorMessage(error?.message);
-      } else {
-        flashErrorMessage();
-      }
-      console.log('error while verifying wali otp =>', error);
-      throw error;
-    }
-  };
-
-  changeGuardianPassword = async (params: any) => {
-    try {
-      const response = await Api.post(
-        `${EndPoints.changeGuardianPassword}`,
-        params
-      );
-      return response;
-    } catch (error: any) {
-      error = error?.response?.data;
-      if (error && error?.results?.length !== 0) {
-        flashErrorMessage(error?.results[0]);
-      } else {
-        flashErrorMessage();
-      }
-      console.log('error while changing guardian password =>', error?.response);
-      throw error;
-    }
-  };
-
-  getUserDetailGuardian = async (userId: string) => {
-    try {
-      const response = await Api.get(
-        `${EndPoints.guardianAuthUser}/${userId}/detail`
-      );
-      return response.data?.results;
-    } catch (error: any) {
-      console.log('error while getting user detail', error?.response);
-      throw error;
-    }
-  };
-
-  logoutGuardian = () => {
-    return new Promise((resolve, reject) => {
-      Api.post(EndPoints.guardianLogout)
-        .then(() => resolve(''))
-        .catch((error: any) => {
-          console.log('error while logging out guardian =>', error);
-          reject('');
-        });
-    });
-  };
-
   addProfilePicture = (params: any, onProgress: (progress: number) => void) => {
     return new Promise(async (resolve, reject) => {
-      const { uri, type, name } = params;
+      const { uri, name } = params;
       const formData = new FormData();
+
+      // Determine file type from URI or default to jpeg
+      let fileType = 'image/jpeg';
+      if (uri) {
+        const extension = uri.split('.').pop()?.toLowerCase();
+        if (extension === 'png') {
+          fileType = 'image/png';
+        } else if (extension === 'jpg' || extension === 'jpeg') {
+          fileType = 'image/jpeg';
+        }
+      }
+
       formData.append('file', {
         uri: uri,
-        type: type ? type : 'image/jpeg',
-        name: name,
-      });
+        type: fileType,
+        name: name || 'profile_picture.jpg',
+      } as any);
       formData.append('key', 'primary_image');
+
       const xhr = new XMLHttpRequest();
       xhr.withCredentials = true;
       xhr.open('POST', `${BaseUrl}/auth/media/upload`);
@@ -1201,16 +1378,40 @@ class GApiServices {
         StorageManager.storageKeys.USER_TOKEN
       );
       xhr.setRequestHeader('Authorization', `Bearer ${userToken}`);
+
+      // Initialize progress
+      onProgress(0);
       xhr.upload.onprogress = (event) => {
-        const progressPercentage = Math.round(
-          (event.loaded / event.total) * 100
-        );
-        onProgress(progressPercentage);
+        if (event.lengthComputable && event.total > 0) {
+          const progressPercentage = Math.round(
+            (event.loaded / event.total) * 100
+          );
+          const clampedProgress = Math.min(
+            Math.max(progressPercentage, 0),
+            100
+          );
+          onProgress(clampedProgress);
+        } else if (event.loaded > 0) {
+          // Fallback: estimate progress if total is unknown
+          const estimatedProgress = Math.min(
+            Math.max(Math.round((event.loaded / 1000000) * 50), 0),
+            99
+          );
+          onProgress(estimatedProgress);
+        }
       };
       xhr.onload = () => {
+        // Ensure progress reaches 100% on completion
+        onProgress(100);
+
         if (xhr.status === 200) {
-          const responseData = JSON.parse(xhr.response);
-          resolve(responseData);
+          try {
+            const responseData = JSON.parse(xhr.response);
+            resolve(responseData);
+          } catch (parseError) {
+            console.error('[Upload] Error parsing response:', parseError);
+            reject('');
+          }
         } else {
           if (
             xhr.response &&

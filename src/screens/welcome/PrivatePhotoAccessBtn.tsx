@@ -1,11 +1,10 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text as ReactText, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Text } from '../../components';
-import { Typography, wp } from '../../global';
-import Constants from '../../global/Constants';
+import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 
@@ -18,35 +17,26 @@ const PrivatePhotoAccessBtn = (props: any) => {
   };
   return (
     <Ripple
-      style={[
-        Styles.privatePhotoAccessBtn,
-        { flexDirection: Rtl ? 'row-reverse' : 'row' },
-      ]}
+      rippleColor={Colors.primary}
+      style={[Styles.container, { flexDirection: Rtl ? 'row-reverse' : 'row' }]}
       onPress={onPress}
     >
-      <View
-        style={{
-          flexDirection: Rtl ? 'row-reverse' : 'row',
-          alignItems: 'center',
-        }}
-      >
-        <Text
-          style={[Styles.privatePhotoAccessTxt, { maxWidth: wp(20) }]}
-          numberOfLines={1}
-        >
-          {photoRequests}
-        </Text>
-        <Text
-          style={[Styles.privatePhotoAccessTxt, { marginHorizontal: 5 }]}
-          numberOfLines={1}
-        >
-          {LanguageKeys.privatePhotoBtnDes}
-        </Text>
+      <View style={Styles.iconWrap}>
+        <Ionicons name="images-outline" size={wp(5)} color={Colors.primary} />
+        {photoRequests ? (
+          <View style={Styles.badge}>
+            <ReactText style={Styles.badgeTxt} numberOfLines={1}>
+              {Number(photoRequests) > 99 ? '99+' : photoRequests}
+            </ReactText>
+          </View>
+        ) : null}
       </View>
-
-      <AntDesign
-        name={Rtl ? 'arrowleft' : 'arrowright'}
-        color={Colors.color1}
+      <Text style={Styles.text} numberOfLines={2}>
+        {LanguageKeys.privatePhotoBtnDes}
+      </Text>
+      <Ionicons
+        name={Rtl ? 'chevron-back' : 'chevron-forward'}
+        color={Colors.primary}
         size={wp(5)}
       />
     </Ripple>
@@ -56,23 +46,50 @@ const PrivatePhotoAccessBtn = (props: any) => {
 export default PrivatePhotoAccessBtn;
 
 const Styles = StyleSheet.create({
-  privatePhotoAccessBtn: {
-    height: 40,
-    borderRadius: 30,
-    flexDirection: 'row',
-    paddingHorizontal: wp(4),
+  container: {
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: Colors.theme,
-    backgroundColor: Colors.themeRGBA20,
-    marginTop: 10,
+    borderRadius: 14,
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(1.3),
+    backgroundColor: Colors.lavender,
+    marginTop: hp(1.4),
+    marginHorizontal: wp(3),
+    gap: wp(3),
   },
-  privatePhotoAccessTxt: {
-    color: Colors.color1,
+  iconWrap: {
+    width: wp(10),
+    height: wp(10),
+    borderRadius: wp(5),
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badge: {
+    position: 'absolute',
+    top: -wp(1),
+    right: -wp(1),
+    minWidth: wp(4.6),
+    height: wp(4.6),
+    borderRadius: wp(2.3),
+    paddingHorizontal: wp(1),
+    backgroundColor: Colors.primary,
+    borderWidth: 1.5,
+    borderColor: Colors.lavender,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  badgeTxt: {
+    color: Colors.surface,
+    fontFamily: Fonts.APPFONT_B,
+    fontSize: Typography.tiny,
+    includeFontPadding: false,
+  },
+  text: {
+    flex: 1,
+    alignSelf: 'center',
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
-    marginBottom: Constants.fontFamilyMarginBottom,
-    alignSelf: 'center',
+    includeFontPadding: false,
   },
 });

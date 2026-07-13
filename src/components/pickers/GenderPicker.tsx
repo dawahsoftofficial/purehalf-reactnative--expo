@@ -131,7 +131,7 @@ const GenderPicker = React.memo((props: GenderPickerProps) => {
       Styles.container,
       {
         flexDirection: (Rtl ? 'row-reverse' : 'row') as 'row' | 'row-reverse',
-        backgroundColor: disabled ? Colors.color54 : Colors.color3,
+        backgroundColor: disabled ? Colors.lavender : Colors.surface,
       },
     ],
     [Rtl, disabled]
@@ -152,7 +152,7 @@ const GenderPicker = React.memo((props: GenderPickerProps) => {
 
   // Memoized elements
   const downIconElement = useMemo(
-    () => <AntDesign name="down" size={wp(3.5)} color={Colors.color4} />,
+    () => <AntDesign name="down" size={wp(3.5)} color={Colors.muted} />,
     []
   );
 
@@ -224,22 +224,23 @@ export default GenderPicker;
 
 const Styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.color3,
+    backgroundColor: Colors.surface,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     height: hp(6.3),
-    paddingLeft: wp(2),
-    paddingRight: wp(5),
-    borderBottomWidth: 0.7,
-    borderColor: Colors.color1,
+    paddingLeft: wp(3),
+    paddingRight: wp(4),
+    borderWidth: 1.4,
+    borderColor: Colors.hairline,
+    borderRadius: 12,
     marginTop: hp(0.8),
   },
   label: {
     fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_M,
     marginBottom: Constants.fontFamilyMarginBottom,
-    color: Colors.color1,
+    color: Colors.ink,
   },
   innerContainer: {
     flexDirection: 'row',
@@ -252,7 +253,7 @@ const Styles = StyleSheet.create({
   },
   outerBtnLabel: {
     fontFamily: Fonts.APPFONT_R,
-    color: Colors.color1,
+    color: Colors.ink,
     fontSize: Typography.small3,
     marginTop: !isIOS ? hp(0.35) : 0,
     alignSelf: 'center',
@@ -279,7 +280,7 @@ const Styles = StyleSheet.create({
   itemLabel: {
     marginHorizontal: wp(1),
     fontSize: Typography.medium,
-    color: Colors.color1,
+    color: Colors.ink,
     fontFamily: Fonts.APPFONT_R,
     marginBottom: Constants.fontFamilyMarginBottom,
   },

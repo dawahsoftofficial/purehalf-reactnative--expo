@@ -1,6 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getApp } from '@react-native-firebase/app';
-import { getAuth, signOut } from '@react-native-firebase/auth';
 import { getMessaging, onMessage } from '@react-native-firebase/messaging';
 import { useNavigation } from '@react-navigation/native';
 import { CommonActions as CommonActionsNav } from '@react-navigation/native';
@@ -16,24 +14,26 @@ import {
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import Rate from 'react-native-rate';
 import { SafeAreaView } from 'react-native-safe-area-context';
+
+import { openAppStore } from '@/lib/utils/rate-app';
 
 import { hp, Typography, wp } from '../global';
 import { Colors, Fonts } from '../res';
 import {
   ApiServices,
-  stopConversationsListener,
+  cleanupSession,
   StorageManager,
   useGlobalContext,
 } from '../services';
+import { useNotificationStore } from '../stores';
+import { routeNotification } from './routeNotification';
 
 const firebaseApp = getApp();
-const auth = getAuth(firebaseApp);
 const messaging = getMessaging(firebaseApp);
 
 const DisplayForegroundNotification = () => {
-  const { getData, setData, deleteAll, storageKeys } = StorageManager;
+  const { getData, setData, storageKeys } = StorageManager;
   const { currentUser, updateCurrentUser, language } = useGlobalContext();
   const navigation: any = useNavigation();
   const [remoteMessage, setRemoteMessage] = useState<any>(null);
@@ -92,35 +92,57 @@ const DisplayForegroundNotification = () => {
     setRemoteMessageData(data);
     setRemoteMessage(remoteMessage);
     showNotification();
+    if (data?.notification_type && data?.notification_type !== 'new_message') {
+      useNotificationStore.getState().increment();
+    }
   };
 
   const onLogoutPress = async () => {
-    const verificationId = await getData(storageKeys.FIREBASE_VERIFICATION_ID);
-    await AsyncStorage.setItem('isRecommended', 'false');
-    await ApiServices.logout().catch();
-    await signOut(auth).catch();
-    await deleteAll()
-      .then(async () => {
-        updateCurrentUser(null);
-        const { setData } = StorageManager;
-        await setData(storageKeys.LANGUAGE, language);
-        await setData(storageKeys.FIREBASE_VERIFICATION_ID, verificationId);
-        await stopConversationsListener();
-        navigation.dispatch(
-          CommonActionsNav.reset({
-            index: 1,
-            routes: [{ name: 'AuthWelcome' }],
-          })
-        );
+    // Best-effort server-side logout — failure here shouldn't block the local
+    // teardown (server may already have invalidated the session if this was
+    // triggered by an account_suspended push).
+    try {
+      await ApiServices.logout();
+    } catch (error) {
+      console.log('[DisplayForegroundNotification] ApiServices.logout:', error);
+    }
+    // Full session teardown — same helper used by handleLogout and account
+    // deletion. Preserves language and firebase verification id.
+    await cleanupSession({ language });
+    updateCurrentUser(null);
+    navigation.dispatch(
+      CommonActionsNav.reset({
+        index: 1,
+        routes: [{ name: 'AuthWelcome' }],
       })
-      .catch();
+    );
   };
 
   useEffect(() => {
-    onMessage(messaging, async (remoteMessage: any) => {
+    // Subscribe to foreground FCM messages. The listener needs cleaning up
+    // on unmount (M4 audit finding) — otherwise the callback closes over
+    // stale handlers after user-switch and never stops firing.
+    const unsubscribe = onMessage(messaging, async (remoteMessage: any) => {
       const pressAction = remoteMessage?.data?.pressAction;
 
-      const data = JSON.parse(remoteMessage?.data?.data || {});
+      // Parse the payload exactly once. Re-parsing the already-parsed
+      // object (as the old code did) throws "[object Object]" errors and
+      // silently dropped most non-openChat notifications.
+      let data: any = null;
+      try {
+        const raw = remoteMessage?.data?.data;
+        if (typeof raw === 'string' && raw.length > 0) {
+          data = JSON.parse(raw);
+        } else if (raw && typeof raw === 'object') {
+          data = raw;
+        }
+      } catch (error) {
+        console.error(
+          '[DisplayForegroundNotification] Failed to parse data payload:',
+          error
+        );
+      }
+
       if (pressAction === 'openChat') {
         getData(storageKeys.OPENED_CONVERSATION_ID)
           .then((res) => {
@@ -136,264 +158,71 @@ const DisplayForegroundNotification = () => {
           .catch(() => {
             handleOnMessage(data, remoteMessage);
           });
-      } else {
-        if (JSON.parse(data)?.notification_type === 'account_suspended') {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-          onLogoutPress();
-        } else if (
-          JSON.parse(data)?.notification_type === 'membership_extended'
-        ) {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MembershipCongrats',
-                params: {
-                  date_of_expiry: JSON.parse(data)?.date_of_expiry,
-                  amount: JSON.parse(data)?.amount,
-                  title: JSON.parse(data)?.title,
-                },
-              },
-            ],
-          });
-        } else if (JSON.parse(data)?.notification_type === 'payment_received') {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-          navigation.reset({
-            index: 0,
-            routes: [
-              {
-                name: 'MembershipCongrats',
-                params: {
-                  date_of_expiry: JSON.parse(data)?.date_of_expiry,
-                  amount: JSON.parse(data)?.amount,
-                  title: JSON.parse(data)?.title,
-                },
-              },
-            ],
-          });
-        } else {
-          handleOnMessage(JSON.parse(data), remoteMessage);
-        }
-      }
-    });
-  }, []);
-
-  const onNotificationPress = async () => {
-    switch (remoteMessageData?.notification_type) {
-      case 'profile_liked':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('UserProfile', {
-          userData: { id: remoteMessageData?.id },
-        });
-        break;
-      case 'profile_visited':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('UserProfile', {
-          userData: { id: remoteMessageData?.id },
-        });
-        break;
-      case 'photo_access_request':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('PrivatePhotoRequest');
-        break;
-      case 'photo_request_declined':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('PrivatePhotoRequest');
-        break;
-      case 'photo_request_approved':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('UserProfile', {
-          userData: { id: remoteMessageData?.id },
-        });
-        break;
-      case 'account_suspended':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        // navigation.reset({
-        //   index: 0,
-        //   routes: [{
-        //     name: "AccountSuspended"
-        //   }],
-        // });
-        break;
-      case 'account_unsuspended':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'account_deletion':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
+      } else if (data?.notification_type === 'account_suspended') {
+        handleOnMessage(data, remoteMessage);
         onLogoutPress();
-        break;
-      case 'membership_upgraded':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'membership_downgraded':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'membership_extended':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        // navigation.reset({
-        //   index: 0,
-        //   routes: [{
-        //     name: "MembershipCongrats", params: {
-        //       date_of_expiry: remoteMessageData?.date_of_expiry
-        //       // amount: remoteMessageData?.price,
-        //       // title: remoteMessageData?.title
-        //     }
-        //   }],
-        // });
-        break;
-      case 'membership_cancelled':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      case 'membership_expiring':
-        // navigation.navigate('UserProfile', {
-        //   userData: { id: remoteMessageData?.other_user_id }
-        // })
-        break;
-      // case "payment_received":
-      //   hideNotification(() => {
-      //     setRemoteMessage(null);
-      //     setRemoteMessageData(null);
-      //   });
-      //   navigation.reset({
-      //     index: 0,
-      //     routes: [{
-      //       name: "MembershipCongrats", params: {
-      //         date_of_expiry: remoteMessageData?.date_of_expiry,
-      //         amount: remoteMessageData?.amount,
-      //         title: remoteMessageData?.title
-      //       }
-      //     }],
-      //   });
-      //   break;
-      case 'membership_renewed':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
+      } else if (
+        data?.notification_type === 'membership_extended' ||
+        data?.notification_type === 'payment_received'
+      ) {
+        handleOnMessage(data, remoteMessage);
         navigation.reset({
           index: 0,
           routes: [
             {
               name: 'MembershipCongrats',
               params: {
-                date_of_expiry: remoteMessageData?.date_of_expiry,
-                amount: remoteMessageData?.amount,
-                title: remoteMessageData?.title,
+                date_of_expiry: data?.date_of_expiry,
+                amount: data?.amount,
+                title: data?.title,
               },
             },
           ],
         });
-        break;
-      case 'daily_matches':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Welcome', {
-          openRecommendationModal: true,
-        });
-        break;
-      case 'new_female_signups':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Welcome');
-        break;
-      case 'new_male_signups':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Welcome');
-        break;
-      case 'expired_discount':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        await AsyncStorage.setItem(
-          'membership_discount',
-          new Date().getTime().toString()
-        );
-        navigation.navigate('DiscountProFeaturesPromotion');
-        break;
+      } else {
+        handleOnMessage(data, remoteMessage);
+      }
+    });
 
-      case 'new_message':
-        hideNotification(() => {
-          setRemoteMessage(null);
-          setRemoteMessageData(null);
-        });
-        navigation.navigate('Messages');
-        // if (remoteMessageData?.conversationId) {
-        //   hideNotification(() => {
-        //     setRemoteMessage(null);
-        //     setRemoteMessageData(null);
-        //   });
-        //   navigation.navigate('SingleChat', {
-        //     from: 'notification',
-        //     conversationId: remoteMessageData?.conversationId,
-        //     otherUserData: remoteMessageData?.user,
-        //     message: remoteMessageData?.message
-        //   })
-        // }
-        break;
-      case 'app_update':
-        const options = {
-          AppleAppID: '6450672518',
-          GooglePackageName: 'com.zojayn',
-          preferInApp: false,
-          openAppStoreIfInAppFails: true,
-        };
-        Rate.rate(options, (success, errorMessage) => {
-          if (success) {
-          }
-          if (errorMessage) {
-            console.log(errorMessage);
-          }
-        });
-      case 'profile_picture_update_required':
-        currentUser.media.primary_image = null;
-        updateCurrentUser(currentUser);
-        await setData(storageKeys.USER, currentUser);
-        navigation.navigate('ProfilePicture');
-        break;
-      default:
-        break;
-    }
+    return () => {
+      try {
+        unsubscribe?.();
+      } catch (error) {
+        console.error(
+          '[DisplayForegroundNotification] Failed to unsubscribe FCM listener:',
+          error
+        );
+      }
+    };
+    // Intentionally not depending on currentUser / navigation — the listener
+    // reads navigation and dispatcher functions that are stable across renders,
+    // and we don't want to re-bind the FCM listener on every profile update.
+  }, []);
+
+  const onNotificationPress = async () => {
+    const type = remoteMessageData?.notification_type;
+    const data = remoteMessageData;
+
+    hideNotification(() => {
+      setRemoteMessage(null);
+      setRemoteMessageData(null);
+    });
+
+    await routeNotification(navigation, type, {
+      data,
+      deps: {
+        onLogout: onLogoutPress,
+        openAppStore,
+        onProfilePictureUpdateRequired: async () => {
+          const updatedUser = {
+            ...currentUser,
+            primary_image_to_show: null,
+          };
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+        },
+      },
+    });
   };
 
   let userImage = '';
@@ -407,7 +236,7 @@ const DisplayForegroundNotification = () => {
       userImage = userData?.user?.image;
     }
   }
-  return null;
+  // return null;
   return remoteMessage ? (
     <SafeAreaView style={Styles.container} {...panResponder.panHandlers}>
       <Ripple onPress={onNotificationPress}>

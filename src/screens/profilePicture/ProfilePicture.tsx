@@ -1,18 +1,13 @@
-import React, { useState } from 'react';
-import { Image, Modal, ScrollView, Text, View } from 'react-native';
-import { StyleSheet } from 'react-native';
-import CircularProgress from 'react-native-circular-progress-indicator';
-import { AppEventsLogger } from 'react-native-fbsdk-next';
+import React, { useCallback, useMemo, useState } from 'react';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import * as ImagePickCrop from 'react-native-image-crop-picker';
-import Ripple from 'react-native-material-ripple';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AntDesign from 'react-native-vector-icons/AntDesign';
 
-import { Animation } from '../../animations';
+import { hp, wp } from '@/global';
+import { Colors } from '@/res';
+
 import { Button, ImagePicker } from '../../components';
-import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   flashSuccessMessage,
@@ -21,406 +16,410 @@ import {
   useGlobalContext,
 } from '../../services';
 import { addAnaylatics } from '../../services/firebase/analytics';
+import GuidelinesModal from './components/guidelines-modal';
+import ProfilePictureHeader from './components/profile-picture-header';
+import ProfilePictureUpload from './components/profile-picture-upload';
+import UploadProgress from './components/upload-progress';
 
-const ProfilePicture = (props: any) => {
+type ImageData = {
+  uri: string;
+  type: string;
+  [key: string]: unknown;
+};
+
+type CroppedImage = {
+  path?: string;
+  height?: number;
+  width?: number;
+  size?: number;
+  [key: string]: unknown;
+};
+
+type ResizedImageObj = {
+  uri: string;
+  name: string;
+  height: number;
+  width: number;
+  size: number;
+};
+
+type User = {
+  gender?: string;
+  guardian?: boolean;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone_number?: string;
+  primary_image_to_show?: string;
+  media?: {
+    primary_image?: string;
+    un_blur_primary_image?: string;
+    primary_image_to_show?: string;
+  };
+  [key: string]: unknown;
+};
+
+type ProfilePictureResponse = {
+  results?: {
+    primary_image?: string;
+    un_blur_primary_image?: string;
+    primary_image_to_show?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+};
+
+type ProfilePictureProps = {
+  navigation: {
+    reset: (config: { index: number; routes: Array<{ name: string }> }) => void;
+  };
+};
+
+function ProfilePicture(props: ProfilePictureProps) {
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
-  const guardian = currentUser?.guardian ? currentUser?.guardian : false;
   const [imagePickerVisible, setImagePickerVisible] = useState(false);
   const [image, setImage] = useState('');
-  const [uploadingProgress, setUploadingProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
-  const [toolTipVisible, setToolTipVisible] = useState<boolean>(false);
+  const [uploadingProgress, setUploadingProgress] = useState(0);
+  const [toolTipVisible, setToolTipVisible] = useState(false);
 
-  const onAddImagePress = () => setImagePickerVisible(true);
+  const onAddImagePress = useCallback(() => {
+    setImagePickerVisible(true);
+  }, []);
 
-  const hideImagePicker = () => setImagePickerVisible(false);
+  const hideImagePicker = useCallback(() => {
+    setImagePickerVisible(false);
+  }, []);
 
-  const onImageSelection = (data: any) => {
-    console.log('Image Selection pr ayasads', data?.length, data);
-    // if (data?.length) {
-    ImagePickCrop.openCropper({
-      path: data[0]?.uri,
-      mediaType: data[0]?.type,
-      width: 450,
-      height: 450,
-    })
-      .then((image) => {
-        const resizedImageObj = {
-          height: image?.height,
-          width: image?.width,
-          uri: image?.path,
-          name: image?.path?.split('/')[image?.path?.split('/')?.length - 1],
-          size: image?.size,
-        };
-        setUploading(true);
-        setUploadingProgress(0);
-        ApiServices.addProfilePicture(resizedImageObj, (progress: any) => {
-          const progressValue = Math.min(
-            Math.max(Number(progress) || 0, 0),
-            100
-          );
-          setUploadingProgress(progressValue);
-        })
-          .then(async (res: any) => {
-            const result = res?.results;
-            const user = {
-              ...currentUser,
-              media: {
-                primary_image: result?.primary_image,
-              },
-            };
-            updateCurrentUser(user);
-            await setData(storageKeys.USER, user);
-            flashSuccessMessage('Profile Picture Updated');
-            setImage(resizedImageObj?.uri);
-            setUploading(false);
-            setUploadingProgress(0);
-          })
-          .catch((error) => {
-            console.log('Errorr  1', error);
-            setUploading(false);
-            setUploadingProgress(0);
-          });
-      })
-      .catch((error) => {
-        console.log('Errorr  3333', error);
-        setUploading(false);
-        setUploadingProgress(0);
-      });
-    // }
-  };
+  const showTooltip = useCallback(() => {
+    setToolTipVisible(true);
+  }, []);
 
-  const onContinuePress = () => {
-    //Facebook Event For complete Registration
-    const info = {
-      gender: currentUser?.gender || '',
-      firstName: currentUser?.firstName || '',
-      lastName: currentUser?.lastName || '',
-      email: currentUser?.email || '',
-      phoneNumber: currentUser?.phone_number || '',
-    };
-    AppEventsLogger.logEvent(AppEventsLogger.AppEvents.CompletedRegistration, {
-      [AppEventsLogger.AppEventParams.RegistrationMethod]: 'email',
-      ...info,
-    });
-    addAnaylatics('Complete Registration', info);
-    if (guardian || currentUser?.gender !== 'female') {
-      props.navigation.reset({
-        index: 0,
-        routes: [{ name: 'WelcomeUser' }],
-      });
-    } else {
-      props.navigation.reset({
-        index: 0,
-        routes: [{ name: 'AddWali' }],
-      });
+  const hideTooltip = useCallback(() => {
+    setToolTipVisible(false);
+  }, []);
+
+  const handleUploadProgress = useCallback((progress: number) => {
+    let progressValue = Number(progress) || 0;
+
+    // Debug: Log the raw progress value to understand what we're receiving
+    console.log('[Upload Progress] Raw value:', progressValue);
+
+    // If progress is between 0 and 1, it's a decimal - convert to percentage
+    if (progressValue > 0 && progressValue <= 1) {
+      progressValue = progressValue * 100;
     }
-  };
+    // If progress is between 1 and 10, it might be a scaled value - convert to percentage
+    else if (progressValue > 1 && progressValue <= 10) {
+      progressValue = (progressValue / 10) * 100;
+    }
+
+    // Ensure progress is between 0 and 100
+    progressValue = Math.min(Math.max(progressValue, 0), 100);
+
+    console.log('[Upload Progress] Normalized value:', progressValue);
+
+    // Use requestAnimationFrame to ensure state updates happen on next frame
+    requestAnimationFrame(() => {
+      setUploadingProgress(progressValue);
+    });
+  }, []);
+
+  const resetUploadState = useCallback(() => {
+    setUploading(false);
+    setUploadingProgress(0);
+  }, []);
+
+  const onImageSelection = useCallback(
+    (data: ImageData[]) => {
+      console.log('[ProfilePicture] onImageSelection called with data:', data);
+
+      if (!data || data.length === 0) {
+        console.log('[ProfilePicture] No data or empty array, returning early');
+        return;
+      }
+
+      const firstImage = data[0];
+      console.log('[ProfilePicture] First image:', firstImage);
+
+      if (!firstImage?.uri) {
+        console.log('[ProfilePicture] No URI in first image, returning early');
+        return;
+      }
+
+      console.log('[ProfilePicture] Opening cropper with URI:', firstImage.uri);
+      ImagePickCrop.openCropper({
+        path: firstImage.uri,
+        mediaType: 'photo',
+        width: 450,
+        height: 450,
+        writeTempFile: true, // Ensure temp file is written (required for iOS)
+      })
+        .then((croppedImage: unknown) => {
+          console.log(
+            '[ProfilePicture] Cropper success, cropped image:',
+            croppedImage
+          );
+          const image = croppedImage as CroppedImage;
+
+          if (!image?.path) {
+            console.error('[ProfilePicture] Cropped image has no path!', image);
+            resetUploadState();
+            return;
+          }
+
+          const pathParts = image.path?.split('/') || [];
+          const resizedImageObj: ResizedImageObj = {
+            height: image.height || 0,
+            width: image.width || 0,
+            uri: image.path || '',
+            name: pathParts[pathParts.length - 1] || 'image.jpg',
+            size: image.size || 0,
+          };
+
+          console.log(
+            '[ProfilePicture] Prepared image object:',
+            resizedImageObj
+          );
+          setUploading(true);
+          setUploadingProgress(0);
+
+          console.log('[ProfilePicture] Calling addProfilePicture API...');
+          ApiServices.addProfilePicture(resizedImageObj, handleUploadProgress)
+            .then(async (res: unknown) => {
+              console.log(
+                '[ProfilePicture] API call successful, response:',
+                res
+              );
+              const response = res as ProfilePictureResponse;
+              const result = response?.results;
+
+              // Extract image URLs from API response
+              // For current user, primary_image_to_show should be un_blur_primary_image
+              // (since they see their own unblurred image)
+              const primaryImage = result?.un_blur_primary_image || '';
+              const primaryImageToShow =
+                result?.primary_image_to_show ||
+                result?.un_blur_primary_image ||
+                '';
+
+              console.log(
+                '[ProfilePicture] Extracted primary image:',
+                primaryImage
+              );
+              console.log(
+                '[ProfilePicture] Extracted primary_image_to_show:',
+                primaryImageToShow
+              );
+
+              // Update user with profile picture from API response
+              // Must set both media.un_blur_primary_image AND primary_image_to_show at root level
+              // RootNavigation checks primary_image_to_show to determine initial route
+              const user: User = {
+                ...(currentUser as User),
+                primary_image_to_show: primaryImageToShow, // Root level - required for RootNavigation check
+                media: {
+                  ...(currentUser?.media as Record<string, unknown>),
+                  un_blur_primary_image: primaryImage,
+                  primary_image_to_show: primaryImageToShow, // Also in media for consistency
+                },
+              };
+
+              console.log(
+                '[ProfilePicture] Saving user with primary_image_to_show:',
+                user.primary_image_to_show
+              );
+
+              updateCurrentUser(user);
+              await setData(storageKeys.USER, user);
+
+              flashSuccessMessage('Profile Picture Updated');
+              setImage(resizedImageObj.uri);
+              resetUploadState();
+            })
+            .catch((error) => {
+              console.error(
+                '[ProfilePicture] Error uploading profile picture:',
+                error
+              );
+              resetUploadState();
+            });
+        })
+        .catch((error: unknown) => {
+          // Handle cropper cancellation or errors
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          const errorCode = (error as { code?: string })?.code;
+
+          console.error('[ProfilePicture] Error cropping image:', {
+            error,
+            errorMessage,
+            errorCode,
+            errorType:
+              errorCode === 'E_PICKER_CANCELLED' ? 'USER_CANCELLED' : 'ERROR',
+          });
+
+          // Only reset state if it's not a user cancellation
+          // User cancellation is normal behavior, no need to show error
+          if (errorCode !== 'E_PICKER_CANCELLED') {
+            resetUploadState();
+          }
+        });
+    },
+    [
+      currentUser,
+      handleUploadProgress,
+      resetUploadState,
+      setData,
+      storageKeys.USER,
+      updateCurrentUser,
+    ]
+  );
+
+  const onContinuePress = useCallback(() => {
+    const user = currentUser as User;
+
+    // Check if user has already completed onboarding
+    // Indicators: membership_status is set, or they have profile details (detail object with data)
+    const hasMembership =
+      user?.membership_status !== null &&
+      user?.membership_status !== undefined &&
+      user?.membership_status !== 0;
+
+    const hasProfileDetails =
+      user?.detail &&
+      typeof user.detail === 'object' &&
+      Object.keys(user.detail).length > 0;
+
+    const hasCompletedOnboarding = hasMembership || hasProfileDetails;
+
+    if (hasCompletedOnboarding) {
+      // Existing user updating profile picture - go directly to BottomTab
+      props.navigation.reset({
+        index: 0,
+        routes: [{ name: 'BottomTab' }],
+      });
+      return;
+    }
+
+    // New user during signup - go through onboarding flow
+    const info = {
+      gender: user?.gender || '',
+      firstName: user?.firstName || '',
+      lastName: user?.lastName || '',
+      email: user?.email || '',
+      phoneNumber: user?.phone_number || '',
+    };
+
+    // Facebook Event For complete Registration
+    // AppEventsLogger.logEvent(AppEventsLogger.AppEvents.CompletedRegistration, {
+    //   [AppEventsLogger.AppEventParams.RegistrationMethod]: 'email',
+    //   ...info,
+    // });
+    addAnaylatics('complete_registration', info);
+
+    // Wali/guardian signup step hidden for now (comment out only, per explicit
+    // direction -- guardian is core functionality, not being removed).
+    // // For females: if they already have guardian, skip AddWali
+    // const isFemale = user?.gender === 'female';
+    // const hasGuardian = Boolean(user?.guardian);
+    // const nextRoute = isFemale && !hasGuardian ? 'AddWali' : 'WelcomeUser';
+    const nextRoute = 'WelcomeUser';
+
+    props.navigation.reset({
+      index: 0,
+      routes: [{ name: nextRoute }],
+    });
+  }, [currentUser, props.navigation]);
+
+  const handleImagePickerSelection = useCallback(
+    (res: ImageData[] | undefined | null) => {
+      console.log(
+        '[ProfilePicture] handleImagePickerSelection called with:',
+        res
+      );
+
+      // Normalize the response - ImagePicker might pass res.assets which could be undefined
+      const imageData = Array.isArray(res) ? res : res ? [res] : [];
+
+      if (imageData.length === 0) {
+        console.log('[ProfilePicture] No image data received, returning early');
+        return;
+      }
+
+      hideImagePicker();
+      setTimeout(
+        () => {
+          console.log(
+            '[ProfilePicture] Calling onImageSelection after timeout'
+          );
+          onImageSelection(imageData);
+        },
+        isIOS ? 1000 : 0
+      );
+    },
+    [hideImagePicker, onImageSelection]
+  );
+
+  const isButtonDisabled = useMemo(() => image.length === 0, [image]);
 
   return (
     <SafeAreaView style={Styles.container}>
-      <Modal
-        transparent={true}
+      <GuidelinesModal
         visible={toolTipVisible}
-        onRequestClose={() => setToolTipVisible(false)}
-        animationType="fade"
+        user={currentUser as User}
+        onClose={hideTooltip}
+      />
+      <ScrollView
+        contentContainerStyle={Styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={Styles.modalWrapper}>
-          <Ripple
-            style={Styles.closeWrapper}
-            onPress={() => setToolTipVisible(false)}
-          >
-            <AntDesign name="close" size={wp(6)} color={Colors.color1} />
-          </Ripple>
-          <View style={Styles.tootltipTextWrapper}>
-            <Text style={Styles.tootltipTitle}>Guildlines</Text>
-            <Text style={Styles.guildlineText}>
-              {`\u2022`} The picture quality should be high and not blurry. The
-              picture should not be your whole body but only the face and upper
-              portion of your body like a passport picture.
-            </Text>
-            <Text style={Styles.guildlineText}>
-              {`\u2022`} The profile picture should be a front facing picture
-              that is clearly visible, avoid sunglasses and should not be facing
-              some other way.
-            </Text>
-            <Text style={Styles.guildlineText}>
-              {`\u2022`} We have already added some instructions on the profile
-              picture screen by clicking on the i icon.
-            </Text>
-            <View style={Styles.pfpContainer}>
-              <View>
-                <Text style={Styles.pfpText}>Incorrect</Text>
-                {currentUser?.gender === 'female' ? (
-                  <Image
-                    source={Images.wrongPFPFemale}
-                    style={Styles.pfpImage}
-                  />
-                ) : (
-                  <Image source={Images.wrongPFP} style={Styles.pfpImage} />
-                )}
-              </View>
-              <View>
-                <Text style={Styles.pfpText}>Correct</Text>
-                {currentUser?.gender === 'female' ? (
-                  <Image
-                    source={Images.rightPfpFemale}
-                    style={Styles.pfpImage}
-                  />
-                ) : (
-                  <Image source={Images.rightPfp} style={Styles.pfpImage} />
-                )}
-              </View>
-            </View>
-          </View>
+        <View style={Styles.content}>
+          <ProfilePictureHeader onGuidelinesPress={showTooltip} />
+          {uploading ? (
+            <UploadProgress progress={uploadingProgress} />
+          ) : (
+            <ProfilePictureUpload imageUri={image} onPress={onAddImagePress} />
+          )}
+        </View>
+        <View style={Styles.btnWrapper}>
           <Button
-            text={LanguageKeys.close}
-            onPress={() => setToolTipVisible(false)}
-            buttonStyle={Styles.closeBtn}
-            textStyle={Styles.closeBtnText}
+            disabled={isButtonDisabled}
+            text={LanguageKeys.continue}
+            onPress={onContinuePress}
           />
         </View>
-      </Modal>
-      <ScrollView contentContainerStyle={Styles.scrollConrtainer}>
-        <>
-          <View style={Styles.innerContainer}>
-            <View style={Styles.headerWrapper}>
-              <Text style={Styles.headerText}>Profile Picture</Text>
-              <Ripple
-                style={Styles.tooltipWrapper}
-                onPress={() => setToolTipVisible(true)}
-              >
-                <Image source={Images.infoIcon} style={Styles.infoIcon} />
-              </Ripple>
-            </View>
-            {uploading ? (
-              <View style={Styles.addImageCon}>
-                <Animation animation="zoomIn">
-                  <CircularProgress
-                    value={uploadingProgress}
-                    maxValue={100}
-                    radius={110}
-                    duration={100}
-                    progressValueColor={Colors.color1}
-                    title={'Uploading'}
-                    titleColor={Colors.color1}
-                    titleStyle={{ fontSize: 25, fontFamily: Fonts.APPFONT_B }}
-                    progressValueStyle={{ fontSize: 65 }}
-                    inActiveStrokeColor={Colors.color18}
-                    activeStrokeColor={Colors.theme}
-                  />
-                </Animation>
-              </View>
-            ) : image?.length !== 0 ? (
-              <Ripple style={Styles.addImageCon} onPress={onAddImagePress}>
-                <Image
-                  source={{ uri: image }}
-                  resizeMode="cover"
-                  style={Styles.image}
-                />
-                <View style={Styles.cameraIconWrapper}>
-                  <AntDesign
-                    name="camerao"
-                    size={wp(8)}
-                    color={Colors.color2}
-                  />
-                </View>
-                {/* <Button
-                  text="Change Picture"
-                  buttonStyle={Styles.changeImageButton}
-                  textStyle={Styles.buttonText}
-                  onPress={onAddImagePress}
-                /> */}
-              </Ripple>
-            ) : (
-              <Ripple style={Styles.addImageCon} onPress={onAddImagePress}>
-                <Image
-                  source={Images.addPhoto}
-                  resizeMode="contain"
-                  style={Styles.addImageIcon}
-                />
-                <Text style={Styles.addImageText}>
-                  Tap the image below to upload your profile picture
-                </Text>
-              </Ripple>
-            )}
-          </View>
-          <View style={Styles.btnWrapper}>
-            {/* {currentUser?.gender === 'female' ? (
-              <Button text={'Skip for now'} onPress={onContinuePress} />
-            ) : null} */}
-            <Button
-              disabled={image?.length === 0 ? true : false}
-              text={LanguageKeys.continue}
-              onPress={onContinuePress}
-              buttonStyle={{ marginTop: 10 }}
-            />
-          </View>
-          <ImagePicker
-            visible={imagePickerVisible}
-            from={'primary_image'}
-            onImageSelection={(res: any) => {
-              hideImagePicker();
-              setTimeout(
-                () => {
-                  onImageSelection(res);
-                },
-                isIOS ? 1000 : 0
-              );
-            }}
-            onClose={hideImagePicker}
-          />
-        </>
       </ScrollView>
+      <ImagePicker
+        from="primary_image_to_show"
+        onClose={hideImagePicker}
+        visible={imagePickerVisible}
+        onImageSelection={handleImagePickerSelection}
+      />
     </SafeAreaView>
   );
-};
+}
 
 export default ProfilePicture;
 
 const Styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: Colors.appBg,
   },
-  scrollConrtainer: {
-    flex: 1,
-    marginHorizontal: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingBottom: 25,
-  },
-  headerWrapper: {
-    // position: 'relative'
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerText: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: 20,
-  },
-  modalWrapper: {
-    flex: 1,
-    padding: 10,
-    backgroundColor: Colors.color2,
-  },
-  tooltipWrapper: {
-    borderRadius: 25,
-    padding: 7,
-    marginLeft: 5,
-    marginBottom: 5,
-  },
-  infoIcon: {
-    width: 25,
-    height: 25,
-  },
-  tootltipTextWrapper: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  closeWrapper: {
-    alignSelf: 'flex-end',
-    paddingRight: 10,
-    marginTop: isIOS ? 45 : 5,
-  },
-  tootltipTitle: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium2,
-    marginTop: 20,
-  },
-  closeBtn: {
-    backgroundColor: Colors.color2,
-    borderWidth: 1,
-    borderColor: Colors.greyRGBA61,
-    marginBottom: hp(2),
-    marginHorizontal: wp(5),
-  },
-  closeBtnText: {
-    color: Colors.blackRGBA70,
-  },
-  addImageCon: {
-    marginTop: hp(3),
-    width: wp(70),
-    height: wp(70),
-    borderRadius: 150,
-    justifyContent: 'center',
-    alignItems: 'center',
-    // backgroundColor: Colors.color51,
-    // overflow: 'hidden',
-    alignSelf: 'center',
-    // position: 'relative'
-    // borderRad
-  },
-  addImageIcon: {
-    width: 205,
-    height: 205,
-    opacity: 0.7,
-  },
-  image: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 150,
-  },
-  cameraIconWrapper: {
-    position: 'absolute',
-    right: 15,
-    bottom: 10,
-    backgroundColor: Colors.color15,
-    padding: 10,
-    borderRadius: 50,
-  },
-  addImageText: {
-    color: Colors.color1,
-    fontSize: wp(4),
-    fontFamily: Fonts.APPFONT_R,
-    marginVertical: hp(3),
-    paddingHorizontal: 25,
-    opacity: 0.7,
-    textAlign: 'center',
-  },
-  changeImageButton: {
-    position: 'absolute',
-    bottom: 6,
-    right: wp(2),
-    height: 28,
-    paddingHorizontal: wp(4),
-    borderRadius: 8,
-  },
-  buttonText: {
-    fontSize: 12,
-    fontFamily: Fonts.APPFONT_SB,
-  },
-  guildlineText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_R,
-    color: Colors.color22,
-    marginTop: 5,
-  },
-  pfpContainer: {
+  scrollContainer: {
+    flexGrow: 1,
+    paddingHorizontal: wp(5),
+    paddingTop: hp(4),
+    paddingBottom: hp(2),
     justifyContent: 'space-between',
-    flexDirection: 'row',
-    marginTop: 20,
   },
-  pfpText: {
-    fontSize: Typography.medium,
-    fontFamily: Fonts.APPFONT_M,
-    color: Colors.color1,
-  },
-  pfpImage: {
-    width: wp(42),
-    height: hp(20),
-    borderRadius: 5,
+  content: {
+    alignItems: 'center',
   },
   btnWrapper: {
     width: '100%',
-    marginBottom: 10,
+    marginTop: hp(4),
   },
 });

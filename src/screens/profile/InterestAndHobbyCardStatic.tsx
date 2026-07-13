@@ -5,7 +5,7 @@ import { Animation } from '../../animations';
 import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
-import { CheckRtl, LanguageKeys } from '../../languages';
+import { CheckRtl } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { useGlobalContext } from '../../services';
 
@@ -23,8 +23,7 @@ const InterestAndHobbyCardStatic = ({
   data = [],
   headerHeading = '',
   fromUserProfile = false,
-  from = '',
-  matchPercentage = 0,
+  matchPercentage,
 }: InterestAndHobbyCardStaticProps) => {
   const Rtl = CheckRtl();
   const { currentUser } = useGlobalContext();
@@ -38,109 +37,107 @@ const InterestAndHobbyCardStatic = ({
     );
   }, [currentUser?.detail?.personality_id, data]);
 
-  if (!fromUserProfile || !matchPercentage) {
+  if (
+    !fromUserProfile ||
+    matchPercentage === null ||
+    matchPercentage === undefined
+  ) {
     return null;
   }
 
-  const headerLabel = `${headerHeading} (${matchPercentage?.toFixed(0)}% match)`;
+  const hasShared = matchingData.length !== 0;
 
-  return data.length !== 0 ? (
-    <View style={Styles.container}>
+  return (
+    <View style={Styles.card}>
       <View
-        style={[
-          Styles.headerContainer,
-          { flexDirection: Rtl ? 'row-reverse' : 'row' },
-        ]}
+        style={[Styles.head, { flexDirection: Rtl ? 'row-reverse' : 'row' }]}
       >
-        <Text style={Styles.headerTxt}>{headerLabel}</Text>
+        <View style={Styles.headText}>
+          <Text variant="display" style={Styles.title}>
+            {headerHeading}
+          </Text>
+        </View>
+        <View style={Styles.badge}>
+          <Text style={Styles.badgePct}>
+            {`${matchPercentage?.toFixed(0)}%`}
+          </Text>
+        </View>
       </View>
-      <Animation animation={'fadeInDown'} duration={500}>
-        {from === 'waliInformation' && fromUserProfile && data.length !== 0 ? (
-          <Text style={Styles.waliInfoDes}>{LanguageKeys.moderatedByWali}</Text>
-        ) : (
+      {hasShared ? (
+        <Animation animation={'fadeInDown'} duration={500}>
           <View
             style={[
-              Styles.listItemContainer,
+              Styles.pills,
               { flexDirection: Rtl ? 'row-reverse' : 'row' },
             ]}
           >
-            {matchingData?.map((item, index) => (
+            {matchingData.map((item, index) => (
               <View key={`${item?.id ?? index}-${index}`} style={Styles.item}>
                 <Text style={Styles.itemValue}>{item?.value ?? ''}</Text>
               </View>
             ))}
           </View>
-        )}
-      </Animation>
+        </Animation>
+      ) : null}
     </View>
-  ) : (
-    <View />
   );
 };
 
 export default React.memo(InterestAndHobbyCardStatic);
 
 const Styles = StyleSheet.create({
-  container: {
+  card: {
     marginHorizontal: wp(4),
-    backgroundColor: Colors.color2,
-    paddingTop: hp(1.5),
-    borderRadius: 10,
-    marginBottom: hp(4.5),
-    borderWidth: 0.5,
-    borderColor: Colors.color27,
-    overflow: 'hidden',
-    paddingBottom: hp(2),
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    marginBottom: hp(2),
+    padding: wp(4),
   },
-  headerContainer: {
+  head: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(1),
+    justifyContent: 'space-between',
   },
-  headerTxt: {
-    color: Colors.color1,
+  headText: {
+    flex: 1,
+    paddingHorizontal: wp(2),
+  },
+  title: {
+    color: Colors.ink,
+    fontSize: Typography.medium1,
+  },
+  badge: {
+    width: wp(16),
+    height: wp(16),
+    borderRadius: wp(8),
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgePct: {
+    color: Colors.color2,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.medium,
-    marginBottom: Constants.fontFamilyMarginBottom,
-  },
-  editButton: {
-    paddingVertical: hp(1),
-    paddingHorizontal: wp(2),
-    marginRight: wp(-2),
-  },
-  waliInfoDes: {
-    color: Colors.color11,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small3,
-    includeFontPadding: false,
-    marginTop: hp(-2),
-    marginBottom: hp(2),
-    marginHorizontal: wp(4),
-  },
-  passInfoDes: {
-    color: Colors.color11,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small3,
     includeFontPadding: false,
   },
-  listItemContainer: {
-    paddingHorizontal: wp(3.5),
+  pills: {
     flexWrap: 'wrap',
+    marginTop: hp(1.6),
   },
   item: {
-    backgroundColor: Colors.color3,
-    paddingHorizontal: wp(2),
-    paddingVertical: hp(1),
+    backgroundColor: Colors.lavender,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.9),
     margin: hp(0.5),
-    borderRadius: 50,
-    borderColor: Colors.color4,
-    borderWidth: 1,
+    marginTop: 0,
+    marginBottom: hp(1),
+    borderRadius: 999,
   },
   itemValue: {
-    color: Colors.color11,
-    fontFamily: Fonts.APPFONT_R,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
     marginBottom: Constants.fontFamilyMarginBottom,
     alignSelf: 'flex-start',

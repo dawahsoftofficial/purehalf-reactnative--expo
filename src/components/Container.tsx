@@ -1,8 +1,9 @@
 import React from 'react';
 import { StatusBar, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Colors } from '../res';
+import AppBackgroundPattern from './AppBackgroundPattern';
 
 const Container = (props: any) => {
   const {
@@ -10,19 +11,19 @@ const Container = (props: any) => {
     barStyle = 'dark-content',
     barBg = Colors.color2,
   } = props;
-  const { top } = useSafeAreaInsets();
 
   return (
-    <View style={[Styles.container, { paddingTop: top }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[Styles.container]}>
       <View style={[Styles.container, style]}>
         <StatusBar
           backgroundColor={barBg}
           barStyle={barStyle}
           translucent={false}
         />
+        <AppBackgroundPattern />
         {props.children}
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 

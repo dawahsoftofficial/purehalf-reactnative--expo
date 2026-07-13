@@ -2,31 +2,26 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { t } from 'i18next';
 import moment from 'moment';
 import React, { useRef, useState } from 'react';
-import {
-  ActivityIndicator,
-  Dimensions,
-  Image,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Dimensions, Image, StyleSheet, Text, View } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Ionicons from 'react-native-vector-icons/Ionicons';
+
+import { useSettingsStore } from '@/stores';
 
 import { hp, Typography } from '../global';
 import { CheckRtl, LanguageKeys } from '../languages';
-import { Colors, Fonts, Images } from '../res';
+import { Colors, Fonts } from '../res';
 import {
   ApiServices,
-  Firebase,
-  flashErrorMessage,
+  capitalizeName,
   isIOS,
   useGlobalContext,
 } from '../services';
 import { Button } from './buttons';
+import { ProfileBadges } from './profile-badges';
+import ProfilePhotoPlaceholder from './ProfilePhotoPlaceholder';
 
 const { width: viewportWidth } = Dimensions.get('window');
 
@@ -35,10 +30,16 @@ const wp = (percentage: any) => {
   return Math.round(value);
 };
 
+// Crisp tactile "pop" for action-button icons — a quick scale up and settle.
+// Replaces the old full-button bounce, which read as janky.
+const POP = {
+  0: { transform: [{ scale: 1 }] },
+  0.4: { transform: [{ scale: 1.35 }] },
+  1: { transform: [{ scale: 1 }] },
+};
+
 export const sliderWidth = viewportWidth;
 export const itemWidth = viewportWidth;
-
-const entryBorderRadius = 8;
 
 const SliderEntry = ({
   data,
@@ -47,10 +48,49 @@ const SliderEntry = ({
   onPassPress,
   onPress,
 }: any) => {
+  const dailyRecommendations = useSettingsStore().getDailyRecommendations();
+
+  // Format 24-hour time to 12-hour am/pm format
+  const formatTimeToAmPm = (hour24: string): string => {
+    const hour = parseInt(hour24, 10);
+    if (isNaN(hour)) return hour24;
+
+    // Handle 24 as 12 AM (midnight)
+    if (hour === 24 || hour === 0) {
+      return '12 AM';
+    }
+
+    if (hour === 12) {
+      return '12 PM';
+    }
+
+    if (hour > 12) {
+      return `${hour - 12} PM`;
+    }
+
+    return `${hour} AM`;
+  };
+
+  // Get formatted time range for the message
+  const getTimeRangeText = (): string => {
+    if (!dailyRecommendations?.start || !dailyRecommendations?.end) {
+      return '6 PM and 12 AM'; // Fallback
+    }
+
+    const startTime = formatTimeToAmPm(dailyRecommendations.start);
+    const endTime = formatTimeToAmPm(dailyRecommendations.end);
+
+    return `${startTime} and ${endTime}`;
+  };
+
   const Rtl = CheckRtl();
-  const { currentUser, conversations } = useGlobalContext();
+  const displayFont = Rtl ? Fonts.APPFONT_B : Fonts.DISPLAY;
+  const { currentUser } = useGlobalContext();
   const navigation: any = useNavigation();
-  const [userConversation, setUserConversation] = useState({
+  // Existing-conversation detection was dropped with the Firebase RTDB removal.
+  // SingleChat ignores route conversationData without a numeric id and resolves
+  // (or creates) the conversation via the REST API on first send.
+  const [userConversation] = useState({
     convDetails: {},
     messages: [],
   });
@@ -59,24 +99,20 @@ const SliderEntry = ({
   const [matchingData, setMatchingData] = useState<any>([]);
   const likeIconRef = useRef<any>(null);
   const unLikeIconRef = useRef<any>(null);
+  const messageIconRef = useRef<any>(null);
 
   const chatUserData = {
+    ...data,
     id: data?.id,
     name: data?.full_name,
     age: data?.age,
     city: data?.city,
     country: data?.country,
-    image: data?.media?.primary_image,
+    image: data?.primary_image_to_show,
     token: data?.fcm_token
       ?.map((item: any) => item?.fcm_token)
       .filter((token: any) => token !== undefined && token !== null),
   };
-
-  useFocusEffect(
-    React.useCallback(() => {
-      getUserConversation();
-    }, [conversations])
-  );
 
   useFocusEffect(
     React.useCallback(() => {
@@ -91,24 +127,6 @@ const SliderEntry = ({
       }
     }, [data?.detail?.personality_id_value?.length])
   );
-
-  const getUserConversation = () => {
-    const conversationData = conversations.filter((element: any) => {
-      const deleteFlag = element.convDetails.participantsDeleteFlag;
-      return deleteFlag.hasOwnProperty(JSON.stringify(data?.id));
-    });
-    if (conversationData && conversationData.length !== 0) {
-      setUserConversation(conversationData[0]);
-    } else {
-      Firebase.getSingleConversation(currentUser?.id, data?.id).then(
-        (data: any) => {
-          if (data && data?.length !== 0) {
-            setUserConversation(data[0]);
-          }
-        }
-      );
-    }
-  };
 
   const isPremiumUser = () => {
     return new Promise((resolve) => {
@@ -140,37 +158,19 @@ const SliderEntry = ({
   };
 
   const onMessagePress = () => {
-    const userConversationDetail: any = userConversation;
-    if (
-      // userConversation?.messages?.length === 0 &&
-      currentUser?.gender === 'male'
-      // && conversations?.length >= 3
-    ) {
+    messageIconRef.current?.animate(POP, 320);
+    // Non-premium male users are routed to the pro-features promotion by
+    // isPremiumUser(); everyone else goes straight to the chat. The legacy
+    // Firebase RTDB daily-chat-limit gate was removed — chat gating now lives
+    // in the REST/chat-credits flow (see profile Header.onMessagePress).
+    if (currentUser?.gender === 'male') {
       isPremiumUser().then(() => {
-        Firebase.getNoOfChats(
-          currentUser?.id,
-          userConversationDetail?.convDetails?.id
-        ).then((numberOfChats: any) => {
-          if (numberOfChats < 5) {
-            setProfileImageError(false);
-            navigateToChat();
-          } else {
-            flashErrorMessage(LanguageKeys.conversationLimit);
-          }
-        });
+        setProfileImageError(false);
+        navigateToChat();
       });
     } else {
-      Firebase.getNoOfChats(
-        currentUser?.id,
-        userConversationDetail?.convDetails?.id
-      ).then((numberOfChats: any) => {
-        if (numberOfChats < 5) {
-          setProfileImageError(false);
-          navigateToChat();
-        } else {
-          flashErrorMessage(LanguageKeys.conversationLimit);
-        }
-      });
+      setProfileImageError(false);
+      navigateToChat();
     }
   };
 
@@ -183,15 +183,28 @@ const SliderEntry = ({
     });
   };
 
+  // M10 fix: guard against double-taps. Without this, two rapid taps fire
+  // both onLikePress and onPassPress (or like twice) before the swipe animation
+  // and parent state catch up — server gets duplicate actions for the same card.
+  const swipeInFlightRef = useRef(false);
   const onLikeUnlike = (type: string) => {
+    if (swipeInFlightRef.current) return;
+    swipeInFlightRef.current = true;
+    // Release the lock after the bounce animation duration; the parent typically
+    // also swaps the card out within this window. If the action never resolves,
+    // the next mount of this card resets the ref anyway.
+    setTimeout(() => {
+      swipeInFlightRef.current = false;
+    }, 600);
+
     if (type === 'like') {
       setProfileImageError(false);
-      likeIconRef.current?.bounce(500);
+      likeIconRef.current?.animate(POP, 380);
       onLikePress(data?.id);
     } else {
       onPassPress(data?.id);
       setProfileImageError(false);
-      unLikeIconRef.current?.bounce(500);
+      unLikeIconRef.current?.animate(POP, 380);
     }
   };
 
@@ -212,33 +225,25 @@ const SliderEntry = ({
         bottom: 0,
       }}
     >
-      {!profileImageError && data?.media?.primary_image ? (
+      {!profileImageError && data?.primary_image_to_show ? (
         <Image
-          source={
-            data?.media?.primary_image
-              ? { uri: data?.media?.primary_image }
-              : Images.userPlaceholderVertical
-          }
+          source={{ uri: data?.primary_image_to_show }}
           onLoadStart={onProfileImageLoadStart}
           onLoadEnd={onProfileImageLoadEnd}
           onError={onProfileImageError}
           style={Styles.image}
-          resizeMode="contain"
+          resizeMode="cover"
         />
       ) : (
-        <Image
-          source={Images.userPlaceholderVertical}
-          style={{ ...Styles.image, height: '100%' }}
-          resizeMode="contain"
-        />
+        <ProfilePhotoPlaceholder name={chatUserData?.name} />
       )}
-      {profileImageLoader && (
+      {/* {profileImageLoader && (
         <ActivityIndicator
           style={{ position: 'absolute' }}
           color={Colors.theme}
           size={wp(8)}
         />
-      )}
+      )} */}
     </View>
   );
 
@@ -246,17 +251,18 @@ const SliderEntry = ({
     return (
       <View style={Styles.nullSlideInnerContainer}>
         <View style={Styles.nullUserInfoContainer}>
-          <Image source={Images.recommendationIcon2} style={Styles.nullIcon} />
+          <View style={Styles.nullIconCircle}>
+            <Ionicons name="sparkles" size={wp(11)} color={Colors.primary} />
+          </View>
           <Text style={Styles.userNullTxtName}>
-            {t('noRcommendedUserAvailable')}
+            {t('noRcommendedUserAvailable', {
+              timeRange: getTimeRangeText(),
+            })}
           </Text>
-        </View>
-        <View style={Styles.closeTextContainer}>
           <Button
             text={LanguageKeys.close}
-            buttonStyle={Styles.btnContainer}
+            buttonStyle={Styles.nullCloseBtn}
             onPress={() => onPress()}
-            textStyle={Styles.closeBtnText}
           />
         </View>
       </View>
@@ -273,15 +279,38 @@ const SliderEntry = ({
       </View>
       <View style={Styles.userDataContainer}>
         <View>
-          <Text style={Styles.userInfoTxtName}>
-            {chatUserData?.name}, {chatUserData?.age}
+          <Text
+            style={[
+              Styles.userInfoTxtName,
+              { fontFamily: displayFont, textAlign: Rtl ? 'right' : 'left' },
+            ]}
+          >
+            {capitalizeName(chatUserData?.name)}, {chatUserData?.age}
           </Text>
+          <ProfileBadges
+            userData={data}
+            iconOnly
+            surface="dailyRecommendations"
+            containerStyle={Styles.recommendationBadges}
+          />
           {chatUserData?.city && (
-            <Text style={Styles.userInfoTxt}>
-              {chatUserData?.city}
-              {chatUserData?.city && chatUserData?.country && ', '}
-              {chatUserData?.country}
-            </Text>
+            <View
+              style={[
+                Styles.locationRow,
+                { flexDirection: Rtl ? 'row-reverse' : 'row' },
+              ]}
+            >
+              <Ionicons
+                name="location-sharp"
+                size={wp(3.6)}
+                color={Colors.whiteRGBA90}
+              />
+              <Text style={Styles.userInfoTxt}>
+                {chatUserData?.city}
+                {chatUserData?.city && chatUserData?.country && ', '}
+                {chatUserData?.country}
+              </Text>
+            </View>
           )}
         </View>
         {matchingData?.length ? (
@@ -299,57 +328,54 @@ const SliderEntry = ({
           </View>
         ) : null}
         <View style={Styles.textContainer}>
-          <Animatable.View
-            ref={likeIconRef}
-            style={[
-              Styles.bottomBtnContainer,
-              { backgroundColor: Colors.color22 },
-            ]}
-          >
-            <Ripple
-              style={Styles.btnWrapper}
-              onPress={() => onLikeUnlike('like')}
-            >
-              <View style={Styles.iconCon}>
-                <AntDesign name="like1" size={wp(5)} color={Colors.color2} />
-              </View>
-              <Text style={[Styles.btnTxt]}>Like</Text>
-            </Ripple>
-          </Animatable.View>
-          <Animatable.View
-            ref={unLikeIconRef}
-            style={[
-              Styles.bottomBtnContainer,
-              { backgroundColor: Colors.color22 },
-            ]}
-          >
-            <Ripple
-              style={Styles.btnWrapper}
-              onPress={() => onLikeUnlike('unlike')}
-            >
-              <View style={Styles.iconCon}>
-                <AntDesign name="dislike1" size={wp(5)} color={Colors.color2} />
-              </View>
-              <Text style={Styles.btnTxt}>Pass</Text>
-            </Ripple>
-          </Animatable.View>
           <Ripple
-            style={[
-              Styles.bottomBtnContainer,
-              { flex: 1.5, backgroundColor: Colors.color47 },
-            ]}
+            style={[Styles.actionBtn, Styles.likeBtn, Styles.lightShadow]}
+            rippleColor={Colors.primary}
+            rippleContainerBorderRadius={wp(4.5)}
+            onPress={() => onLikeUnlike('like')}
+          >
+            <View style={Styles.btnWrapper}>
+              <Animatable.View ref={likeIconRef}>
+                <Ionicons name="heart" size={wp(5.2)} color={Colors.primary} />
+              </Animatable.View>
+              <Text style={[Styles.btnTxt, { color: Colors.primary }]}>
+                Like
+              </Text>
+            </View>
+          </Ripple>
+          <Ripple
+            style={[Styles.actionBtn, Styles.passBtn]}
+            rippleColor={Colors.surface}
+            rippleContainerBorderRadius={wp(4.5)}
+            onPress={() => onLikeUnlike('unlike')}
+          >
+            <View style={Styles.btnWrapper}>
+              <Animatable.View ref={unLikeIconRef}>
+                <Ionicons name="close" size={wp(5.6)} color={Colors.surface} />
+              </Animatable.View>
+              <Text style={[Styles.btnTxt, { color: Colors.surface }]}>
+                Pass
+              </Text>
+            </View>
+          </Ripple>
+          <Ripple
+            style={[Styles.actionBtn, Styles.messageBtn, Styles.messageShadow]}
+            rippleColor={Colors.whiteRGBA30}
+            rippleContainerBorderRadius={wp(4.5)}
             onPress={onMessagePress}
           >
-            <View style={Styles.iconCon}>
-              <MaterialCommunityIcons
-                name="message-processing-outline"
-                size={wp(5)}
-                color={Colors.color2}
-              />
+            <View style={Styles.btnWrapper}>
+              <Animatable.View ref={messageIconRef}>
+                <Ionicons
+                  name="chatbubble-ellipses"
+                  size={wp(4.8)}
+                  color={Colors.surface}
+                />
+              </Animatable.View>
+              <Text style={[Styles.btnTxt, { color: Colors.surface }]}>
+                Message
+              </Text>
             </View>
-            <Text style={[Styles.btnTxt, { color: Colors.color2 }]}>
-              Message
-            </Text>
           </Ripple>
         </View>
       </View>
@@ -388,30 +414,28 @@ const Styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.appBg,
+    paddingHorizontal: wp(10),
   },
-  nullIcon: {
-    marginBottom: 20,
-    width: 102,
-    height: 100,
+  nullIconCircle: {
+    width: wp(24),
+    height: wp(24),
+    borderRadius: wp(12),
+    backgroundColor: Colors.lavender,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: hp(3),
   },
   userNullTxtName: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_R,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small3,
-    paddingLeft: wp(3),
-    paddingRight: wp(3),
-    // textShadowColor: Colors.blackRGBA70,
-    // textShadowOffset: { width: 2, height: 2 },
-    // textShadowRadius: 15,
     textAlign: 'center',
+    lineHeight: hp(3),
   },
-  closeTextContainer: {
-    position: 'absolute',
-    bottom: 0,
-    marginBottom: 10,
-    justifyContent: 'center',
-    width: '95%',
+  nullCloseBtn: {
+    marginTop: hp(3),
+    width: wp(55),
   },
   slideInnerContainer: {
     height: '100%',
@@ -428,11 +452,11 @@ const Styles = StyleSheet.create({
     shadowOpacity: 1,
     shadowOffset: { width: 0, height: 5 },
     shadowRadius: 10,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.lavender,
   },
   imageContainer: {
     marginBottom: isIOS ? 0 : -1,
-    backgroundColor: Colors.color2,
+    backgroundColor: Colors.lavender,
     position: 'absolute',
     top: 0,
     left: 0,
@@ -440,7 +464,7 @@ const Styles = StyleSheet.create({
     bottom: 0,
   },
   imageContainerEven: {
-    backgroundColor: Colors.color1,
+    backgroundColor: Colors.lavender,
   },
   profileImageCon: {
     justifyContent: 'center',
@@ -453,29 +477,37 @@ const Styles = StyleSheet.create({
   },
   userDataContainer: {
     position: 'absolute',
-    bottom: 10,
+    bottom: hp(2.5),
     left: 0,
     right: 0,
     zIndex: 9,
   },
   userInfoTxtName: {
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.large2,
-    paddingHorizontal: wp(2.5),
+    fontSize: Typography.large1,
+    paddingHorizontal: wp(3),
     textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 15,
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 12,
     textTransform: 'capitalize',
   },
+  recommendationBadges: {
+    paddingHorizontal: wp(3),
+    marginTop: hp(0.8),
+  },
+  locationRow: {
+    alignItems: 'center',
+    gap: wp(1.2),
+    paddingHorizontal: wp(3),
+    marginTop: hp(0.3),
+  },
   userInfoTxt: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.medium2,
-    paddingHorizontal: wp(2.5),
+    color: Colors.whiteRGBA90,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small3,
     textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 15,
+    textShadowOffset: { width: 1, height: 2 },
+    textShadowRadius: 12,
   },
   listItemContainer: {
     flexWrap: 'wrap',
@@ -484,68 +516,69 @@ const Styles = StyleSheet.create({
     marginBottom: 10,
   },
   item: {
-    marginTop: 10,
-    paddingHorizontal: wp(1.5),
-    paddingVertical: hp(0.5),
+    marginTop: 8,
+    paddingHorizontal: wp(3),
+    paddingVertical: hp(0.6),
     borderRadius: 50,
-    borderColor: Colors.color2,
-    borderWidth: 1,
-    textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 4, height: 4 },
-    textShadowRadius: 15,
+    backgroundColor: Colors.whiteRGBA18,
   },
   itemValue: {
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_R,
+    fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small,
-    alignSelf: 'flex-start',
-    textShadowColor: Colors.blackRGBA70,
-    textShadowOffset: { width: 4, height: 4 },
-    textShadowRadius: 15,
   },
   textContainer: {
-    paddingHorizontal: wp(2.5),
-    marginBottom: 10,
+    paddingHorizontal: wp(3),
     justifyContent: 'center',
     flexDirection: 'row',
-    borderBottomLeftRadius: entryBorderRadius,
-    borderBottomRightRadius: entryBorderRadius,
-    gap: 5,
-    marginTop: 10,
+    gap: wp(2.5),
+    marginTop: hp(2),
   },
-  btnContainer: {
-    backgroundColor: Colors.color2,
-    borderWidth: 1,
-    borderColor: Colors.greyRGBA61,
-  },
-  closeBtnText: {
-    color: Colors.blackRGBA70,
-  },
-  bottomBtnContainer: {
+  actionBtn: {
     flex: 1,
-    height: hp(5.5),
-    borderRadius: 5,
+    height: hp(7),
+    borderRadius: wp(4.5),
     alignItems: 'center',
     justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 5,
+  },
+  likeBtn: {
+    backgroundColor: Colors.surface,
+  },
+  passBtn: {
+    backgroundColor: Colors.whiteRGBA18,
+    borderWidth: 1.5,
+    borderColor: Colors.whiteRGBA30,
+  },
+  messageBtn: {
+    flex: 1.6,
+    backgroundColor: Colors.primary,
+  },
+  lightShadow: {
+    shadowColor: Colors.blackRGBA50,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  messageShadow: {
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 14,
+    elevation: 10,
   },
   btnWrapper: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: wp(1.8),
   },
   btnTxt: {
-    alignSelf: 'center',
     color: Colors.color2,
-    fontFamily: Fonts.APPFONT_B,
-    fontSize: Typography.small2,
-    paddingLeft: wp(2.5),
-  },
-  iconCon: {
-    justifyContent: 'center',
-    borderRadius: 30,
-    flexDirection: 'row',
-    alignItems: 'center',
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small3,
+    letterSpacing: 0.2,
   },
 });

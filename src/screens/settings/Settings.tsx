@@ -1,29 +1,47 @@
+import { APP_DEBUG } from '@env';
 import React, { memo, useCallback, useMemo, useState } from 'react';
-import { Linking, ScrollView, StyleSheet } from 'react-native';
-import Rate from 'react-native-rate';
+import { PermissionsAndroid } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Container, SettingsButton, SettingsHeader } from '../../components';
+import { requestRateApp } from '@/lib/utils/rate-app';
+import { usePremiumStore } from '@/stores';
+
+import {
+  Container,
+  SettingsButton,
+  SettingsHeader,
+  Text,
+} from '../../components';
 import LocationConsentModal from '../../components/alerts/LocationConsentModal';
-import { hp, wp } from '../../global';
+import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import { useGlobalContext } from '../../services';
+import { confirmDebugDeleteAccountAndRestart } from '../../services/debug/debugDeleteAccountAndRestart';
 
 type SettingsProps = {
   navigation: {
+    goBack: () => void;
     navigate: (screen: string, params?: object) => void;
   };
 };
 
 type SettingsMenuItem = {
-  icon: number;
+  iconName: string;
   name: string;
   onPress: () => void;
   showCondition?: () => boolean;
 };
 
+type SettingsSection = {
+  title: string;
+  data: SettingsMenuItem[];
+};
+
 function Settings(props: SettingsProps) {
   const { currentUser } = useGlobalContext();
+  const { isPremium } = usePremiumStore();
+  const premium = isPremium();
   const { navigate } = props.navigation;
   const [showLocationConsentModal, setShowLocationConsentModal] =
     useState<boolean>(false);
@@ -32,14 +50,67 @@ function Settings(props: SettingsProps) {
     navigate('UserInput', { fromSettings: true });
   }, [navigate]);
 
-  const onLocationPress = useCallback(() => {
-    setShowLocationConsentModal(true);
+  const checkLocationPermission = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'ios') {
+      // iOS permissions are handled automatically by the system
+      return true;
+    }
+    try {
+      const granted = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      return granted;
+    } catch {
+      return false;
+    }
   }, []);
 
-  const handleLocationConsentContinue = useCallback(() => {
+  const requestLocationPermission = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'ios') {
+      // iOS will show native permission dialog automatically
+      return true;
+    }
+    try {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+      );
+      return granted === PermissionsAndroid.RESULTS.GRANTED;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const onLocationPress = useCallback(async () => {
+    // Check if permission is already granted
+    const hasPermission = await checkLocationPermission();
+
+    if (hasPermission) {
+      // Permission already granted, navigate directly
+      navigate('UserLocation');
+    } else {
+      // Show custom consent modal first
+      setShowLocationConsentModal(true);
+    }
+  }, [checkLocationPermission, navigate]);
+
+  const handleLocationConsentContinue = useCallback(async () => {
     setShowLocationConsentModal(false);
-    navigate('UserLocation');
-  }, [navigate]);
+
+    // Request native location permission
+    const granted = await requestLocationPermission();
+
+    if (granted) {
+      // Permission granted, navigate to map screen
+      navigate('UserLocation');
+    } else {
+      // Permission denied, open native location settings
+      if (Platform.OS === 'android') {
+        Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS');
+      } else {
+        Linking.openSettings();
+      }
+    }
+  }, [navigate, requestLocationPermission]);
 
   const handleLocationConsentClose = useCallback(() => {
     setShowLocationConsentModal(false);
@@ -58,36 +129,23 @@ function Settings(props: SettingsProps) {
   }, [navigate]);
 
   const onMembershipPress = useCallback(() => {
-    if (
-      currentUser?.membership_status === 0 ||
-      currentUser?.membership_status === null
-    ) {
+    if (!premium) {
       navigate('ProFeaturesPromotion');
     } else {
       navigate('MembershipInfo');
     }
-  }, [currentUser?.membership_status, navigate]);
+  }, [premium, navigate]);
 
   const onAddWaliPress = useCallback(() => {
     navigate('AddWali', { fromSettings: true });
   }, [navigate]);
 
-  const onRateAppPress = useCallback(() => {
-    const options = {
-      AppleAppID: '6450672518',
-      GooglePackageName: 'com.zojayn',
-      preferInApp: false,
-      openAppStoreIfInAppFails: true,
-    };
-
-    Rate.rate(options, (success, errorMessage) => {
-      if (success) {
-        // User successfully went to the Review Page
-      }
-      if (errorMessage) {
-        console.log(errorMessage);
-      }
-    });
+  const onRateAppPress = useCallback(async () => {
+    try {
+      await requestRateApp();
+    } catch (error) {
+      console.error('[Settings] Rate app failed:', error);
+    }
   }, []);
 
   const onHelpAndSupportPress = useCallback(() => {
@@ -100,58 +158,91 @@ function Settings(props: SettingsProps) {
     navigate('ContactSupport');
   }, [navigate]);
 
-  const settingsMenuItems = useMemo<SettingsMenuItem[]>(
+  const onDebugDeleteAccountPress = useCallback(() => {
+    confirmDebugDeleteAccountAndRestart();
+  }, []);
+
+  const settingsSections = useMemo<SettingsSection[]>(
     () => [
       {
-        icon: Images.user,
-        name: LanguageKeys.basicSettings,
-        onPress: onBasicInfoPress,
+        title: LanguageKeys.accountSection,
+        data: [
+          {
+            iconName: 'person-outline',
+            name: LanguageKeys.basicSettings,
+            onPress: onBasicInfoPress,
+          },
+          {
+            iconName: 'location-outline',
+            name: LanguageKeys.updateLocation,
+            onPress: onLocationPress,
+          },
+          {
+            iconName: 'diamond-outline',
+            name: LanguageKeys.membershipInformation,
+            onPress: onMembershipPress,
+          },
+        ],
       },
       {
-        icon: Images.mapIcon,
-        name: LanguageKeys.updateLocation,
-        onPress: onLocationPress,
+        title: LanguageKeys.privacySafetySection,
+        data: [
+          {
+            iconName: 'lock-closed-outline',
+            name: LanguageKeys.privacySettings,
+            onPress: onPrivacyPress,
+          },
+          {
+            iconName: 'images-outline',
+            name: LanguageKeys.privatePhotoBtnDes,
+            onPress: onPrivatePhotoAccessPress,
+          },
+          {
+            iconName: 'ban-outline',
+            name: LanguageKeys.blockedListControl,
+            onPress: onBlockListPress,
+          },
+          // Wali/guardian settings entry hidden for now (comment out only,
+          // per explicit direction -- guardian is core functionality, not
+          // being removed).
+          // {
+          //   iconName: 'person-add-outline',
+          //   name: LanguageKeys.addWali,
+          //   onPress: onAddWaliPress,
+          //   showCondition: () => currentUser?.gender !== 'male',
+          // },
+        ],
       },
       {
-        icon: Images.block,
-        name: LanguageKeys.blockedListControl,
-        onPress: onBlockListPress,
+        title: LanguageKeys.supportSection,
+        data: [
+          {
+            iconName: 'star-outline',
+            name: LanguageKeys.rateApp,
+            onPress: onRateAppPress,
+          },
+          {
+            iconName: 'help-circle-outline',
+            name: LanguageKeys.helpAndSupport,
+            onPress: onHelpAndSupportPress,
+          },
+          {
+            iconName: 'chatbubble-ellipses-outline',
+            name: LanguageKeys.needHelp,
+            onPress: onNeedHelpPress,
+          },
+        ],
       },
       {
-        icon: Images.privacy,
-        name: LanguageKeys.privacySettings,
-        onPress: onPrivacyPress,
-      },
-      {
-        icon: Images.privatePhotoRequest,
-        name: LanguageKeys.privatePhotoBtnDes,
-        onPress: onPrivatePhotoAccessPress,
-      },
-      {
-        icon: Images.guardian,
-        name: LanguageKeys.addWali,
-        onPress: onAddWaliPress,
-        showCondition: () => currentUser?.gender !== 'male',
-      },
-      {
-        icon: Images.membership,
-        name: LanguageKeys.membershipInformation,
-        onPress: onMembershipPress,
-      },
-      {
-        icon: Images.starBlack,
-        name: LanguageKeys.rateApp,
-        onPress: onRateAppPress,
-      },
-      {
-        icon: Images.questionIcon,
-        name: LanguageKeys.helpAndSupport,
-        onPress: onHelpAndSupportPress,
-      },
-      {
-        icon: Images.needHelp,
-        name: LanguageKeys.needHelp,
-        onPress: onNeedHelpPress,
+        title: 'Debug',
+        data: [
+          {
+            iconName: 'trash-outline',
+            name: 'Delete Test Account & Restart',
+            onPress: onDebugDeleteAccountPress,
+            showCondition: () => APP_DEBUG === 'true',
+          },
+        ],
       },
     ],
     [
@@ -165,33 +256,47 @@ function Settings(props: SettingsProps) {
       onRateAppPress,
       onHelpAndSupportPress,
       onNeedHelpPress,
+      onDebugDeleteAccountPress,
       currentUser?.gender,
     ]
   );
 
-  const visibleMenuItems = useMemo(
+  const visibleSections = useMemo(
     () =>
-      settingsMenuItems.filter(
-        (item) => !item.showCondition || item.showCondition()
-      ),
-    [settingsMenuItems]
+      settingsSections
+        .map((section) => ({
+          ...section,
+          data: section.data.filter(
+            (item) => !item.showCondition || item.showCondition()
+          ),
+        }))
+        .filter((section) => section.data.length > 0),
+    [settingsSections]
   );
 
   return (
     <Container style={Styles.container}>
-      <SettingsHeader />
+      <SettingsHeader navigation={props.navigation} />
       <ScrollView
         contentContainerStyle={Styles.innerCon}
         showsVerticalScrollIndicator={false}
       >
-        {visibleMenuItems.map((item) => (
-          <SettingsButton
-            key={item.name}
-            icon={item.icon}
-            name={item.name}
-            onPress={item.onPress}
-            accessibilityLabel={item.name}
-          />
+        {visibleSections.map((section) => (
+          <View key={section.title} style={Styles.section}>
+            <Text style={Styles.sectionLabel}>{section.title}</Text>
+            <View style={Styles.groupCard}>
+              {section.data.map((item, index) => (
+                <SettingsButton
+                  key={item.name}
+                  iconName={item.iconName}
+                  name={item.name}
+                  onPress={item.onPress}
+                  accessibilityLabel={item.name}
+                  showDivider={index < section.data.length - 1}
+                />
+              ))}
+            </View>
+          </View>
         ))}
       </ScrollView>
       <LocationConsentModal
@@ -208,9 +313,29 @@ export default memo(Settings);
 const Styles = StyleSheet.create({
   container: {
     paddingHorizontal: wp(4),
+    backgroundColor: Colors.appBg,
   },
   innerCon: {
-    paddingBottom: hp(1),
+    paddingBottom: hp(3),
     flexGrow: 1,
+  },
+  section: {
+    marginTop: hp(2.4),
+  },
+  sectionLabel: {
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: Colors.muted,
+    marginBottom: hp(1),
+    marginLeft: wp(1),
+  },
+  groupCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    overflow: 'hidden',
   },
 });

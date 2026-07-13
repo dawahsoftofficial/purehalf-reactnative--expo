@@ -3,14 +3,14 @@ const EndPoints = {
   socialAuthenticate: '/socialite/authenticate',
   updateInfo: '/auth/update/info',
   updateDetails: '/auth/update/detail',
+  updateProfilePrivacy: '/auth/profile/privacy',
+  claimProfileGift: '/auth/profile/claim-gift',
   getLanguageList: '/auth/list/language',
   getNationalityList: '/auth/list/nationality',
   getUsers: '/auth/user/index',
   getUserDetail: '/auth/user',
   recommendedUsers: '/auth/user/exclusive?page=1&type=-1',
   getCurrentUserDetail: '/auth/my/detail',
-  messagePushNotification:
-    'https://fcm.googleapis.com/v1/projects/purehalf-19603/messages:send',
   getAttribute: '/auth/list/attribute',
   logout: '/auth/logout',
   deleteMedia: '/auth/media/delete',
@@ -21,6 +21,7 @@ const EndPoints = {
   privatePhotoAccessRequest: '/auth/interaction/photo/access',
   privatePhotoAcceptRequest: '/auth/interaction/photo/access/approve',
   privatePhotoRejectRequest: '/auth/interaction/photo/access/reject',
+  privatePhotoRevokeAccess: '/auth/interaction/photo/access/revoke',
   privatePhotoRemoveRequest: '/auth/interaction/photo/access/remove',
   counter: '/auth/counter',
   searchFilterApply: '/auth/filter/apply',
@@ -30,20 +31,59 @@ const EndPoints = {
   deleteAccountOtp: '/auth/otp/email/send',
   verifyOtp: '/auth/otp/email/verify',
   deleteAccount: '/auth/delete/account',
+  debugForceDeleteAccount: '/auth/debug/force-delete-account',
   user: '/auth/user',
   privateMedia: '/private/media',
   createGuardian: '/auth/guardian/create',
   removeGuardian: '/auth/guardian/remove',
-  resendOtp: '/auth/guardian/resend-otp',
-  authenticateGuardian: '/guardian/authenticate',
-  verifyGuardian: '/auth/guardian/verify',
-  changeGuardianPassword: '/guardian/auth/change-password',
-  guardianAuthUser: '/guardian/auth/user',
-  guardianLogout: 'guardian/auth/logout',
   storeQuerySupport: '/auth/query/store',
-  getButtonsActiveStatus: '/settings',
+  getAppSettings: '/settings',
+  storeRating: '/auth/rating/store',
   paymentInfo: '/auth/list/paymentinfo',
   snedMessageNotification: '/auth/send/message/notification',
+
+  // Message/Conversation endpoints
+  startConversation: '/auth/conversations/start',
+  getConversationsList: '/auth/conversations/list',
+  getConversationMessages: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/messages`,
+  sendConversationMessage: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/messages`,
+  getMessageAudioUrl: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/audio`,
+  clearConversation: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/clear`,
+  deleteConversation: (conversationId: number) =>
+    `/auth/conversations/${conversationId}`,
+  blockConversationParticipant: (
+    conversationId: number,
+    participantId: number
+  ) => `/auth/conversations/${conversationId}/block/${participantId}`,
+  unblockConversationParticipant: (
+    conversationId: number,
+    participantId: number
+  ) => `/auth/conversations/${conversationId}/unblock/${participantId}`,
+  reportMessage: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/report`,
+  markMessageAsRead: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/read`,
+  markAllMessagesAsRead: (conversationId: number) =>
+    `/auth/conversations/${conversationId}/mark-all-read`,
+  markMessageDelivered: (messageId: number) =>
+    `/auth/conversations/messages/${messageId}/delivered`,
+  collectChatCredit: '/auth/collect/chat-credit',
+  dailyChatCreditReward: '/auth/chat-credit/daily-reward',
+
+  // Notification center endpoints
+  notifications: '/auth/notifications',
+  notificationMarkRead: (id: number) => `/auth/notifications/${id}/read`,
+  notificationsMarkAllRead: '/auth/notifications/mark-all-read',
+  notificationDelete: (id: number) => `/auth/notifications/${id}`,
+  notificationsClearAll: '/auth/notifications/clear-all',
+
+  // Signup welcome primer (Part 2)
+  matchCount: '/public/match-count',
+  introCommit: '/auth/intro/commit',
 };
 
 export default EndPoints;

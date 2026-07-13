@@ -1,30 +1,15 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 
-import {
-  Messages,
-  Profile,
-  SearchProfiles,
-  Settings,
-  Welcome,
-} from '../screens';
-import CustomBottomTab from './CustomBottomTab';
+import { Welcome } from '../screens';
 
-const Tab = createBottomTabNavigator();
-const AdminBottomTab = () => {
-  return (
-    <Tab.Navigator
-      initialRouteName="Welcome"
-      tabBar={(props) => <CustomBottomTab {...props} />}
-      screenOptions={{ headerShown: false, lazy: true }}
-    >
-      <Tab.Screen name="Settings" component={Settings} />
-      <Tab.Screen name="Profile" component={Profile} />
-      <Tab.Screen name="Welcome" component={Welcome} />
-      <Tab.Screen name="SearchProfiles" component={SearchProfiles} />
-      <Tab.Screen name="Messages" component={Messages} />
-    </Tab.Navigator>
-  );
-};
+// The "BottomTab" route name is load-bearing across onboarding and paywall
+// flows (navigation.navigate('BottomTab') /
+// navigation.reset({ routes: [{ name: 'BottomTab' }] })). Renaming the route
+// would mean updating every one of those call sites for no behavioral gain,
+// so this stays registered as "BottomTab" and simply forwards to Welcome —
+// there is no more tab bar to render.
+const BottomTab = (props: Record<string, unknown>) => (
+  <Welcome {...(props as any)} />
+);
 
-export default AdminBottomTab;
+export default BottomTab;

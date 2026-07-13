@@ -35,6 +35,7 @@ export default defineConfig([
     '**/*.config.js',
     '**/*.config.mjs',
     '**/vendor/**',
+    'index.js', // Entry point file contains JSX but is .js extension
   ]),
   {
     files: ['src/**/*.js', 'src/**/*.jsx'],

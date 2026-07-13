@@ -1,28 +1,17 @@
-import { LanguageKeys } from '../../languages';
+import LanguageKeys from '../../languages/Keys';
+
+const numberRange = (min: number, max: number) =>
+  Array.from({ length: max - min + 1 }, (_, i) => min + i);
 
 const Data: any = {
   appearanceAndHealth: [
     {
       title: LanguageKeys.height,
       data: [
-        {
-          scale: 'ft',
-          values: [
-            4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 4.1, 4.11, 4.12,
-            5.0, 5.1, 5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 5.1, 5.11, 5.12,
-            6.0, 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.1, 6.11, 6.12,
-            7.0, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9, 7.1, 7.11, 7.12,
-          ],
-        },
-        {
-          scale: 'cm',
-          values: [
-            122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158,
-            152, 155, 158, 162, 165, 168, 171, 174, 177, 180, 183, 186, 189,
-            183, 186, 189, 192, 195, 198, 201, 204, 207, 210, 213, 216, 219,
-            213, 216, 219, 223, 226, 229, 232, 235, 238, 241, 244, 247, 250,
-          ],
-        },
+        // ft values are total inches (4'0"–7'11"); the API only ever
+        // receives cm (see profile-editor-flow buildScalingSelected).
+        { scale: 'ft', values: numberRange(48, 95) },
+        { scale: 'cm', values: numberRange(122, 250) },
       ],
       type: 'scalling',
       id: 'height',
@@ -30,51 +19,10 @@ const Data: any = {
       category: 'appearance-0',
       apiKey: 'height',
     },
-    {
-      title: LanguageKeys.weight,
-      data: [
-        {
-          scale: 'kg',
-          values: [
-            40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
-            57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73,
-            74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
-            91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105,
-            106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118,
-            119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131,
-            132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144,
-            145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157,
-            158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168, 169, 170,
-            171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181, 182, 183,
-            184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194, 195, 196,
-            197, 198, 199, 200,
-          ],
-        },
-        {
-          scale: 'lbs',
-          values: [
-            90, 93, 95, 97, 99, 101, 104, 106, 108, 110, 112, 115, 117, 119,
-            121, 123, 126, 128, 130, 132, 134, 137, 139, 141, 143, 146, 148,
-            150, 152, 154, 157, 159, 161, 163, 165, 168, 170, 172, 174, 176,
-            179, 181, 183, 185, 187, 190, 192, 194, 196, 198, 201, 203, 205,
-            207, 209, 212, 214, 216, 218, 220, 223, 225, 227, 229, 231, 234,
-            236, 238, 240, 243, 245, 247, 249, 251, 254, 256, 258, 260, 262,
-            265, 267, 269, 271, 273, 276, 278, 280, 282, 284, 287, 289, 291,
-            293, 295, 298, 300, 302, 304, 306, 309, 311, 313, 315, 317, 320,
-            322, 324, 326, 328, 331, 333, 335, 337, 340, 342, 344, 346, 348,
-            351, 353, 355, 357, 359, 362, 364, 366, 368, 370, 373, 375, 377,
-            379, 381, 384, 386, 388, 390, 392, 395, 397, 399, 401, 403, 406,
-            408, 410, 412, 414, 417, 419, 421, 423, 425, 428, 430, 432, 434,
-            437, 439, 441,
-          ],
-        },
-      ],
-      type: 'scalling',
-      id: 'weight',
-      selected: { scale: 'kg' },
-      category: 'appearance-0',
-      apiKey: 'weight',
-    },
+    // Weight slider intentionally removed — a numeric weight prompt clashes with
+    // the welcome flow's empathy promise. Body type below (with "Prefer not to
+    // say") is the optional, dignity-preserving descriptor that replaces it.
+    // Height is kept.
     {
       title: LanguageKeys.disabilities,
       data: [],
@@ -92,6 +40,7 @@ const Data: any = {
       selected: {},
       category: 'appearance-0',
       apiKey: 'body_type_id',
+      inline: true,
     },
     {
       title: LanguageKeys.eyesColor,
@@ -101,6 +50,7 @@ const Data: any = {
       selected: {},
       category: 'appearance-0',
       apiKey: 'eyes_color_id',
+      inline: true,
     },
     {
       title: LanguageKeys.skinTone,
@@ -110,6 +60,7 @@ const Data: any = {
       selected: {},
       category: 'appearance-0',
       apiKey: 'skin_tone_id',
+      inline: true,
     },
   ],
   familyBackground: [
@@ -121,6 +72,7 @@ const Data: any = {
       selected: {},
       category: 'familybg-0',
       apiKey: 'ethinicity_id',
+      inline: true,
     },
     {
       title: LanguageKeys.language,
@@ -140,16 +92,6 @@ const Data: any = {
       category: 'familybg-0',
       apiKey: 'nationality',
     },
-    {
-      title: LanguageKeys.caste,
-      placeholder: 'Enter caste',
-      data: [],
-      id: 'caste',
-      type: 'input',
-      selected: {},
-      category: 'familybg-0',
-      apiKey: 'caste',
-    },
   ],
   lifeStyle: [
     {
@@ -160,6 +102,7 @@ const Data: any = {
       selected: {},
       category: 'life-0',
       apiKey: 'education_level_id',
+      inline: true,
     },
     {
       title: LanguageKeys.profession,
@@ -178,6 +121,7 @@ const Data: any = {
       selected: {},
       category: 'life-0',
       apiKey: 'earnings_per_month_id',
+      inline: true,
     },
     {
       title: LanguageKeys.maritalStatus,
@@ -187,9 +131,11 @@ const Data: any = {
       selected: {},
       category: 'life-0',
       apiKey: 'maritial_status_id',
+      inline: true,
     },
     {
       title: LanguageKeys.haveChildren,
+      viewTitle: LanguageKeys.children,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -202,6 +148,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouSmoke,
+      viewTitle: LanguageKeys.smokingLabel,
       data: [],
       type: 'dropDown',
       id: 'smoke-0',
@@ -211,6 +158,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouDrink,
+      viewTitle: LanguageKeys.drinking,
       data: [],
       type: 'dropDown',
       id: 'drink-0',
@@ -220,6 +168,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouOwnACar,
+      viewTitle: LanguageKeys.car,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -232,6 +181,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouOwnABusiness,
+      viewTitle: LanguageKeys.business,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -244,6 +194,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouKeepPets,
+      viewTitle: LanguageKeys.pets,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -256,6 +207,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouOwnAHouse,
+      viewTitle: LanguageKeys.house,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -312,6 +264,7 @@ const Data: any = {
   islamicValues: [
     {
       title: LanguageKeys.howMuchDoYouPray,
+      viewTitle: LanguageKeys.prayerLabel,
       data: [],
       type: 'dropDown',
       id: 'pray-0',
@@ -321,6 +274,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouCoverYourself,
+      viewTitle: LanguageKeys.hijabLabel,
       data: [],
       type: 'dropDown',
       id: 'hijab-0',
@@ -330,6 +284,7 @@ const Data: any = {
     },
     {
       title: LanguageKeys.doYouHaveABeard,
+      viewTitle: LanguageKeys.beard,
       data: [
         { id: LanguageKeys.yes, value: 1 },
         { id: LanguageKeys.no, value: 0 },
@@ -374,6 +329,7 @@ const Data: any = {
   personalityRequirements: [
     {
       title: LanguageKeys.aboutYourself,
+      viewTitle: LanguageKeys.aboutView,
       placeholder: LanguageKeys.notYetProvided,
       data: [],
       type: 'input',
@@ -381,9 +337,35 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'about_you',
+      multiline: true,
+      minLength: 10,
+      maxLength: 400,
+      // Sourced from the pre-registration signup primer's "strengths" step
+      // (journeys.ts) so the same self-description language carries through.
+      suggestionsFemale: [
+        'Kind and caring',
+        'Family-oriented',
+        'Well educated',
+        'Ambitious and hardworking',
+        'Good sense of humour',
+        'Practising in my deen',
+        'Honest and loyal',
+        'Independent',
+      ],
+      suggestionsMale: [
+        'Caring and supportive',
+        'Hardworking and ambitious',
+        'Family-oriented',
+        'Well educated',
+        'Good sense of humour',
+        'Practising in my deen',
+        'Honest and loyal',
+        'Financially responsible',
+      ],
     },
     {
       title: LanguageKeys.aboutPartner,
+      viewTitle: LanguageKeys.lookingFor,
       placeholder: LanguageKeys.notYetProvided,
       data: [],
       type: 'input',
@@ -391,6 +373,31 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'about_partner',
+      multiline: true,
+      minLength: 10,
+      maxLength: 400,
+      // Sourced from the pre-registration signup primer's "priorities" step.
+      suggestionsFemale: [
+        'Strong deen & character',
+        'Good-looking, takes care of himself',
+        'Tall',
+        'Financially settled',
+        'Respected family background',
+        'Well educated',
+        'Respects my career and goals',
+        'Kind to the women in his life',
+        'Emotionally mature',
+      ],
+      suggestionsMale: [
+        'Beautiful / attractive',
+        'Youthful and full of life',
+        'Warm, well-mannered nature',
+        'Easy-going and fun to be with',
+        'Practising deen and modesty',
+        'Honest and loyal',
+        'Family-oriented',
+        'Career-minded is a plus',
+      ],
     },
     {
       title: LanguageKeys.likes,
@@ -401,6 +408,20 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'likes',
+      multiline: true,
+      minLength: 3,
+      maxLength: 200,
+      // No pre-registration equivalent exists yet -- authored fresh.
+      suggestions: [
+        'Reading',
+        'Cooking',
+        'Traveling',
+        'Sports & fitness',
+        'Nature & outdoors',
+        'Volunteering',
+        'Learning new things',
+        'Spending time with family',
+      ],
     },
     {
       title: LanguageKeys.disLikes,
@@ -411,6 +432,21 @@ const Data: any = {
       selected: {},
       category: 'personality-0',
       apiKey: 'dislikes',
+      multiline: true,
+      minLength: 3,
+      maxLength: 200,
+      // No pre-registration equivalent exists yet -- authored fresh, kept to
+      // behaviours/values rather than anything about protected traits.
+      suggestions: [
+        'Dishonesty',
+        'Rudeness',
+        'Lack of ambition',
+        'Gossiping',
+        'Being late',
+        'Materialism',
+        'Closed-mindedness',
+        'Arguing',
+      ],
     },
     {
       title: LanguageKeys.openForPolygamy,
@@ -428,6 +464,7 @@ const Data: any = {
   futurePlan: [
     {
       title: 'What are your plans for having children?',
+      viewTitle: LanguageKeys.familyPlans,
       data: [],
       type: 'dropDown',
       id: 'familyplan-0',
@@ -437,6 +474,7 @@ const Data: any = {
     },
     {
       title: 'When do you plan to get married?',
+      viewTitle: LanguageKeys.marriageTimeline,
       data: [],
       type: 'dropDown',
       id: 'marriageplan-0',
@@ -446,6 +484,7 @@ const Data: any = {
     },
     {
       title: 'Are you open to relocating?',
+      viewTitle: LanguageKeys.openToRelocating,
       data: [],
       type: 'dropDown',
       id: 'relocationplan-0',

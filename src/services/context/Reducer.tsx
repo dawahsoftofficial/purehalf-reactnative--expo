@@ -11,16 +11,6 @@ const Reducer = (state: any, action: any) => {
         ...state,
         currentUser: action.payload.currentUser,
       };
-    case 'UPDATE_CONVERSATIONS':
-      return {
-        ...state,
-        conversations: action.payload.conversations,
-      };
-    case 'CONVERSATION_LOADING':
-      return {
-        ...state,
-        coversationLoading: action.payload.coversationLoading,
-      };
     case 'OPENED_CONVERSATION_ID':
       return {
         ...state,

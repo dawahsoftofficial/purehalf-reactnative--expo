@@ -1,9 +1,10 @@
 import React from 'react';
-import { Image, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts, Images } from '../../res';
+import { Colors, Fonts } from '../../res';
 import { Button } from '../buttons';
 import Text from '../Text';
 import AlertContainer from './AlertContainer';
@@ -24,12 +25,10 @@ const LocationConsentModal = (props: LocationConsentModalProps) => {
   return (
     <AlertContainer visible={visible} onClose={onClose}>
       <View style={Styles.contentContainer}>
-        <Image
-          source={Images.mapIcon}
-          resizeMode="contain"
-          style={Styles.icon}
-        />
-        <Text style={Styles.heading}>
+        <View style={Styles.iconCircle}>
+          <Ionicons name="location-sharp" size={wp(9)} color={Colors.primary} />
+        </View>
+        <Text variant="display" style={Styles.heading}>
           {LanguageKeys.locationConsentHeading}
         </Text>
         <Text style={Styles.description}>
@@ -50,33 +49,38 @@ export default LocationConsentModal;
 const Styles = StyleSheet.create({
   contentContainer: {
     alignItems: 'center',
+    paddingHorizontal: wp(3),
   },
-  icon: {
-    width: wp(10),
-    height: hp(6),
+  iconCircle: {
+    width: wp(18),
+    height: wp(18),
+    borderRadius: wp(9),
+    backgroundColor: Colors.lavender,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: hp(1),
   },
   heading: {
     alignSelf: 'center',
     textAlign: 'center',
-    lineHeight: wp(7),
-    fontFamily: Fonts.APPFONT_B,
+    lineHeight: wp(7.5),
     fontSize: Typography.large1,
-    color: Colors.color1,
-    marginTop: hp(2),
+    color: Colors.ink,
+    marginTop: hp(2.5),
     marginBottom: hp(1),
   },
   description: {
     alignSelf: 'center',
     textAlign: 'center',
-    lineHeight: wp(5),
+    lineHeight: wp(5.4),
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
-    color: Colors.color1,
+    color: Colors.muted,
     marginHorizontal: wp(4),
   },
   button: {
-    width: wp(80),
-    marginTop: hp(5),
-    marginBottom: hp(3),
+    width: wp(78),
+    marginTop: hp(3.5),
+    marginBottom: hp(1),
   },
 });

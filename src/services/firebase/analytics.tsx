@@ -6,7 +6,14 @@ const analytics = getAnalytics(firebaseApp);
 
 const addAnaylatics = async (title: string, obj: any) => {
   console.log('analytic msg-->', 'Click on ' + title);
-  await logEvent(analytics, title.replace('-', ''), obj).then(() => {
+  // Sanitize event name: replace spaces and hyphens with underscores, keep only alphanumeric and underscores
+  const sanitizedTitle = title
+    .replace(/\s+/g, '_')
+    .replace(/-/g, '_')
+    .replace(/[^a-zA-Z0-9_]/g, '')
+    .toLowerCase()
+    .substring(0, 40); // Firebase limit is 40 characters
+  await logEvent(analytics, sanitizedTitle, obj).then(() => {
     console.log('analytics added');
   });
 };
