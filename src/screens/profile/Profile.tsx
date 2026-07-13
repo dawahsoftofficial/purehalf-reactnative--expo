@@ -309,7 +309,7 @@ const Profile = ({
     const data = await getData(storageKeys.PROFILE_DETAIL_LOCAL);
     setError(false);
     if (data) {
-      if (fromUserProfile) {
+      if (fromUserProfile && profileUserId !== currentUser?.id) {
         try {
           setLoader({
             visible: true,
@@ -360,6 +360,7 @@ const Profile = ({
     setDataLoader(false);
     hideLoader();
   }, [
+    currentUser?.id,
     fromUserProfile,
     getAttribute,
     getData,
