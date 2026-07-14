@@ -193,7 +193,7 @@
     "onboardingIntroRewardChip": "Free chats when you finish",
     "onboardingIntroCta": "Let's Go",
     "giftClaimTitle": "You've completed your profile!",
-    "giftClaimBody": "Claim your free chats — our gift for finishing your full profile.",
+    "giftClaimBody": "Claim {{amount}} free chats — our gift for finishing your full profile.",
     "claimGift": "Claim Gift",
     "maybeLater": "Maybe Later",
     "vipDailyGiftTitle": "Your VIP daily gift is ready",
