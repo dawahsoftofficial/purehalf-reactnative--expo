@@ -378,7 +378,7 @@ const Data: any = {
       // Sourced from the pre-registration signup primer's "priorities" step.
       suggestionsFemale: [
         'Strong deen & character',
-        'Good-looking, takes care of himself',
+        'Good-looking and takes care of himself',
         'Tall',
         'Financially settled',
         'Respected family background',
@@ -390,7 +390,7 @@ const Data: any = {
       suggestionsMale: [
         'Beautiful / attractive',
         'Youthful and full of life',
-        'Warm, well-mannered nature',
+        'Warm and well-mannered nature',
         'Easy-going and fun to be with',
         'Practising deen and modesty',
         'Honest and loyal',

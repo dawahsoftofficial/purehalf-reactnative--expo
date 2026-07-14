@@ -93,7 +93,7 @@ const femaleJourney: PrimerStepDef[] = [
     support: 'Knowing what you want is a strength — choose freely.',
     options: [
       o('strong_deen', 'Strong deen & character'),
-      o('good_looking', 'Good-looking, takes care of himself'),
+      o('good_looking', 'Good-looking and takes care of himself'),
       o('tall', 'Tall'),
       o('financially_settled', 'Financially settled'),
       o('respected_family', 'Respected family background'),
@@ -237,7 +237,7 @@ const maleJourney: PrimerStepDef[] = [
     options: [
       o('beautiful', 'Beautiful / attractive'),
       o('youthful', 'Youthful and full of life'),
-      o('warm_mannered', 'Warm, well-mannered nature'),
+      o('warm_mannered', 'Warm and well-mannered nature'),
       o('easy_going', 'Easy-going and fun to be with'),
       o('practising', 'Practising deen and modesty'),
       o('honest_loyal', 'Honest and loyal'),
