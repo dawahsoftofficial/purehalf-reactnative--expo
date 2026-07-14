@@ -45,6 +45,7 @@ const EditProfileGroup = ({ navigation, route }: any) => {
         .then(async (result: ProfilePrivacyResponse) => {
           const savedVisibility =
             result?.profile_field_visibility ?? optimistic;
+          const savedForField = savedVisibility[field] ?? next;
           const updatedUser = {
             ...currentUser,
             detail: {
@@ -53,16 +54,19 @@ const EditProfileGroup = ({ navigation, route }: any) => {
             },
           };
 
-          setProfileFieldVisibility(savedVisibility);
+          // Only apply this field's confirmed value — a slower response for
+          // one field must not clobber a newer optimistic/confirmed value for
+          // another field that was toggled while this request was in flight.
+          setProfileFieldVisibility((prev) => ({
+            ...prev,
+            [field]: savedForField,
+          }));
           updateCurrentUser(updatedUser);
           await setData(storageKeys.USER, updatedUser);
           flashSuccessMessage(LanguageKeys.updated);
         })
         .catch(() => {
-          setProfileFieldVisibility({
-            ...profileFieldVisibility,
-            [field]: previous,
-          });
+          setProfileFieldVisibility((prev) => ({ ...prev, [field]: previous }));
         })
         .finally(() => setPrivacyUpdatingField(''));
     },
