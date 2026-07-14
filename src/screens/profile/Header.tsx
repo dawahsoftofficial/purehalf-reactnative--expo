@@ -22,7 +22,6 @@ import {
 } from 'react-native';
 import CircularProgress from 'react-native-circular-progress-indicator';
 import Ripple from 'react-native-material-ripple';
-import { Switch } from 'react-native-switch';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -56,6 +55,7 @@ import { presentChatCreditsPaywall } from '../../services/paywall-service';
 import { useSettingsStore } from '../../stores';
 import GiftBadge from './components/gift-badge';
 import GiftClaimModal from './components/gift-claim-modal';
+import PrivacyQuickSettingsModal from './components/privacy-quick-settings-modal';
 import { buildUpdatedUserAfterGiftClaim } from './gift-claim-outcome';
 
 const { width, height } = Dimensions.get('window');
@@ -115,9 +115,6 @@ type HeaderProps = {
   onTaglineSubmit?: () => void;
   onTaglineEditPress?: () => void;
   onTaglineCancel?: () => void;
-  taglinePrivacyVisible?: boolean;
-  taglinePrivacyUpdating?: boolean;
-  onTaglinePrivacyChange?: () => void;
 };
 
 type NameRowProps = {
@@ -332,9 +329,6 @@ const Header = ({
   onTaglineSubmit = () => null,
   onTaglineEditPress = () => null,
   onTaglineCancel = () => null,
-  taglinePrivacyVisible = true,
-  taglinePrivacyUpdating = false,
-  onTaglinePrivacyChange = () => null,
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { t } = useTranslation();
@@ -350,6 +344,7 @@ const Header = ({
   const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
   const giftThreshold =
     useSettingsStore().getProfileCompletionThresholdPercent();
   const giftCredits = useSettingsStore().getProfileCompletionGiftCredits();
@@ -793,6 +788,16 @@ const Header = ({
         >
           <Ripple
             style={Styles.overflowBtn}
+            onPress={() => setPrivacySettingsVisible(true)}
+            hitSlop={12}
+            rippleColor={Colors.color2}
+            accessibilityRole="button"
+            accessibilityLabel={t(LanguageKeys.privacySettings)}
+          >
+            <Entypo name="eye" color={Colors.color2} size={wp(5)} />
+          </Ripple>
+          <Ripple
+            style={Styles.overflowBtn}
             onPress={() => navigation.navigate('Settings')}
             hitSlop={12}
             rippleColor={Colors.color2}
@@ -909,53 +914,31 @@ const Header = ({
             />
           </View>
         </View>
-        <View style={Styles.taglinePrivacyRow}>
-          <Ripple
-            style={Styles.taglineEditRow}
-            onPress={onTaglineEditPress}
-            rippleColor={Colors.lavender}
-          >
-            <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
-            {tagline && tagline.trim().length ? (
-              <ReactText
-                style={[
-                  Styles.cardTagline,
-                  { textAlign: Rtl ? 'right' : 'left', flex: 1 },
-                ]}
-                numberOfLines={2}
-              >
-                {`“${tagline}”`}
-              </ReactText>
-            ) : (
-              <Text
-                style={[
-                  Styles.cardTagline,
-                  Styles.cardTaglineMuted,
-                  { flex: 1 },
-                ]}
-                numberOfLines={2}
-              >
-                {LanguageKeys.enterTagline}
-              </Text>
-            )}
-          </Ripple>
-          <Entypo
-            name={taglinePrivacyVisible ? 'eye' : 'eye-with-line'}
-            size={wp(3.8)}
-            color={Colors.muted}
-          />
-          <Switch
-            value={taglinePrivacyVisible}
-            onValueChange={onTaglinePrivacyChange}
-            disabled={taglinePrivacyUpdating}
-            renderActiveText={false}
-            renderInActiveText={false}
-            circleSize={23}
-            backgroundActive={Colors.primary}
-            backgroundInactive={Colors.color18}
-            innerCircleStyle={Styles.privacySwitchInner}
-          />
-        </View>
+        <Ripple
+          style={Styles.taglineEditRow}
+          onPress={onTaglineEditPress}
+          rippleColor={Colors.lavender}
+        >
+          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
+          {tagline && tagline.trim().length ? (
+            <ReactText
+              style={[
+                Styles.cardTagline,
+                { textAlign: Rtl ? 'right' : 'left', flex: 1 },
+              ]}
+              numberOfLines={2}
+            >
+              {`“${tagline}”`}
+            </ReactText>
+          ) : (
+            <Text
+              style={[Styles.cardTagline, Styles.cardTaglineMuted, { flex: 1 }]}
+              numberOfLines={2}
+            >
+              {LanguageKeys.enterTagline}
+            </Text>
+          )}
+        </Ripple>
         {typeof profileStrength === 'number' ? (
           <View style={Styles.strengthWrap}>
             <View
@@ -1200,6 +1183,10 @@ const Header = ({
         onClaimed={onGiftClaimed}
         claim={claimGift}
       />
+      <PrivacyQuickSettingsModal
+        visible={privacySettingsVisible}
+        onClose={() => setPrivacySettingsVisible(false)}
+      />
     </View>
   );
 };
@@ -1313,15 +1300,6 @@ const Styles = StyleSheet.create({
     gap: wp(2),
     marginTop: hp(1),
     flex: 1,
-  },
-  taglinePrivacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(3),
-  },
-  privacySwitchInner: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
   },
   reviewStatusIcon: {
     width: wp(7),
