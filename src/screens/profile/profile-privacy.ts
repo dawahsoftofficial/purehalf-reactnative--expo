@@ -1,6 +1,6 @@
 export type FieldVisibilityLevel = 'public' | 'private';
 export type ProfileFieldVisibility = Record<string, FieldVisibilityLevel>;
-export type ProfileVisibility = 'everyone' | 'active_chat' | 'liked';
+export type ProfileVisibility = 'everyone' | 'active_chat' | 'liked' | 'nobody';
 
 const PROFILE_FIELD_ALIASES: Record<string, string> = {
   language: 'language_id',
