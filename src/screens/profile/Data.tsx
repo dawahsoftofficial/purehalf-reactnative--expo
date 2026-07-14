@@ -72,7 +72,6 @@ const Data: any = {
       selected: {},
       category: 'familybg-0',
       apiKey: 'ethinicity_id',
-      inline: true,
     },
     {
       title: LanguageKeys.language,
