@@ -25,6 +25,7 @@ import {
   TesterApi,
   useGlobalContext,
 } from '../../services';
+import BaseUrl from '../../services/api/BaseUrl';
 import {
   useRatingStore,
   useSettingsStore,
@@ -520,6 +521,7 @@ export default function TesterConsole({ navigation }: any) {
             Every server action is authorized against your live tester flag.
             Changes affect real test data.
           </Text>
+          <Text style={styles.warningText}>API: {BaseUrl}</Text>
         </View>
 
         <TesterTabs active={activeTab} onChange={setActiveTab} />

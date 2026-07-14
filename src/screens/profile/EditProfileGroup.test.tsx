@@ -332,7 +332,11 @@ describe('EditProfileGroup', () => {
         visibility: { height: 'private' },
       })
     );
-    expect(flashSuccessMessage).toHaveBeenCalledWith('fieldHiddenToast');
+    // Feedback is the persistent inline status text next to the toggle, not
+    // a toast -- a toast interpolating the raw (untranslated) field id was
+    // confusing (tester note #25).
+    expect(flashSuccessMessage).not.toHaveBeenCalled();
+    expect(screen.getByText('Hidden from your profile')).toBeTruthy();
   });
 
   it('shows a tag question title only once', () => {

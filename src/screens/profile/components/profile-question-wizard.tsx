@@ -25,7 +25,7 @@ import {
 import { hp, Typography, wp } from '../../../global';
 import { CheckRtl, LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
-import { ApiServices, flashSuccessMessage } from '../../../services';
+import { ApiServices } from '../../../services';
 import { getEyeColorSwatch } from '../eye-color-swatches';
 import {
   buildScalingSelected,
@@ -730,38 +730,37 @@ const ProfileQuestionWizard = ({
             <View style={Styles.questionTitleText}>
               <Text style={Styles.questionTitle}>{iTitle}</Text>
               {showPrivacyControl ? (
-                <Ripple
-                  testID={`profile-privacy-toggle-${privacyField}`}
-                  style={[
-                    Styles.privacyToggle,
-                    Rtl && { flexDirection: 'row-reverse' },
-                  ]}
-                  onPress={() => {
-                    const nextVisibility = isVisible ? 'private' : 'public';
-                    onPrivacyChange?.(privacyField, nextVisibility);
-                    flashSuccessMessage(
-                      t(
-                        nextVisibility === 'private'
-                          ? LanguageKeys.fieldHiddenToast
-                          : LanguageKeys.fieldVisibleToast,
-                        { field: iTitle }
-                      )
-                    );
-                  }}
-                  disabled={privacyUpdatingField === privacyField}
-                  rippleColor={Colors.primary}
-                >
-                  <Entypo
-                    name={isVisible ? 'eye' : 'eye-with-line'}
-                    size={wp(3.6)}
-                    color={Colors.primary}
-                  />
-                  <Text style={Styles.privacyToggleTxt}>
+                <>
+                  <Ripple
+                    testID={`profile-privacy-toggle-${privacyField}`}
+                    style={[
+                      Styles.privacyToggle,
+                      Rtl && { flexDirection: 'row-reverse' },
+                    ]}
+                    onPress={() => {
+                      const nextVisibility = isVisible ? 'private' : 'public';
+                      onPrivacyChange?.(privacyField, nextVisibility);
+                    }}
+                    disabled={privacyUpdatingField === privacyField}
+                    rippleColor={Colors.primary}
+                  >
+                    <Entypo
+                      name={isVisible ? 'eye' : 'eye-with-line'}
+                      size={wp(3.6)}
+                      color={Colors.primary}
+                    />
+                    <Text style={Styles.privacyToggleTxt}>
+                      {isVisible
+                        ? LanguageKeys.hideField
+                        : LanguageKeys.unhideField}
+                    </Text>
+                  </Ripple>
+                  <Text style={Styles.privacyStatusTxt}>
                     {isVisible
-                      ? LanguageKeys.hideField
-                      : LanguageKeys.unhideField}
+                      ? LanguageKeys.visibleOnProfile
+                      : LanguageKeys.hiddenOnProfile}
                   </Text>
-                </Ripple>
+                </>
               ) : null}
             </View>
           </View>
@@ -975,6 +974,13 @@ const Styles = StyleSheet.create({
     color: Colors.primary,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  privacyStatusTxt: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.tiny1,
+    marginTop: hp(0.4),
     includeFontPadding: false,
   },
   controlWrap: {
