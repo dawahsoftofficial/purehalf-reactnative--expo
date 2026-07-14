@@ -33,7 +33,7 @@ src/
 ├── stores/                  # Zustand: premium, settings, conversation, user-stats
 ├── hooks/, global/, lib/    # shared helpers (scaling, typography, constants, utils)
 ├── notifications/           # notifee + FCM permission flow
-└── translations/            # i18n JSON, validated by eslint-plugin-i18n-json
+└── languages/               # i18n: Keys.tsx + English/Urdu/RomanUrdu.json, loaded by i18n.tsx (i18next)
 ```
 
 ## Commands
@@ -59,7 +59,7 @@ Node ≥20. Yarn (not npm) is canonical — `yarn.lock` is committed.
 - **Type-only imports**: `import type` enforced by `@typescript-eslint/consistent-type-imports` with inline fix style. Linter will auto-fix.
 - **No cyclic imports**: `import/no-cycle` is `error`. If you hit it, restructure — don't disable.
 - **`max-params: 3`** — split into an options object if you need more.
-- **i18n**: every user-visible string goes through `t()`. Keys in `src/translations/en.json` are authoritative; `i18n-json/identical-keys` will fail builds if other locales drift.
+- **i18n**: every user-visible string goes through `t()`. Keys live in `src/languages/English.json` (+ `Urdu.json`, `RomanUrdu.json`, `Keys.tsx`), loaded by `src/languages/i18n.tsx`. `eslint-plugin-i18n-json` validates JSON syntax and i18next interpolation syntax on these files; key-parity/sort enforcement (`identical-keys`/`sorted-keys`) isn't turned on yet — English.json isn't alphabetized and locale parity has existing drift (see the comment in `eslint.config.mjs`).
 - **Scaling**: use `wp()` / `hp()` from `src/global/Scalling.tsx` for sizes, not raw pixel values.
 - **Husky + lint-staged** are wired — commits run lint on staged files. Don't bypass with `--no-verify` unless explicitly told to.
 
