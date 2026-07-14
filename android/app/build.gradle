@@ -231,3 +231,25 @@ tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach {
         dependsOn(tasks.named("checkReleaseEnv"))
     }
 }
+
+// A release *bundle* (the .aab uploaded to Play) must never be debug-signed.
+// assembleRelease may still fall back to the debug keystore for local install
+// testing, but bundleRelease is refused unless the upload keystore is
+// configured — otherwise a debug-signed AAB would silently ship.
+tasks.register("checkReleaseSigning") {
+    description = "Fails a release bundle build if the upload keystore isn't configured."
+    doFirst {
+        if (!releaseSigningConfigured) {
+            throw new GradleException(
+                "Release signing is not configured (MYAPP_UPLOAD_STORE_FILE / _STORE_PASSWORD / " +
+                "_KEY_ALIAS / _KEY_PASSWORD). Refusing to build a release bundle that would be signed " +
+                "with the debug keystore. Set the upload keystore properties in gradle.properties " +
+                "(or via CI) and rebuild."
+            )
+        }
+    }
+}
+
+tasks.matching { it.name.matches(/bundle.*Release/) }.configureEach {
+    dependsOn(tasks.named("checkReleaseSigning"))
+}
