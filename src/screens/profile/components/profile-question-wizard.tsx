@@ -13,6 +13,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
 import { Switch } from 'react-native-switch';
+import Entypo from 'react-native-vector-icons/Entypo';
 
 import {
   Button,
@@ -714,11 +715,23 @@ const ProfileQuestionWizard = ({
             <View style={Styles.questionTitleText}>
               <Text style={Styles.questionTitle}>{iTitle}</Text>
               {showPrivacyControl ? (
-                <Text style={Styles.privacyStatus}>
-                  {isVisible
-                    ? LanguageKeys.visibleOnProfile
-                    : LanguageKeys.hiddenOnProfile}
-                </Text>
+                <View
+                  style={[
+                    Styles.privacyStatusRow,
+                    Rtl && { flexDirection: 'row-reverse' },
+                  ]}
+                >
+                  <Entypo
+                    name={isVisible ? 'eye' : 'eye-with-line'}
+                    size={wp(3.6)}
+                    color={Colors.muted}
+                  />
+                  <Text style={Styles.privacyStatus}>
+                    {isVisible
+                      ? LanguageKeys.visibleOnProfile
+                      : LanguageKeys.hiddenOnProfile}
+                  </Text>
+                </View>
               ) : null}
             </View>
             {showPrivacyControl ? (
@@ -806,7 +819,11 @@ const ProfileQuestionWizard = ({
 
   return (
     <>
-      <View style={Styles.content}>
+      <ScrollView
+        style={Styles.content}
+        contentContainerStyle={Styles.contentContainer}
+        showsVerticalScrollIndicator={false}
+      >
         {visibleFields.length > 0 ? (
           renderActiveControl(activeItem)
         ) : (
@@ -814,7 +831,7 @@ const ProfileQuestionWizard = ({
             <Text style={Styles.emptyText}>{LanguageKeys.notYetProvided}</Text>
           </View>
         )}
-      </View>
+      </ScrollView>
       <View style={Styles.footer}>
         {saving ? (
           <View style={Styles.savingStatus}>
@@ -883,8 +900,11 @@ export default ProfileQuestionWizard;
 const Styles = StyleSheet.create({
   content: {
     flex: 1,
+  },
+  contentContainer: {
     paddingHorizontal: wp(4),
     paddingTop: hp(2),
+    paddingBottom: hp(2),
   },
   questionCard: {
     backgroundColor: Colors.surface,
@@ -927,11 +947,16 @@ const Styles = StyleSheet.create({
   questionTitleText: {
     flex: 1,
   },
+  privacyStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(1.2),
+    marginTop: hp(0.3),
+  },
   privacyStatus: {
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.tiny2,
-    marginTop: hp(0.3),
   },
   switchInner: {
     borderWidth: 1.5,
