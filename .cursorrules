@@ -23,7 +23,7 @@ src
   │   ├── card.tsx
   │   └── ui  ## core ui components. buttons, inputs, etc
   ├── lib  ## shared libraries, auth, env, hooks, i18n, storage, test-utils, utils
-  ├── translations  ## translations files for the app
+  ├── languages  ## i18n: Keys.tsx + English/Urdu/RomanUrdu.json (i18next)
   ├── types  ## shared types
 
 ```
