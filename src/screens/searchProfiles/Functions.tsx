@@ -1,7 +1,11 @@
 import { LanguageKeys } from '../../languages';
 import { ApiServices, flashErrorMessage } from '../../services';
 
-const onSearch = async (ageRange: any, filtersDataList: any) => {
+const onSearch = async (
+  ageRange: any,
+  filtersDataList: any,
+  nameQuery = ''
+) => {
   return new Promise((resolve, reject) => {
     let urlParams = '';
     let searchForPeople = '';
@@ -10,6 +14,9 @@ const onSearch = async (ageRange: any, filtersDataList: any) => {
     }
     if (ageRange?.maxAge) {
       urlParams = urlParams + `&max_age=${ageRange?.maxAge}`;
+    }
+    if (nameQuery.trim().length > 0) {
+      urlParams = urlParams + `&name=${encodeURIComponent(nameQuery.trim())}`;
     }
     filtersDataList.forEach((element: any) => {
       if (Object.keys(element?.selected).length !== 0) {
@@ -36,8 +43,13 @@ const onSearch = async (ageRange: any, filtersDataList: any) => {
   });
 };
 
-const saveAndSearch = (ageRange: any, filtersDataList: any, title: any) => {
+const saveAndSearch = (
+  ageRange: any,
+  filtersDataList: any,
+  options: { title: any; nameQuery?: string }
+) => {
   return new Promise((resolve, reject) => {
+    const { title, nameQuery = '' } = options;
     const view: any = {};
     const apply: any = {};
     if (ageRange?.minAge) {
@@ -59,7 +71,7 @@ const saveAndSearch = (ageRange: any, filtersDataList: any, title: any) => {
       view: view,
       title: title,
     };
-    onSearch(ageRange, filtersDataList)
+    onSearch(ageRange, filtersDataList, nameQuery)
       .then((res) => {
         if (Object.keys(params?.apply).length === 0) {
           flashErrorMessage('Please select atleast 1 filter');
