@@ -853,15 +853,17 @@ const Header = ({
                 { flexDirection: Rtl ? 'row-reverse' : 'row' },
               ]}
             >
-              <View style={Styles.nameShrink}>
-                <NameRow
-                  firstName={userData?.first_name}
-                  lastName={userData?.last_name}
-                  showStatus={false}
-                  statusColor={onlineStatusColor}
-                  rtl={Rtl}
-                />
-              </View>
+              {userData?.first_name || userData?.last_name ? (
+                <View style={Styles.nameShrink}>
+                  <NameRow
+                    firstName={userData?.first_name}
+                    lastName={userData?.last_name}
+                    showStatus={false}
+                    statusColor={onlineStatusColor}
+                    rtl={Rtl}
+                  />
+                </View>
+              ) : null}
               <View
                 style={{
                   flexDirection: Rtl ? 'row-reverse' : 'row',
