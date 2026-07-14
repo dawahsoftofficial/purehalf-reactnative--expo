@@ -592,8 +592,6 @@ const Keys = {
   otpMismatchedError: 'otpMismatchedError',
   skipForNow: 'skipForNow',
   guardianInfo: 'guardianInfo',
-  relation: 'relation',
-  selectRelation: 'selectRelation',
   codeSentToWali: 'codeSentToWali',
   invalidEmailError: 'invalidEmailError',
   informationUpdated: 'informationUpdated',
