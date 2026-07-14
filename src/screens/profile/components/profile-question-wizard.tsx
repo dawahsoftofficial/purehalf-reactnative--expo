@@ -111,22 +111,31 @@ const TextQuestionInput = React.memo(
       ref
     ) => {
       const [value, setValue] = useState(initialValue);
-      const wasAnswered = useRef(
-        (initialValue?.trim().length ?? 0) >= minLength
+      // Suggestion chips set `value` programmatically (see onSuggestionPress
+      // below), which bypasses the native TextInput's own `maxLength` guard --
+      // so "answered" here also gates on the upper bound, not just the lower
+      // one, to keep the wizard from advancing with an over-limit answer.
+      const isWithinLength = useCallback(
+        (text?: string) => {
+          const len = text?.trim().length ?? 0;
+          return len >= minLength && (!maxLength || len <= maxLength);
+        },
+        [minLength, maxLength]
       );
+      const wasAnswered = useRef(isWithinLength(initialValue));
 
       useImperativeHandle(ref, () => ({ getValue: () => value }), [value]);
 
       const onChangeText = useCallback(
         (text: string) => {
           setValue(text);
-          const answered = (text?.trim().length ?? 0) >= minLength;
+          const answered = isWithinLength(text);
           if (answered !== wasAnswered.current) {
             wasAnswered.current = answered;
             onAnsweredChange(id, answered);
           }
         },
-        [id, minLength, onAnsweredChange]
+        [id, isWithinLength, onAnsweredChange]
       );
 
       const onBlur = useCallback(() => {
@@ -161,7 +170,12 @@ const TextQuestionInput = React.memo(
             maxLength={maxLength}
           />
           {maxLength ? (
-            <Text style={Styles.charCounter}>
+            <Text
+              style={[
+                Styles.charCounter,
+                (value?.length ?? 0) > maxLength && Styles.charCounterOver,
+              ]}
+            >
               {`${value?.length ?? 0}/${maxLength}`}
             </Text>
           ) : null}
@@ -997,6 +1011,9 @@ const Styles = StyleSheet.create({
     textAlign: 'right',
     alignSelf: 'flex-end',
     marginTop: hp(0.5),
+  },
+  charCounterOver: {
+    color: '#E53935',
   },
   suggestionWrap: {
     flexDirection: 'row',
