@@ -935,6 +935,11 @@ const Header = ({
               </Text>
             )}
           </Ripple>
+          <Entypo
+            name={taglinePrivacyVisible ? 'eye' : 'eye-with-line'}
+            size={wp(3.8)}
+            color={Colors.muted}
+          />
           <Switch
             value={taglinePrivacyVisible}
             onValueChange={onTaglinePrivacyChange}
