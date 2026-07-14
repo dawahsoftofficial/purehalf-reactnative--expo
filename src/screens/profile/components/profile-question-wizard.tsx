@@ -9,10 +9,10 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import { Switch } from 'react-native-switch';
 import Entypo from 'react-native-vector-icons/Entypo';
 
 import {
@@ -25,7 +25,7 @@ import {
 import { hp, Typography, wp } from '../../../global';
 import { CheckRtl, LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
-import { ApiServices } from '../../../services';
+import { ApiServices, flashSuccessMessage } from '../../../services';
 import { getEyeColorSwatch } from '../eye-color-swatches';
 import {
   buildScalingSelected,
@@ -465,6 +465,7 @@ const ProfileQuestionWizard = ({
   onPrivacyChange,
 }: ProfileQuestionWizardProps) => {
   const Rtl = CheckRtl();
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState<any[]>(() =>
     JSON.parse(JSON.stringify(fields ?? [])).map(normalizeScalingSelected)
@@ -715,44 +716,40 @@ const ProfileQuestionWizard = ({
             <View style={Styles.questionTitleText}>
               <Text style={Styles.questionTitle}>{iTitle}</Text>
               {showPrivacyControl ? (
-                <View
+                <Ripple
+                  testID={`profile-privacy-toggle-${privacyField}`}
                   style={[
-                    Styles.privacyStatusRow,
+                    Styles.privacyToggle,
                     Rtl && { flexDirection: 'row-reverse' },
                   ]}
+                  onPress={() => {
+                    const nextVisibility = isVisible ? 'private' : 'public';
+                    onPrivacyChange?.(privacyField, nextVisibility);
+                    flashSuccessMessage(
+                      t(
+                        nextVisibility === 'private'
+                          ? LanguageKeys.fieldHiddenToast
+                          : LanguageKeys.fieldVisibleToast,
+                        { field: iTitle }
+                      )
+                    );
+                  }}
+                  disabled={privacyUpdatingField === privacyField}
+                  rippleColor={Colors.primary}
                 >
                   <Entypo
                     name={isVisible ? 'eye' : 'eye-with-line'}
                     size={wp(3.6)}
-                    color={Colors.muted}
+                    color={Colors.primary}
                   />
-                  <Text style={Styles.privacyStatus}>
+                  <Text style={Styles.privacyToggleTxt}>
                     {isVisible
-                      ? LanguageKeys.visibleOnProfile
-                      : LanguageKeys.hiddenOnProfile}
+                      ? LanguageKeys.hideField
+                      : LanguageKeys.unhideField}
                   </Text>
-                </View>
+                </Ripple>
               ) : null}
             </View>
-            {showPrivacyControl ? (
-              <Switch
-                testID={`profile-privacy-switch-${privacyField}`}
-                value={isVisible}
-                onValueChange={() =>
-                  onPrivacyChange?.(
-                    privacyField,
-                    isVisible ? 'private' : 'public'
-                  )
-                }
-                disabled={privacyUpdatingField === privacyField}
-                renderActiveText={false}
-                renderInActiveText={false}
-                circleSize={25}
-                backgroundActive={Colors.primary}
-                backgroundInactive={Colors.color18}
-                innerCircleStyle={Styles.switchInner}
-              />
-            ) : null}
           </View>
 
           <View style={Styles.controlWrap}>
@@ -814,6 +811,7 @@ const ProfileQuestionWizard = ({
       profileFieldVisibility,
       privacyUpdatingField,
       onPrivacyChange,
+      t,
     ]
   );
 
@@ -947,20 +945,23 @@ const Styles = StyleSheet.create({
   questionTitleText: {
     flex: 1,
   },
-  privacyStatusRow: {
+  privacyToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp(1.2),
-    marginTop: hp(0.3),
+    alignSelf: 'flex-start',
+    gap: wp(1.5),
+    marginTop: hp(0.8),
+    paddingVertical: hp(0.7),
+    paddingHorizontal: wp(3),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
   },
-  privacyStatus: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.tiny2,
-  },
-  switchInner: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
+  privacyToggleTxt: {
+    alignSelf: 'center',
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
   },
   controlWrap: {
     marginTop: hp(2),

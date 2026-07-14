@@ -347,11 +347,13 @@ const OnboardingProfile = ({ navigation, route }: any) => {
                 {LanguageKeys.finishLater}
               </Text>
             </Ripple>
-            <GiftBadge
-              eligible={giftEligible}
-              claimed={giftClaimed}
-              onPress={onGiftBadgePress}
-            />
+            {!giftClaimed && (
+              <GiftBadge
+                eligible={giftEligible}
+                claimed={giftClaimed}
+                onPress={onGiftBadgePress}
+              />
+            )}
           </View>
         </View>
         <View style={Styles.meterRow}>

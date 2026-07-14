@@ -94,3 +94,18 @@ export function checkProfileCompleted(
 
   return Object.values(keysData).every((value) => value === true);
 }
+
+/**
+ * Strips a leading emoji (and any following whitespace) from a label, e.g.
+ * turning "🚀 Entrepreneurial Visionary" into "Entrepreneurial Visionary".
+ * Personality/interest choice labels come from the server with an emoji
+ * prefix baked into the value; this is a display-only cleanup.
+ */
+const LEADING_EMOJI = new RegExp(
+  '^[\\p{Extended_Pictographic}\\u200D\\uFE0F]+\\s*',
+  'u'
+);
+
+export function stripLeadingEmoji(value: string): string {
+  return value.replace(LEADING_EMOJI, '');
+}

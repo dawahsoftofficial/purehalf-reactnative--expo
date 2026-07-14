@@ -63,7 +63,6 @@ const EditProfileGroup = ({ navigation, route }: any) => {
           }));
           updateCurrentUser(updatedUser);
           await setData(storageKeys.USER, updatedUser);
-          flashSuccessMessage(LanguageKeys.updated);
         })
         .catch(() => {
           setProfileFieldVisibility((prev) => ({ ...prev, [field]: previous }));

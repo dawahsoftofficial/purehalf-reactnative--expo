@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, Text as RNText, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import { Switch } from 'react-native-switch';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Text } from '../../components';
@@ -54,59 +54,46 @@ export const CompletionCard = memo(function CompletionCard({
 type InterestsPreviewProps = {
   interests: any[];
   onEdit: () => void;
-  privacyVisible?: boolean;
-  privacyUpdating?: boolean;
-  onPrivacyChange?: () => void;
 };
 
 export const InterestsPreview = memo(function InterestsPreview({
   interests,
   onEdit,
-  privacyVisible = true,
-  privacyUpdating = false,
-  onPrivacyChange,
 }: InterestsPreviewProps) {
-  const selected = (interests ?? []).filter((i) => i?.selected).slice(0, 8);
+  const { t } = useTranslation();
+  const selectedCount = (interests ?? []).filter((i) => i?.selected).length;
   return (
-    <View style={Styles.card}>
+    <Ripple onPress={onEdit} style={Styles.card}>
       <View style={Styles.cardHead}>
-        <Text style={Styles.cardHeadTxt}>
-          {LanguageKeys.myInterestAndHobbies}
-        </Text>
-        <View style={Styles.cardHeadActions}>
-          <Ripple onPress={onEdit} style={Styles.editLink}>
-            <Text style={Styles.editLinkTxt}>{LanguageKeys.update}</Text>
-          </Ripple>
-          {onPrivacyChange ? (
-            <Switch
-              value={privacyVisible}
-              onValueChange={onPrivacyChange}
-              disabled={privacyUpdating}
-              renderActiveText={false}
-              renderInActiveText={false}
-              circleSize={23}
-              backgroundActive={Colors.primary}
-              backgroundInactive={Colors.color18}
-              innerCircleStyle={Styles.switchInner}
-            />
+        <View style={Styles.cardHeadText}>
+          <Text style={Styles.cardHeadTxt}>
+            {LanguageKeys.myInterestAndHobbies}
+          </Text>
+          {selectedCount === 0 ? (
+            <View style={Styles.addRow}>
+              <Ionicons name="add" size={wp(4.5)} color={Colors.primary} />
+              <Text style={Styles.addTxt}>{LanguageKeys.tapToAdd}</Text>
+            </View>
           ) : null}
         </View>
-      </View>
-      {selected.length > 0 ? (
-        <View style={Styles.pills}>
-          {selected.map((i) => (
-            <View key={i?.id} style={Styles.pill}>
-              <Text style={Styles.pillTxt}>{i?.value}</Text>
+        <View style={Styles.cardHeadActions}>
+          {selectedCount > 0 ? (
+            <View style={Styles.countPill}>
+              <RNText style={Styles.countTxt}>
+                {t(LanguageKeys.interestAndHobbiesSelectedCount, {
+                  count: selectedCount,
+                })}
+              </RNText>
             </View>
-          ))}
+          ) : null}
+          <Ionicons
+            name="chevron-forward"
+            size={wp(5)}
+            color={Colors.primaryLite}
+          />
         </View>
-      ) : (
-        <Ripple onPress={onEdit} style={Styles.addRow}>
-          <Ionicons name="add" size={wp(4.5)} color={Colors.primary} />
-          <Text style={Styles.addTxt}>{LanguageKeys.tapToAdd}</Text>
-        </Ripple>
-      )}
-    </View>
+      </View>
+    </Ripple>
   );
 });
 
@@ -231,11 +218,13 @@ const Styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: wp(4),
-    paddingTop: hp(1.6),
-    paddingBottom: hp(0.5),
+    paddingVertical: hp(1.6),
+  },
+  cardHeadText: {
+    flex: 1,
+    paddingRight: wp(3),
   },
   cardHeadTxt: {
-    flex: 1,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small3,
     color: Colors.ink,
@@ -245,45 +234,11 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2.5),
   },
-  switchInner: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
-  },
-  editLink: {
-    paddingVertical: hp(0.5),
-    paddingHorizontal: wp(1),
-  },
-  editLinkTxt: {
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small1,
-    color: Colors.primary,
-  },
-  pills: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: wp(2),
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(1.8),
-    paddingTop: hp(0.5),
-  },
-  pill: {
-    backgroundColor: Colors.lavender,
-    borderRadius: 999,
-    paddingVertical: hp(0.8),
-    paddingHorizontal: wp(3),
-  },
-  pillTxt: {
-    color: Colors.ink,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
-  },
   addRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(1.5),
-    paddingHorizontal: wp(4),
-    paddingBottom: hp(1.8),
-    paddingTop: hp(0.5),
+    marginTop: hp(0.8),
   },
   addTxt: {
     color: Colors.primary,

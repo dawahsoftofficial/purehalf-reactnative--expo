@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Animation } from '../../animations';
 import { SlideShowContainer, Text } from '../../components';
+import AppBackgroundPattern from '../../components/AppBackgroundPattern';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl } from '../../languages';
 import { postSignupMembershipRoute } from '../../navigation/resolve-post-signup-route';
@@ -260,6 +261,7 @@ function AuthWelcome({ navigation }: AuthWelcomeProps) {
       <StatusBar backgroundColor={Colors.color2} barStyle="dark-content" />
 
       <View style={Styles.container}>
+        <AppBackgroundPattern />
         <LogoSection />
 
         <Animation style={buttonSectionStyle}>

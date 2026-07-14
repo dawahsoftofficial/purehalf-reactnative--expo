@@ -22,9 +22,11 @@ import {
 } from '../../services';
 import messageServices from '../../services/api/message-services';
 import PolygamyBadge from './components/polygamy-badge';
+import { updateDetails } from './Funtions';
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
+import InterestsPickerModal from './InterestsPickerModal';
 import {
   type BlockPickerOption,
   BlockPickerSheet,
@@ -133,6 +135,8 @@ const Profile = ({
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
+  const [interestsPickerVisible, setInterestsPickerVisible] = useState(false);
+  const [interestsSaving, setInterestsSaving] = useState(false);
   const [privacyUpdatingField, setPrivacyUpdatingField] = useState('');
   const [profileFieldVisibility, setProfileFieldVisibility] =
     useState<ProfileFieldVisibility>(
@@ -230,8 +234,37 @@ const Profile = ({
   );
 
   const onEditInterests = useCallback(() => {
-    navigation.navigate('EditInterests', { data: interestAndHobbies });
-  }, [navigation, interestAndHobbies]);
+    setInterestsPickerVisible(true);
+  }, []);
+
+  const onCloseInterestsPicker = useCallback(() => {
+    setInterestsPickerVisible(false);
+  }, []);
+
+  const onSaveInterests = useCallback(
+    (ids: string[]) => {
+      setInterestsSaving(true);
+      updateDetails({ interestAndHobbies: ids })
+        .then(async (res: any) => {
+          if (res && Object.keys(res).length !== 0) {
+            const updatedUser = { ...currentUser, detail: res };
+            await setData(storageKeys.USER, updatedUser);
+            updateCurrentUser(updatedUser);
+            setIinterestAndHobbies((prev) =>
+              prev.map((item) => ({
+                ...item,
+                selected: ids.includes(item?.id),
+              }))
+            );
+          }
+          flashSuccessMessage();
+          setInterestsSaving(false);
+          setInterestsPickerVisible(false);
+        })
+        .catch(() => setInterestsSaving(false));
+    },
+    [currentUser, setData, storageKeys.USER, updateCurrentUser]
+  );
 
   const getAttribute = useCallback(
     (Data: any, nextUserData: User) => {
@@ -629,20 +662,6 @@ const Profile = ({
                       <InterestsPreview
                         interests={interestAndHobbies}
                         onEdit={onEditInterests}
-                        privacyVisible={
-                          profileFieldVisibility.personality_id !== 'private'
-                        }
-                        privacyUpdating={
-                          privacyUpdatingField === 'personality_id'
-                        }
-                        onPrivacyChange={() =>
-                          updateInlinePrivacy(
-                            'personality_id',
-                            profileFieldVisibility.personality_id === 'private'
-                              ? 'public'
-                              : 'private'
-                          )
-                        }
                       />
                       <SectionLabel label={LanguageKeys.profileDetailsLabel} />
                       <DetailSectionList
@@ -717,6 +736,24 @@ const Profile = ({
         data={buttonPickerVisible.pickerData}
         onButtonPress={onButtonPickerButtonPress}
         headerTitle={buttonPickerVisible.pickerHeaderTitle}
+      />
+
+      <InterestsPickerModal
+        visible={interestsPickerVisible}
+        data={interestAndHobbies}
+        saving={interestsSaving}
+        privacyVisible={profileFieldVisibility.personality_id !== 'private'}
+        privacyUpdating={privacyUpdatingField === 'personality_id'}
+        onPrivacyChange={() =>
+          updateInlinePrivacy(
+            'personality_id',
+            profileFieldVisibility.personality_id === 'private'
+              ? 'public'
+              : 'private'
+          )
+        }
+        onClose={onCloseInterestsPicker}
+        onSave={onSaveInterests}
       />
     </SafeAreaView>
   );
