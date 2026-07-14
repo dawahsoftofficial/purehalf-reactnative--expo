@@ -689,11 +689,11 @@ class GApiServices {
 
   updateProfilePrivacy = (privacy: {
     visibility?: Record<string, 'public' | 'private'>;
-    profile_visibility?: 'everyone' | 'active_chat' | 'liked';
+    profile_visibility?: 'everyone' | 'active_chat' | 'liked' | 'nobody';
   }) => {
     return new Promise<{
       profile_field_visibility?: Record<string, 'public' | 'private'>;
-      profile_visibility?: 'everyone' | 'active_chat' | 'liked';
+      profile_visibility?: 'everyone' | 'active_chat' | 'liked' | 'nobody';
     }>((resolve, reject) => {
       Api.patch(EndPoints.updateProfilePrivacy, privacy)
         .then((res) => resolve(res?.data?.results))

@@ -25,7 +25,12 @@ import {
   TesterApi,
   useGlobalContext,
 } from '../../services';
-import { useSettingsStore, useUserStatsStore } from '../../stores';
+import {
+  useRatingStore,
+  useSettingsStore,
+  useTesterPreviewStore,
+  useUserStatsStore,
+} from '../../stores';
 import TesterNotesTab from './TesterNotesTab';
 
 const Button = ({
@@ -346,6 +351,24 @@ export default function TesterConsole({ navigation }: any) {
   };
 
   const playSplash = () => navigation.navigate('TesterSplash');
+
+  const goHome = () =>
+    navigation.dispatch(
+      CommonActions.reset({ index: 0, routes: [{ name: 'BottomTab' }] })
+    );
+
+  // Close the tester tool and show the rating popup (rendered app-wide from
+  // Initialization, so it appears over home once we land there).
+  const openRatingScreen = () => {
+    goHome();
+    useRatingStore.getState().show('tester_preview');
+  };
+
+  // Close the tester tool and ask home to show the daily-gift calendar popup.
+  const openGiftCalendar = () => {
+    useTesterPreviewStore.getState().requestGiftCalendar();
+    goHome();
+  };
 
   const restartApp = () =>
     Alert.alert(
@@ -753,6 +776,18 @@ export default function TesterConsole({ navigation }: any) {
         <Button
           label="Clear people who like me"
           onPress={() => resetData('likes_me', 'People who like me')}
+          disabled={busy}
+        />
+
+        <Text style={styles.heading}>Screen previews</Text>
+        <Button
+          label="Open the rating screen"
+          onPress={openRatingScreen}
+          disabled={busy}
+        />
+        <Button
+          label="Gift calendar"
+          onPress={openGiftCalendar}
           disabled={busy}
         />
 

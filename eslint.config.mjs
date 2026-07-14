@@ -162,10 +162,11 @@ export default defineConfig([
       ],
       'i18n-json/valid-json': 2,
       // sorted-keys/identical-keys are OFF: English.json's keys aren't sorted
-      // alphabetically yet, and Urdu/RomanUrdu already have drift vs English
-      // (Urdu is missing 16 keys and has 2 English doesn't; RomanUrdu is
-      // missing 21 keys). Sort English.json and reconcile the other two
-      // locale files, then flip these back to 2 and point identical-keys at:
+      // alphabetically yet, and RomanUrdu still has drift vs English (missing
+      // 20 keys) -- see docs/superpowers/plans/2026-07-15-urdu-i18n-completeness-audit.md
+      // for the Urdu reconciliation this deferred (Urdu itself is now in sync,
+      // as of that plan). Sort English.json and reconcile RomanUrdu, then flip
+      // these back to 2 and point identical-keys at:
       //   filePath: path.resolve(__dirname, './src/languages/English.json')
       'i18n-json/sorted-keys': 0,
       'i18n-json/identical-keys': 0,

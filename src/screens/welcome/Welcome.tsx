@@ -13,7 +13,13 @@ import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { usePremiumStore, useSettingsStore, useUserStatsStore } from '@/stores';
+import {
+  TESTER_GIFT_CALENDAR_PREVIEW,
+  usePremiumStore,
+  useSettingsStore,
+  useTesterPreviewStore,
+  useUserStatsStore,
+} from '@/stores';
 
 import {
   CheckMembershipStatus,
@@ -281,6 +287,22 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         active = false;
       };
     }, [currentUser?.id, currentUser?.last_chat_credit_collected_at])
+  );
+
+  // Tester tools can request the daily-gift ("gift calendar") popup on demand
+  // for review, using sample reward data instead of a real eligible day.
+  const giftCalendarRequested = useTesterPreviewStore(
+    (s) => s.giftCalendarRequested
+  );
+  const clearGiftCalendar = useTesterPreviewStore((s) => s.clearGiftCalendar);
+  useFocusEffect(
+    useCallback(() => {
+      if (!giftCalendarRequested) return;
+      clearGiftCalendar();
+      setDailyReward(TESTER_GIFT_CALENDAR_PREVIEW);
+      setRecommendationModal(false);
+      setDailyRewardVisible(true);
+    }, [giftCalendarRequested, clearGiftCalendar])
   );
 
   const claimDailyReward = useCallback(
