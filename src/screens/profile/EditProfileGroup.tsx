@@ -86,7 +86,7 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       updateDetails(formData)
         .then(async (res: any) => {
           if (res && Object.keys(res).length !== 0) {
-            const updatedUser = { ...currentUser, detail: res };
+            const updatedUser = { ...currentUser, detail: res.detail ?? res };
             await setData(storageKeys.USER, updatedUser);
             updateCurrentUser(updatedUser);
           }
