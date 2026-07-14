@@ -103,15 +103,18 @@ jest.mock('../../../languages', () => ({
     profileVisibilityLikedDesc: 'profileVisibilityLikedDesc',
     profileVisibilityNobody: 'profileVisibilityNobody',
     profileVisibilityNobodyDesc: 'profileVisibilityNobodyDesc',
-    understood: 'Understood',
+    save: 'save',
   },
 }));
+
+const mockFlashErrorMessage = jest.fn();
 
 jest.mock('../../../services', () => ({
   ApiServices: {
     updateProfilePrivacy: jest.fn(),
     updateUserInfo: jest.fn(),
   },
+  flashErrorMessage: (...args: unknown[]) => mockFlashErrorMessage(...args),
   StorageManager: {
     setData: jest.fn(),
     storageKeys: { USER: 'USER' },
@@ -138,16 +141,32 @@ describe('PrivacyQuickSettingsModal', () => {
       detail: { profile_visibility: 'everyone' },
     };
     mockUpdateCurrentUser.mockReset();
+    mockFlashErrorMessage.mockReset();
     (ApiServices.updateUserInfo as jest.Mock).mockReset().mockResolvedValue({});
     (ApiServices.updateProfilePrivacy as jest.Mock)
       .mockReset()
       .mockResolvedValue({ profile_visibility: 'nobody' });
   });
 
-  it('turns Invisible mode on by sending search_visibility 0 with the current profile snapshot', async () => {
+  it('stages a selection locally without calling the API until Save is pressed', () => {
+    render(<PrivacyQuickSettingsModal visible onClose={jest.fn()} />);
+
+    fireEvent.press(screen.getByTestId('quick-privacy-visibility-nobody'));
+
+    expect(ApiServices.updateProfilePrivacy).not.toHaveBeenCalled();
+    expect(
+      screen.getByTestId('quick-privacy-visibility-nobody').props
+        .accessibilityState.selected
+    ).toBe(true);
+  });
+
+  it('saves Invisible mode only once Save is pressed, sending search_visibility 0 with the current profile snapshot', async () => {
     render(<PrivacyQuickSettingsModal visible onClose={jest.fn()} />);
 
     fireEvent.press(screen.getByTestId('quick-privacy-invisible-mode-switch'));
+    expect(ApiServices.updateUserInfo).not.toHaveBeenCalled();
+
+    fireEvent.press(screen.getByText('save'));
 
     await waitFor(() =>
       expect(ApiServices.updateUserInfo).toHaveBeenCalledWith(
@@ -168,44 +187,57 @@ describe('PrivacyQuickSettingsModal', () => {
     );
   });
 
-  it('selects "hide completely" by sending profile_visibility nobody', async () => {
+  it('saves the "hide completely" selection only once Save is pressed', async () => {
     render(<PrivacyQuickSettingsModal visible onClose={jest.fn()} />);
 
     fireEvent.press(screen.getByTestId('quick-privacy-visibility-nobody'));
+    fireEvent.press(screen.getByText('save'));
 
     await waitFor(() =>
       expect(ApiServices.updateProfilePrivacy).toHaveBeenCalledWith({
         profile_visibility: 'nobody',
       })
     );
-    expect(
-      screen.getByTestId('quick-privacy-visibility-nobody').props
-        .accessibilityState.selected
-    ).toBe(true);
+    await waitFor(() =>
+      expect(mockUpdateCurrentUser).toHaveBeenCalledWith(
+        expect.objectContaining({
+          detail: expect.objectContaining({ profile_visibility: 'nobody' }),
+        })
+      )
+    );
   });
 
-  it('reverts the selection if the API call fails', async () => {
+  it('closes without any API call when Save is pressed with no changes', () => {
+    const onClose = jest.fn();
+    render(<PrivacyQuickSettingsModal visible onClose={onClose} />);
+
+    fireEvent.press(screen.getByText('save'));
+
+    expect(onClose).toHaveBeenCalled();
+    expect(ApiServices.updateUserInfo).not.toHaveBeenCalled();
+    expect(ApiServices.updateProfilePrivacy).not.toHaveBeenCalled();
+  });
+
+  it('flashes an error and keeps the selection (for retry) if saving fails', async () => {
     (ApiServices.updateProfilePrivacy as jest.Mock).mockRejectedValue(
       new Error('network')
     );
+    const onClose = jest.fn();
 
-    render(<PrivacyQuickSettingsModal visible onClose={jest.fn()} />);
+    render(<PrivacyQuickSettingsModal visible onClose={onClose} />);
 
     fireEvent.press(screen.getByTestId('quick-privacy-visibility-nobody'));
+    fireEvent.press(screen.getByText('save'));
 
     await waitFor(() =>
       expect(ApiServices.updateProfilePrivacy).toHaveBeenCalled()
     );
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('quick-privacy-visibility-nobody').props
-          .accessibilityState.selected
-      ).toBe(false)
-    );
+    await waitFor(() => expect(mockFlashErrorMessage).toHaveBeenCalled());
     expect(
-      screen.getByTestId('quick-privacy-visibility-everyone').props
+      screen.getByTestId('quick-privacy-visibility-nobody').props
         .accessibilityState.selected
     ).toBe(true);
     expect(mockUpdateCurrentUser).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

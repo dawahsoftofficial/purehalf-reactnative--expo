@@ -1,5 +1,5 @@
 import moment from 'moment';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import { Switch } from 'react-native-switch';
@@ -11,6 +11,7 @@ import { CheckRtl, LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 import {
   ApiServices,
+  flashErrorMessage,
   StorageManager,
   useGlobalContext,
 } from '../../../services';
@@ -57,13 +58,8 @@ const PrivacyQuickSettingsModal = ({
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>(
     currentUser?.detail?.profile_visibility ?? 'everyone'
   );
-  // Shared, not per-control: the invisible-mode switch and the visibility
-  // radio group both merge into currentUser via `{ ...currentUser, <field> }`
-  // using a closure-captured snapshot. If both were saving at once, whichever
-  // resolves second would clobber the first's local update with a stale
-  // snapshot. One flag disables both controls during any in-flight save,
-  // which also matches the full PrivacySettings screen's effective behavior
-  // (its full-screen ModalLoader blocks all interaction during any save).
+  // Selections are staged locally and only sent to the server when the
+  // bottom button is pressed -- tapping an option just updates local state.
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -74,68 +70,96 @@ const PrivacyQuickSettingsModal = ({
 
   const onInvisibleModeChange = (nextInvisible: boolean) => {
     if (saving) return;
-    const previous = searchVisible;
-    const nextSearchVisible = !nextInvisible;
-    setSearchVisible(nextSearchVisible);
-    setSaving(true);
-
-    const {
-      first_name,
-      last_name,
-      gender,
-      date_of_birth,
-      interface_language_id,
-      country,
-      city,
-      latitude,
-      longitude,
-    } = currentUser ?? {};
-    const dob = moment(date_of_birth, 'DD MMM,YYYY').toDate();
-
-    ApiServices.updateUserInfo({
-      search_visibility: nextSearchVisible ? 1 : 0,
-      first_name,
-      last_name,
-      gender,
-      date_of_birth: moment(dob).format('YYYY-MM-DD'),
-      interface_language_id,
-      country,
-      city,
-      longitude,
-      latitude,
-    })
-      .then(async () => {
-        const updatedUser = {
-          ...currentUser,
-          search_visibility: nextSearchVisible ? 1 : 0,
-        };
-        updateCurrentUser(updatedUser);
-        await setData(storageKeys.USER, updatedUser);
-      })
-      .catch(() => setSearchVisible(previous))
-      .finally(() => setSaving(false));
+    setSearchVisible(!nextInvisible);
   };
 
   const onProfileVisibilityChange = (next: ProfileVisibility) => {
-    if (saving || next === profileVisibility) return;
-    const previous = profileVisibility;
+    if (saving) return;
     setProfileVisibility(next);
-    setSaving(true);
-
-    ApiServices.updateProfilePrivacy({ profile_visibility: next })
-      .then(async (result) => {
-        const saved = result?.profile_visibility ?? next;
-        const updatedUser = {
-          ...currentUser,
-          detail: { ...(currentUser?.detail ?? {}), profile_visibility: saved },
-        };
-        setProfileVisibility(saved);
-        updateCurrentUser(updatedUser);
-        await setData(storageKeys.USER, updatedUser);
-      })
-      .catch(() => setProfileVisibility(previous))
-      .finally(() => setSaving(false));
   };
+
+  const searchVisibilityChanged =
+    searchVisible !== (currentUser?.search_visibility === 1);
+  const profileVisibilityChanged =
+    profileVisibility !==
+    (currentUser?.detail?.profile_visibility ?? 'everyone');
+  const hasChanges = searchVisibilityChanged || profileVisibilityChanged;
+
+  const handleSave = useCallback(async () => {
+    if (saving) return;
+    if (!hasChanges) {
+      onClose();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      let updatedUser = { ...currentUser };
+
+      if (searchVisibilityChanged) {
+        const {
+          first_name,
+          last_name,
+          gender,
+          date_of_birth,
+          interface_language_id,
+          country,
+          city,
+          latitude,
+          longitude,
+        } = currentUser ?? {};
+        const dob = moment(date_of_birth, 'DD MMM,YYYY').toDate();
+
+        await ApiServices.updateUserInfo({
+          search_visibility: searchVisible ? 1 : 0,
+          first_name,
+          last_name,
+          gender,
+          date_of_birth: moment(dob).format('YYYY-MM-DD'),
+          interface_language_id,
+          country,
+          city,
+          longitude,
+          latitude,
+        });
+        updatedUser = {
+          ...updatedUser,
+          search_visibility: searchVisible ? 1 : 0,
+        };
+      }
+
+      if (profileVisibilityChanged) {
+        const result = await ApiServices.updateProfilePrivacy({
+          profile_visibility: profileVisibility,
+        });
+        const saved = result?.profile_visibility ?? profileVisibility;
+        updatedUser = {
+          ...updatedUser,
+          detail: { ...(updatedUser?.detail ?? {}), profile_visibility: saved },
+        };
+      }
+
+      updateCurrentUser(updatedUser);
+      await setData(storageKeys.USER, updatedUser);
+      onClose();
+    } catch {
+      flashErrorMessage();
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    saving,
+    hasChanges,
+    searchVisibilityChanged,
+    profileVisibilityChanged,
+    searchVisible,
+    profileVisibility,
+    currentUser,
+    updateCurrentUser,
+    setData,
+    storageKeys.USER,
+    onClose,
+  ]);
 
   return (
     <Modal
@@ -228,9 +252,10 @@ const PrivacyQuickSettingsModal = ({
               })}
             </View>
             <Button
-              onPress={onClose}
+              onPress={handleSave}
+              loading={saving}
               buttonStyle={Styles.understoodBtn}
-              text={LanguageKeys.understood}
+              text={LanguageKeys.save}
             />
           </ScrollView>
         </View>
