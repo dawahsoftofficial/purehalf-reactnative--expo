@@ -633,16 +633,6 @@ const Profile = ({
             onTaglineSubmit={onTagLineSubmit}
             onTaglineEditPress={showTagLineInput}
             onTaglineCancel={hideTagLineInput}
-            taglinePrivacyVisible={profileFieldVisibility.tagline !== 'private'}
-            taglinePrivacyUpdating={privacyUpdatingField === 'tagline'}
-            onTaglinePrivacyChange={() =>
-              updateInlinePrivacy(
-                'tagline',
-                profileFieldVisibility.tagline === 'private'
-                  ? 'public'
-                  : 'private'
-              )
-            }
           />
           {isBlockedYou ? (
             <Text style={Styles.userNotAvailDes}>
