@@ -43,7 +43,7 @@ yarn start              # Metro
 yarn android            # build + run Android
 yarn ios                # build + run iOS (run `bundle exec pod install` first on macOS)
 yarn type-check         # tsc --noEmit  (currently CLEAN)
-yarn lint               # eslint  (currently: 20 errors, 853 warnings — see Known Issues)
+yarn lint               # eslint  (currently: 1 error, 739 warnings — see Known Issues)
 yarn lint:fix
 yarn test               # jest  (currently BROKEN — see Known Issues)
 yarn check-all          # lint + type-check + test
