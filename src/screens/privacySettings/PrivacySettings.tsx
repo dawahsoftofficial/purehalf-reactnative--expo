@@ -123,6 +123,11 @@ const PrivacySettings = (props: any) => {
       title: LanguageKeys.profileVisibilityLiked,
       description: LanguageKeys.profileVisibilityLikedDesc,
     },
+    {
+      value: 'nobody',
+      title: LanguageKeys.profileVisibilityNobody,
+      description: LanguageKeys.profileVisibilityNobodyDesc,
+    },
   ];
 
   const hideFromSearchToggle = (hidden: boolean) => {
