@@ -24,15 +24,6 @@ const Data: any = {
     // say") is the optional, dignity-preserving descriptor that replaces it.
     // Height is kept.
     {
-      title: LanguageKeys.disabilities,
-      data: [],
-      type: 'dropDown',
-      id: 'dis-0',
-      category: 'appearance-0',
-      selected: {},
-      apiKey: 'disability_id',
-    },
-    {
       title: LanguageKeys.bodyType,
       data: [],
       type: 'dropDown',
@@ -61,6 +52,16 @@ const Data: any = {
       category: 'appearance-0',
       apiKey: 'skin_tone_id',
       inline: true,
+    },
+    // Moved to the end of this group per tester note #24.
+    {
+      title: LanguageKeys.disabilities,
+      data: [],
+      type: 'dropDown',
+      id: 'dis-0',
+      category: 'appearance-0',
+      selected: {},
+      apiKey: 'disability_id',
     },
   ],
   familyBackground: [
