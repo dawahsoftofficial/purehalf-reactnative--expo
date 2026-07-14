@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import CircularProgress from 'react-native-circular-progress-indicator';
 import Ripple from 'react-native-material-ripple';
+import { Switch } from 'react-native-switch';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 import Entypo from 'react-native-vector-icons/Entypo';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -114,6 +115,9 @@ type HeaderProps = {
   onTaglineSubmit?: () => void;
   onTaglineEditPress?: () => void;
   onTaglineCancel?: () => void;
+  taglinePrivacyVisible?: boolean;
+  taglinePrivacyUpdating?: boolean;
+  onTaglinePrivacyChange?: () => void;
 };
 
 type NameRowProps = {
@@ -135,7 +139,11 @@ const NameRow = React.memo(function NameRow({
 }: NameRowProps): ReactElement {
   return (
     <View
-      style={{ ...Styles.nameCon, flexDirection: rtl ? 'row-reverse' : 'row' }}
+      style={{
+        ...Styles.nameCon,
+        flexDirection: 'column',
+        alignItems: rtl ? 'flex-end' : 'flex-start',
+      }}
     >
       <ReactText
         style={[Styles.name, !rtl ? { fontFamily: Fonts.DISPLAY } : null]}
@@ -146,16 +154,24 @@ const NameRow = React.memo(function NameRow({
       {showStatus && (
         <View
           style={{
-            ...Styles.onlineStatus,
-            backgroundColor: statusColor,
+            flexDirection: rtl ? 'row-reverse' : 'row',
+            alignItems: 'center',
+            marginTop: hp(0.3),
           }}
-        />
+        >
+          <View
+            style={{
+              ...Styles.onlineStatus,
+              backgroundColor: statusColor,
+            }}
+          />
+          {statusLabel ? (
+            <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
+              {statusLabel}
+            </ReactText>
+          ) : null}
+        </View>
       )}
-      {showStatus && statusLabel ? (
-        <ReactText style={Styles.cardLastSeenTxt} numberOfLines={1}>
-          {statusLabel}
-        </ReactText>
-      ) : null}
     </View>
   );
 });
@@ -316,6 +332,9 @@ const Header = ({
   onTaglineSubmit = () => null,
   onTaglineEditPress = () => null,
   onTaglineCancel = () => null,
+  taglinePrivacyVisible = true,
+  taglinePrivacyUpdating = false,
+  onTaglinePrivacyChange = () => null,
 }: HeaderProps) => {
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { t } = useTranslation();
@@ -834,15 +853,17 @@ const Header = ({
                 { flexDirection: Rtl ? 'row-reverse' : 'row' },
               ]}
             >
-              <View style={Styles.nameShrink}>
-                <NameRow
-                  firstName={userData?.first_name}
-                  lastName={userData?.last_name}
-                  showStatus={false}
-                  statusColor={onlineStatusColor}
-                  rtl={Rtl}
-                />
-              </View>
+              {userData?.first_name || userData?.last_name ? (
+                <View style={Styles.nameShrink}>
+                  <NameRow
+                    firstName={userData?.first_name}
+                    lastName={userData?.last_name}
+                    showStatus={false}
+                    statusColor={onlineStatusColor}
+                    rtl={Rtl}
+                  />
+                </View>
+              ) : null}
               <View
                 style={{
                   flexDirection: Rtl ? 'row-reverse' : 'row',
@@ -886,31 +907,53 @@ const Header = ({
             />
           </View>
         </View>
-        <Ripple
-          style={Styles.taglineEditRow}
-          onPress={onTaglineEditPress}
-          rippleColor={Colors.lavender}
-        >
-          <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
-          {tagline && tagline.trim().length ? (
-            <ReactText
-              style={[
-                Styles.cardTagline,
-                { textAlign: Rtl ? 'right' : 'left', flex: 1 },
-              ]}
-              numberOfLines={2}
-            >
-              {`“${tagline}”`}
-            </ReactText>
-          ) : (
-            <Text
-              style={[Styles.cardTagline, Styles.cardTaglineMuted, { flex: 1 }]}
-              numberOfLines={2}
-            >
-              {LanguageKeys.enterTagline}
-            </Text>
-          )}
-        </Ripple>
+        <View style={Styles.taglinePrivacyRow}>
+          <Ripple
+            style={Styles.taglineEditRow}
+            onPress={onTaglineEditPress}
+            rippleColor={Colors.lavender}
+          >
+            <Entypo name="pencil" size={wp(3.8)} color={Colors.primaryMid} />
+            {tagline && tagline.trim().length ? (
+              <ReactText
+                style={[
+                  Styles.cardTagline,
+                  { textAlign: Rtl ? 'right' : 'left', flex: 1 },
+                ]}
+                numberOfLines={2}
+              >
+                {`“${tagline}”`}
+              </ReactText>
+            ) : (
+              <Text
+                style={[
+                  Styles.cardTagline,
+                  Styles.cardTaglineMuted,
+                  { flex: 1 },
+                ]}
+                numberOfLines={2}
+              >
+                {LanguageKeys.enterTagline}
+              </Text>
+            )}
+          </Ripple>
+          <Entypo
+            name={taglinePrivacyVisible ? 'eye' : 'eye-with-line'}
+            size={wp(3.8)}
+            color={Colors.muted}
+          />
+          <Switch
+            value={taglinePrivacyVisible}
+            onValueChange={onTaglinePrivacyChange}
+            disabled={taglinePrivacyUpdating}
+            renderActiveText={false}
+            renderInActiveText={false}
+            circleSize={23}
+            backgroundActive={Colors.primary}
+            backgroundInactive={Colors.color18}
+            innerCircleStyle={Styles.privacySwitchInner}
+          />
+        </View>
         {typeof profileStrength === 'number' ? (
           <View style={Styles.strengthWrap}>
             <View
@@ -1004,7 +1047,16 @@ const Header = ({
         <>
           <CheckMembershipStatus />
           {renderHeroPhoto(true, !isSelf && !isBlockedYou, false)}
-          <TesterProfileTools navigation={navigation} userId={userData?.id} />
+          {currentUser?.tester_mode_enabled === true &&
+            currentUser?.is_tester &&
+            userData?.id && (
+              <View style={Styles.testerToolsWrap}>
+                <TesterProfileTools
+                  navigation={navigation}
+                  userId={userData?.id}
+                />
+              </View>
+            )}
           <View style={Styles.infoCard}>
             <View
               style={[
@@ -1370,6 +1422,9 @@ const Styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  testerToolsWrap: {
+    marginBottom: hp(4.5),
+  },
   infoCard: {
     marginTop: -hp(4.5),
     marginHorizontal: wp(4),
@@ -1456,6 +1511,16 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2),
     marginTop: hp(1),
+    flex: 1,
+  },
+  taglinePrivacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(3),
+  },
+  privacySwitchInner: {
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
   },
   reviewStatusIcon: {
     width: wp(7),

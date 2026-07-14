@@ -26,6 +26,7 @@ import {
   useGlobalContext,
 } from '../../services';
 import { useSettingsStore, useUserStatsStore } from '../../stores';
+import TesterNotesTab from './TesterNotesTab';
 
 const Button = ({
   label,
@@ -264,7 +265,7 @@ function BadgesTab() {
   );
 }
 
-type TesterTab = 'actions' | 'vip' | 'badges';
+type TesterTab = 'actions' | 'vip' | 'badges' | 'notes';
 
 function TesterTabs({
   active,
@@ -277,9 +278,10 @@ function TesterTabs({
     <View style={styles.tabs}>
       {(
         [
-          ['actions', 'Test actions'],
-          ['vip', 'VIP packages'],
+          ['actions', 'Actions'],
+          ['vip', 'VIP'],
           ['badges', 'Badges'],
+          ['notes', 'Notes'],
         ] as const
       ).map(([value, label]) => (
         <TouchableOpacity
@@ -465,6 +467,18 @@ export default function TesterConsole({ navigation }: any) {
         <ScrollView contentContainerStyle={styles.content}>
           <TesterTabs active={activeTab} onChange={setActiveTab} />
           <BadgesTab />
+        </ScrollView>
+      </Container>
+    );
+  }
+
+  if (activeTab === 'notes') {
+    return (
+      <Container>
+        <Header navigation={navigation} title="Tester tools" />
+        <ScrollView contentContainerStyle={styles.content}>
+          <TesterTabs active={activeTab} onChange={setActiveTab} />
+          <TesterNotesTab navigation={navigation} />
         </ScrollView>
       </Container>
     );

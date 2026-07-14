@@ -11,12 +11,6 @@ import React, {
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import {
-  Menu,
-  MenuOption,
-  MenuOptions,
-  MenuTrigger,
-} from 'react-native-popup-menu';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { usePremiumStore, useSettingsStore, useUserStatsStore } from '@/stores';
@@ -189,29 +183,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   const { loaded, isPremium } = usePremiumStore();
   const isPremiumUser = isPremium();
-  const accountMenuItems = [
-    {
-      label: t(LanguageKeys.viewProfile),
-      icon: 'person-outline',
-      screen: 'Profile',
-    },
-    {
-      label: t(LanguageKeys.myPhotos),
-      icon: 'images-outline',
-      screen: 'PhotosAndVideos',
-    },
-    {
-      label: t(LanguageKeys.membershipInformation),
-      icon: 'diamond-outline',
-      screen: 'MembershipInfo',
-    },
-    {
-      label: t(LanguageKeys.generalSettings),
-      icon: 'settings-outline',
-      screen: 'Settings',
-    },
-  ];
-
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, getData, storageKeys } = StorageManager;
   const [loader, setLoader] = useState(true);
@@ -780,66 +751,33 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             >
               <Ionicons name="search" size={wp(5.8)} color={Colors.ink} />
             </Ripple>
-            <Menu>
-              <MenuTrigger>
-                <View style={Styles.avatarBtn}>
-                  {currentUser?.media?.un_blur_primary_image ? (
-                    <Image
-                      source={{
-                        uri: currentUser?.media?.un_blur_primary_image,
-                      }}
-                      style={Styles.avatarImg}
-                    />
-                  ) : (
-                    <Text style={Styles.headerText}>
-                      {currentUser?.first_name?.slice(0, 1)}
-                    </Text>
-                  )}
-                  {isPremiumUser ? (
-                    <View style={Styles.premiumBadge}>
-                      <Ionicons
-                        name="diamond"
-                        size={wp(2.6)}
-                        color={Colors.surface}
-                      />
-                    </View>
-                  ) : null}
+            <Ripple
+              style={Styles.avatarBtn}
+              onPress={() => navigation.navigate('Profile')}
+              rippleColor={Colors.primary}
+            >
+              {currentUser?.media?.un_blur_primary_image ? (
+                <Image
+                  source={{
+                    uri: currentUser?.media?.un_blur_primary_image,
+                  }}
+                  style={Styles.avatarImg}
+                />
+              ) : (
+                <Text style={Styles.headerText}>
+                  {currentUser?.first_name?.slice(0, 1)}
+                </Text>
+              )}
+              {isPremiumUser ? (
+                <View style={Styles.premiumBadge}>
+                  <Ionicons
+                    name="diamond"
+                    size={wp(2.6)}
+                    color={Colors.surface}
+                  />
                 </View>
-              </MenuTrigger>
-              <MenuOptions optionsContainerStyle={Styles.accountMenuOptions}>
-                {accountMenuItems.map((item) => (
-                  <MenuOption
-                    key={item.screen}
-                    onSelect={() => navigation.navigate(item.screen)}
-                    style={Styles.accountMenuOption}
-                  >
-                    <View
-                      style={[
-                        Styles.accountMenuOptionContent,
-                        { flexDirection: Rtl ? 'row-reverse' : 'row' },
-                      ]}
-                    >
-                      <Ionicons
-                        name={item.icon as any}
-                        size={wp(4.6)}
-                        color={Colors.primary}
-                      />
-                      <Text
-                        style={[
-                          Styles.accountMenuOptionText,
-                          {
-                            marginLeft: Rtl ? 0 : wp(2.8),
-                            marginRight: Rtl ? wp(2.8) : 0,
-                          },
-                        ]}
-                      >
-                        {item.label}
-                      </Text>
-                    </View>
-                  </MenuOption>
-                ))}
-              </MenuOptions>
-            </Menu>
+              ) : null}
+            </Ripple>
           </View>
         </View>
         {!giftStatus.claimed &&
@@ -1034,33 +972,6 @@ const Styles = StyleSheet.create({
     right: -2,
     borderWidth: 1.5,
     borderColor: Colors.surface,
-  },
-  accountMenuOptions: {
-    width: wp(53),
-    marginTop: hp(1),
-    paddingVertical: hp(0.6),
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-    shadowColor: Colors.ink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  accountMenuOption: {
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1.4),
-  },
-  accountMenuOptionContent: {
-    alignItems: 'center',
-  },
-  accountMenuOptionText: {
-    flex: 1,
-    color: Colors.ink,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
   },
   pendingApprovalBanner: {
     flexDirection: 'row',

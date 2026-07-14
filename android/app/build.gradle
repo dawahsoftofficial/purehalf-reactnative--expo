@@ -4,11 +4,47 @@ apply plugin: "com.facebook.react"
 apply plugin: 'com.google.gms.google-services' // Google Services
 apply plugin: 'com.google.firebase.crashlytics' // Firebase Crashlytics
 
+// Release artifacts deliberately target different environments:
+//   bundleRelease   -> .env.production (Play Store AAB)
+//   assembleRelease -> .env.staging    (test APK)
+//
+// React Native's Gradle plugin launches Metro in a child Node process. Route
+// that process through a small wrapper so APP_ENV is set deterministically,
+// even when the caller's shell has a different APP_ENV value.
+def requestedTaskNames = gradle.startParameter.taskNames.collect {
+    it.tokenize(':').last()
+}
+def isProductionBundle = requestedTaskNames.any {
+    it.equalsIgnoreCase('bundleRelease')
+}
+def isStagingAssembly = requestedTaskNames.any {
+    it.equalsIgnoreCase('assembleRelease')
+}
+
+if (isProductionBundle && isStagingAssembly) {
+    throw new GradleException(
+            'Run bundleRelease and assembleRelease separately: they use production and staging environments, respectively.'
+    )
+}
+
+def releaseAppEnv = isProductionBundle ? 'production' :
+        (isStagingAssembly ? 'staging' : null)
+def selectedReleaseEnvFile = releaseAppEnv == null ? null :
+        file("$rootDir/../.env.${releaseAppEnv}")
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
  */
 react {
+    if (releaseAppEnv != null) {
+        nodeExecutableAndArgs = [
+                "node",
+                file("../../scripts/run-with-app-env.js").absolutePath,
+                releaseAppEnv,
+        ]
+    }
+
     /* Folders */
     //   The root of your project, i.e. where "package.json" lives. Default is '../..'
     // root = file("../../")
@@ -96,8 +132,8 @@ android {
         applicationId "com.zojayn"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 72
-        versionName "3.1"
+        versionCode 75
+        versionName "3.5"
     }
 
     configurations.all {
@@ -156,14 +192,42 @@ dependencies {
     implementation("androidx.activity:activity:1.9.+")
 }
 
-// Fails a release build if app-old/.env still has APP_DEBUG=true baked in
-// (that flag gates a debug-only Settings row; see scripts/check-release-env.js
-// and docs/superpowers/specs/2026-07-11-debug-delete-account-restart-design.md).
-tasks.register("checkReleaseEnv", Exec) {
-    description = "Fails the build if .env has APP_DEBUG=true left on for a release build."
-    commandLine "node", file("$rootDir/../scripts/check-release-env.js").absolutePath
+// Always show which environment is being bundled. This also blocks indirect
+// release invocations (for example `gradlew build`) whose artifact type is
+// ambiguous and therefore cannot safely select staging vs production.
+tasks.register("confirmReleaseEnvironment") {
+    description = "Confirms the environment selected for an Android release artifact."
+    doLast {
+        if (releaseAppEnv == null) {
+            throw new GradleException(
+                    'Release environment is ambiguous. Run bundleRelease for production or assembleRelease for staging.'
+            )
+        }
+        if (!selectedReleaseEnvFile.exists()) {
+            throw new GradleException(
+                    "Missing release environment file: ${selectedReleaseEnvFile.absolutePath}"
+            )
+        }
+        logger.lifecycle(
+                "Release environment selected: .env.${releaseAppEnv} (${isProductionBundle ? 'AAB' : 'APK'})"
+        )
+    }
 }
 
-tasks.matching { it.name.matches(/(assemble|bundle).*Release/) }.configureEach {
-    dependsOn(tasks.named("checkReleaseEnv"))
+// Production bundles must never include the debug-only Settings row. Staging
+// APKs intentionally enable it, so this check only applies to bundleRelease.
+tasks.register("checkReleaseEnv", Exec) {
+    description = "Fails a production bundle if .env.production enables APP_DEBUG."
+    commandLine "node",
+            file("$rootDir/../scripts/check-release-env.js").absolutePath,
+            file("$rootDir/../.env.production").absolutePath
+}
+
+// Put the guards directly in front of Metro so a missing/unsafe env file is
+// caught before any JavaScript bundle can be generated.
+tasks.matching { it.name == "createBundleReleaseJsAndAssets" }.configureEach {
+    dependsOn(tasks.named("confirmReleaseEnvironment"))
+    if (releaseAppEnv == 'production') {
+        dependsOn(tasks.named("checkReleaseEnv"))
+    }
 }

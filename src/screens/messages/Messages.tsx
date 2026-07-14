@@ -32,7 +32,7 @@ import {
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
-import { Colors, Fonts } from '../../res';
+import { Colors, Fonts, Images } from '../../res';
 import {
   capitalizeName,
   flashErrorMessage,
@@ -50,6 +50,7 @@ import type {
 } from '../../services/api/types/message-types';
 import { presentChatCreditsPaywall } from '../../services/paywall-service';
 import { useConversationStore } from '../../stores';
+import NotificationPermissionBanner from './components/notification-permission-banner';
 import { isLastMessageReadByParticipant } from './SingleChat.utils';
 
 type MessagesProps = {
@@ -58,6 +59,12 @@ type MessagesProps = {
     dispatch: (action: unknown) => void;
   };
 };
+
+const isSupportConversation = (conversation: Conversation) =>
+  conversation.type === 'support' ||
+  conversation.participants?.some(
+    (participant) => participant.type === 'Admin'
+  );
 
 const Messages = (props: MessagesProps) => {
   const { t } = useTranslation();
@@ -73,6 +80,21 @@ const Messages = (props: MessagesProps) => {
   const { currentUser, updateCurrentUser, language } = useGlobalContext();
   const unsubscribeUserChannelRef = useRef<(() => void) | null>(null);
   const subscribedUserIdRef = useRef<string | number | null>(null);
+
+  const pinnedConversations = useMemo(() => {
+    const supportConversations: Conversation[] = [];
+    const otherConversations: Conversation[] = [];
+
+    conversations.forEach((conversation) => {
+      if (isSupportConversation(conversation)) {
+        supportConversations.push(conversation);
+      } else {
+        otherConversations.push(conversation);
+      }
+    });
+
+    return [...supportConversations, ...otherConversations];
+  }, [conversations]);
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -457,8 +479,7 @@ const Messages = (props: MessagesProps) => {
       !!otherParticipant?.is_blocked || !!currentUserParticipant?.is_blocked;
 
     // Pure Half Customer Support thread — same detection as SingleChatHeader.
-    const isSupport =
-      item?.type === 'support' || otherParticipant?.type === 'Admin';
+    const isSupport = isSupportConversation(item);
 
     const previewText =
       item.last_message_detail?.type === 'audio'
@@ -484,14 +505,18 @@ const Messages = (props: MessagesProps) => {
         rippleColor={Colors.primary}
       >
         <View style={Styles.profilePictureCon}>
-          {otherParticipant?.image && !isBlocked ? (
+          {isSupport ? (
+            <Image
+              source={Images.logoWithoutTextBlack}
+              resizeMode="contain"
+              style={Styles.supportLogo}
+            />
+          ) : otherParticipant?.image && !isBlocked ? (
             <Image
               source={{ uri: otherParticipant.image }}
               resizeMode="cover"
               style={Styles.image}
             />
-          ) : isSupport ? (
-            <Ionicons name="heart" size={AVATAR * 0.5} color={Colors.primary} />
           ) : (
             <ProfilePhotoPlaceholder
               name={otherParticipant?.name}
@@ -609,6 +634,7 @@ const Messages = (props: MessagesProps) => {
           </View>
         )}
       />
+      <NotificationPermissionBanner />
       {currentUser?.guardian ? (
         <Ripple style={Styles.guardianTextWrapper} onPress={onWaliPress}>
           <Ionicons
@@ -641,11 +667,11 @@ const Messages = (props: MessagesProps) => {
             visible={true}
             style={{ height: hp(60) }}
           />
-        ) : conversations.length ? (
+        ) : pinnedConversations.length ? (
           <VirtualizedList
             initialNumToRender={10}
             windowSize={15}
-            data={conversations}
+            data={pinnedConversations}
             getItemCount={(data) => data.length}
             getItem={(data, index) => data[index]}
             renderItem={renderConversations}
@@ -695,6 +721,10 @@ const Styles = StyleSheet.create({
   image: {
     width: '100%',
     height: '100%',
+  },
+  supportLogo: {
+    width: '76%',
+    height: '76%',
   },
   middleCon: {
     flex: 1,

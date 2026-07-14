@@ -124,7 +124,6 @@ export const toggleSuggestionInValue = (
 // the ids here as a fallback for profile data hydrated from older caches that
 // do not retain the field-level `inline` flag.
 const INLINE_OPTION_FIELD_IDS = new Set([
-  'ethini-0',
   'bdy-0',
   'eye-0',
   'skin-0',

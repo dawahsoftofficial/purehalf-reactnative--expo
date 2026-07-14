@@ -83,6 +83,10 @@ src/assets/json/serviceAccountKey.json
 *.serviceAccountKey.json
 .env
 .env.local
+.env.production
+.env.staging
 .env.*.local
+!.env.production.example
+!.env.staging.example
 android/app/release/
 .worktrees/

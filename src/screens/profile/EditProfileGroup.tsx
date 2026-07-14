@@ -6,18 +6,79 @@ import { Container, Header } from '../../components';
 import { LanguageKeys } from '../../languages';
 import { Colors } from '../../res';
 import {
+  ApiServices,
   flashSuccessMessage,
   StorageManager,
   useGlobalContext,
 } from '../../services';
 import ProfileQuestionWizard from './components/profile-question-wizard';
 import { updateDetails } from './Funtions';
+import {
+  type FieldVisibilityLevel,
+  normalizeProfilePrivacyKey,
+  type ProfileFieldVisibility,
+  type ProfilePrivacyResponse,
+} from './profile-privacy';
 
 const EditProfileGroup = ({ navigation, route }: any) => {
   const { title = '', data: initialData = [] } = route?.params ?? {};
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
   const [saving, setSaving] = useState(false);
+  const [privacyUpdatingField, setPrivacyUpdatingField] = useState('');
+  const [profileFieldVisibility, setProfileFieldVisibility] =
+    useState<ProfileFieldVisibility>(
+      currentUser?.detail?.profile_field_visibility ?? {}
+    );
+
+  const onPrivacyChange = useCallback(
+    (apiKey: string, next: FieldVisibilityLevel) => {
+      const field = normalizeProfilePrivacyKey(apiKey);
+      if (!field || privacyUpdatingField) return;
+
+      const previous = profileFieldVisibility[field] ?? 'public';
+      const optimistic = { ...profileFieldVisibility, [field]: next };
+      setProfileFieldVisibility(optimistic);
+      setPrivacyUpdatingField(field);
+
+      ApiServices.updateProfilePrivacy({ visibility: { [field]: next } })
+        .then(async (result: ProfilePrivacyResponse) => {
+          const savedVisibility =
+            result?.profile_field_visibility ?? optimistic;
+          const savedForField = savedVisibility[field] ?? next;
+          const updatedUser = {
+            ...currentUser,
+            detail: {
+              ...(currentUser?.detail ?? {}),
+              profile_field_visibility: savedVisibility,
+            },
+          };
+
+          // Only apply this field's confirmed value — a slower response for
+          // one field must not clobber a newer optimistic/confirmed value for
+          // another field that was toggled while this request was in flight.
+          setProfileFieldVisibility((prev) => ({
+            ...prev,
+            [field]: savedForField,
+          }));
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+          flashSuccessMessage(LanguageKeys.updated);
+        })
+        .catch(() => {
+          setProfileFieldVisibility((prev) => ({ ...prev, [field]: previous }));
+        })
+        .finally(() => setPrivacyUpdatingField(''));
+    },
+    [
+      currentUser,
+      privacyUpdatingField,
+      profileFieldVisibility,
+      setData,
+      storageKeys.USER,
+      updateCurrentUser,
+    ]
+  );
 
   const onComplete = useCallback(
     (formData: any[]) => {
@@ -25,7 +86,7 @@ const EditProfileGroup = ({ navigation, route }: any) => {
       updateDetails(formData)
         .then(async (res: any) => {
           if (res && Object.keys(res).length !== 0) {
-            const updatedUser = { ...currentUser, detail: res };
+            const updatedUser = { ...currentUser, detail: res.detail ?? res };
             await setData(storageKeys.USER, updatedUser);
             updateCurrentUser(updatedUser);
           }
@@ -46,6 +107,9 @@ const EditProfileGroup = ({ navigation, route }: any) => {
         gender={currentUser?.gender}
         saving={saving}
         finalLabel={LanguageKeys.update}
+        profileFieldVisibility={profileFieldVisibility}
+        privacyUpdatingField={privacyUpdatingField}
+        onPrivacyChange={onPrivacyChange}
         onComplete={onComplete}
       />
     </Container>

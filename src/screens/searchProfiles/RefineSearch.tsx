@@ -37,6 +37,7 @@ type RefineSearchRef = {
 
 type RefineSearchProps = {
   premium?: boolean;
+  nameQuery?: string;
 };
 
 const hasCoordinate = (value: unknown): boolean =>
@@ -46,7 +47,7 @@ const hasCoordinate = (value: unknown): boolean =>
   Number.isFinite(Number(value));
 
 const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
-  ({ premium = false }, ref) => {
+  ({ premium = false, nameQuery = '' }, ref) => {
     const Rtl = CheckRtl();
     const { currentUser } = useGlobalContext();
     const navigation: any = useNavigation();
@@ -662,6 +663,10 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
     };
 
     const onSaveAndSearchPress = () => {
+      if (nameQuery.trim().length === 1) {
+        flashErrorMessage('Enter at least 2 characters to search by name.');
+        return;
+      }
       setSaveAndSearchAlertVisble(true);
     };
 
@@ -683,6 +688,10 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
     };
 
     const onSearchPress = () => {
+      if (nameQuery.trim().length === 1) {
+        flashErrorMessage('Enter at least 2 characters to search by name.');
+        return;
+      }
       setModalLoader({
         visible: true,
         message: LanguageKeys.searching,
@@ -691,7 +700,7 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
         minAge: minAge === LanguageKeys.any ? 1 : minAge,
         maxAge: maxAge === LanguageKeys.any ? 99 : maxAge,
       };
-      onSearch(ageRange, filtersDataList)
+      onSearch(ageRange, filtersDataList, nameQuery)
         .then((res: any) => {
           navigation.navigate('SearchResults', {
             searchResults: res.data,
@@ -723,7 +732,10 @@ const RefineSearch = React.forwardRef<RefineSearchRef, RefineSearchProps>(
         minAge: minAge === LanguageKeys.any ? 1 : minAge,
         maxAge: maxAge === LanguageKeys.any ? 99 : maxAge,
       };
-      saveAndSearch(ageRange, filtersDataList, searchTitle)
+      saveAndSearch(ageRange, filtersDataList, {
+        title: searchTitle,
+        nameQuery,
+      })
         .then((res: any) => {
           navigation.navigate('SearchResults', {
             searchResults: res.data,

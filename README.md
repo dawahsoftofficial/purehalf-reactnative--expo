@@ -62,6 +62,30 @@ If everything is set up correctly, you should see your new app running in the An
 
 This is one way to run your app — you can also build it directly from Android Studio or Xcode.
 
+### Android release environments
+
+Create the local environment files from the committed templates and fill in
+the deployment-specific URLs and public client keys. The real files are
+gitignored and must not contain server-side credentials such as a Pusher
+secret or app ID.
+
+```sh
+cp .env.production.example .env.production
+cp .env.staging.example .env.staging
+```
+
+Run release builds from the `android` directory. Gradle selects the environment automatically based on the artifact type:
+
+```sh
+# Play Store AAB; always uses .env.production
+./gradlew bundleRelease
+
+# Test APK; always uses .env.staging
+./gradlew assembleRelease
+```
+
+On Windows Command Prompt or PowerShell, use `gradlew.bat` instead of `./gradlew`. The build prints the selected environment and refuses ambiguous release commands or a command that requests both artifacts together.
+
 ## Step 3: Modify your app
 
 Now that you have successfully run the app, let's make changes!

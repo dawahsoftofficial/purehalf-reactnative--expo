@@ -39,6 +39,11 @@ import {
   InterestsPreview,
   SectionLabel,
 } from './profile-hub';
+import {
+  type FieldVisibilityLevel,
+  type ProfileFieldVisibility,
+  type ProfilePrivacyResponse,
+} from './profile-privacy';
 import Styles from './Styles';
 
 type LoaderState = { visible: boolean; message: string };
@@ -60,6 +65,7 @@ type UserDetail = {
   weight?: number;
   gender?: string;
   open_for_polygamy?: boolean | number | null;
+  profile_field_visibility?: ProfileFieldVisibility;
 };
 
 type User = {
@@ -70,6 +76,7 @@ type User = {
   match_percentage?: number;
   is_blur?: boolean;
   gender?: string;
+  profile_restricted?: boolean;
 };
 
 type Conversation = {
@@ -126,6 +133,11 @@ const Profile = ({
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
+  const [privacyUpdatingField, setPrivacyUpdatingField] = useState('');
+  const [profileFieldVisibility, setProfileFieldVisibility] =
+    useState<ProfileFieldVisibility>(
+      currentUser?.detail?.profile_field_visibility ?? {}
+    );
 
   const blockPickerData: BlockPickerOption[] = useMemo(
     () =>
@@ -181,6 +193,9 @@ const Profile = ({
         if (currentUser?.detail?.tagline) {
           setTagLineInput(currentUser.detail.tagline);
         }
+        setProfileFieldVisibility(
+          currentUser?.detail?.profile_field_visibility ?? {}
+        );
       }, 0);
 
       return () => clearTimeout(timeout);
@@ -309,7 +324,7 @@ const Profile = ({
     const data = await getData(storageKeys.PROFILE_DETAIL_LOCAL);
     setError(false);
     if (data) {
-      if (fromUserProfile) {
+      if (fromUserProfile && profileUserId !== currentUser?.id) {
         try {
           setLoader({
             visible: true,
@@ -317,6 +332,9 @@ const Profile = ({
           });
           const user = (await ApiServices.getUserDetail(profileUserId)) as User;
           setUserData(user);
+          setProfileFieldVisibility(
+            user?.detail?.profile_field_visibility ?? {}
+          );
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
@@ -346,6 +364,9 @@ const Profile = ({
             match_percentage: userData.match_percentage ?? undefined,
           };
           setUserData(user);
+          setProfileFieldVisibility(
+            user?.detail?.profile_field_visibility ?? {}
+          );
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
@@ -360,6 +381,7 @@ const Profile = ({
     setDataLoader(false);
     hideLoader();
   }, [
+    currentUser?.id,
     fromUserProfile,
     getAttribute,
     getData,
@@ -496,6 +518,57 @@ const Profile = ({
 
   const onChangeTagLine = (text: string) => setTagLineInput(text);
 
+  const updateInlinePrivacy = useCallback(
+    (field: string, next: FieldVisibilityLevel) => {
+      if (privacyUpdatingField) return;
+
+      const previous = profileFieldVisibility[field] ?? 'public';
+      const optimistic = { ...profileFieldVisibility, [field]: next };
+      setProfileFieldVisibility(optimistic);
+      setPrivacyUpdatingField(field);
+
+      ApiServices.updateProfilePrivacy({ visibility: { [field]: next } })
+        .then(async (result: ProfilePrivacyResponse) => {
+          const savedVisibility =
+            result?.profile_field_visibility ?? optimistic;
+          const updatedUser = {
+            ...currentUser,
+            detail: {
+              ...(currentUser?.detail ?? {}),
+              profile_field_visibility: savedVisibility,
+            },
+          };
+
+          setProfileFieldVisibility(savedVisibility);
+          setUserData((previousUser) => ({
+            ...previousUser,
+            detail: {
+              ...(previousUser?.detail ?? {}),
+              profile_field_visibility: savedVisibility,
+            },
+          }));
+          updateCurrentUser(updatedUser);
+          await setData(storageKeys.USER, updatedUser);
+          flashSuccessMessage(LanguageKeys.updated);
+        })
+        .catch(() => {
+          setProfileFieldVisibility({
+            ...profileFieldVisibility,
+            [field]: previous,
+          });
+        })
+        .finally(() => setPrivacyUpdatingField(''));
+    },
+    [
+      currentUser,
+      privacyUpdatingField,
+      profileFieldVisibility,
+      setData,
+      storageKeys.USER,
+      updateCurrentUser,
+    ]
+  );
+
   const isOwnProfile = !fromUserProfile;
   return (
     <SafeAreaView style={Styles.container}>
@@ -527,6 +600,16 @@ const Profile = ({
             onTaglineSubmit={onTagLineSubmit}
             onTaglineEditPress={showTagLineInput}
             onTaglineCancel={hideTagLineInput}
+            taglinePrivacyVisible={profileFieldVisibility.tagline !== 'private'}
+            taglinePrivacyUpdating={privacyUpdatingField === 'tagline'}
+            onTaglinePrivacyChange={() =>
+              updateInlinePrivacy(
+                'tagline',
+                profileFieldVisibility.tagline === 'private'
+                  ? 'public'
+                  : 'private'
+              )
+            }
           />
           {isBlockedYou ? (
             <Text style={Styles.userNotAvailDes}>
@@ -546,6 +629,20 @@ const Profile = ({
                       <InterestsPreview
                         interests={interestAndHobbies}
                         onEdit={onEditInterests}
+                        privacyVisible={
+                          profileFieldVisibility.personality_id !== 'private'
+                        }
+                        privacyUpdating={
+                          privacyUpdatingField === 'personality_id'
+                        }
+                        onPrivacyChange={() =>
+                          updateInlinePrivacy(
+                            'personality_id',
+                            profileFieldVisibility.personality_id === 'private'
+                              ? 'public'
+                              : 'private'
+                          )
+                        }
                       />
                       <SectionLabel label={LanguageKeys.profileDetailsLabel} />
                       <DetailSectionList
@@ -555,6 +652,15 @@ const Profile = ({
                       />
                       <View style={{ height: 28 }} />
                     </>
+                  ) : userData?.profile_restricted ? (
+                    <View style={Styles.profileRestrictedCard}>
+                      <Text style={Styles.profileRestrictedTitle}>
+                        {LanguageKeys.profileRestrictedTitle}
+                      </Text>
+                      <Text style={Styles.profileRestrictedDescription}>
+                        {LanguageKeys.profileRestrictedDescription}
+                      </Text>
+                    </View>
                   ) : (
                     <>
                       {userData?.detail?.open_for_polygamy ? (

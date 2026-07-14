@@ -1,7 +1,9 @@
 import moment from 'moment';
 import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
+import Ripple from 'react-native-material-ripple';
 import { Switch } from 'react-native-switch';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Container, Header, ModalLoader, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
@@ -14,9 +16,14 @@ import {
 } from '../../services';
 import { StorageManager } from '../../services';
 import ProfileData from '../profile/Data';
+import {
+  type FieldVisibilityLevel,
+  normalizeProfilePrivacyKey,
+  type ProfileFieldVisibility,
+  type ProfilePrivacyResponse,
+  type ProfileVisibility,
+} from '../profile/profile-privacy';
 
-type VisibilityLevel = 'public' | 'private';
-type ProfileVisibility = Record<string, VisibilityLevel>;
 type ProfileFieldDefinition = {
   apiKey?: string;
   title?: string;
@@ -25,11 +32,6 @@ type ProfileFieldDefinition = {
 type PrivacyField = {
   apiKey: string;
   title: string;
-};
-
-const PROFILE_FIELD_ALIASES: Record<string, string> = {
-  language: 'language_id',
-  nationality: 'nationality_id',
 };
 
 const PROFILE_PRIVACY_GROUPS = [
@@ -66,7 +68,7 @@ const PROFILE_PRIVACY_GROUPS = [
       const apiKey = field.apiKey as string;
 
       return {
-        apiKey: PROFILE_FIELD_ALIASES[apiKey] ?? apiKey,
+        apiKey: normalizeProfilePrivacyKey(apiKey),
         title: field.viewTitle ?? field.title ?? '',
       };
     }),
@@ -94,13 +96,40 @@ const PrivacySettings = (props: any) => {
     currentUser?.sms_notification === 1 ? true : false
   );
   const [profileVisibility, setProfileVisibility] = useState<ProfileVisibility>(
-    currentUser?.detail?.profile_field_visibility ?? {}
+    currentUser?.detail?.profile_visibility ?? 'everyone'
   );
+  const [profileFieldVisibility, setProfileFieldVisibility] =
+    useState<ProfileFieldVisibility>(
+      currentUser?.detail?.profile_field_visibility ?? {}
+    );
 
-  const searchVisibilityToggle = () => {
-    setSearchVisibility(!searchVisibility);
+  const profileVisibilityOptions: Array<{
+    value: ProfileVisibility;
+    title: string;
+    description: string;
+  }> = [
+    {
+      value: 'everyone',
+      title: LanguageKeys.profileVisibilityEveryone,
+      description: LanguageKeys.profileVisibilityEveryoneDesc,
+    },
+    {
+      value: 'active_chat',
+      title: LanguageKeys.profileVisibilityActiveChat,
+      description: LanguageKeys.profileVisibilityActiveChatDesc,
+    },
+    {
+      value: 'liked',
+      title: LanguageKeys.profileVisibilityLiked,
+      description: LanguageKeys.profileVisibilityLikedDesc,
+    },
+  ];
+
+  const hideFromSearchToggle = (hidden: boolean) => {
+    const nextSearchVisibility = !hidden;
+    setSearchVisibility(nextSearchVisibility);
     const params = {
-      search_visibility: !searchVisibility ? 1 : 0,
+      search_visibility: nextSearchVisibility ? 1 : 0,
       in_app_notifications: inAppNotification ? 1 : 0,
     };
     updateToggle(params);
@@ -191,35 +220,63 @@ const PrivacySettings = (props: any) => {
   };
 
   const toggleProfileField = (field: string) => {
-    const previous = profileVisibility[field] ?? 'public';
-    const next: VisibilityLevel = previous === 'private' ? 'public' : 'private';
-    const optimistic = { ...profileVisibility, [field]: next };
+    const previous = profileFieldVisibility[field] ?? 'public';
+    const next: FieldVisibilityLevel =
+      previous === 'private' ? 'public' : 'private';
+    const optimistic = { ...profileFieldVisibility, [field]: next };
 
-    setProfileVisibility(optimistic);
+    setProfileFieldVisibility(optimistic);
     setLoader({ visible: true, message: 'Updating...' });
 
-    ApiServices.updateProfilePrivacy({ [field]: next })
-      .then(
-        async (result: { profile_field_visibility?: ProfileVisibility }) => {
-          const savedVisibility =
-            result?.profile_field_visibility ?? optimistic;
-          const updatedUser = {
-            ...currentUser,
-            detail: {
-              ...(currentUser?.detail ?? {}),
-              profile_field_visibility: savedVisibility,
-            },
-          };
+    ApiServices.updateProfilePrivacy({ visibility: { [field]: next } })
+      .then(async (result: ProfilePrivacyResponse) => {
+        const savedVisibility = result?.profile_field_visibility ?? optimistic;
+        const updatedUser = {
+          ...currentUser,
+          detail: {
+            ...(currentUser?.detail ?? {}),
+            profile_field_visibility: savedVisibility,
+          },
+        };
 
-          setProfileVisibility(savedVisibility);
-          updateCurrentUser(updatedUser);
-          await setData(storageKeys.USER, updatedUser);
-          flashSuccessMessage(LanguageKeys.updated);
-        }
-      )
-      .catch(() => {
-        setProfileVisibility({ ...profileVisibility, [field]: previous });
+        setProfileFieldVisibility(savedVisibility);
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
+        flashSuccessMessage(LanguageKeys.updated);
       })
+      .catch(() => {
+        setProfileFieldVisibility({
+          ...profileFieldVisibility,
+          [field]: previous,
+        });
+      })
+      .finally(hideLoader);
+  };
+
+  const updateProfileVisibility = (next: ProfileVisibility) => {
+    if (next === profileVisibility) return;
+
+    const previous = profileVisibility;
+    setProfileVisibility(next);
+    setLoader({ visible: true, message: 'Updating...' });
+
+    ApiServices.updateProfilePrivacy({ profile_visibility: next })
+      .then(async (result: ProfilePrivacyResponse) => {
+        const savedVisibility = result?.profile_visibility ?? next;
+        const updatedUser = {
+          ...currentUser,
+          detail: {
+            ...(currentUser?.detail ?? {}),
+            profile_visibility: savedVisibility,
+          },
+        };
+
+        setProfileVisibility(savedVisibility);
+        updateCurrentUser(updatedUser);
+        await setData(storageKeys.USER, updatedUser);
+        flashSuccessMessage(LanguageKeys.updated);
+      })
+      .catch(() => setProfileVisibility(previous))
       .finally(hideLoader);
   };
 
@@ -278,9 +335,48 @@ const PrivacySettings = (props: any) => {
           <RenderField
             heading={LanguageKeys.searchVisibility}
             description={LanguageKeys.searchVisibilityDesc}
-            switchEnabled={searchVisibility}
-            onChangeSwitch={searchVisibilityToggle}
+            switchEnabled={!searchVisibility}
+            onChangeSwitch={hideFromSearchToggle}
           />
+        </View>
+
+        <Text style={[Styles.sectionLabel, Styles.sectionLabelSpaced]}>
+          {LanguageKeys.overallProfileVisibility}
+        </Text>
+        <Text style={Styles.privacyIntro}>
+          {LanguageKeys.overallProfileVisibilityDesc}
+        </Text>
+        <View style={Styles.groupCard}>
+          {profileVisibilityOptions.map((option, index) => {
+            const selected = profileVisibility === option.value;
+
+            return (
+              <Ripple
+                key={option.value}
+                onPress={() => updateProfileVisibility(option.value)}
+                style={[
+                  Styles.visibilityOption,
+                  index < profileVisibilityOptions.length - 1 && Styles.divider,
+                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                ]}
+              >
+                <View
+                  style={[
+                    Styles.fieldTxtCon,
+                    { alignItems: Rtl ? 'flex-end' : 'flex-start' },
+                  ]}
+                >
+                  <Text style={Styles.fieldTxt}>{option.title}</Text>
+                  <Text style={Styles.fieldDesc}>{option.description}</Text>
+                </View>
+                <Ionicons
+                  name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                  size={wp(6)}
+                  color={selected ? Colors.primary : Colors.color18}
+                />
+              </Ripple>
+            );
+          })}
         </View>
 
         <Text style={[Styles.sectionLabel, Styles.sectionLabelSpaced]}>
@@ -297,7 +393,8 @@ const PrivacySettings = (props: any) => {
             <Text style={Styles.profileGroupTitle}>{group.title}</Text>
             <View style={Styles.groupCard}>
               {group.fields.map((field: PrivacyField, index: number) => {
-                const isVisible = profileVisibility[field.apiKey] !== 'private';
+                const isVisible =
+                  profileFieldVisibility[field.apiKey] !== 'private';
 
                 return (
                   <RenderField
@@ -406,6 +503,12 @@ const Styles = StyleSheet.create({
   divider: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.hairline,
+  },
+  visibilityOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: hp(1.8),
+    paddingHorizontal: wp(4),
   },
   fieldTxtCon: {
     flex: 1,
