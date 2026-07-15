@@ -9,6 +9,8 @@ const updateDetails = async (data: any) => {
           if (element.id === 'height') {
             params.height = element.selected.value;
             params.height_scale = element.selected.scale;
+            params.height_display_scale =
+              element.selected.displayScale ?? element.selected.scale;
           } else if (element.id === 'weight') {
             params.weight = element.selected.value;
             params.weight_scale = element.selected?.scale;

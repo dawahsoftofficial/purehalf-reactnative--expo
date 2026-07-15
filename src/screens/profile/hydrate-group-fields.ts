@@ -39,6 +39,7 @@ export const hydrateGroupFields = (
           element.selected = {
             scale: detail?.height_scale,
             value: detail?.height,
+            displayScale: detail?.height_display_scale ?? detail?.height_scale,
           };
         } else {
           element.selected = {
