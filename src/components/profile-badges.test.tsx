@@ -70,7 +70,7 @@ describe('ProfileBadges', () => {
   it('renders the detail header badge as a compact text pill', async () => {
     render(<ProfileBadges userData={completeUser} variant="pill" />);
 
-    expect(await screen.findByText('Complete')).toBeTruthy();
+    expect(await screen.findByLabelText('Complete')).toBeTruthy();
 
     expect(screen.getByTestId('profile-badges-pill')).toBeTruthy();
   });
@@ -78,7 +78,7 @@ describe('ProfileBadges', () => {
   it('keeps icon-only badges textless for profile list overlays', async () => {
     render(<ProfileBadges userData={completeUser} iconOnly vertical />);
 
-    await waitFor(() => expect(screen.queryByText('Complete')).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText('Complete')).toBeNull());
   });
 
   it('honors the global badge enabled control', async () => {
@@ -93,7 +93,7 @@ describe('ProfileBadges', () => {
 
     render(<ProfileBadges userData={completeUser} variant="pill" />);
 
-    await waitFor(() => expect(screen.queryByText('Complete')).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText('Complete')).toBeNull());
   });
 
   it('honors the visibility control for the current surface', async () => {
@@ -114,7 +114,7 @@ describe('ProfileBadges', () => {
       />
     );
 
-    await waitFor(() => expect(screen.queryByText('Complete')).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText('Complete')).toBeNull());
   });
 
   it('shows New for an account inside the configured age window', async () => {
@@ -140,7 +140,7 @@ describe('ProfileBadges', () => {
       />
     );
 
-    expect(await screen.findByText('New')).toBeTruthy();
+    expect(await screen.findByLabelText('New')).toBeTruthy();
   });
 
   it('forces every badge on tester profiles for an authorized tester', async () => {
@@ -169,10 +169,10 @@ describe('ProfileBadges', () => {
       />
     );
 
-    expect(await screen.findByText('VIP')).toBeTruthy();
-    expect(screen.getByText('Boosted')).toBeTruthy();
-    expect(screen.getByText('Complete')).toBeTruthy();
-    expect(screen.getByText('New')).toBeTruthy();
+    expect(await screen.findByLabelText('VIP')).toBeTruthy();
+    expect(screen.getByLabelText('Boosted')).toBeTruthy();
+    expect(screen.getByLabelText('Complete')).toBeTruthy();
+    expect(screen.getByLabelText('New')).toBeTruthy();
   });
 
   it('does not force badges when server tester mode is disabled', async () => {
@@ -201,9 +201,9 @@ describe('ProfileBadges', () => {
       />
     );
 
-    await waitFor(() => expect(screen.queryByText('VIP')).toBeNull());
-    expect(screen.queryByText('Boosted')).toBeNull();
-    expect(screen.queryByText('Complete')).toBeNull();
-    expect(screen.queryByText('New')).toBeNull();
+    await waitFor(() => expect(screen.queryByLabelText('VIP')).toBeNull());
+    expect(screen.queryByLabelText('Boosted')).toBeNull();
+    expect(screen.queryByLabelText('Complete')).toBeNull();
+    expect(screen.queryByLabelText('New')).toBeNull();
   });
 });

@@ -26,12 +26,17 @@ jest.mock('../../services', () => ({
   },
 }));
 
-const note = (
-  id: number,
-  status: 'open' | 'in_progress' | 'resolved',
-  statusLabel: string,
-  notes: string
-) => ({
+const note = ({
+  id,
+  status,
+  statusLabel,
+  notes,
+}: {
+  id: number;
+  status: 'open' | 'in_progress' | 'resolved';
+  statusLabel: string;
+  notes: string;
+}) => ({
   id,
   screen_name: `Screen ${id}`,
   notes,
@@ -45,13 +50,26 @@ const note = (
 
 describe('TesterNotesTab', () => {
   beforeEach(() => {
-    mockNotes
-      .mockReset()
-      .mockResolvedValue([
-        note(1, 'open', 'Open', 'Open task'),
-        note(2, 'in_progress', 'In progress', 'Active task'),
-        note(3, 'resolved', 'Resolved', 'Resolved task'),
-      ]);
+    mockNotes.mockReset().mockResolvedValue([
+      note({
+        id: 1,
+        status: 'open',
+        statusLabel: 'Open',
+        notes: 'Open task',
+      }),
+      note({
+        id: 2,
+        status: 'in_progress',
+        statusLabel: 'In progress',
+        notes: 'Active task',
+      }),
+      note({
+        id: 3,
+        status: 'resolved',
+        statusLabel: 'Resolved',
+        notes: 'Resolved task',
+      }),
+    ]);
   });
 
   it('shows status counts and filters tester notes', async () => {
