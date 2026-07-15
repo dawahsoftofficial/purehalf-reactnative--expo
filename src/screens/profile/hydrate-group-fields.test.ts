@@ -20,6 +20,16 @@ const textField = {
   selected: {},
 };
 
+const heightField = {
+  title: 'Height',
+  type: 'scalling',
+  id: 'height',
+  category: 'appearance-0',
+  apiKey: 'height',
+  data: [],
+  selected: {},
+};
+
 describe('hydrateGroupFields', () => {
   it('fills dropdown options from the attribute cache', () => {
     const attribute = {
@@ -46,6 +56,41 @@ describe('hydrateGroupFields', () => {
       id: 'aboutYourself',
       value: 'Kind',
       category: 'personality-0',
+    });
+  });
+
+  it('restores the saved height display unit separately from storage', () => {
+    const [out] = hydrateGroupFields(
+      [heightField],
+      {},
+      {
+        height: 178,
+        height_scale: 'cm',
+        height_display_scale: 'ft',
+      }
+    );
+
+    expect(out.selected).toEqual({
+      value: 178,
+      scale: 'cm',
+      displayScale: 'ft',
+    });
+  });
+
+  it('falls back to the storage unit for existing height records', () => {
+    const [out] = hydrateGroupFields(
+      [heightField],
+      {},
+      {
+        height: 178,
+        height_scale: 'cm',
+      }
+    );
+
+    expect(out.selected).toEqual({
+      value: 178,
+      scale: 'cm',
+      displayScale: 'cm',
     });
   });
 

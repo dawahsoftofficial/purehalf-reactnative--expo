@@ -62,6 +62,7 @@ type UserDetail = {
   tagline?: string;
   personality_id?: number[];
   height_scale?: string;
+  height_display_scale?: string;
   height?: number;
   weight_scale?: string;
   weight?: number;
@@ -318,6 +319,9 @@ const Profile = ({
                       element.selected = {
                         scale: nextUserData?.detail?.height_scale,
                         value: nextUserData?.detail?.height,
+                        displayScale:
+                          nextUserData?.detail?.height_display_scale ??
+                          nextUserData?.detail?.height_scale,
                       };
                     } else {
                       element.selected = {
