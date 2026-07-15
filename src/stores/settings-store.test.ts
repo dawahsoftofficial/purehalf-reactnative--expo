@@ -55,3 +55,47 @@ describe('getMaintenanceMode', () => {
     );
   });
 });
+
+describe('profile intro media settings', () => {
+  afterEach(() => {
+    useSettingsStore.getState().clearSettings();
+  });
+
+  it('stays disabled until the server explicitly enables each format', () => {
+    expect(useSettingsStore.getState().getProfileIntroVideoEnabled()).toBe(
+      false
+    );
+    expect(useSettingsStore.getState().getProfileIntroVoiceEnabled()).toBe(
+      false
+    );
+  });
+
+  it('reads independent video and voice switches', () => {
+    useSettingsStore.getState().setSettings({
+      message: 'ok',
+      error: false,
+      code: 200,
+      results: [
+        {
+          title: 'Profile intro video',
+          key: 'profile_intro_video_enabled',
+          type: 'boolean',
+          value: true,
+        },
+        {
+          title: 'Profile intro voice',
+          key: 'profile_intro_voice_enabled',
+          type: 'boolean',
+          value: false,
+        },
+      ],
+    });
+
+    expect(useSettingsStore.getState().getProfileIntroVideoEnabled()).toBe(
+      true
+    );
+    expect(useSettingsStore.getState().getProfileIntroVoiceEnabled()).toBe(
+      false
+    );
+  });
+});
