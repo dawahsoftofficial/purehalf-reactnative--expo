@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -28,6 +28,17 @@ const statusColors: Record<
   wont_fix: { background: '#EEEEF2', text: '#5E5968' },
 };
 
+type NoteStatusFilter = 'all' | TesterNoteStatus;
+
+const statusFilters: Array<{ value: NoteStatusFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'resolved', label: 'Resolved' },
+  { value: 'human_required', label: 'Needs review' },
+  { value: 'wont_fix', label: 'Not planned' },
+];
+
 const formatDate = (value?: string | null) => {
   if (!value) return '';
   const date = new Date(value);
@@ -38,6 +49,35 @@ export default function TesterNotesTab({ navigation }: any) {
   const [notes, setNotes] = useState<TesterNoteSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<NoteStatusFilter>('all');
+
+  const statusCounts = useMemo(
+    () =>
+      notes.reduce<Record<NoteStatusFilter, number>>(
+        (counts, note) => ({
+          ...counts,
+          all: counts.all + 1,
+          [note.status]: counts[note.status] + 1,
+        }),
+        {
+          all: 0,
+          open: 0,
+          in_progress: 0,
+          resolved: 0,
+          human_required: 0,
+          wont_fix: 0,
+        }
+      ),
+    [notes]
+  );
+
+  const visibleNotes = useMemo(
+    () =>
+      selectedStatus === 'all'
+        ? notes
+        : notes.filter((note) => note.status === selectedStatus),
+    [notes, selectedStatus]
+  );
 
   const load = useCallback(async (refresh = false) => {
     if (refresh) {
@@ -86,6 +126,51 @@ export default function TesterNotesTab({ navigation }: any) {
         </TouchableOpacity>
       </View>
 
+      {!loading ? (
+        <View accessibilityRole="tablist" style={styles.statusTabs}>
+          {statusFilters.map((filter) => {
+            const selected = selectedStatus === filter.value;
+            const count = statusCounts[filter.value];
+
+            return (
+              <TouchableOpacity
+                key={filter.value}
+                accessibilityLabel={`${filter.label}, ${count} ${count === 1 ? 'note' : 'notes'}`}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+                onPress={() => setSelectedStatus(filter.value)}
+                style={[styles.statusTab, selected && styles.statusTabActive]}
+                testID={`tester-note-status-${filter.value}`}
+              >
+                <Text
+                  style={[
+                    styles.statusTabText,
+                    selected && styles.statusTabTextActive,
+                  ]}
+                >
+                  {filter.label}
+                </Text>
+                <View
+                  style={[
+                    styles.statusTabCount,
+                    selected && styles.statusTabCountActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.statusTabCountText,
+                      selected && styles.statusTabCountTextActive,
+                    ]}
+                  >
+                    {count}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      ) : null}
+
       {loading ? (
         <ActivityIndicator color={Colors.primary} style={styles.loader} />
       ) : notes.length === 0 ? (
@@ -100,9 +185,21 @@ export default function TesterNotesTab({ navigation }: any) {
             Notes submitted with the tester snapshot button will appear here.
           </Text>
         </View>
+      ) : visibleNotes.length === 0 ? (
+        <View style={styles.emptyCard}>
+          <Ionicons
+            name="filter-outline"
+            color={Colors.primaryLite}
+            size={32}
+          />
+          <Text style={styles.emptyTitle}>No notes with this status</Text>
+          <Text style={styles.emptyText}>
+            Choose another status tab to see your other tester notes.
+          </Text>
+        </View>
       ) : (
         <View style={styles.list}>
-          {notes.map((note) => {
+          {visibleNotes.map((note) => {
             const palette = statusColors[note.status] || statusColors.open;
             return (
               <TouchableOpacity
@@ -175,6 +272,41 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loader: { paddingVertical: 50 },
+  statusTabs: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statusTab: {
+    minHeight: 36,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: '#fff',
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+  },
+  statusTabActive: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  statusTabText: { color: Colors.muted, fontSize: 11, fontWeight: '700' },
+  statusTabTextActive: { color: '#fff' },
+  statusTabCount: {
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    backgroundColor: '#F0F1F3',
+    paddingHorizontal: 5,
+  },
+  statusTabCountActive: { backgroundColor: '#fff' },
+  statusTabCountText: {
+    color: Colors.muted,
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  statusTabCountTextActive: { color: Colors.primary },
   list: { gap: 10 },
   row: {
     backgroundColor: '#fff',

@@ -9,7 +9,6 @@ import { LanguageKeys } from '../../../languages';
 import { Colors, Fonts } from '../../../res';
 import { flashErrorMessage } from '../../../services';
 import type { ClaimResult } from '../gift-claim-outcome';
-import Confetti from './confetti';
 
 type GiftClaimModalProps = {
   visible: boolean;
@@ -19,7 +18,7 @@ type GiftClaimModalProps = {
   claim: () => Promise<ClaimResult>;
 };
 
-// How long the confetti/success view holds before handing off to the parent
+// How long the success view holds before handing off to the parent
 // (which updates currentUser and closes this modal).
 const SUCCESS_HOLD_MS = 1800;
 
@@ -94,7 +93,6 @@ const GiftClaimModal = ({
         <View style={Styles.card}>
           {justClaimed ? (
             <>
-              <Confetti />
               <View style={[Styles.iconChip, Styles.iconChipSuccess]}>
                 <Ionicons
                   name="checkmark"
@@ -179,6 +177,7 @@ const Styles = StyleSheet.create({
     color: Colors.ink,
     fontSize: Typography.medium1,
     textAlign: 'center',
+    alignSelf: 'stretch',
   },
   body: {
     color: Colors.muted,

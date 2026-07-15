@@ -45,6 +45,7 @@ type ProfileBadgesProps = {
     membership_expiry?: string | null;
     created_at?: string | null;
     is_tester?: boolean;
+    tester_badge_preview?: boolean;
   };
   isSelf?: boolean;
   showText?: boolean;
@@ -83,7 +84,7 @@ export function ProfileBadges({
     currentUser?.tester_mode_enabled === true &&
     currentUser?.is_tester &&
     currentUser?.tester_show_all_badges &&
-    (isSelf ? currentUser?.is_tester : userData?.is_tester)
+    (isSelf ? currentUser?.is_tester : userData?.tester_badge_preview)
   );
   const pillBadgeIconSize = wp(9);
 
