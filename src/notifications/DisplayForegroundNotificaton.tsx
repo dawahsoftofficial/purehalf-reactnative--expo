@@ -174,6 +174,8 @@ const DisplayForegroundNotification = () => {
               params: {
                 date_of_expiry: data?.date_of_expiry,
                 amount: data?.amount,
+                localizedPrice: data?.formatted_amount,
+                currencyCode: data?.currency_code,
                 title: data?.title,
               },
             },
