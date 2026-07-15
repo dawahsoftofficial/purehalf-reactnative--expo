@@ -24,6 +24,7 @@ import {
   formatMatchCount,
   nextStepIndex,
   prevStepIndex,
+  questionPosition,
 } from './primer-logic';
 import type { PrimerGender, PrimerStepDef } from './primer-types';
 
@@ -77,6 +78,10 @@ const SignupPrimer = ({ navigation }: any) => {
   const current = steps[stepIndex];
   const progress = useMemo(
     () => computeProgress(steps, answers, stepIndex),
+    [steps, answers, stepIndex]
+  );
+  const questionCount = useMemo(
+    () => questionPosition(steps, answers, stepIndex),
     [steps, answers, stepIndex]
   );
 
@@ -302,6 +307,9 @@ const SignupPrimer = ({ navigation }: any) => {
             >
               <Ionicons name="arrow-back" size={wp(5.6)} color={Colors.ink} />
             </Ripple>
+            <RNText style={Styles.questionCount}>
+              {`Question ${questionCount.current} of ${questionCount.total}`}
+            </RNText>
           </View>
           <Ripple onPress={advance}>
             <RNText style={Styles.laterTxt}>Skip</RNText>
@@ -370,6 +378,11 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(1.5),
+  },
+  questionCount: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
   },
   backBtn: {
     width: wp(9),
