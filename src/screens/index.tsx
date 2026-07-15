@@ -24,6 +24,7 @@ export * from './privacySettings';
 export * from './privatePhotoRequest';
 export * from './proFeaturesPromotion';
 export * from './profile';
+export * from './profileIntro';
 export * from './profilePicture';
 export * from './searchProfiles';
 export * from './settings';

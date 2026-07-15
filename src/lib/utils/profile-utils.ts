@@ -1,7 +1,7 @@
 type UserData = {
   media?: {
-    cover_image?: string;
-  };
+    cover_image?: string | null;
+  } | null;
   primary_image_to_show?: string;
   detail?: {
     tagline?: string;

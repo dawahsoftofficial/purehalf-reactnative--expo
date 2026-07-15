@@ -28,7 +28,7 @@ const ImagePicker = (props: any) => {
         mediaType: 'video',
         videoQuality: 'high',
         cameraType: 'front',
-        durationLimit: 25,
+        durationLimit: 10,
       };
     } else {
       options = {
@@ -52,7 +52,7 @@ const ImagePicker = (props: any) => {
     if (from === 'video') {
       options = {
         mediaType: 'video',
-        durationLimit: 15,
+        durationLimit: 10,
       };
     } else {
       options = {

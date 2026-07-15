@@ -63,12 +63,18 @@ const { width, height } = Dimensions.get('window');
 type FcmToken = { fcm_token?: string | null };
 
 type UserMedia = {
-  primary_image?: string;
-  cover_image?: string;
-  public_gallery?: string[];
-  private_photo_count?: number;
-  youtube_url?: string;
-  un_blur_primary_image?: string;
+  primary_image?: string | null;
+  cover_image?: string | null;
+  public_gallery?: string[] | null;
+  private_photo_count?: number | null;
+  youtube_url?: string | null;
+  un_blur_primary_image?: string | null;
+  intro_video?: string | null;
+  intro_video_status?: 'pending' | 'approved' | 'rejected' | null;
+  intro_video_rejection_reason?: string | null;
+  intro_voice?: string | null;
+  intro_voice_status?: 'pending' | 'approved' | 'rejected' | null;
+  intro_voice_rejection_reason?: string | null;
 };
 
 type User = {
@@ -82,7 +88,7 @@ type User = {
   last_online_at?: string;
   liked?: boolean;
   membership_expiry?: string | null;
-  media?: UserMedia;
+  media?: UserMedia | null;
   primary_image_to_show?: string;
   match_percentage?: number | null;
   fcm_token?: FcmToken[];

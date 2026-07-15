@@ -29,9 +29,9 @@ type ProfileBadgesProps = {
   userData?: {
     id?: number;
     media?: {
-      primary_image_to_show?: string;
-      cover_image?: string;
-    };
+      primary_image_to_show?: string | null;
+      cover_image?: string | null;
+    } | null;
     detail?: {
       tagline?: string;
       family_plan_id?: number;
