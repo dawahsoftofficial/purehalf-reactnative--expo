@@ -203,6 +203,8 @@ type SettingsState = {
   getEnablePresignupQuestions: () => boolean;
   getEnablePostsignupQuestions: () => boolean;
   getEnableMatchCountReveal: () => boolean;
+  getProfileIntroVideoEnabled: () => boolean;
+  getProfileIntroVoiceEnabled: () => boolean;
   getProfileCompletionGiftCredits: () => number;
   getProfileCompletionThresholdPercent: () => number;
   getMaxChatsPerDay: () => MaxChatsPerDay | null;
@@ -266,6 +268,20 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   getEnableMatchCountReveal: () => {
     const state = get();
     return state.getSettingByKey<boolean>('enable_match_count_reveal') ?? false;
+  },
+
+  getProfileIntroVideoEnabled: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<boolean>('profile_intro_video_enabled') ?? false
+    );
+  },
+
+  getProfileIntroVoiceEnabled: () => {
+    const state = get();
+    return (
+      state.getSettingByKey<boolean>('profile_intro_voice_enabled') ?? false
+    );
   },
 
   getProfileCompletionGiftCredits: () => {

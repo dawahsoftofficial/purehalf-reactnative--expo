@@ -21,7 +21,9 @@ import {
   useGlobalContext,
 } from '../../services';
 import messageServices from '../../services/api/message-services';
+import type { UserMedia } from '../../services/api/types/user-types';
 import PolygamyBadge from './components/polygamy-badge';
+import ProfileIntroMedia from './components/profile-intro-media';
 import { updateDetails } from './Funtions';
 import Header from './Header';
 import InfoCard from './InfoCard';
@@ -80,6 +82,7 @@ type User = {
   is_blur?: boolean;
   gender?: string;
   profile_restricted?: boolean;
+  media?: Partial<UserMedia>;
 };
 
 type Conversation = {
@@ -128,7 +131,9 @@ const Profile = ({
   const { getData, storageKeys, setData } = StorageManager;
 
   const [userData, setUserData] = useState<User>(
-    propUserData ? propUserData : currentUser
+    propUserData
+      ? propUserData
+      : { ...currentUser, media: currentUser?.media ?? undefined }
   );
   const profileUserId = userData?.id;
   const [interestAndHobbies, setIinterestAndHobbies] = useState<any[]>([]);
@@ -399,6 +404,7 @@ const Profile = ({
             is_blur: userData.is_blur === 1,
             detail: userData.detail ?? undefined,
             match_percentage: userData.match_percentage ?? undefined,
+            media: userData.media ?? undefined,
           };
           setUserData(user);
           setProfileFieldVisibility(
@@ -607,6 +613,21 @@ const Profile = ({
   );
 
   const isOwnProfile = !fromUserProfile;
+  const headerUserData = {
+    ...userData,
+    media: userData.media
+      ? {
+          primary_image: userData.media.primary_image ?? undefined,
+          cover_image: userData.media.cover_image ?? undefined,
+          public_gallery: userData.media.public_gallery ?? undefined,
+          private_photo_count: userData.media.private_photo_count ?? undefined,
+          youtube_url: userData.media.youtube_url ?? undefined,
+          un_blur_primary_image:
+            userData.media.un_blur_primary_image ?? undefined,
+        }
+      : undefined,
+  };
+
   return (
     <SafeAreaView style={Styles.container}>
       <ScreenLoader visible={loader.visible} message={loader.message} />
@@ -616,7 +637,7 @@ const Profile = ({
           <Header
             navigation={navigation}
             fromUserProfile={fromUserProfile}
-            userData={userData}
+            userData={headerUserData}
             onBlockPress={onBlockPress}
             onLikeUnlikePress={onLikeUnlikePress}
             isBlockedYou={isBlockedYou}
@@ -638,6 +659,13 @@ const Profile = ({
             onTaglineEditPress={showTagLineInput}
             onTaglineCancel={hideTagLineInput}
           />
+          {!isBlockedYou ? (
+            <ProfileIntroMedia
+              isOwner={!fromUserProfile}
+              media={!fromUserProfile ? currentUser?.media : userData?.media}
+              navigation={navigation}
+            />
+          ) : null}
           {isBlockedYou ? (
             <Text style={Styles.userNotAvailDes}>
               {LanguageKeys.userBlockedYouDes}

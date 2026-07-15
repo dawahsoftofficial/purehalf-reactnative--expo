@@ -34,7 +34,11 @@ export type UserMedia = {
   un_blur_primary_image: string;
   cover_image: string | null;
   intro_video: string | null;
+  intro_video_status: IntroMediaStatus;
+  intro_video_rejection_reason: string | null;
   intro_voice: string | null;
+  intro_voice_status: IntroMediaStatus;
+  intro_voice_rejection_reason: string | null;
   youtube_url: string | null;
   public_gallery: string[] | null;
   created_at: string;
@@ -42,6 +46,8 @@ export type UserMedia = {
   deleted_at: string | null;
   private_photo_count: number | null;
 };
+
+export type IntroMediaStatus = 'pending' | 'approved' | 'rejected' | null;
 
 /**
  * User Detail object (can be null)

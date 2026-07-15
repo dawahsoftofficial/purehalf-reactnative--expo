@@ -47,6 +47,8 @@ import {
   PrivacySettings,
   PrivatePhotoRequest,
   Profile,
+  ProfileIntroVideo,
+  ProfileIntroVoice,
   ProfilePicture,
   PurposeOfLeaving,
   SearchProfiles,
@@ -245,6 +247,14 @@ function App() {
           <Stack.Screen name="ContactSupport" component={ContactSupport} />
           <Stack.Screen name="AddWali" component={AddWali} />
           <Stack.Screen name="ProfilePicture" component={ProfilePicture} />
+          <Stack.Screen
+            name="ProfileIntroVideo"
+            component={ProfileIntroVideo}
+          />
+          <Stack.Screen
+            name="ProfileIntroVoice"
+            component={ProfileIntroVoice}
+          />
           <Stack.Screen name="UserLocation" component={Map} />
           <Stack.Screen name="AccountSuspended" component={AccountSuspended} />
           <Stack.Screen name="SignupStepInput" component={SignupStepInput} />
