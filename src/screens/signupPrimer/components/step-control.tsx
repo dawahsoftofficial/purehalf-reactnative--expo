@@ -6,7 +6,12 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { hp, Typography, wp } from '../../../global';
 import { Colors, Fonts } from '../../../res';
-import { HABIT_OPTIONS, INCOME_BANDS } from '../journeys';
+import {
+  HABIT_OPTIONS,
+  INCOME_BANDS,
+  SECOND_MARRIAGE_LABEL,
+  SECT_PREFERENCE_OPTIONS,
+} from '../journeys';
 import type { PrimerOption, PrimerStepDef } from '../primer-types';
 import RangeSlider from './range-slider';
 
@@ -191,13 +196,19 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
               onPress={() => onChange({ ...v, status: op.id })}
             />
           ))}
-          <Ripple
-            style={[Styles.row, Styles.advancedRow, v.polygamy && Styles.rowOn]}
-            onPress={() => onChange({ ...v, polygamy: !v.polygamy })}
-          >
-            <RNText style={Styles.rowTxt}>Open to another marriage</RNText>
-            <Square on={!!v.polygamy} />
-          </Ripple>
+          {step.hasPolygamy ? (
+            <Ripple
+              style={[
+                Styles.row,
+                Styles.advancedRow,
+                v.polygamy && Styles.rowOn,
+              ]}
+              onPress={() => onChange({ ...v, polygamy: !v.polygamy })}
+            >
+              <RNText style={Styles.rowTxt}>{SECOND_MARRIAGE_LABEL}</RNText>
+              <Square on={!!v.polygamy} />
+            </Ripple>
+          ) : null}
         </View>
       );
     }
@@ -244,11 +255,17 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
               />
             ))}
           </View>
-          <RNText style={Styles.subLabel}>Prefer the same sect?</RNText>
-          <YesNo
-            value={v.matters}
-            onChange={(m) => onChange({ ...v, matters: m })}
-          />
+          <RNText style={Styles.subLabel}>Match preference</RNText>
+          <View style={Styles.list}>
+            {SECT_PREFERENCE_OPTIONS.map((op) => (
+              <Row
+                key={op.id}
+                label={op.label}
+                on={v.matters === op.id}
+                onPress={() => onChange({ ...v, matters: op.id })}
+              />
+            ))}
+          </View>
         </View>
       );
     }
@@ -368,7 +385,8 @@ const Styles = StyleSheet.create({
   },
   rowOn: { borderColor: Colors.primary, backgroundColor: Colors.lavender },
   advancedRow: {
-    borderStyle: 'dashed',
+    borderColor: Colors.primaryLite,
+    backgroundColor: Colors.lavender,
     justifyContent: 'flex-start',
     gap: wp(3),
   },

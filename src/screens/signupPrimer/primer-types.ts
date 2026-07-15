@@ -31,6 +31,7 @@ export type PrimerStepDef = {
   sliderMax?: number;
   visibility: 'public' | 'private';
   required?: boolean; // blocks advance until answered (e.g. M-HABITS)
+  hasPolygamy?: boolean; // status: show the male second-marriage option
   hasRevert?: boolean; // deen: show the independent "I'm a revert" checkbox
   hasIncome?: boolean; // work: show the optional income band
   placeholder?: string; // text

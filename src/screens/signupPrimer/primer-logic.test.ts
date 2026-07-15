@@ -4,6 +4,7 @@ import {
   nextStepIndex,
   prevStepIndex,
   type PrimerStep,
+  questionPosition,
   shouldShowPrimer,
 } from './primer-logic';
 
@@ -66,5 +67,16 @@ describe('conditional steps', () => {
     expect(computeProgress(steps, { wantB: false }, 0)).toBe(50);
     expect(computeProgress(steps, { wantB: false }, 2)).toBe(100);
     expect(computeProgress(steps, { wantB: true }, 0)).toBe(33);
+  });
+
+  it('questionPosition counts only visible steps', () => {
+    expect(questionPosition(steps, { wantB: false }, 2)).toEqual({
+      current: 2,
+      total: 2,
+    });
+    expect(questionPosition(steps, { wantB: true }, 1)).toEqual({
+      current: 2,
+      total: 3,
+    });
   });
 });

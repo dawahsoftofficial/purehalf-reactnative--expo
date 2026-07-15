@@ -73,3 +73,21 @@ export const computeProgress = (
     .filter((s) => isVisible(s, answers)).length;
   return Math.round((done / visibleTotal) * 100);
 };
+
+// Human-readable position for the header. Uses only visible steps so the count
+// stays aligned with the progress bar when conditional questions are skipped.
+export const questionPosition = (
+  steps: PrimerStep[],
+  answers: PrimerAnswers,
+  currentIndex: number
+): { current: number; total: number } => {
+  const visibleIndexes = steps
+    .map((step, index) => (isVisible(step, answers) ? index : -1))
+    .filter((index) => index >= 0);
+  const position = visibleIndexes.indexOf(currentIndex);
+
+  return {
+    current: position >= 0 ? position + 1 : 0,
+    total: visibleIndexes.length,
+  };
+};
