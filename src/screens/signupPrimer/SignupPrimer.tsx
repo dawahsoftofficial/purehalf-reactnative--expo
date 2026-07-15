@@ -184,14 +184,61 @@ const SignupPrimer = ({ navigation }: any) => {
   if (phase === 'gender') {
     return (
       <Container style={Styles.screen}>
-        <View style={Styles.genderWrap}>
-          <RNText style={Styles.title}>Let&apos;s start with you</RNText>
-          <RNText style={Styles.subtitle}>I am a…</RNText>
+        <ScrollView
+          style={Styles.genderScroll}
+          contentContainerStyle={Styles.genderWrap}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={Styles.brandMark}>
+            <Ionicons name="heart" size={wp(8)} color={Colors.primary} />
+          </View>
+          <RNText style={Styles.welcome}>Assalamu Alaikum</RNText>
+          <RNText style={Styles.title}>
+            Marriage, with faith at the heart
+          </RNText>
+          <RNText style={Styles.subtitle}>
+            A private space to meet sincere Muslims who are ready for nikah.
+          </RNText>
+
+          <View style={Styles.missionCard}>
+            <View style={Styles.missionItem}>
+              <Ionicons
+                name="heart-outline"
+                size={wp(5)}
+                color={Colors.primary}
+              />
+              <RNText style={Styles.missionText}>Marriage-minded</RNText>
+            </View>
+            <View style={Styles.missionDivider} />
+            <View style={Styles.missionItem}>
+              <Ionicons
+                name="moon-outline"
+                size={wp(5)}
+                color={Colors.primary}
+              />
+              <RNText style={Styles.missionText}>Faith-centered</RNText>
+            </View>
+            <View style={Styles.missionDivider} />
+            <View style={Styles.missionItem}>
+              <Ionicons
+                name="shield-checkmark-outline"
+                size={wp(5)}
+                color={Colors.primary}
+              />
+              <RNText style={Styles.missionText}>Private by design</RNText>
+            </View>
+          </View>
+
+          <RNText style={Styles.selectionTitle}>
+            First, tell us about you
+          </RNText>
           <View style={Styles.tiles}>
             <Ripple
               style={Styles.tile}
               onPress={() => onSelectGender('female')}
               rippleContainerBorderRadius={16}
+              accessibilityRole="button"
+              accessibilityLabel="I am a woman"
             >
               <View style={Styles.tileIcon}>
                 <Ionicons name="female" size={wp(7)} color={Colors.primary} />
@@ -202,6 +249,8 @@ const SignupPrimer = ({ navigation }: any) => {
               style={Styles.tile}
               onPress={() => onSelectGender('male')}
               rippleContainerBorderRadius={16}
+              accessibilityRole="button"
+              accessibilityLabel="I am a man"
             >
               <View style={Styles.tileIcon}>
                 <Ionicons name="male" size={wp(7)} color={Colors.primaryMid} />
@@ -209,10 +258,13 @@ const SignupPrimer = ({ navigation }: any) => {
               <RNText style={Styles.tileTxt}>Man</RNText>
             </Ripple>
           </View>
-        </View>
+          <RNText style={Styles.timeHint}>
+            About 2 minutes · no account needed
+          </RNText>
+        </ScrollView>
         <View style={Styles.footer}>
           <Ripple style={Styles.laterBtn} onPress={exitFlow}>
-            <RNText style={Styles.laterTxt}>Maybe later</RNText>
+            <RNText style={Styles.laterTxt}>Skip for now</RNText>
           </Ripple>
         </View>
       </Container>
@@ -442,24 +494,84 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small2,
   },
   // gender
+  genderScroll: { flex: 1 },
   genderWrap: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: wp(5),
+    paddingTop: hp(3),
+    paddingBottom: hp(1),
+  },
+  brandMark: {
+    alignSelf: 'center',
+    width: wp(17),
+    height: wp(17),
+    borderRadius: wp(8.5),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.lavender,
+    borderWidth: 1,
+    borderColor: Colors.primaryRGBA12,
+    marginBottom: hp(1.8),
+  },
+  welcome: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    textAlign: 'center',
+    marginBottom: hp(0.7),
   },
   title: {
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.large2,
     textAlign: 'center',
+    lineHeight: wp(8.5),
+    paddingHorizontal: wp(3),
   },
   subtitle: {
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    textAlign: 'center',
+    lineHeight: wp(5.5),
+    marginTop: hp(1),
+    paddingHorizontal: wp(4),
+  },
+  missionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    marginTop: hp(2.5),
+    paddingHorizontal: wp(2),
+    paddingVertical: hp(1.6),
+  },
+  missionItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: hp(0.5),
+  },
+  missionDivider: {
+    width: 1,
+    height: hp(4),
+    backgroundColor: Colors.hairline,
+  },
+  missionText: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.tiny1,
+    textAlign: 'center',
+  },
+  selectionTitle: {
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small3,
     textAlign: 'center',
-    marginTop: hp(1),
-    marginBottom: hp(4),
+    marginTop: hp(3),
+    marginBottom: hp(1.5),
   },
   tiles: { flexDirection: 'row', gap: wp(3) },
   tile: {
@@ -484,6 +596,13 @@ const Styles = StyleSheet.create({
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small3,
+  },
+  timeHint: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small1,
+    textAlign: 'center',
+    marginTop: hp(1.5),
   },
   // reveal
   sparkBadge: {
