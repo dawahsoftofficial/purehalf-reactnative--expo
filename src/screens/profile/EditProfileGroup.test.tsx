@@ -7,7 +7,7 @@ import {
 import React, { type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 
-import { ApiServices } from '../../services';
+import { ApiServices, flashSuccessMessage } from '../../services';
 import EditProfileGroup from './EditProfileGroup';
 import { updateDetails } from './Funtions';
 
@@ -42,13 +42,18 @@ type RippleProps = ChildrenProps & {
   disabled?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 };
 
 type MockTextComponent = React.ComponentType<
   ChildrenProps & { onPress?: () => void }
 >;
 type MockViewComponent = React.ComponentType<
-  ChildrenProps & { style?: StyleProp<ViewStyle> }
+  ChildrenProps & {
+    style?: StyleProp<ViewStyle>;
+    testID?: string;
+    onPress?: () => void;
+  }
 >;
 
 jest.mock('react-native-material-ripple', () => {
@@ -57,8 +62,12 @@ jest.mock('react-native-material-ripple', () => {
     View: MockViewComponent;
   };
 
-  return ({ children, style }: RippleProps) =>
-    ReactActual.createElement(MockView, { style }, children);
+  return ({ children, style, testID, onPress, disabled }: RippleProps) =>
+    ReactActual.createElement(
+      MockView,
+      { style, testID, onPress: disabled ? undefined : onPress },
+      children
+    );
 });
 
 jest.mock('../../components', () => {
@@ -126,6 +135,10 @@ jest.mock('../../languages', () => ({
     none: 'None',
     visibleOnProfile: 'Shown on your profile',
     hiddenOnProfile: 'Hidden from your profile',
+    hideField: 'Hide it',
+    unhideField: 'Unhide it',
+    fieldHiddenToast: 'fieldHiddenToast',
+    fieldVisibleToast: 'fieldVisibleToast',
   },
 }));
 
@@ -285,7 +298,7 @@ describe('EditProfileGroup', () => {
     expect(screen.getAllByText('Height')).toHaveLength(1);
   });
 
-  it('updates field privacy from the switch beside Height', async () => {
+  it('updates field privacy from the Hide it pill beside Height', async () => {
     (ApiServices.updateProfilePrivacy as jest.Mock).mockResolvedValue({
       profile_field_visibility: { height: 'private' },
     });
@@ -312,17 +325,18 @@ describe('EditProfileGroup', () => {
       />
     );
 
-    fireEvent(
-      screen.getByTestId('profile-privacy-switch-height'),
-      'valueChange',
-      false
-    );
+    fireEvent.press(screen.getByTestId('profile-privacy-toggle-height'));
 
     await waitFor(() =>
       expect(ApiServices.updateProfilePrivacy).toHaveBeenCalledWith({
         visibility: { height: 'private' },
       })
     );
+    // Feedback is the persistent inline status text next to the toggle, not
+    // a toast -- a toast interpolating the raw (untranslated) field id was
+    // confusing (tester note #25).
+    expect(flashSuccessMessage).not.toHaveBeenCalled();
+    expect(screen.getByText('Hidden from your profile')).toBeTruthy();
   });
 
   it('shows a tag question title only once', () => {

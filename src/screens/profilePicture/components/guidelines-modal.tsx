@@ -6,6 +6,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Button } from '../../../components';
 import { hp, Typography, wp } from '../../../global';
+import { LanguageKeys } from '../../../languages';
 import { Colors, Fonts, Images } from '../../../res';
 
 type User = {
@@ -120,7 +121,7 @@ function GuidelinesModal({ visible, user, onClose }: GuidelinesModalProps) {
         </ScrollView>
 
         <View style={Styles.footer}>
-          <Button text="Got it" onPress={onClose} />
+          <Button text={LanguageKeys.gotIt} onPress={onClose} />
         </View>
       </SafeAreaView>
     </Modal>

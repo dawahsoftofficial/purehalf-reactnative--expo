@@ -6,6 +6,7 @@ import Ripple from 'react-native-material-ripple';
 import { Button, Container, Header, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { CheckRtl, LanguageKeys } from '../../languages';
+import { stripLeadingEmoji } from '../../lib/utils/profile-utils';
 import { Colors, Fonts } from '../../res';
 import {
   flashErrorMessage,
@@ -92,7 +93,7 @@ const EditInterests = ({ navigation, route }: any) => {
               style={[Styles.pill, isSelected && Styles.pillOn]}
             >
               <Text style={[Styles.pillTxt, isSelected && Styles.pillTxtOn]}>
-                {item?.value}
+                {stripLeadingEmoji(item?.value ?? '')}
               </Text>
             </Ripple>
           );

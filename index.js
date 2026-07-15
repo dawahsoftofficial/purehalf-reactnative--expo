@@ -14,6 +14,17 @@ import { name as appName } from './app.json';
 import { Images } from './src/res';
 import { AppProvider, isIOS } from './src/services';
 
+// In release builds, silence verbose console output (log/info/debug/trace) so
+// message content, user IDs, and payloads never reach logcat / the device
+// console. `error` and `warn` are kept for Crashlytics and diagnostics.
+if (!__DEV__) {
+  const noop = () => {};
+  console.log = noop;
+  console.info = noop;
+  console.debug = noop;
+  console.trace = noop;
+}
+
 const firebaseApp = getApp();
 const messaging = getMessaging(firebaseApp);
 

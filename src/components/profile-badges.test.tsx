@@ -163,7 +163,10 @@ describe('ProfileBadges', () => {
     };
 
     render(
-      <ProfileBadges userData={{ id: 2, is_tester: true }} variant="pill" />
+      <ProfileBadges
+        userData={{ id: 2, tester_badge_preview: true }}
+        variant="pill"
+      />
     );
 
     expect(await screen.findByText('VIP')).toBeTruthy();
@@ -192,7 +195,10 @@ describe('ProfileBadges', () => {
     };
 
     render(
-      <ProfileBadges userData={{ id: 2, is_tester: true }} variant="pill" />
+      <ProfileBadges
+        userData={{ id: 2, tester_badge_preview: true }}
+        variant="pill"
+      />
     );
 
     await waitFor(() => expect(screen.queryByText('VIP')).toBeNull());

@@ -53,6 +53,7 @@ export type UserDetail = {
   relocation_plan_id?: number;
   personality_id?: number[];
   height_scale?: string;
+  height_display_scale?: string;
   height?: number;
   weight_scale?: string;
   weight?: number;

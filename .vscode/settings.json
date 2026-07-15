@@ -31,7 +31,7 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
   "cSpell.words": ["Flashlist", "Lato"],
-  "i18n-ally.localesPaths": ["src/translations/"],
+  "i18n-ally.localesPaths": ["src/languages/"],
   "i18n-ally.keystyle": "nested",
   "i18n-ally.disabled": false,
   "tailwindCSS.experimental.classRegex": [

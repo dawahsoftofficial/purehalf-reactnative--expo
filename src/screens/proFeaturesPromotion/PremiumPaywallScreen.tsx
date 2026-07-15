@@ -457,6 +457,8 @@ export default function PremiumPaywallScreen({
             name: 'MembershipCongrats',
             params: {
               amount: packageToPurchase?.product?.price || 0,
+              localizedPrice: packageToPurchase?.product?.priceString,
+              currencyCode: packageToPurchase?.product?.currencyCode,
               title: packageToPurchase?.product?.title || 'Premium',
             },
           },

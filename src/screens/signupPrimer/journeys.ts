@@ -19,6 +19,13 @@ const SECT_OPTIONS: PrimerOption[] = [
   o('prefer_not_say', 'Prefer not to say'),
 ];
 
+export const SECT_PREFERENCE_OPTIONS: PrimerOption[] = [
+  o('yes', 'Prefer the same sect'),
+  o('no', 'Any sect can work'),
+];
+
+export const SECOND_MARRIAGE_LABEL = 'Looking for a second marriage';
+
 const femaleJourney: PrimerStepDef[] = [
   {
     id: 'stage',
@@ -42,12 +49,6 @@ const femaleJourney: PrimerStepDef[] = [
       o('divorced', 'Divorced'),
       o('widowed', 'Widowed'),
     ],
-  },
-  {
-    id: 'caste',
-    control: 'casteCombo',
-    visibility: 'public',
-    question: 'Your Caste',
   },
   {
     id: 'deen',
@@ -93,7 +94,7 @@ const femaleJourney: PrimerStepDef[] = [
     support: 'Knowing what you want is a strength — choose freely.',
     options: [
       o('strong_deen', 'Strong deen & character'),
-      o('good_looking', 'Good-looking, takes care of himself'),
+      o('good_looking', 'Good-looking and takes care of himself'),
       o('tall', 'Tall'),
       o('financially_settled', 'Financially settled'),
       o('respected_family', 'Respected family background'),
@@ -168,6 +169,14 @@ const femaleJourney: PrimerStepDef[] = [
 
 const maleJourney: PrimerStepDef[] = [
   {
+    id: 'status',
+    control: 'status',
+    visibility: 'public',
+    question: "What's your current status?",
+    hasPolygamy: true,
+    options: [o('single', 'Single (never married)'), o('divorced', 'Divorced')],
+  },
+  {
     id: 'stage',
     control: 'single',
     visibility: 'private',
@@ -178,20 +187,6 @@ const maleJourney: PrimerStepDef[] = [
       o('guard_deen', 'To complete half my deen'),
       o('been_searching', 'Been searching, hoping to find the one'),
     ],
-  },
-  {
-    id: 'status',
-    control: 'status',
-    visibility: 'public',
-    question: "What's your current status?",
-    // "Widowed" is intentionally omitted for men (kept for the female flow).
-    options: [o('single', 'Single (never married)'), o('divorced', 'Divorced')],
-  },
-  {
-    id: 'caste',
-    control: 'casteCombo',
-    visibility: 'public',
-    question: 'Your Caste',
   },
   {
     id: 'deen',
@@ -237,7 +232,7 @@ const maleJourney: PrimerStepDef[] = [
     options: [
       o('beautiful', 'Beautiful / attractive'),
       o('youthful', 'Youthful and full of life'),
-      o('warm_mannered', 'Warm, well-mannered nature'),
+      o('warm_mannered', 'Warm and well-mannered nature'),
       o('easy_going', 'Easy-going and fun to be with'),
       o('practising', 'Practising deen and modesty'),
       o('honest_loyal', 'Honest and loyal'),
@@ -280,13 +275,6 @@ const maleJourney: PrimerStepDef[] = [
       o('govt_job', 'Government job'),
       o('settled_overseas', 'Settled overseas'),
     ],
-  },
-  {
-    id: 'habits',
-    control: 'habits',
-    visibility: 'public',
-    required: true,
-    question: 'A couple of quick facts',
   },
   {
     id: 'offerings',

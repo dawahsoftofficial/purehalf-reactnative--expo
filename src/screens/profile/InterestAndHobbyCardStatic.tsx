@@ -6,6 +6,7 @@ import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
 import { CheckRtl } from '../../languages';
+import { stripLeadingEmoji } from '../../lib/utils/profile-utils';
 import { Colors, Fonts } from '../../res';
 import { useGlobalContext } from '../../services';
 
@@ -73,7 +74,9 @@ const InterestAndHobbyCardStatic = ({
           >
             {matchingData.map((item, index) => (
               <View key={`${item?.id ?? index}-${index}`} style={Styles.item}>
-                <Text style={Styles.itemValue}>{item?.value ?? ''}</Text>
+                <Text style={Styles.itemValue}>
+                  {stripLeadingEmoji(item?.value ?? '')}
+                </Text>
               </View>
             ))}
           </View>

@@ -13,23 +13,12 @@ import { LanguageKeys } from '../../languages';
 import { Colors, Fonts, Images } from '../../res';
 import { ApiServices, StorageManager, useGlobalContext } from '../../services';
 import { addAnaylatics } from '../../services/firebase/analytics';
+import { formatMembershipAmount } from './membership-purchase-display';
 
 type RowItem = {
   label: string;
   value: string;
   badge?: string;
-};
-
-const groupThousands = (n: number) => {
-  const [intPart, decPart] = String(n).split('.');
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  return decPart ? `${grouped}.${decPart}` : grouped;
-};
-
-const formatAmount = (val: number | string) => {
-  const n = Number(val);
-  if (!Number.isFinite(n)) return String(val);
-  return groupThousands(n);
 };
 
 const DetailRow = ({
@@ -55,6 +44,8 @@ const MembershipCongrats = (props: any) => {
   const {
     title,
     amount,
+    localizedPrice,
+    currencyCode,
     isNewTransaction,
     date_of_expiry = null,
   } = props.route.params;
@@ -71,7 +62,7 @@ const MembershipCongrats = (props: any) => {
   const updateNewTransaction = () => {
     if (isNewTransaction) {
       //Facebook Event For Manual Paid Tracking
-      AppEventsLogger.logPurchase(amount, 'PKR');
+      AppEventsLogger.logPurchase(Number(amount), currencyCode || 'PKR');
       ApiServices.updateDetails({ paid_tracking: 1 }).then(async (res) => {
         await setData(storageKeys.USER, res);
         updateCurrentUser(res);
@@ -82,7 +73,10 @@ const MembershipCongrats = (props: any) => {
   useEffect(() => {
     updateNewTransaction();
     if (title && amount) {
-      addAnaylatics('PaymentSuccess', { amount });
+      addAnaylatics('PaymentSuccess', {
+        amount,
+        currency: currencyCode || 'PKR',
+      });
     }
     const backAction = () => {
       onGetStartedPress();
@@ -105,7 +99,11 @@ const MembershipCongrats = (props: any) => {
   if (Number(amount) > 0) {
     rows.push({
       label: LanguageKeys.amountPaid,
-      value: `Rs. ${formatAmount(amount)}`,
+      value: formatMembershipAmount({
+        amount,
+        localizedPrice,
+        currencyCode,
+      }),
     });
   }
   rows.push({ label: LanguageKeys.membershipLabel, value: planName });

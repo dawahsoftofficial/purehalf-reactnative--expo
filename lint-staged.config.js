@@ -13,7 +13,7 @@ module.exports = {
     `npx prettier --write ${filenames
       .map((filename) => `"${filename}"`)
       .join(' ')}`,
-  'src/translations/*.(json)': (filenames) => [
+  'src/languages/*.(json)': (filenames) => [
     `npx eslint --fix ${filenames
       .map((filename) => `"${filename}"`)
       .join(' ')}`,

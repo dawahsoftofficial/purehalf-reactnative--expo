@@ -9,10 +9,10 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
-import { Switch } from 'react-native-switch';
 import Entypo from 'react-native-vector-icons/Entypo';
 
 import {
@@ -111,22 +111,31 @@ const TextQuestionInput = React.memo(
       ref
     ) => {
       const [value, setValue] = useState(initialValue);
-      const wasAnswered = useRef(
-        (initialValue?.trim().length ?? 0) >= minLength
+      // Suggestion chips set `value` programmatically (see onSuggestionPress
+      // below), which bypasses the native TextInput's own `maxLength` guard --
+      // so "answered" here also gates on the upper bound, not just the lower
+      // one, to keep the wizard from advancing with an over-limit answer.
+      const isWithinLength = useCallback(
+        (text?: string) => {
+          const len = text?.trim().length ?? 0;
+          return len >= minLength && (!maxLength || len <= maxLength);
+        },
+        [minLength, maxLength]
       );
+      const wasAnswered = useRef(isWithinLength(initialValue));
 
       useImperativeHandle(ref, () => ({ getValue: () => value }), [value]);
 
       const onChangeText = useCallback(
         (text: string) => {
           setValue(text);
-          const answered = (text?.trim().length ?? 0) >= minLength;
+          const answered = isWithinLength(text);
           if (answered !== wasAnswered.current) {
             wasAnswered.current = answered;
             onAnsweredChange(id, answered);
           }
         },
-        [id, minLength, onAnsweredChange]
+        [id, isWithinLength, onAnsweredChange]
       );
 
       const onBlur = useCallback(() => {
@@ -161,7 +170,12 @@ const TextQuestionInput = React.memo(
             maxLength={maxLength}
           />
           {maxLength ? (
-            <Text style={Styles.charCounter}>
+            <Text
+              style={[
+                Styles.charCounter,
+                (value?.length ?? 0) > maxLength && Styles.charCounterOver,
+              ]}
+            >
               {`${value?.length ?? 0}/${maxLength}`}
             </Text>
           ) : null}
@@ -465,6 +479,7 @@ const ProfileQuestionWizard = ({
   onPrivacyChange,
 }: ProfileQuestionWizardProps) => {
   const Rtl = CheckRtl();
+  const { t } = useTranslation();
 
   const [formData, setFormData] = useState<any[]>(() =>
     JSON.parse(JSON.stringify(fields ?? [])).map(normalizeScalingSelected)
@@ -715,44 +730,39 @@ const ProfileQuestionWizard = ({
             <View style={Styles.questionTitleText}>
               <Text style={Styles.questionTitle}>{iTitle}</Text>
               {showPrivacyControl ? (
-                <View
-                  style={[
-                    Styles.privacyStatusRow,
-                    Rtl && { flexDirection: 'row-reverse' },
-                  ]}
-                >
-                  <Entypo
-                    name={isVisible ? 'eye' : 'eye-with-line'}
-                    size={wp(3.6)}
-                    color={Colors.muted}
-                  />
-                  <Text style={Styles.privacyStatus}>
+                <>
+                  <Ripple
+                    testID={`profile-privacy-toggle-${privacyField}`}
+                    style={[
+                      Styles.privacyToggle,
+                      Rtl && { flexDirection: 'row-reverse' },
+                    ]}
+                    onPress={() => {
+                      const nextVisibility = isVisible ? 'private' : 'public';
+                      onPrivacyChange?.(privacyField, nextVisibility);
+                    }}
+                    disabled={privacyUpdatingField === privacyField}
+                    rippleColor={Colors.primary}
+                  >
+                    <Entypo
+                      name={isVisible ? 'eye' : 'eye-with-line'}
+                      size={wp(3.6)}
+                      color={Colors.primary}
+                    />
+                    <Text style={Styles.privacyToggleTxt}>
+                      {isVisible
+                        ? LanguageKeys.hideField
+                        : LanguageKeys.unhideField}
+                    </Text>
+                  </Ripple>
+                  <Text style={Styles.privacyStatusTxt}>
                     {isVisible
                       ? LanguageKeys.visibleOnProfile
                       : LanguageKeys.hiddenOnProfile}
                   </Text>
-                </View>
+                </>
               ) : null}
             </View>
-            {showPrivacyControl ? (
-              <Switch
-                testID={`profile-privacy-switch-${privacyField}`}
-                value={isVisible}
-                onValueChange={() =>
-                  onPrivacyChange?.(
-                    privacyField,
-                    isVisible ? 'private' : 'public'
-                  )
-                }
-                disabled={privacyUpdatingField === privacyField}
-                renderActiveText={false}
-                renderInActiveText={false}
-                circleSize={25}
-                backgroundActive={Colors.primary}
-                backgroundInactive={Colors.color18}
-                innerCircleStyle={Styles.switchInner}
-              />
-            ) : null}
           </View>
 
           <View style={Styles.controlWrap}>
@@ -814,6 +824,7 @@ const ProfileQuestionWizard = ({
       profileFieldVisibility,
       privacyUpdatingField,
       onPrivacyChange,
+      t,
     ]
   );
 
@@ -947,20 +958,30 @@ const Styles = StyleSheet.create({
   questionTitleText: {
     flex: 1,
   },
-  privacyStatusRow: {
+  privacyToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: wp(1.2),
-    marginTop: hp(0.3),
+    alignSelf: 'flex-start',
+    gap: wp(1.5),
+    marginTop: hp(0.8),
+    paddingVertical: hp(0.7),
+    paddingHorizontal: wp(3),
+    borderRadius: 999,
+    backgroundColor: Colors.lavender,
   },
-  privacyStatus: {
+  privacyToggleTxt: {
+    alignSelf: 'center',
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    includeFontPadding: false,
+  },
+  privacyStatusTxt: {
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.tiny2,
-  },
-  switchInner: {
-    borderWidth: 1.5,
-    borderColor: Colors.primary,
+    fontSize: Typography.tiny1,
+    marginTop: hp(0.4),
+    includeFontPadding: false,
   },
   controlWrap: {
     marginTop: hp(2),
@@ -996,6 +1017,9 @@ const Styles = StyleSheet.create({
     textAlign: 'right',
     alignSelf: 'flex-end',
     marginTop: hp(0.5),
+  },
+  charCounterOver: {
+    color: '#E53935',
   },
   suggestionWrap: {
     flexDirection: 'row',

@@ -324,6 +324,8 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small3,
     textAlign: 'center',
+    alignSelf: 'center',
+    width: '100%',
     lineHeight: wp(5.6),
     marginTop: hp(2),
     maxWidth: wp(72),

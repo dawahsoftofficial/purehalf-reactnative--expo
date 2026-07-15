@@ -1110,30 +1110,6 @@ const PhotosAndVideos = (props: any) => {
             <Text style={Styles.videoVoiceIconText}>My audio</Text>
           </Ripple>
         </View> */}
-        <Ripple
-          style={{
-            ...Styles.valuesBanner,
-            flexDirection: Rtl ? 'row-reverse' : 'row',
-          }}
-          onPress={() => setToolTipVisible(true)}
-        >
-          <View style={{ ...Styles.valuesBannerMark, ...Styles.shadow }}>
-            <AntDesign name="staro" size={wp(4.5)} color={Colors.primary} />
-          </View>
-          <View style={Styles.valuesBannerTxtCon}>
-            <Text style={Styles.valuesBannerTitle}>
-              {LanguageKeys.honoringIslamicValues}
-            </Text>
-            <Text style={Styles.valuesBannerDes}>
-              {LanguageKeys.valuesBannerDes}
-            </Text>
-          </View>
-          <AntDesign
-            name={Rtl ? 'left' : 'right'}
-            size={wp(3.5)}
-            color={Colors.primaryMid}
-          />
-        </Ripple>
         <RenderHeadingDes
           heading={LanguageKeys.profilePhotoHeading}
           description={LanguageKeys.profilePhotoShownDes}
@@ -1262,41 +1238,6 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  valuesBanner: {
-    marginHorizontal: wp(4),
-    marginTop: hp(1.5),
-    backgroundColor: Colors.appBg,
-    borderWidth: 1,
-    borderColor: Colors.hairline,
-    borderRadius: 14,
-    padding: wp(3),
-    alignItems: 'center',
-  },
-  valuesBannerMark: {
-    width: wp(9),
-    height: wp(9),
-    borderRadius: wp(4.5),
-    backgroundColor: Colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  valuesBannerTxtCon: {
-    flex: 1,
-    marginHorizontal: wp(3),
-  },
-  valuesBannerTitle: {
-    color: Colors.primary,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small2,
-    includeFontPadding: false,
-  },
-  valuesBannerDes: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_R,
-    fontSize: Typography.small,
-    lineHeight: wp(4.4),
-    marginTop: hp(0.2),
   },
   sheetBackdrop: {
     flex: 1,

@@ -1,16 +1,23 @@
 import moment from 'moment';
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { StyleSheet, Text, View } from 'react-native';
+import Ripple from 'react-native-material-ripple';
 
 import NewBadgeIcon from '../assets/svgs/badges/new-badge.svg';
 import PopularBadgeIcon from '../assets/svgs/badges/popular-badge.svg';
 import ProfileCompleteBadgeIcon from '../assets/svgs/badges/profile-complete-badge.svg';
 import VipBadgeIcon from '../assets/svgs/badges/vip-badge.svg';
 import { hp, Typography, wp } from '../global';
+import { LanguageKeys } from '../languages';
 import { checkProfileCompleted } from '../lib/utils/profile-utils';
 import { Colors, Fonts } from '../res';
-import { StorageManager, useGlobalContext } from '../services';
+import {
+  flashSuccessMessage,
+  StorageManager,
+  useGlobalContext,
+} from '../services';
 import {
   type BadgesAndPayments,
   type BadgeVisibility,
@@ -38,6 +45,7 @@ type ProfileBadgesProps = {
     membership_expiry?: string | null;
     created_at?: string | null;
     is_tester?: boolean;
+    tester_badge_preview?: boolean;
   };
   isSelf?: boolean;
   showText?: boolean;
@@ -60,6 +68,7 @@ export function ProfileBadges({
   surface = 'singleProfile',
   iconSize,
 }: ProfileBadgesProps) {
+  const { t } = useTranslation();
   const { currentUser } = useGlobalContext();
   const { getData, storageKeys } = StorageManager;
   const isPremium = usePremiumStore((state) => state.isPremium);
@@ -75,9 +84,9 @@ export function ProfileBadges({
     currentUser?.tester_mode_enabled === true &&
     currentUser?.is_tester &&
     currentUser?.tester_show_all_badges &&
-    (isSelf ? currentUser?.is_tester : userData?.is_tester)
+    (isSelf ? currentUser?.is_tester : userData?.tester_badge_preview)
   );
-  const pillBadgeIconSize = wp(4.2);
+  const pillBadgeIconSize = wp(9);
 
   const isVisibleByConfig = React.useCallback(
     (key: 'completedProfile' | 'boosted' | 'vipMember' | 'newMember') => {
@@ -165,7 +174,7 @@ export function ProfileBadges({
       icon: React.ReactNode;
       pillIcon: React.ReactNode;
       label: string;
-      tone: 'purple' | 'green' | 'blue';
+      hint: string;
     }> = [];
 
     if (isVIP && isVisibleByConfig('vipMember')) {
@@ -175,7 +184,7 @@ export function ProfileBadges({
           <VipBadgeIcon width={pillBadgeIconSize} height={pillBadgeIconSize} />
         ),
         label: 'VIP',
-        tone: 'purple',
+        hint: t(LanguageKeys.vipBadgeHint),
       });
     }
 
@@ -189,7 +198,7 @@ export function ProfileBadges({
           />
         ),
         label: 'Boosted',
-        tone: 'green',
+        hint: t(LanguageKeys.boostedBadgeHint),
       });
     }
 
@@ -211,7 +220,7 @@ export function ProfileBadges({
           />
         ),
         label: 'Complete',
-        tone: 'green',
+        hint: t(LanguageKeys.completeBadgeHint),
       });
     }
 
@@ -222,7 +231,7 @@ export function ProfileBadges({
           <NewBadgeIcon width={pillBadgeIconSize} height={pillBadgeIconSize} />
         ),
         label: 'New',
-        tone: 'blue',
+        hint: t(LanguageKeys.newBadgeHint),
       });
     }
 
@@ -236,6 +245,7 @@ export function ProfileBadges({
     forceAllBadges,
     isNew,
     isVisibleByConfig,
+    t,
   ]);
 
   if (badges.length === 0) {
@@ -249,34 +259,15 @@ export function ProfileBadges({
         style={[Styles.container, Styles.pillContainer, containerStyle]}
       >
         {badges.map((badge, index) => (
-          <View
+          <Ripple
             key={index}
-            style={[
-              Styles.pillBadge,
-              badge.tone === 'purple' ? Styles.pillBadgePurple : null,
-              badge.tone === 'blue' ? Styles.pillBadgeBlue : null,
-            ]}
+            onPress={() => flashSuccessMessage(badge.hint)}
+            accessibilityRole="button"
+            accessibilityLabel={badge.label}
+            style={Styles.pillIconWrap}
           >
-            <View
-              style={[
-                Styles.pillIconWrap,
-                badge.tone === 'purple' ? Styles.pillIconWrapPurple : null,
-                badge.tone === 'blue' ? Styles.pillIconWrapBlue : null,
-              ]}
-            >
-              {badge.pillIcon}
-            </View>
-            <Text
-              style={[
-                Styles.pillLabel,
-                badge.tone === 'purple' ? Styles.pillLabelPurple : null,
-                badge.tone === 'blue' ? Styles.pillLabelBlue : null,
-              ]}
-              numberOfLines={1}
-            >
-              {badge.label}
-            </Text>
-          </View>
+            {badge.pillIcon}
+          </Ripple>
         ))}
       </View>
     );
@@ -329,54 +320,13 @@ const Styles = StyleSheet.create({
   },
   pillContainer: {
     marginTop: hp(0.75),
-  },
-  pillBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: wp(1.2),
-    maxWidth: '100%',
-    paddingVertical: hp(0.55),
-    paddingHorizontal: wp(2.2),
-    borderRadius: 999,
-    backgroundColor: 'rgba(46,158,91,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(46,158,91,0.24)',
+    flexWrap: 'nowrap',
   },
   pillIconWrap: {
-    width: wp(4.2),
-    height: wp(4.2),
-    borderRadius: wp(2.1),
+    width: wp(9),
+    height: wp(9),
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
-  },
-  pillBadgePurple: {
-    backgroundColor: Colors.primaryRGBA12,
-    borderColor: Colors.themeRGBA20,
-  },
-  pillBadgeBlue: {
-    backgroundColor: 'rgba(75,159,234,0.1)',
-    borderColor: 'rgba(75,159,234,0.28)',
-  },
-  pillIconWrapPurple: {
-    backgroundColor: Colors.lavender,
-  },
-  pillIconWrapBlue: {
-    backgroundColor: '#EAF4FF',
-  },
-  pillLabel: {
-    color: Colors.verified,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.tiny1,
-    includeFontPadding: false,
-    alignSelf: 'center',
-  },
-  pillLabelPurple: {
-    color: Colors.primary,
-  },
-  pillLabelBlue: {
-    color: '#287FC2',
   },
   badge: {
     flexDirection: 'row',

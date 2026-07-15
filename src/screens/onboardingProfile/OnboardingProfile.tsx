@@ -195,7 +195,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
 
   const onGiftClaimed = useCallback(
     (result: any) => {
-      // GiftClaimModal shows its own confetti/"You earned" celebration
+      // GiftClaimModal shows its own "You earned" confirmation
       // before calling this (for a fresh claim) or hands off immediately
       // (for an already-claimed race) — either way, no separate toast here,
       // just persisting the result on currentUser.
@@ -347,11 +347,13 @@ const OnboardingProfile = ({ navigation, route }: any) => {
                 {LanguageKeys.finishLater}
               </Text>
             </Ripple>
-            <GiftBadge
-              eligible={giftEligible}
-              claimed={giftClaimed}
-              onPress={onGiftBadgePress}
-            />
+            {!giftClaimed && (
+              <GiftBadge
+                eligible={giftEligible}
+                claimed={giftClaimed}
+                onPress={onGiftBadgePress}
+              />
+            )}
           </View>
         </View>
         <View style={Styles.meterRow}>
