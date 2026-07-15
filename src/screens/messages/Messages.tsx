@@ -36,7 +36,6 @@ import { Colors, Fonts, Images } from '../../res';
 import {
   capitalizeName,
   flashErrorMessage,
-  flashSuccessMessage,
   formatDate,
   StorageManager,
   useGlobalContext,
@@ -432,8 +431,6 @@ const Messages = (props: MessagesProps) => {
 
   const onChatCreditsSuccessCollect = () => {
     setChatCreditsSuccessModalVisible(false);
-
-    flashSuccessMessage('Your chat bundle is ready.');
   };
 
   const onItemPress = (item: Conversation) => {

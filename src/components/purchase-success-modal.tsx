@@ -4,7 +4,6 @@ import Ripple from 'react-native-material-ripple';
 import AntDesign from 'react-native-vector-icons/AntDesign';
 
 import { hp, Typography, wp } from '../global';
-import { CheckRtl } from '../languages';
 import { Colors, Fonts } from '../res';
 import { Text } from './';
 
@@ -21,8 +20,6 @@ export function PurchaseSuccessModal({
   title,
   message,
 }: PurchaseSuccessModalProps) {
-  const Rtl = CheckRtl();
-
   return (
     <Modal
       visible={visible}
@@ -32,19 +29,23 @@ export function PurchaseSuccessModal({
     >
       <View style={Styles.overlay}>
         <View style={Styles.container}>
+          <View style={Styles.topAccent} />
           <View style={Styles.iconContainer}>
-            <AntDesign name="checkcircle" size={wp(15)} color={Colors.theme} />
+            <AntDesign
+              name="checkcircle"
+              size={wp(12)}
+              color={Colors.verified}
+            />
           </View>
           <Text style={Styles.title}>{title || 'Purchase Successful'}</Text>
           <Text style={Styles.message}>
             {message || 'Your purchase was successful!'}
           </Text>
           <Ripple
-            style={[
-              Styles.collectButton,
-              { flexDirection: Rtl ? 'row-reverse' : 'row' },
-            ]}
+            style={Styles.collectButton}
             onPress={onCollect}
+            accessibilityRole="button"
+            accessibilityLabel="Collect chat bundle"
           >
             <Text style={Styles.collectButtonText}>{'Collect'}</Text>
           </Ripple>
@@ -65,12 +66,36 @@ const Styles = StyleSheet.create({
   container: {
     backgroundColor: Colors.color2,
     borderRadius: wp(5),
-    padding: wp(6),
+    paddingHorizontal: wp(6),
+    paddingTop: hp(4),
+    paddingBottom: hp(2.5),
     alignItems: 'center',
     width: '100%',
     maxWidth: wp(85),
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    shadowColor: Colors.ink,
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 10,
+  },
+  topAccent: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: hp(0.8),
+    backgroundColor: Colors.theme,
   },
   iconContainer: {
+    width: wp(20),
+    height: wp(20),
+    borderRadius: wp(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(46, 158, 91, 0.12)',
     marginBottom: hp(2),
   },
   title: {
@@ -78,6 +103,7 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_B,
     color: Colors.color1,
     textAlign: 'center',
+    alignSelf: 'stretch',
     marginBottom: hp(1),
     includeFontPadding: false,
   },
@@ -86,17 +112,17 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_R,
     color: Colors.color1,
     textAlign: 'center',
+    alignSelf: 'stretch',
     marginBottom: hp(3),
     includeFontPadding: false,
   },
   collectButton: {
     backgroundColor: Colors.theme,
-    paddingHorizontal: wp(8),
     paddingVertical: hp(1.5),
-    borderRadius: wp(3),
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: wp(40),
+    width: '100%',
   },
   collectButtonText: {
     fontSize: Typography.medium,

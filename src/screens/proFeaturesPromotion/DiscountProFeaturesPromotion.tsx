@@ -184,6 +184,8 @@ const DiscountProFeaturesPromotion = (props: any) => {
                 name: 'MembershipCongrats',
                 params: {
                   amount: selectedPackage?.product?.price,
+                  localizedPrice: selectedPackage?.product?.priceString,
+                  currencyCode: selectedPackage?.product?.currencyCode,
                   title: selectedPackage?.product?.title,
                 },
               },
