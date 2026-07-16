@@ -262,11 +262,6 @@ const SignupPrimer = ({ navigation }: any) => {
             About 2 minutes · no account needed
           </RNText>
         </ScrollView>
-        <View style={Styles.footer}>
-          <Ripple style={Styles.laterBtn} onPress={exitFlow}>
-            <RNText style={Styles.laterTxt}>Skip for now</RNText>
-          </Ripple>
-        </View>
       </Container>
     );
   }
@@ -363,9 +358,6 @@ const SignupPrimer = ({ navigation }: any) => {
               {`Question ${questionCount.current} of ${questionCount.total}`}
             </RNText>
           </View>
-          <Ripple onPress={advance}>
-            <RNText style={Styles.laterTxt}>Skip</RNText>
-          </Ripple>
         </View>
         <View style={Styles.meterTrack}>
           <View style={[Styles.meterFill, { width: `${progress}%` }]} />
@@ -486,12 +478,6 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(5),
     paddingTop: hp(1.2),
     paddingBottom: hp(2),
-  },
-  laterBtn: { alignSelf: 'center', paddingVertical: hp(1.4) },
-  laterTxt: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small2,
   },
   // gender
   genderScroll: { flex: 1 },
