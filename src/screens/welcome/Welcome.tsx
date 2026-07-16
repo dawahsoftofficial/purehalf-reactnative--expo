@@ -1072,8 +1072,6 @@ const Styles = StyleSheet.create({
   },
   accountMenuCue: {
     alignItems: 'center',
-    backgroundColor: Colors.lavender,
-    borderRadius: wp(4),
     height: wp(7),
     justifyContent: 'center',
     width: wp(7),
