@@ -452,6 +452,7 @@ type ProfileQuestionWizardProps = {
   saving?: boolean;
   finalLabel?: string;
   showSkip?: boolean;
+  requireAnswer?: boolean;
   onComplete: (formData: any[]) => void;
   // Called when Back is pressed on the FIRST question — lets a multi-group host
   // (onboarding) step to the previous group. Absent for single-group use (ME).
@@ -470,6 +471,7 @@ const ProfileQuestionWizard = ({
   saving = false,
   finalLabel = LanguageKeys.update,
   showSkip = true,
+  requireAnswer = true,
   onComplete,
   onBack,
   startAtEnd = false,
@@ -879,11 +881,17 @@ const ProfileQuestionWizard = ({
                     : LanguageKeys.next
               }
               onPress={
-                saving || visibleFields.length === 0 || !isAnswered
+                saving ||
+                visibleFields.length === 0 ||
+                (requireAnswer && !isAnswered)
                   ? undefined
                   : advance
               }
-              disabled={saving || visibleFields.length === 0 || !isAnswered}
+              disabled={
+                saving ||
+                visibleFields.length === 0 ||
+                (requireAnswer && !isAnswered)
+              }
             />
           </View>
         </View>
