@@ -37,6 +37,7 @@ import {
   isIOS,
 } from '../../services';
 import { StorageManager, useGlobalContext } from '../../services';
+import ProfileIntroMedia from '../profile/components/profile-intro-media';
 import { imageResizer } from './Functions';
 
 const PhotosAndVideos = (props: any) => {
@@ -1115,6 +1116,12 @@ const PhotosAndVideos = (props: any) => {
           description={LanguageKeys.profilePhotoShownDes}
         />
         {AddProfilePictureBtn()}
+        <View style={Styles.divider} />
+        <ProfileIntroMedia
+          isOwner
+          media={currentUser?.media}
+          navigation={props.navigation}
+        />
         <View style={Styles.divider} />
         {/* <View style={{ flexDirection: Rtl ? 'row-reverse' : 'row' }}>
           <IconInput

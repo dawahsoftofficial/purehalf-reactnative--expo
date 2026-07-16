@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Entypo from 'react-native-vector-icons/Entypo';
@@ -28,6 +29,7 @@ const PRIVACY_FIELD = 'interest_id';
 
 const EditInterests = ({ navigation, route }: any) => {
   const { data = [] } = (route?.params ?? {}) as { data?: InterestItem[] };
+  const { t } = useTranslation();
   const Rtl = CheckRtl();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
@@ -135,7 +137,7 @@ const EditInterests = ({ navigation, route }: any) => {
       />
       <View style={Styles.subHead}>
         <Text style={Styles.subtitle}>
-          {`${LanguageKeys.interestAndHobbiesLimit} · ${ids.length}/10`}
+          {`${t(LanguageKeys.interestAndHobbiesLimit)} · ${ids.length}/10`}
         </Text>
         <Ripple
           testID={`profile-privacy-toggle-${PRIVACY_FIELD}`}
