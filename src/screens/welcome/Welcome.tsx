@@ -214,39 +214,32 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const accountMenuItems = useMemo(
     () => [
       {
-        label: t(LanguageKeys.myProfile),
+        label: t(LanguageKeys.accountMenuProfile),
         icon: 'person-outline',
         screen: 'Profile',
       },
       {
-        label: t(LanguageKeys.myPhotos),
+        label: t(LanguageKeys.accountMenuPhotos),
         icon: 'images-outline',
         screen: 'PhotosAndVideos',
       },
       {
-        label: t(LanguageKeys.generalSettings),
-        icon: 'settings-outline',
-        screen: 'Settings',
-      },
-      {
-        label: t(LanguageKeys.privacySettings),
+        label: t(LanguageKeys.accountMenuPrivacy),
         icon: 'shield-checkmark-outline',
         screen: 'PrivacySettings',
       },
       {
-        label: t(LanguageKeys.photoRequests),
-        icon: 'image-outline',
-        screen: 'PrivatePhotoRequest',
-        badgeCount: photoAlertCount,
-        params: { initialTab: 'othersRequests' },
-      },
-      {
-        label: t(LanguageKeys.membershipInformation),
+        label: t(LanguageKeys.accountMenuMembership),
         icon: 'diamond-outline',
         screen: isPremiumUser ? 'MembershipInfo' : 'ProFeaturesPromotion',
       },
+      {
+        label: t(LanguageKeys.accountMenuSettings),
+        icon: 'settings-outline',
+        screen: 'Settings',
+      },
     ],
-    [isPremiumUser, photoAlertCount, t]
+    [isPremiumUser, t]
   );
   const [activeOptionButton, setActiveOptionButton] = useState<OptionButton>(
     optionBarList[0]
@@ -856,22 +849,21 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                   >
                     {currentUser?.first_name || t(LanguageKeys.myProfile)}
                   </AppText>
-                  <AppText style={Styles.greetingEyebrow}>
-                    {LanguageKeys.assalamuAlaikum}
-                  </AppText>
                 </View>
-                <Ionicons
-                  name="chevron-down"
-                  size={wp(4)}
-                  color={Colors.muted}
-                />
+                <View style={Styles.accountMenuCue}>
+                  <Ionicons
+                    name="chevron-down"
+                    size={wp(3.6)}
+                    color={Colors.primary}
+                  />
+                </View>
               </View>
             </MenuTrigger>
             <MenuOptions optionsContainerStyle={Styles.accountMenuOptions}>
               {accountMenuItems.map((item) => (
                 <MenuOption
                   key={`${item.screen}-${item.label}`}
-                  onSelect={() => navigation.navigate(item.screen, item.params)}
+                  onSelect={() => navigation.navigate(item.screen)}
                   style={Styles.accountMenuOption}
                 >
                   <View
@@ -890,19 +882,11 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                     <Text style={Styles.accountMenuOptionText}>
                       {item.label}
                     </Text>
-                    {item.badgeCount ? (
-                      <View style={Styles.menuAlertBadge}>
-                        <Text style={Styles.menuAlertBadgeText}>
-                          {item.badgeCount > 99 ? '99+' : item.badgeCount}
-                        </Text>
-                      </View>
-                    ) : (
-                      <Ionicons
-                        name={Rtl ? 'chevron-back' : 'chevron-forward'}
-                        size={wp(4)}
-                        color={Colors.muted}
-                      />
-                    )}
+                    <Ionicons
+                      name={Rtl ? 'chevron-back' : 'chevron-forward'}
+                      size={wp(4)}
+                      color={Colors.muted}
+                    />
                   </View>
                 </MenuOption>
               ))}
@@ -1062,20 +1046,13 @@ const Styles = StyleSheet.create({
     marginTop: hp(1),
   },
   greetingBlock: {
-    flex: 1,
-    paddingHorizontal: wp(2),
-  },
-  greetingEyebrow: {
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
-    color: Colors.muted,
-    includeFontPadding: false,
+    flexShrink: 1,
+    marginHorizontal: wp(2.8),
   },
   greetingName: {
-    fontSize: Typography.medium,
+    fontSize: Typography.large1,
     color: Colors.ink,
     textTransform: 'capitalize',
-    marginTop: hp(0.2),
     includeFontPadding: false,
   },
   headerRightWrapper: {
@@ -1086,13 +1063,20 @@ const Styles = StyleSheet.create({
   accountTrigger: {
     alignItems: 'center',
     backgroundColor: Colors.surface,
-    borderColor: Colors.hairline,
-    borderRadius: wp(7),
+    borderColor: Colors.primaryRGBA12,
+    borderRadius: wp(8),
     borderWidth: 1,
-    maxWidth: wp(56),
-    minWidth: wp(43),
-    paddingHorizontal: wp(1.2),
-    paddingVertical: hp(0.55),
+    maxWidth: wp(62),
+    paddingHorizontal: wp(1.1),
+    paddingVertical: hp(0.4),
+  },
+  accountMenuCue: {
+    alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: wp(4),
+    height: wp(7),
+    justifyContent: 'center',
+    width: wp(7),
   },
   searchIconBtn: {
     width: wp(10),
@@ -1105,17 +1089,17 @@ const Styles = StyleSheet.create({
     borderColor: Colors.primaryRGBA12,
   },
   avatarBtn: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
+    width: wp(13),
+    height: wp(13),
+    borderRadius: wp(6.5),
     backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarImg: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
+    width: wp(13),
+    height: wp(13),
+    borderRadius: wp(6.5),
   },
   headerText: {
     fontFamily: Fonts.APPFONT_B,
@@ -1162,7 +1146,7 @@ const Styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     elevation: 8,
-    marginTop: hp(1),
+    marginTop: hp(7.2),
     paddingVertical: hp(0.7),
     shadowColor: Colors.ink,
     shadowOffset: { width: 0, height: 5 },
@@ -1191,21 +1175,6 @@ const Styles = StyleSheet.create({
     flex: 1,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
-    includeFontPadding: false,
-  },
-  menuAlertBadge: {
-    alignItems: 'center',
-    backgroundColor: Colors.color24,
-    borderRadius: wp(4),
-    justifyContent: 'center',
-    minHeight: wp(6),
-    minWidth: wp(6),
-    paddingHorizontal: wp(1.4),
-  },
-  menuAlertBadgeText: {
-    color: Colors.color2,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.tiny1,
     includeFontPadding: false,
   },
   pendingApprovalBanner: {
