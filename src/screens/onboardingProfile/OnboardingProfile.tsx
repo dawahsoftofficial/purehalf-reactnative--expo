@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { t } from 'i18next';
 import React, {
   useCallback,
   useEffect,
@@ -8,7 +7,6 @@ import React, {
   useState,
 } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
-import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Button, Container, Text } from '../../components';
@@ -19,15 +17,8 @@ import {
   scheduleProfileReminder,
 } from '../../notifications/profile-reminder';
 import { Colors, Fonts } from '../../res';
-import {
-  ApiServices,
-  flashErrorMessage,
-  flashSuccessMessage,
-  StorageManager,
-  useGlobalContext,
-} from '../../services';
+import { ApiServices, StorageManager, useGlobalContext } from '../../services';
 import { useSettingsStore } from '../../stores';
-import GiftBadge from '../profile/components/gift-badge';
 import GiftClaimModal from '../profile/components/gift-claim-modal';
 import ProfileQuestionWizard from '../profile/components/profile-question-wizard';
 import Data from '../profile/Data';
@@ -160,22 +151,7 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   }, [setData, storageKeys.ONBOARDING_INTRO_SEEN]);
 
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
-
-  // GiftBadge is tappable in all three states; only the eligible tap opens
-  // the claim modal — locked/claimed taps just explain the state.
-  const onGiftBadgePress = useCallback(() => {
-    if (giftClaimed) {
-      flashSuccessMessage(t(LanguageKeys.giftAlreadyClaimedHint));
-      return;
-    }
-    if (!giftEligible) {
-      flashErrorMessage(
-        t(LanguageKeys.giftLockedHint, { percent: giftThreshold })
-      );
-      return;
-    }
-    setGiftModalVisible(true);
-  }, [giftClaimed, giftEligible, giftThreshold]);
+  const openGiftModal = useCallback(() => setGiftModalVisible(true), []);
 
   // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
   // so callers cast at the call site — matching the existing
@@ -217,24 +193,11 @@ const OnboardingProfile = ({ navigation, route }: any) => {
       setCategoriesData((prev) => ({ ...prev, [currentGroup.key]: formData }));
       updateDetails(formData)
         .then(async (res: any) => {
-          const reward = res?.reward;
-          if (reward && reward.awarded > 0) {
-            // Reward is surfaced as a lightweight toast now that the between-
-            // groups checkpoint screen is gone. Translate each key first — the
-            // flash helper t()s the whole string, which can't resolve a
-            // concatenation of keys.
-            flashSuccessMessage(
-              `${t(LanguageKeys.youEarned)} +${Math.floor(reward.awarded / 50)} ${t(LanguageKeys.chatCredits)}`
-            );
-          }
           if (res?.detail) {
             const updatedUser: any = {
               ...(currentUser as any),
               detail: res.detail,
             };
-            if (reward && typeof reward.new_balance === 'number') {
-              updatedUser.chat_credits = reward.new_balance;
-            }
             await setData(storageKeys.USER, updatedUser);
             updateCurrentUser(updatedUser);
           }
@@ -307,6 +270,60 @@ const OnboardingProfile = ({ navigation, route }: any) => {
   }
 
   if (phase === 'done') {
+    // Eligible & unclaimed: present the gift with a Claim button.
+    if (giftEligible) {
+      return (
+        <Container style={Styles.screen}>
+          <View style={Styles.center}>
+            <View style={[Styles.doneBadge, Styles.giftBadgeCircle]}>
+              <Ionicons name="gift" size={wp(9)} color={Colors.color2} />
+            </View>
+            <Text variant="display" style={Styles.doneTitle}>
+              {LanguageKeys.giftReadyTitle}
+            </Text>
+            <Text style={Styles.doneBody}>{LanguageKeys.giftReadyBody}</Text>
+          </View>
+          <View style={Styles.footer}>
+            <Button text={LanguageKeys.claimGift} onPress={openGiftModal} />
+          </View>
+          <GiftClaimModal
+            visible={giftModalVisible}
+            giftCredits={giftCredits}
+            onClose={closeGiftModal}
+            onClaimed={onGiftClaimed}
+            claim={claimGift}
+          />
+        </Container>
+      );
+    }
+
+    // Below threshold & unclaimed: nudge to finish in-profile; schedule reminder.
+    if (!giftClaimed) {
+      return (
+        <Container style={Styles.screen}>
+          <View style={Styles.center}>
+            <View style={[Styles.doneBadge, Styles.skippedBadge]}>
+              <Ionicons
+                name="gift-outline"
+                size={wp(9)}
+                color={Colors.primary}
+              />
+            </View>
+            <Text variant="display" style={Styles.doneTitle}>
+              {LanguageKeys.onboardingSkippedTitle}
+            </Text>
+            <Text style={Styles.doneBody}>
+              {LanguageKeys.onboardingSkippedBody}
+            </Text>
+          </View>
+          <View style={Styles.footer}>
+            <Button text={LanguageKeys.continue} onPress={bailFlow} />
+          </View>
+        </Container>
+      );
+    }
+
+    // Already claimed: all set.
     return (
       <Container style={Styles.screen}>
         <View style={Styles.center}>
@@ -341,20 +358,6 @@ const OnboardingProfile = ({ navigation, route }: any) => {
               {currentGroup.title}
             </Text>
           </View>
-          <View style={Styles.headerEndRow}>
-            <Ripple onPress={saving ? undefined : bailFlow} disabled={saving}>
-              <Text style={Styles.finishLaterText}>
-                {LanguageKeys.finishLater}
-              </Text>
-            </Ripple>
-            {!giftClaimed && (
-              <GiftBadge
-                eligible={giftEligible}
-                claimed={giftClaimed}
-                onPress={onGiftBadgePress}
-              />
-            )}
-          </View>
         </View>
         <View style={Styles.meterRow}>
           <View style={Styles.meterTrack}>
@@ -371,16 +374,10 @@ const OnboardingProfile = ({ navigation, route }: any) => {
         saving={saving}
         finalLabel={LanguageKeys.continue}
         showSkip={false}
+        requireAnswer={false}
         startAtEnd={startAtEnd}
         onBack={groupIndex > 0 ? goToPrevGroup : undefined}
         onComplete={onGroupComplete}
-      />
-      <GiftClaimModal
-        visible={giftModalVisible}
-        giftCredits={giftCredits}
-        onClose={closeGiftModal}
-        onClaimed={onGiftClaimed}
-        claim={claimGift}
       />
     </Container>
   );
@@ -408,11 +405,6 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     gap: wp(2.5),
     marginRight: wp(3),
-  },
-  headerEndRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(2.5),
   },
   groupIconChip: {
     width: wp(8),
@@ -458,11 +450,6 @@ const Styles = StyleSheet.create({
     paddingTop: hp(1.5),
     paddingBottom: hp(2),
   },
-  finishLaterText: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small2,
-  },
   doneBadge: {
     width: wp(18),
     height: wp(18),
@@ -471,6 +458,12 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: hp(2),
+  },
+  giftBadgeCircle: {
+    backgroundColor: Colors.attention,
+  },
+  skippedBadge: {
+    backgroundColor: Colors.lavender,
   },
   doneTitle: {
     color: Colors.ink,
