@@ -273,6 +273,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     () => computeGiftStatus(currentUser, giftThreshold),
     [currentUser, giftThreshold]
   );
+  const giftPending = !giftStatus.claimed;
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [dailyReward, setDailyReward] = useState<DailyVipReward | null>(null);
   const [dailyRewardVisible, setDailyRewardVisible] = useState(false);
@@ -840,6 +841,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                       </Text>
                     </View>
                   ) : null}
+                  {giftPending ? <View style={Styles.giftDot} /> : null}
                 </View>
                 <View style={Styles.greetingBlock}>
                   <AppText
@@ -879,9 +881,14 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
                         color={Colors.primary}
                       />
                     </View>
-                    <Text style={Styles.accountMenuOptionText}>
-                      {item.label}
-                    </Text>
+                    <View style={Styles.accountMenuLabelWrap}>
+                      <Text style={Styles.accountMenuOptionText}>
+                        {item.label}
+                      </Text>
+                      {giftPending && item.screen === 'Profile' ? (
+                        <View style={Styles.giftDotInline} />
+                      ) : null}
+                    </View>
                     <Ionicons
                       name={Rtl ? 'chevron-back' : 'chevron-forward'}
                       size={wp(4)}
@@ -1174,6 +1181,29 @@ const Styles = StyleSheet.create({
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small1,
     includeFontPadding: false,
+  },
+  accountMenuLabelWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+  },
+  giftDot: {
+    position: 'absolute',
+    top: -hp(0.2),
+    left: -wp(1),
+    width: wp(3),
+    height: wp(3),
+    borderRadius: wp(1.5),
+    backgroundColor: Colors.color24,
+    borderWidth: 1.5,
+    borderColor: Colors.surface,
+  },
+  giftDotInline: {
+    width: wp(2.2),
+    height: wp(2.2),
+    borderRadius: wp(1.1),
+    backgroundColor: Colors.color24,
   },
   pendingApprovalBanner: {
     flexDirection: 'row',
