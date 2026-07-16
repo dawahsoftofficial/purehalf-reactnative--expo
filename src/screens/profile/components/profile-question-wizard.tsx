@@ -9,7 +9,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ripple from 'react-native-material-ripple';
@@ -479,7 +478,6 @@ const ProfileQuestionWizard = ({
   onPrivacyChange,
 }: ProfileQuestionWizardProps) => {
   const Rtl = CheckRtl();
-  const { t } = useTranslation();
 
   const [formData, setFormData] = useState<any[]>(() =>
     JSON.parse(JSON.stringify(fields ?? [])).map(normalizeScalingSelected)
@@ -711,7 +709,42 @@ const ProfileQuestionWizard = ({
 
       return (
         <View style={Styles.questionCard}>
-          <Text style={Styles.questionEyebrow}>{progressLabel}</Text>
+          <View style={Styles.headerRow}>
+            <Text style={Styles.questionEyebrow}>{progressLabel}</Text>
+            {showPrivacyControl ? (
+              <View style={Styles.privacyControlWrap}>
+                <Ripple
+                  testID={`profile-privacy-toggle-${privacyField}`}
+                  style={[
+                    Styles.privacyToggle,
+                    Rtl && { flexDirection: 'row-reverse' },
+                  ]}
+                  onPress={() => {
+                    const nextVisibility = isVisible ? 'private' : 'public';
+                    onPrivacyChange?.(privacyField, nextVisibility);
+                  }}
+                  disabled={privacyUpdatingField === privacyField}
+                  rippleColor={Colors.primary}
+                >
+                  <Entypo
+                    name={isVisible ? 'eye' : 'eye-with-line'}
+                    size={wp(3.6)}
+                    color={Colors.primary}
+                  />
+                  <Text style={Styles.privacyToggleTxt}>
+                    {isVisible
+                      ? LanguageKeys.hideField
+                      : LanguageKeys.unhideField}
+                  </Text>
+                </Ripple>
+                <Text style={Styles.privacyStatusTxt}>
+                  {isVisible
+                    ? LanguageKeys.visibleOnProfile
+                    : LanguageKeys.hiddenOnProfile}
+                </Text>
+              </View>
+            ) : null}
+          </View>
           <View style={Styles.progressTrack}>
             <View
               style={[
@@ -726,44 +759,7 @@ const ProfileQuestionWizard = ({
               ]}
             />
           </View>
-          <View style={Styles.questionTitleRow}>
-            <View style={Styles.questionTitleText}>
-              <Text style={Styles.questionTitle}>{iTitle}</Text>
-              {showPrivacyControl ? (
-                <>
-                  <Ripple
-                    testID={`profile-privacy-toggle-${privacyField}`}
-                    style={[
-                      Styles.privacyToggle,
-                      Rtl && { flexDirection: 'row-reverse' },
-                    ]}
-                    onPress={() => {
-                      const nextVisibility = isVisible ? 'private' : 'public';
-                      onPrivacyChange?.(privacyField, nextVisibility);
-                    }}
-                    disabled={privacyUpdatingField === privacyField}
-                    rippleColor={Colors.primary}
-                  >
-                    <Entypo
-                      name={isVisible ? 'eye' : 'eye-with-line'}
-                      size={wp(3.6)}
-                      color={Colors.primary}
-                    />
-                    <Text style={Styles.privacyToggleTxt}>
-                      {isVisible
-                        ? LanguageKeys.hideField
-                        : LanguageKeys.unhideField}
-                    </Text>
-                  </Ripple>
-                  <Text style={Styles.privacyStatusTxt}>
-                    {isVisible
-                      ? LanguageKeys.visibleOnProfile
-                      : LanguageKeys.hiddenOnProfile}
-                  </Text>
-                </>
-              ) : null}
-            </View>
-          </View>
+          <Text style={Styles.questionTitle}>{iTitle}</Text>
 
           <View style={Styles.controlWrap}>
             {type === 'input' ? (
@@ -824,7 +820,6 @@ const ProfileQuestionWizard = ({
       profileFieldVisibility,
       privacyUpdatingField,
       onPrivacyChange,
-      t,
     ]
   );
 
@@ -925,10 +920,20 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(4),
     paddingVertical: hp(2.2),
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: wp(3),
+  },
   questionEyebrow: {
     color: Colors.primary,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
+    marginTop: hp(0.5),
+  },
+  privacyControlWrap: {
+    alignItems: 'flex-end',
   },
   progressTrack: {
     height: 8,
@@ -949,21 +954,11 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small3,
     lineHeight: wp(6.2),
   },
-  questionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: wp(3),
-  },
-  questionTitleText: {
-    flex: 1,
-  },
   privacyToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
     gap: wp(1.5),
-    marginTop: hp(0.8),
     paddingVertical: hp(0.7),
     paddingHorizontal: wp(3),
     borderRadius: 999,
@@ -980,6 +975,7 @@ const Styles = StyleSheet.create({
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.tiny1,
+    textAlign: 'right',
     marginTop: hp(0.4),
     includeFontPadding: false,
   },

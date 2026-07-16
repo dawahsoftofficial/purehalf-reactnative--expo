@@ -24,11 +24,9 @@ import messageServices from '../../services/api/message-services';
 import type { UserMedia } from '../../services/api/types/user-types';
 import PolygamyBadge from './components/polygamy-badge';
 import ProfileIntroMedia from './components/profile-intro-media';
-import { updateDetails } from './Funtions';
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
-import InterestsPickerModal from './InterestsPickerModal';
 import {
   type BlockPickerOption,
   BlockPickerSheet,
@@ -43,11 +41,7 @@ import {
   InterestsPreview,
   SectionLabel,
 } from './profile-hub';
-import {
-  type FieldVisibilityLevel,
-  type ProfileFieldVisibility,
-  type ProfilePrivacyResponse,
-} from './profile-privacy';
+import { type ProfileFieldVisibility } from './profile-privacy';
 import Styles from './Styles';
 
 type LoaderState = { visible: boolean; message: string };
@@ -142,13 +136,6 @@ const Profile = ({
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
-  const [interestsPickerVisible, setInterestsPickerVisible] = useState(false);
-  const [interestsSaving, setInterestsSaving] = useState(false);
-  const [privacyUpdatingField, setPrivacyUpdatingField] = useState('');
-  const [profileFieldVisibility, setProfileFieldVisibility] =
-    useState<ProfileFieldVisibility>(
-      currentUser?.detail?.profile_field_visibility ?? {}
-    );
 
   const blockPickerData: BlockPickerOption[] = useMemo(
     () =>
@@ -204,9 +191,6 @@ const Profile = ({
         if (currentUser?.detail?.tagline) {
           setTagLineInput(currentUser.detail.tagline);
         }
-        setProfileFieldVisibility(
-          currentUser?.detail?.profile_field_visibility ?? {}
-        );
       }, 0);
 
       return () => clearTimeout(timeout);
@@ -241,37 +225,8 @@ const Profile = ({
   );
 
   const onEditInterests = useCallback(() => {
-    setInterestsPickerVisible(true);
-  }, []);
-
-  const onCloseInterestsPicker = useCallback(() => {
-    setInterestsPickerVisible(false);
-  }, []);
-
-  const onSaveInterests = useCallback(
-    (ids: string[]) => {
-      setInterestsSaving(true);
-      updateDetails({ interestAndHobbies: ids })
-        .then(async (res: any) => {
-          if (res && Object.keys(res).length !== 0) {
-            const updatedUser = { ...currentUser, detail: res };
-            await setData(storageKeys.USER, updatedUser);
-            updateCurrentUser(updatedUser);
-            setIinterestAndHobbies((prev) =>
-              prev.map((item) => ({
-                ...item,
-                selected: ids.includes(item?.id),
-              }))
-            );
-          }
-          flashSuccessMessage();
-          setInterestsSaving(false);
-          setInterestsPickerVisible(false);
-        })
-        .catch(() => setInterestsSaving(false));
-    },
-    [currentUser, setData, storageKeys.USER, updateCurrentUser]
-  );
+    navigation.navigate('EditInterests', { data: interestAndHobbies });
+  }, [navigation, interestAndHobbies]);
 
   const getAttribute = useCallback(
     async (Data: any, nextUserData: User) => {
@@ -383,9 +338,6 @@ const Profile = ({
           });
           const user = (await ApiServices.getUserDetail(profileUserId)) as User;
           setUserData(user);
-          setProfileFieldVisibility(
-            user?.detail?.profile_field_visibility ?? {}
-          );
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
@@ -416,9 +368,6 @@ const Profile = ({
             media: userData.media ?? undefined,
           };
           setUserData(user);
-          setProfileFieldVisibility(
-            user?.detail?.profile_field_visibility ?? {}
-          );
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
@@ -570,57 +519,6 @@ const Profile = ({
 
   const onChangeTagLine = (text: string) => setTagLineInput(text);
 
-  const updateInlinePrivacy = useCallback(
-    (field: string, next: FieldVisibilityLevel) => {
-      if (privacyUpdatingField) return;
-
-      const previous = profileFieldVisibility[field] ?? 'public';
-      const optimistic = { ...profileFieldVisibility, [field]: next };
-      setProfileFieldVisibility(optimistic);
-      setPrivacyUpdatingField(field);
-
-      ApiServices.updateProfilePrivacy({ visibility: { [field]: next } })
-        .then(async (result: ProfilePrivacyResponse) => {
-          const savedVisibility =
-            result?.profile_field_visibility ?? optimistic;
-          const updatedUser = {
-            ...currentUser,
-            detail: {
-              ...(currentUser?.detail ?? {}),
-              profile_field_visibility: savedVisibility,
-            },
-          };
-
-          setProfileFieldVisibility(savedVisibility);
-          setUserData((previousUser) => ({
-            ...previousUser,
-            detail: {
-              ...(previousUser?.detail ?? {}),
-              profile_field_visibility: savedVisibility,
-            },
-          }));
-          updateCurrentUser(updatedUser);
-          await setData(storageKeys.USER, updatedUser);
-          flashSuccessMessage(LanguageKeys.updated);
-        })
-        .catch(() => {
-          setProfileFieldVisibility({
-            ...profileFieldVisibility,
-            [field]: previous,
-          });
-        })
-        .finally(() => setPrivacyUpdatingField(''));
-    },
-    [
-      currentUser,
-      privacyUpdatingField,
-      profileFieldVisibility,
-      setData,
-      storageKeys.USER,
-      updateCurrentUser,
-    ]
-  );
-
   const isOwnProfile = !fromUserProfile;
   const headerUserData = {
     ...userData,
@@ -668,10 +566,13 @@ const Profile = ({
             onTaglineEditPress={showTagLineInput}
             onTaglineCancel={hideTagLineInput}
           />
-          {!isBlockedYou ? (
+          {/* Owner manages their intro video/voice from the Photos & videos
+              screen; here we only show the viewer version so visitors can
+              still watch/hear another member's intro on their profile. */}
+          {!isBlockedYou && fromUserProfile ? (
             <ProfileIntroMedia
-              isOwner={!fromUserProfile}
-              media={!fromUserProfile ? currentUser?.media : userData?.media}
+              isOwner={false}
+              media={userData?.media}
               navigation={navigation}
             />
           ) : null}
@@ -767,24 +668,6 @@ const Profile = ({
         data={buttonPickerVisible.pickerData}
         onButtonPress={onButtonPickerButtonPress}
         headerTitle={buttonPickerVisible.pickerHeaderTitle}
-      />
-
-      <InterestsPickerModal
-        visible={interestsPickerVisible}
-        data={interestAndHobbies}
-        saving={interestsSaving}
-        privacyVisible={profileFieldVisibility.interest_id !== 'private'}
-        privacyUpdating={privacyUpdatingField === 'interest_id'}
-        onPrivacyChange={() =>
-          updateInlinePrivacy(
-            'interest_id',
-            profileFieldVisibility.interest_id === 'private'
-              ? 'public'
-              : 'private'
-          )
-        }
-        onClose={onCloseInterestsPicker}
-        onSave={onSaveInterests}
       />
     </SafeAreaView>
   );
