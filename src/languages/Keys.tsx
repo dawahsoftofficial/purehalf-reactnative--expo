@@ -26,6 +26,8 @@ const Keys = {
   group: 'group',
   onboardingDoneTitle: 'onboardingDoneTitle',
   onboardingDoneBody: 'onboardingDoneBody',
+  onboardingSkippedTitle: 'onboardingSkippedTitle',
+  onboardingSkippedBody: 'onboardingSkippedBody',
   onboardingIntroTitle: 'onboardingIntroTitle',
   onboardingIntroBody: 'onboardingIntroBody',
   onboardingIntroRewardChip: 'onboardingIntroRewardChip',

@@ -181,6 +181,8 @@
     "group": "Group",
     "onboardingDoneTitle": "You're all set",
     "onboardingDoneBody": "Your profile is looking great. You can always add more from your profile.",
+    "onboardingSkippedTitle": "A few details are still empty",
+    "onboardingSkippedBody": "Finish your profile to unlock your free-chats gift. You can complete it anytime from your profile.",
     "onboardingIntroTitle": "Let's Build Your Best Profile",
     "onboardingIntroBody": "A few more details about your appearance, lifestyle, and values help us find matches who are truly right for you. Finish every section and we'll thank you with free chats — enough to start real conversations.",
     "onboardingIntroRewardChip": "Free chats when you finish",
