@@ -43,6 +43,13 @@ const InterestAndHobbyCard = ({
 
   const hasSelected = selectedItems.length > 0;
 
+  // Other-member payloads redact private interests to an empty value. Do not
+  // turn that redaction (or a genuinely empty answer) into a visible profile
+  // section that hints at a hidden field.
+  if (fromUserProfile && !hasSelected) {
+    return <View />;
+  }
+
   return data.length !== 0 ? (
     <Ripple
       onPress={onEdit}

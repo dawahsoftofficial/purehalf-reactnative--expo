@@ -9,6 +9,7 @@ type UserData = {
     marriage_plan_id?: number;
     relocation_plan_id?: number;
     personality_id?: number[];
+    interest_id?: string[];
     [key: string]: unknown;
   };
   [key: string]: unknown;
@@ -42,7 +43,7 @@ export function checkProfileCompleted(
       userData.detail?.marriage_plan_id &&
       userData.detail?.relocation_plan_id
     ),
-    'myInterestAndHobbies-0': Boolean(userData.detail?.personality_id?.length),
+    'myInterestAndHobbies-0': Boolean(userData.detail?.interest_id?.length),
   };
 
   if (profileDetailLocal && typeof profileDetailLocal === 'object') {

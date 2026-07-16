@@ -370,6 +370,8 @@
     "overallPracticeLevel": "Majmoi tor par mazhab par amal",
     "seeAllPictures": "Tamam tasaveer dekhyn",
     "myPhotos": "Meri tasveerain",
+    "myProfile": "Mera profile",
+    "photoRequests": "Photo requests",
     "rs3000PerMonth": "RS 3000 per month",
     "aboutYourself": "Apnay bary mai batayn",
     "aboutPartner": "Ap ko kis qism ky hamsafar ki zarorat hai?",
@@ -668,7 +670,7 @@
     "turnOnNotifications": "Notifications on karain",
     "notificationsBannerDescription": "Naya message miltay hi notification hasil karain.",
     "notificationPermissionOffTitle": "Notifications band hain",
-    "notificationPermissionOffDescription": "Yeh ijazat sirf device settings mein tabdeel ho sakti hai. Settings khol kar Pure Half ke notifications allow karain.",
+    "notificationPermissionOffDescription": "Notifications band hon to naye messages, matches, photo requests aur approvals, membership updates aur customer support ke replies miss ho saktay hain. Ab notifications on karain ya device settings mein Pure Half ko allow karain.",
     "openSettings": "Settings kholain",
     "notNow": "Abhi nahi"
   }

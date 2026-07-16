@@ -1,117 +1,158 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   StatusBar,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Ripple from 'react-native-material-ripple';
-import AntDesign from 'react-native-vector-icons/AntDesign';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
-import { Animation } from '../../animations';
 import { hp, Typography, wp } from '../../global';
 import { Colors, Fonts } from '../../res';
 import Text from '../Text';
 import SearchBar from './SearchBar';
 
-const Picker = (props: any) => {
-  const [data, setData] = useState([]);
+type PickerItem = {
+  id?: string | number;
+  value?: string | number;
+};
 
-  const {
-    visible = false,
-    onClose = () => null,
-    onPress = () => null,
-    headerTitle = '',
-    loader = false,
-  } = props;
+type PickerProps = {
+  visible?: boolean;
+  onClose?: () => void;
+  onPress?: (item: PickerItem) => void;
+  headerTitle?: string;
+  loader?: boolean;
+  data?: PickerItem[];
+};
 
-  useEffect(() => {
-    setTimeout(() => {
-      setData(props?.data);
-    }, 0);
-  }, [props?.data]);
+const displayValue = (value: PickerItem['value']) => {
+  if (typeof value !== 'number') return value ?? '';
+  if (value === 1) return 'Yes';
+  if (value === 0) return 'No';
+  return String(value);
+};
 
-  const renderList = ({ item }: any) => {
-    const { value } = item;
-    return (
-      <Ripple style={Styles.itemCon} onPress={onPress.bind(null, item)}>
-        <Text style={Styles.itemLabel} numberOfLines={1}>
-          {typeof value === 'number'
-            ? value === 1
-              ? 'Yes'
-              : value === 0
-                ? 'No'
-                : JSON.stringify(value)
-            : value}
-        </Text>
-      </Ripple>
+const Picker = ({
+  visible = false,
+  onClose = () => undefined,
+  onPress = () => undefined,
+  headerTitle = '',
+  loader = false,
+  data = [],
+}: PickerProps) => {
+  const [query, setQuery] = useState('');
+
+  const filteredData = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    if (!normalizedQuery) return data;
+
+    return data.filter((item) =>
+      String(displayValue(item?.value))
+        .toLocaleLowerCase()
+        .includes(normalizedQuery)
     );
-  };
-
-  const renderLoader = () => (
-    <ActivityIndicator
-      color={Colors.theme}
-      size={wp(6)}
-      style={Styles.loader}
-    />
-  );
-
-  const onChangeSearch = (text: any) => {
-    if (text.length === 0) {
-      setData(props?.data);
-    } else {
-      const regex = new RegExp(
-        `.*${text.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&').trim()}.*`,
-        'gi'
-      );
-      const data = props?.data?.filter((item: any) => regex.test(item?.value));
-      setData(data);
-    }
-  };
+  }, [data, query]);
 
   return (
-    <Modal visible={visible} transparent={true} animationType="slide">
-      <StatusBar
-        backgroundColor={Colors.blackRGBA50}
-        barStyle="light-content"
-      />
-      <TouchableOpacity
-        style={Styles.container}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <Animation
-          style={{
-            ...Styles.innerContainer,
-            height: props?.data?.length > 10 ? hp(65) : 'auto',
-          }}
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="fullScreen"
+      onShow={() => setQuery('')}
+      onRequestClose={() => {
+        setQuery('');
+        onClose();
+      }}
+    >
+      <SafeAreaView style={Styles.safeArea} edges={['top', 'bottom']}>
+        <StatusBar backgroundColor={Colors.surface} barStyle="dark-content" />
+        <KeyboardAvoidingView
+          style={Styles.keyboardAvoidingView}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={Styles.headerCon}>
-            <Text style={Styles.headerTxt} numberOfLines={1}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={() => {
+                setQuery('');
+                onClose();
+              }}
+              style={Styles.closeBtn}
+            >
+              <Ionicons name="close" color={Colors.ink} size={wp(6)} />
+            </TouchableOpacity>
+            <Text style={Styles.headerTxt} numberOfLines={2}>
               {headerTitle}
             </Text>
-            <AntDesign
-              name="closecircle"
-              color={Colors.color1}
-              size={wp(6)}
-              style={Styles.closeBtn}
-              onPress={onClose}
-            />
+            <View style={Styles.headerSpacer} />
           </View>
-          {props?.data?.length > 10 && (
-            <SearchBar onChangeText={onChangeSearch} />
-          )}
+
+          {data.length > 10 ? (
+            <SearchBar
+              key={visible ? 'picker-search-open' : 'picker-search-closed'}
+              onChangeText={setQuery}
+              autoFocus={false}
+            />
+          ) : null}
+
           <FlatList
-            data={data}
-            renderItem={renderList}
+            data={filteredData}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={
+              Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+            }
+            keyExtractor={(item, index) => String(item?.id ?? index)}
+            renderItem={({ item }) => (
+              <Ripple
+                style={Styles.itemCon}
+                onPress={() => {
+                  setQuery('');
+                  onPress(item);
+                }}
+              >
+                <Text style={Styles.itemLabel}>
+                  {displayValue(item?.value)}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  color={Colors.primaryLite}
+                  size={wp(4.5)}
+                />
+              </Ripple>
+            )}
             contentContainerStyle={Styles.listContainer}
-            ListFooterComponent={loader && renderLoader()}
+            ListEmptyComponent={
+              loader ? (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size="small"
+                  style={Styles.loader}
+                />
+              ) : (
+                <Text style={Styles.emptyText}>No matching options</Text>
+              )
+            }
+            ListFooterComponent={
+              loader && filteredData.length > 0 ? (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size="small"
+                  style={Styles.loader}
+                />
+              ) : null
+            }
           />
-        </Animation>
-      </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 };
@@ -119,59 +160,73 @@ const Picker = (props: any) => {
 export default Picker;
 
 const Styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.blackRGBA50,
-    justifyContent: 'flex-end',
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.appBg,
+  },
+  keyboardAvoidingView: {
     flex: 1,
   },
-  innerContainer: {
-    backgroundColor: Colors.color2,
-    borderTopRightRadius: 20,
-    borderTopLeftRadius: 20,
-  },
   headerCon: {
-    borderBottomWidth: 0.2,
-    borderBottomColor: Colors.color4,
-    borderTopRightRadius: 20,
-    borderTopLeftRadius: 20,
-    paddingVertical: hp(1.5),
-    justifyContent: 'center',
+    minHeight: hp(7),
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.color8,
+    paddingHorizontal: wp(3),
+    backgroundColor: Colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.hairline,
+  },
+  closeBtn: {
+    width: wp(11),
+    minHeight: hp(6),
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   headerTxt: {
-    color: Colors.color1,
-    alignSelf: 'center',
+    flex: 1,
+    color: Colors.ink,
     textAlign: 'center',
     fontFamily: Fonts.APPFONT_B,
     fontSize: Typography.small3,
-    lineHeight: wp(5),
-    maxWidth: wp(80),
+    lineHeight: wp(5.5),
   },
-  closeBtn: {
-    alignSelf: 'flex-end',
-    marginBottom: hp(1),
-    position: 'absolute',
-    paddingHorizontal: wp(2),
+  headerSpacer: {
+    width: wp(11),
   },
   listContainer: {
-    paddingHorizontal: wp(3),
+    paddingHorizontal: wp(4),
     paddingTop: hp(1),
-    paddingBottom: hp(10),
+    paddingBottom: hp(4),
   },
   itemCon: {
-    borderBottomWidth: 0.2,
-    borderBottomColor: Colors.color4,
-    paddingVertical: hp(1.5),
+    minHeight: hp(7),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: wp(3),
+    paddingHorizontal: wp(4),
+    paddingVertical: hp(1.3),
+    marginBottom: hp(1),
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.hairline,
+    backgroundColor: Colors.surface,
   },
   itemLabel: {
-    color: Colors.color1,
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small3,
-    lineHeight: wp(5),
-    maxWidth: wp(90),
+    flex: 1,
+    color: Colors.ink,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small2,
+    lineHeight: wp(5.2),
   },
   loader: {
-    marginTop: hp(5),
+    marginVertical: hp(4),
+  },
+  emptyText: {
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+    textAlign: 'center',
+    marginTop: hp(8),
   },
 });

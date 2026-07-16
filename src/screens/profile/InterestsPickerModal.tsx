@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Modal,
   ScrollView,
@@ -43,6 +44,7 @@ const InterestsPickerModal = ({
   onSave,
 }: InterestsPickerModalProps) => {
   const Rtl = CheckRtl();
+  const { t } = useTranslation();
   const [ids, setIds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -90,7 +92,7 @@ const InterestsPickerModal = ({
         onPress={onClose}
       >
         <Animation style={Styles.sheet}>
-          <TouchableOpacity activeOpacity={1}>
+          <TouchableOpacity activeOpacity={1} style={Styles.sheetContent}>
             <View style={Styles.headerCon}>
               <Text style={Styles.headerTxt} numberOfLines={1}>
                 {LanguageKeys.myInterestAndHobbies}
@@ -105,7 +107,7 @@ const InterestsPickerModal = ({
             </View>
             <View style={Styles.subHead}>
               <Text style={Styles.subtitle}>
-                {LanguageKeys.interestAndHobbiesLimit}
+                {`${t(LanguageKeys.interestAndHobbiesLimit)} · ${ids.length}/10`}
               </Text>
               {onPrivacyChange ? (
                 <Ripple
@@ -175,7 +177,7 @@ const InterestsPickerModal = ({
             </ScrollView>
             <View style={Styles.footer}>
               <Button
-                text={LanguageKeys.save}
+                text={LanguageKeys.update}
                 onPress={saving ? undefined : () => onSave(ids)}
                 disabled={saving}
                 loading={saving}
@@ -201,7 +203,10 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.color2,
     borderTopRightRadius: 20,
     borderTopLeftRadius: 20,
-    maxHeight: hp(80),
+    maxHeight: hp(86),
+  },
+  sheetContent: {
+    flexShrink: 1,
   },
   headerCon: {
     borderBottomWidth: 0.2,
@@ -261,6 +266,7 @@ const Styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: wp(3),
+    flexShrink: 1,
   },
   listContent: {
     paddingTop: hp(0.5),

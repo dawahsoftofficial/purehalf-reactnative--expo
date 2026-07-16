@@ -86,11 +86,16 @@ export const InterestsPreview = memo(function InterestsPreview({
               </RNText>
             </View>
           ) : null}
-          <Ionicons
-            name="chevron-forward"
-            size={wp(5)}
-            color={Colors.primaryLite}
-          />
+          <View style={Styles.updateAction}>
+            <RNText style={Styles.updateActionTxt}>
+              {t(LanguageKeys.update)}
+            </RNText>
+            <Ionicons
+              name="chevron-forward"
+              size={wp(4.5)}
+              color={Colors.primary}
+            />
+          </View>
         </View>
       </View>
     </Ripple>
@@ -233,6 +238,18 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2.5),
+  },
+  updateAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(0.5),
+    paddingVertical: hp(0.7),
+    paddingLeft: wp(2),
+  },
+  updateActionTxt: {
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
   },
   addRow: {
     flexDirection: 'row',

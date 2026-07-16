@@ -373,6 +373,8 @@
     "overallPracticeLevel": "How commited are you in islamic lifestyle?",
     "seeAllPictures": "See all pictures",
     "myPhotos": "My Photos",
+    "myProfile": "My profile",
+    "photoRequests": "Photo requests",
     "rs3000PerMonth": "RS 3000 per month",
     "aboutYourself": "About yourself",
     "aboutPartner": "What kind of partner do you require?",
@@ -688,7 +690,7 @@
     "turnOnNotifications": "Turn on notifications",
     "notificationsBannerDescription": "Get notified as soon as you receive a new message.",
     "notificationPermissionOffTitle": "Notifications are turned off",
-    "notificationPermissionOffDescription": "This permission can only be changed in your device settings. Open Settings and allow notifications for Pure Half.",
+    "notificationPermissionOffDescription": "When notifications are off, you may miss new messages, matches, photo requests and approvals, membership updates, and replies from customer support. Turn them on now or open your device settings to allow Pure Half notifications.",
     "openSettings": "Open Settings",
     "notNow": "Not now"
   }

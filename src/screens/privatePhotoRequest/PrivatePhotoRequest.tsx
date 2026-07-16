@@ -8,6 +8,8 @@ import Constants from '../../global/Constants';
 import { LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
 import { ApiServices } from '../../services';
+import notificationServices from '../../services/api/notification-services';
+import { useUserStatsStore } from '../../stores';
 import RequestedList from './RequestedList';
 
 type TopBarButtonProps = {
@@ -15,6 +17,7 @@ type TopBarButtonProps = {
   onTopBarPress: (btn: string) => void;
   btnType: 'othersRequests' | 'yourRequests';
   label: string;
+  badgeCount?: number;
 };
 
 const RenderTopBarButton = ({
@@ -22,6 +25,7 @@ const RenderTopBarButton = ({
   onTopBarPress,
   btnType,
   label,
+  badgeCount = 0,
 }: TopBarButtonProps) => (
   <Ripple
     style={{
@@ -41,19 +45,46 @@ const RenderTopBarButton = ({
     >
       {label}
     </Text>
+    {badgeCount > 0 ? (
+      <View style={Styles.badgeView}>
+        <Text style={Styles.badgeTxt}>
+          {String(badgeCount > 99 ? '99+' : badgeCount)}
+        </Text>
+      </View>
+    ) : null}
   </Ripple>
 );
 
 const PrivatePhotoRequest = (props: any) => {
+  const initialTab =
+    props.route?.params?.initialTab === 'yourRequests'
+      ? 'yourRequests'
+      : 'othersRequests';
   const [loader, setLoader] = useState(true);
-  const [selectedTopBarBtn, setSelectedTopBarBtn] = useState('othersRequests');
+  const [selectedTopBarBtn, setSelectedTopBarBtn] = useState(initialTab);
   const [othersRequests, setOthersRequests] = useState<any>([]);
   const [othersRequestsPage, setOthersRequestsPage] = useState<any>(1);
   const [yourRequests, setYourRequests] = useState<any>([]);
   const [yourRequestsPage, setYourRequestsPage] = useState<any>(1);
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
+  const { photo_request_count, photo_approval_count, setPhotoApprovalCount } =
+    useUserStatsStore();
 
-  const onTopBarPress = (btn: any) => setSelectedTopBarBtn(btn);
+  const markPhotoApprovalsSeen = () => {
+    const previousCount = photo_approval_count;
+    setPhotoApprovalCount(0);
+    notificationServices.markPhotoApprovalsAsRead().catch(() => {
+      // Restore the indicator if the server could not persist the read state.
+      setPhotoApprovalCount(previousCount);
+    });
+  };
+
+  const onTopBarPress = (btn: any) => {
+    setSelectedTopBarBtn(btn);
+    if (btn === 'yourRequests') {
+      markPhotoApprovalsSeen();
+    }
+  };
 
   const hideLoader = () => setLoader(false);
 
@@ -89,6 +120,9 @@ const PrivatePhotoRequest = (props: any) => {
         }
         setLoader(false);
         setLoadMoreLoader(false);
+        if (initialTab === 'yourRequests') {
+          markPhotoApprovalsSeen();
+        }
       })
       .catch(hideLoader);
   };
@@ -132,12 +166,14 @@ const PrivatePhotoRequest = (props: any) => {
             onTopBarPress={onTopBarPress}
             btnType="othersRequests"
             label={LanguageKeys.othersRequested}
+            badgeCount={photo_request_count}
           />
           <RenderTopBarButton
             selectedTopBarBtn={selectedTopBarBtn}
             onTopBarPress={onTopBarPress}
             btnType="yourRequests"
             label={LanguageKeys.youRequested}
+            badgeCount={photo_approval_count}
           />
         </View>
         {loader ? (
@@ -199,14 +235,16 @@ const Styles = StyleSheet.create({
     alignSelf: 'center',
   },
   badgeView: {
-    width: width * 0.033,
-    height: width * 1 * 0.033,
-    borderRadius: (width * 1 * 0.033) / 2,
+    minWidth: width * 0.05,
+    height: width * 0.05,
+    borderRadius: width * 0.025,
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
     backgroundColor: Colors.color24,
-    top: hp(-0.5),
+    right: wp(2),
+    top: hp(0.3),
+    paddingHorizontal: wp(1),
   },
   badgeTxt: {
     color: Colors.color2,

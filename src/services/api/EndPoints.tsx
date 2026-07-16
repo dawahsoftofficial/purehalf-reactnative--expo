@@ -78,6 +78,8 @@ const EndPoints = {
   notifications: '/auth/notifications',
   notificationMarkRead: (id: number) => `/auth/notifications/${id}/read`,
   notificationsMarkAllRead: '/auth/notifications/mark-all-read',
+  notificationPhotoApprovalsMarkRead:
+    '/auth/notifications/photo-approvals/read',
   notificationDelete: (id: number) => `/auth/notifications/${id}`,
   notificationsClearAll: '/auth/notifications/clear-all',
 

@@ -58,12 +58,14 @@ export type UserDetail = {
   marriage_plan_id?: number;
   relocation_plan_id?: number;
   personality_id?: number[];
+  interest_id?: string[];
   height_scale?: string;
   height_display_scale?: string;
   height?: number;
   weight_scale?: string;
   weight?: number;
   personality_id_value?: unknown;
+  interest_id_value?: unknown;
   [key: string]: unknown;
 };
 

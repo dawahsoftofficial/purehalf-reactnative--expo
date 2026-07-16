@@ -137,7 +137,7 @@ const updateDetails = async (data: any) => {
         }
       }
     } else if (data?.interestAndHobbies) {
-      params.personality_id = data.interestAndHobbies;
+      params.interest_id = data.interestAndHobbies;
     }
     ApiServices.updateDetails(params)
       .then(async (res) => {

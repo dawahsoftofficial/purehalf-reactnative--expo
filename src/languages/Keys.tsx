@@ -190,6 +190,8 @@ const Keys = {
   overallPracticeLevel: 'overallPracticeLevel',
   seeAllPictures: 'seeAllPictures',
   myPhotos: 'myPhotos',
+  myProfile: 'myProfile',
+  photoRequests: 'photoRequests',
   rs3000PerMonth: 'rs3000PerMonth',
   aboutYourself: 'aboutYourself',
   aboutPartner: 'aboutPartner',

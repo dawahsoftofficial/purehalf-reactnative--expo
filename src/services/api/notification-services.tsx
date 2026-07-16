@@ -76,6 +76,26 @@ class NotificationServices {
     });
   };
 
+  markPhotoApprovalsAsRead = () => {
+    return new Promise<void>((resolve, reject) => {
+      Api.post(EndPoints.notificationPhotoApprovalsMarkRead)
+        .then((response) => {
+          const data = response.data as StandardNotificationResponse;
+          if (data?.error === true) {
+            reject(data?.message || 'Failed to mark photo approvals as read');
+            return;
+          }
+          resolve();
+        })
+        .catch((error) => {
+          reject(
+            error?.response?.data?.message ||
+              'Failed to mark photo approvals as read'
+          );
+        });
+    });
+  };
+
   deleteNotification = (id: number) => {
     return new Promise<void>((resolve, reject) => {
       Api.delete(EndPoints.notificationDelete(id))

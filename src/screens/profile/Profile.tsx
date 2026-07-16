@@ -63,6 +63,7 @@ type PickerState = {
 type UserDetail = {
   tagline?: string;
   personality_id?: number[];
+  interest_id?: string[];
   height_scale?: string;
   height_display_scale?: string;
   height?: number;
@@ -273,86 +274,94 @@ const Profile = ({
   );
 
   const getAttribute = useCallback(
-    (Data: any, nextUserData: User) => {
-      getData(storageKeys.ATTRIBUTE).then((attributeRes: any) => {
-        if (attributeRes) {
-          if (attributeRes.hasOwnProperty('personality-0')) {
-            const interest = attributeRes['personality-0'] as any[];
-            interest?.forEach((element: any) => {
-              if (nextUserData?.detail?.personality_id?.includes(element.id)) {
-                element.selected = true;
-              }
-            });
-            setIinterestAndHobbies(interest);
-          }
-          const catData: any = {};
-          for (const child in Data) {
-            Data[child].forEach((element: any) => {
-              if (child !== 'personalityRequirements') {
-                const result = attributeRes[element.category][element.id];
-                if (result) {
-                  element.data = result;
-                }
-              }
-              if (
-                nextUserData?.detail &&
-                Object.keys(nextUserData?.detail).length !== 0
-              ) {
-                const value = (nextUserData?.detail as any)[element.apiKey];
+    async (Data: any, nextUserData: User) => {
+      let attributeRes: any;
+      try {
+        attributeRes = await ApiServices.getAttribute();
+        await setData(storageKeys.ATTRIBUTE, attributeRes);
+      } catch {
+        attributeRes = await getData(storageKeys.ATTRIBUTE);
+      }
 
-                if (value !== null && value !== undefined) {
-                  if (element.type === 'dropDown') {
-                    const result = _.find(element?.data, function (n) {
-                      if (n.id === value) {
-                        return n;
-                      }
-                    });
+      if (attributeRes) {
+        if (attributeRes.hasOwnProperty('interest-0')) {
+          const interest = (attributeRes['interest-0'] as any[]).map(
+            (element: any) => ({
+              ...element,
+              selected: Boolean(
+                nextUserData?.detail?.interest_id?.includes(element.id)
+              ),
+            })
+          );
+          setIinterestAndHobbies(interest);
+        }
+        const catData: any = {};
+        for (const child in Data) {
+          Data[child].forEach((element: any) => {
+            if (child !== 'personalityRequirements') {
+              const result = attributeRes[element.category]?.[element.id];
+              if (result) {
+                element.data = result;
+              }
+            }
+            if (
+              nextUserData?.detail &&
+              Object.keys(nextUserData?.detail).length !== 0
+            ) {
+              const value = (nextUserData?.detail as any)[element.apiKey];
 
-                    if (result) {
-                      element.selected = result;
-                    } else if (
-                      element.id === 'language' ||
-                      element.id === 'nationality'
-                    ) {
-                      element.selected = {
-                        id: value?.id,
-                        value: value?.name,
-                      };
+              if (value !== null && value !== undefined) {
+                if (element.type === 'dropDown') {
+                  const result = _.find(element?.data, function (n) {
+                    if (n.id === value) {
+                      return n;
                     }
-                  } else if (element.type === 'scalling') {
-                    if (element.id === 'height') {
-                      element.selected = {
-                        scale: nextUserData?.detail?.height_scale,
-                        value: nextUserData?.detail?.height,
-                        displayScale:
-                          nextUserData?.detail?.height_display_scale ??
-                          nextUserData?.detail?.height_scale,
-                      };
-                    } else {
-                      element.selected = {
-                        scale: nextUserData?.detail?.weight_scale,
-                        value: nextUserData?.detail?.weight,
-                      };
-                    }
-                  } else {
+                  });
+
+                  if (result) {
+                    element.selected = result;
+                  } else if (
+                    element.id === 'language' ||
+                    element.id === 'nationality'
+                  ) {
                     element.selected = {
-                      id: element?.id,
-                      value: value,
-                      category: element?.category,
+                      id: value?.id,
+                      value: value?.name,
                     };
                   }
+                } else if (element.type === 'scalling') {
+                  if (element.id === 'height') {
+                    element.selected = {
+                      scale: nextUserData?.detail?.height_scale,
+                      value: nextUserData?.detail?.height,
+                      displayScale:
+                        nextUserData?.detail?.height_display_scale ??
+                        nextUserData?.detail?.height_scale,
+                    };
+                  } else {
+                    element.selected = {
+                      scale: nextUserData?.detail?.weight_scale,
+                      value: nextUserData?.detail?.weight,
+                    };
+                  }
+                } else {
+                  element.selected = {
+                    id: element?.id,
+                    value: value,
+                    category: element?.category,
+                  };
                 }
               }
-            });
-            catData[child] = Data[child];
-          }
-          console.log('catData', catData);
-          setCategoriesData(catData);
-          setDataLoader(false);
+            }
+          });
+          catData[child] = Data[child];
         }
-      });
+        console.log('catData', catData);
+        setCategoriesData(catData);
+        setDataLoader(false);
+      }
     },
-    [getData, storageKeys.ATTRIBUTE]
+    [getData, setData, storageKeys.ATTRIBUTE]
   );
 
   const hideLoader = useCallback(() => {
@@ -764,12 +773,12 @@ const Profile = ({
         visible={interestsPickerVisible}
         data={interestAndHobbies}
         saving={interestsSaving}
-        privacyVisible={profileFieldVisibility.personality_id !== 'private'}
-        privacyUpdating={privacyUpdatingField === 'personality_id'}
+        privacyVisible={profileFieldVisibility.interest_id !== 'private'}
+        privacyUpdating={privacyUpdatingField === 'interest_id'}
         onPrivacyChange={() =>
           updateInlinePrivacy(
-            'personality_id',
-            profileFieldVisibility.personality_id === 'private'
+            'interest_id',
+            profileFieldVisibility.interest_id === 'private'
               ? 'public'
               : 'private'
           )

@@ -10,7 +10,7 @@ import { stripLeadingEmoji } from '../../lib/utils/profile-utils';
 import { Colors, Fonts } from '../../res';
 import { useGlobalContext } from '../../services';
 
-type InterestItem = { id?: number; value?: string };
+type InterestItem = { id?: string; value?: string };
 
 type InterestAndHobbyCardStaticProps = {
   data?: InterestItem[];
@@ -30,13 +30,13 @@ const InterestAndHobbyCardStatic = ({
   const { currentUser } = useGlobalContext();
 
   const matchingData = useMemo(() => {
-    if (!data?.length || !currentUser?.detail?.personality_id) {
+    if (!data?.length || !currentUser?.detail?.interest_id) {
       return [];
     }
     return data.filter((item) =>
-      currentUser.detail.personality_id?.includes(item?.id)
+      currentUser.detail.interest_id?.includes(item?.id)
     );
-  }, [currentUser?.detail?.personality_id, data]);
+  }, [currentUser?.detail?.interest_id, data]);
 
   if (
     !fromUserProfile ||

@@ -116,16 +116,16 @@ const SliderEntry = ({
 
   useFocusEffect(
     React.useCallback(() => {
-      if (data?.detail?.personality_id_value?.length) {
+      if (data?.detail?.interest_id_value?.length) {
         setMatchingData(
-          data?.detail?.personality_id_value
+          data?.detail?.interest_id_value
             ?.slice(0, 4)
             ?.filter((userData: any) =>
-              currentUser?.detail?.personality_id?.includes(userData?.id)
+              currentUser?.detail?.interest_id?.includes(userData?.id)
             )
         );
       }
-    }, [data?.detail?.personality_id_value?.length])
+    }, [currentUser?.detail?.interest_id, data?.detail?.interest_id_value])
   );
 
   const isPremiumUser = () => {

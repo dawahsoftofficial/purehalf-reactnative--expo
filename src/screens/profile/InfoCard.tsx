@@ -10,6 +10,7 @@ import { hp, Typography, wp } from '../../global';
 import Constants from '../../global/Constants';
 import { CheckRtl, LanguageKeys } from '../../languages';
 import { Colors, Fonts } from '../../res';
+import { hasRealProfileValue } from './info-card-values';
 
 // One distinct icon per section, matching the "my profile" grouped list
 // (GROUP_META in profile-hub) so the visitor screen and own screen read
@@ -58,18 +59,6 @@ const InfoCard = ({
     [userData?.gender]
   );
 
-  const hasRealValue = useCallback((item: InfoItem) => {
-    const value = item?.selected?.value;
-    if (typeof value === 'number') {
-      return true;
-    }
-    if (typeof value === 'string' && value.length !== 0) {
-      return true;
-    }
-    // disabilities still renders a meaningful "None" when empty
-    return item?.title === 'disabilities';
-  }, []);
-
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const id = item?.id;
@@ -89,12 +78,12 @@ const InfoCard = ({
         }
       }
       // On another member's profile, hide fields they haven't filled in.
-      if (fromUserProfile && !hasRealValue(item)) {
+      if (fromUserProfile && !hasRealProfileValue(item)) {
         return false;
       }
       return true;
     });
-  }, [data, fromUserProfile, isMale, hasRealValue]);
+  }, [data, fromUserProfile, isMale]);
 
   const keyExtractor = useCallback(
     (item: InfoItem, index: number) => `${item?.id ?? index}-${index}`,

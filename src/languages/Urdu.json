@@ -374,6 +374,8 @@
     "overallPracticeLevel": "مجموعی مذہبی رجحان",
     "seeAllPictures": "تمام تصاویر دیکھیں",
     "myPhotos": "میری تصاویر",
+    "myProfile": "میری پروفائل",
+    "photoRequests": "تصویر کی درخواستیں",
     "rs3000PerMonth": "3000 روپے ماہانہ",
     "aboutYourself": "اپنے بارے میں",
     "aboutPartner": "آپ کو کیسے ساتھی کی ضرورت ہے؟",
@@ -688,7 +690,7 @@
     "turnOnNotifications": "نوٹیفیکیشنز آن کریں",
     "notificationsBannerDescription": "نیا پیغام ملتے ہی اطلاع حاصل کریں۔",
     "notificationPermissionOffTitle": "نوٹیفیکیشنز بند ہیں",
-    "notificationPermissionOffDescription": "یہ اجازت صرف آپ کے فون کی سیٹنگز میں تبدیل ہو سکتی ہے۔ سیٹنگز کھولیں اور Pure Half کے لیے نوٹیفیکیشنز کی اجازت دیں۔",
+    "notificationPermissionOffDescription": "نوٹیفیکیشنز بند ہونے پر آپ نئے پیغامات، میچز، تصویر کی درخواستیں اور منظوری، ممبرشپ اپ ڈیٹس اور کسٹمر سپورٹ کے جوابات سے محروم ہو سکتے ہیں۔ ابھی نوٹیفیکیشنز آن کریں یا فون کی سیٹنگز میں Pure Half کو اجازت دیں۔",
     "openSettings": "سیٹنگز کھولیں",
     "notNow": "ابھی نہیں"
   }

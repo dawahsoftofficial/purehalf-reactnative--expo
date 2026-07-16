@@ -6,7 +6,8 @@ import {
   Alert,
   AppState,
   type AppStateStatus,
-  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
@@ -42,6 +43,7 @@ import type { AudioBubblePlayback } from './components/AudioMessageBubble';
 import IcebreakerChips from './components/IcebreakerChips';
 import MatchIntroCard from './components/MatchIntroCard';
 import MessageBubble from './components/MessageBubble';
+import NotificationPermissionBanner from './components/notification-permission-banner';
 import TypingIndicator from './components/TypingIndicator';
 import VoiceRecorderBar from './components/VoiceRecorderBar';
 import { useSendMessage } from './hooks/useSendMessage';
@@ -1439,13 +1441,13 @@ const SingleChat = (props: any) => {
         isBlockedYou={isBlockedYou}
         setMessages={setMessages}
       />
-      <ScrollView
-        contentContainerStyle={Styles.innerContainer}
-        automaticallyAdjustKeyboardInsets
-        keyboardShouldPersistTaps={'handled'}
-        scrollEnabled={false}
+      <NotificationPermissionBanner />
+      <KeyboardAvoidingView
+        style={Styles.keyboardAvoidingView}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {/* Wali/guardian banner hidden for now (comment out only, per
+        <View style={Styles.innerContainer}>
+          {/* Wali/guardian banner hidden for now (comment out only, per
             explicit direction -- guardian is core functionality, not being
             removed).
         {guardian ? (
@@ -1458,201 +1460,202 @@ const SingleChat = (props: any) => {
           </Ripple>
         ) : null} */}
 
-        {/* Typing Indicator */}
-        {isOtherUserTyping && (
-          <TypingIndicator userName={otherUserData?.name} />
-        )}
-
-        <ScrollView
-          horizontal
-          scrollEnabled={false}
-          contentContainerStyle={Styles.chatBody}
-        >
-          {loader ? (
-            <ActivityIndicator
-              color={Colors.primary}
-              size={'small'}
-              style={{ marginLeft: wp(46) }}
-            />
-          ) : messages?.length ? (
-            <VirtualizedList
-              onScrollBeginDrag={onScrollBegin}
-              initialNumToRender={10}
-              windowSize={15}
-              ref={flatListRef}
-              data={messages}
-              inverted
-              style={Styles.messagesList}
-              renderItem={({ item, index }) => {
-                const currentUserId = currentUser?.id;
-
-                return (
-                  <MessageBubble
-                    item={item}
-                    index={index}
-                    currentUserId={currentUserId}
-                    guardianUserId={currentUser?.user?.id}
-                    otherUserId={otherUserData?.id}
-                    otherUserImage={otherUserData?.image}
-                    isBlockedYou={isBlockedYou}
-                    messages={messages}
-                    messagePressedId={messagePressedId}
-                    onMessagePress={onMessagePress}
-                    getAudioPlayback={getAudioPlayback}
-                    onToggleAudioPlayback={onToggleAudioPlayback}
-                    Styles={Styles}
-                  />
-                );
-              }}
-              contentContainerStyle={Styles.messagesListContainer}
-              getItem={(data, index) => data[index]}
-              getItemCount={(data) => data.length}
-              keyExtractor={(item: any) => String(item.id)}
-              onEndReached={loadOlderMessages}
-              onEndReachedThreshold={0.5}
-              ListFooterComponent={
-                isLoadingMoreMessages ? (
-                  <ActivityIndicator
-                    color={Colors.primary}
-                    size={'small'}
-                    style={{ marginVertical: wp(4) }}
-                  />
-                ) : null
-              }
-            />
-          ) : (
-            <View style={Styles.threadIntroEmptyWrapper}>
-              {renderThreadIntro()}
-            </View>
+          {/* Typing Indicator */}
+          {isOtherUserTyping && (
+            <TypingIndicator userName={otherUserData?.name} />
           )}
-        </ScrollView>
-        <View>
-          {showIcebreakers && !isRecordingVoice && (
-            <IcebreakerChips onSelect={onIcebreakerSelect} rtl={Rtl} />
-          )}
-          {isRecordingVoice ? (
-            <VoiceRecorderBar
-              elapsedSeconds={voiceElapsedSeconds}
-              isSending={isSendingVoice}
-              waveformPeaks={voiceWaveformPeaks}
-              onCancel={cancelVoiceRecording}
-              onSend={sendVoiceRecording}
-            />
-          ) : isBlockedByYou ? (
-            // You've blocked this member — replace the composer with a clear
-            // inline bar + one-tap Unblock, instead of a native alert on send.
-            <View
-              style={{
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-                alignItems: 'center',
-                paddingVertical: wp(3),
-                paddingHorizontal: wp(4),
-                borderTopWidth: 1,
-                borderTopColor: Colors.hairline,
-                gap: wp(3),
-              }}
-            >
-              <Ionicons name="ban" size={wp(5)} color={Colors.muted} />
-              <Text
-                style={{
-                  flex: 1,
-                  color: Colors.muted,
-                  fontSize: wp(3.4),
-                  textAlign: Rtl ? 'right' : 'left',
+
+          <View style={Styles.chatBody}>
+            {loader ? (
+              <ActivityIndicator
+                color={Colors.primary}
+                size={'small'}
+                style={Styles.chatLoader}
+              />
+            ) : messages?.length ? (
+              <VirtualizedList
+                onScrollBeginDrag={onScrollBegin}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode={
+                  Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+                }
+                initialNumToRender={10}
+                windowSize={15}
+                ref={flatListRef}
+                data={messages}
+                inverted
+                style={Styles.messagesList}
+                renderItem={({ item, index }) => {
+                  const currentUserId = currentUser?.id;
+
+                  return (
+                    <MessageBubble
+                      item={item}
+                      index={index}
+                      currentUserId={currentUserId}
+                      guardianUserId={currentUser?.user?.id}
+                      otherUserId={otherUserData?.id}
+                      otherUserImage={otherUserData?.image}
+                      isBlockedYou={isBlockedYou}
+                      messages={messages}
+                      messagePressedId={messagePressedId}
+                      onMessagePress={onMessagePress}
+                      getAudioPlayback={getAudioPlayback}
+                      onToggleAudioPlayback={onToggleAudioPlayback}
+                      Styles={Styles}
+                    />
+                  );
                 }}
-                numberOfLines={2}
-              >
-                {`You blocked ${
-                  otherUserData?.name || 'this member'
-                }. Unblock to send messages.`}
-              </Text>
-              <TouchableOpacity
-                onPress={onUnblockFromComposer}
-                disabled={isUnblocking}
+                contentContainerStyle={Styles.messagesListContainer}
+                getItem={(data, index) => data[index]}
+                getItemCount={(data) => data.length}
+                keyExtractor={(item: any) => String(item.id)}
+                onEndReached={loadOlderMessages}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={
+                  isLoadingMoreMessages ? (
+                    <ActivityIndicator
+                      color={Colors.primary}
+                      size={'small'}
+                      style={{ marginVertical: wp(4) }}
+                    />
+                  ) : null
+                }
+              />
+            ) : (
+              <View style={Styles.threadIntroEmptyWrapper}>
+                {renderThreadIntro()}
+              </View>
+            )}
+          </View>
+          <View style={Styles.composerArea}>
+            {showIcebreakers && !isRecordingVoice && (
+              <IcebreakerChips onSelect={onIcebreakerSelect} rtl={Rtl} />
+            )}
+            {isRecordingVoice ? (
+              <VoiceRecorderBar
+                elapsedSeconds={voiceElapsedSeconds}
+                isSending={isSendingVoice}
+                waveformPeaks={voiceWaveformPeaks}
+                onCancel={cancelVoiceRecording}
+                onSend={sendVoiceRecording}
+              />
+            ) : isBlockedByYou ? (
+              // You've blocked this member — replace the composer with a clear
+              // inline bar + one-tap Unblock, instead of a native alert on send.
+              <View
                 style={{
-                  paddingVertical: wp(2),
-                  paddingHorizontal: wp(4.5),
-                  borderRadius: wp(6),
-                  backgroundColor: isUnblocking
-                    ? Colors.primaryLite
-                    : Colors.primary,
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
+                  alignItems: 'center',
+                  paddingVertical: wp(3),
+                  paddingHorizontal: wp(4),
+                  borderTopWidth: 1,
+                  borderTopColor: Colors.hairline,
+                  gap: wp(3),
                 }}
               >
+                <Ionicons name="ban" size={wp(5)} color={Colors.muted} />
                 <Text
                   style={{
-                    color: Colors.color2,
-                    fontWeight: '600',
+                    flex: 1,
+                    color: Colors.muted,
                     fontSize: wp(3.4),
+                    textAlign: Rtl ? 'right' : 'left',
                   }}
+                  numberOfLines={2}
                 >
-                  {t(LanguageKeys.unBlock)}
+                  {`You blocked ${
+                    otherUserData?.name || 'this member'
+                  }. Unblock to send messages.`}
                 </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View
-              style={{
-                ...Styles.messageInputOuter,
-                flexDirection: Rtl ? 'row-reverse' : 'row',
-              }}
-            >
-              <TextInput
-                ref={inputRef}
-                style={{
-                  ...Styles.messageInput,
-                  textAlign: Rtl ? 'right' : 'left',
-                }}
-                placeholder={t('message')}
-                placeholderTextColor={Colors.muted}
-                value={inputMessage}
-                onChangeText={onChangeInputMessage}
-                onFocus={onInputFocus}
-                onSubmitEditing={handleSubmitEditing}
-                maxLength={350}
-                submitBehavior="blurAndSubmit"
-                returnKeyType="send"
-              />
-              <TouchableOpacity
-                style={{
-                  ...Styles.sendBtn,
-                  backgroundColor:
-                    inputMessage.trim().length === 0
+                <TouchableOpacity
+                  onPress={onUnblockFromComposer}
+                  disabled={isUnblocking}
+                  style={{
+                    paddingVertical: wp(2),
+                    paddingHorizontal: wp(4.5),
+                    borderRadius: wp(6),
+                    backgroundColor: isUnblocking
                       ? Colors.primaryLite
                       : Colors.primary,
-                }}
-                disabled={isSending}
-                onPress={async () => {
-                  if (isSending) return;
-                  if (inputMessage.trim().length === 0) {
-                    await startVoiceRecording();
-                    return;
-                  }
-                  const res = await onSendPress(inputMessage);
-
-                  if (res?.type === 'blockedByYou') {
-                    flashErrorMessage(
-                      `Unblock ${
-                        otherUserData?.name || 'this member'
-                      } to send a message.`
-                    );
-                  }
+                  }}
+                >
+                  <Text
+                    style={{
+                      color: Colors.color2,
+                      fontWeight: '600',
+                      fontSize: wp(3.4),
+                    }}
+                  >
+                    {t(LanguageKeys.unBlock)}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View
+                style={{
+                  ...Styles.messageInputOuter,
+                  flexDirection: Rtl ? 'row-reverse' : 'row',
                 }}
               >
-                <Ionicons
-                  name={inputMessage.trim().length === 0 ? 'mic' : 'send'}
-                  size={wp(4.6)}
-                  color={Colors.color2}
+                <TextInput
+                  ref={inputRef}
                   style={{
-                    marginLeft: Rtl ? 0 : wp(0.5),
-                    marginRight: Rtl ? wp(0.5) : 0,
-                    transform: Rtl ? [{ scaleX: -1 }] : [],
+                    ...Styles.messageInput,
+                    textAlign: Rtl ? 'right' : 'left',
                   }}
+                  placeholder={t('message')}
+                  placeholderTextColor={Colors.muted}
+                  value={inputMessage}
+                  onChangeText={onChangeInputMessage}
+                  onFocus={onInputFocus}
+                  onSubmitEditing={handleSubmitEditing}
+                  maxLength={350}
+                  submitBehavior="blurAndSubmit"
+                  returnKeyType="send"
                 />
-              </TouchableOpacity>
-            </View>
-          )}
+                <TouchableOpacity
+                  style={{
+                    ...Styles.sendBtn,
+                    backgroundColor:
+                      inputMessage.trim().length === 0
+                        ? Colors.primaryLite
+                        : Colors.primary,
+                  }}
+                  disabled={isSending}
+                  onPress={async () => {
+                    if (isSending) return;
+                    if (inputMessage.trim().length === 0) {
+                      await startVoiceRecording();
+                      return;
+                    }
+                    const res = await onSendPress(inputMessage);
+
+                    if (res?.type === 'blockedByYou') {
+                      flashErrorMessage(
+                        `Unblock ${
+                          otherUserData?.name || 'this member'
+                        } to send a message.`
+                      );
+                    }
+                  }}
+                >
+                  <Ionicons
+                    name={inputMessage.trim().length === 0 ? 'mic' : 'send'}
+                    size={wp(4.6)}
+                    color={Colors.color2}
+                    style={{
+                      marginLeft: Rtl ? 0 : wp(0.5),
+                      marginRight: Rtl ? wp(0.5) : 0,
+                      transform: Rtl ? [{ scaleX: -1 }] : [],
+                    }}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
-      </ScrollView>
+      </KeyboardAvoidingView>
     </Container>
   );
 };

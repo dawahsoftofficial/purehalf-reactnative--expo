@@ -20,7 +20,7 @@ import {
 } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
-import { Colors, Fonts } from '../../res';
+import { Colors, Fonts, Images } from '../../res';
 import {
   ApiServices,
   capitalizeName,
@@ -462,17 +462,17 @@ const SingleChatHeader = (props: SingleChatHeaderProps) => {
           }}
         >
           <View style={Styles.userImage}>
-            {otherUserData?.image && !isBlockedYou ? (
+            {isSupportConversation ? (
+              <Image
+                source={Images.logoWithoutTextBlack}
+                resizeMode="contain"
+                style={Styles.supportLogo}
+              />
+            ) : otherUserData?.image && !isBlockedYou ? (
               <Image
                 source={{ uri: otherUserData.image }}
                 resizeMode="cover"
                 style={Styles.avatarImage}
-              />
-            ) : isSupportConversation ? (
-              <Ionicons
-                name="heart"
-                size={width * 0.055}
-                color={Colors.primary}
               />
             ) : (
               <ProfilePhotoPlaceholder
@@ -614,6 +614,10 @@ const Styles = StyleSheet.create({
   avatarImage: {
     width: '100%',
     height: '100%',
+  },
+  supportLogo: {
+    height: '68%',
+    width: '68%',
   },
   menuBtn: {
     width: wp(9),
