@@ -5,7 +5,13 @@ import {
 } from '@react-navigation/native';
 import moment from 'moment';
 import type { ReactElement } from 'react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -56,6 +62,9 @@ import { useSettingsStore } from '../../stores';
 import GiftBadge from './components/gift-badge';
 import GiftClaimModal from './components/gift-claim-modal';
 import PrivacyQuickSettingsModal from './components/privacy-quick-settings-modal';
+import ProfileGiftInfoModal, {
+  type ProfileGiftInfoVariant,
+} from './components/profile-gift-info-modal';
 import { buildUpdatedUserAfterGiftClaim } from './gift-claim-outcome';
 
 const { width, height } = Dimensions.get('window');
@@ -349,6 +358,8 @@ const Header = ({
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
   const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [giftInfoVariant, setGiftInfoVariant] =
+    useState<ProfileGiftInfoVariant | null>(null);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
   const giftThreshold =
@@ -610,22 +621,40 @@ const Header = ({
   }, [updateCurrentUser, t]);
 
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+  const closeGiftInfo = useCallback(() => setGiftInfoVariant(null), []);
+
+  // Sticky fallback for the variant prop below: on iOS, RN's Modal keeps
+  // rendering children through the fade-out animation until the native
+  // onDismiss fires, so the instant closeGiftInfo() nulls giftInfoVariant,
+  // a literal 'locked' fallback would visibly swap claimed's copy/buttons to
+  // locked's while the popup is still fading out. Tracking the last non-null
+  // variant keeps the closing popup showing what it was showing.
+  const lastGiftInfoVariant = useRef<ProfileGiftInfoVariant>('locked');
+  if (giftInfoVariant !== null) {
+    lastGiftInfoVariant.current = giftInfoVariant;
+  }
+
+  // `from: 'Home'` is what makes OnboardingProfile's exitFlow/bailFlow reset to
+  // BottomTab when the user leaves it, rather than continuing down the signup
+  // chain to ProfilePicture — correct for a flow entered from inside the app.
+  const onGiftInfoStart = useCallback(() => {
+    setGiftInfoVariant(null);
+    navigation.navigate('OnboardingProfile', { from: 'Home' });
+  }, [navigation]);
 
   // GiftBadge is tappable in all three states; only the eligible tap opens
-  // the claim modal — locked/claimed taps just explain the state.
+  // the claim modal — locked/claimed taps open the explainer popup instead.
   const onGiftBadgePress = useCallback(() => {
     if (giftClaimed) {
-      flashSuccessMessage(t(LanguageKeys.giftAlreadyClaimedHint));
+      setGiftInfoVariant('claimed');
       return;
     }
     if (!giftEligible) {
-      flashErrorMessage(
-        t(LanguageKeys.giftLockedHint, { percent: giftThreshold })
-      );
+      setGiftInfoVariant('locked');
       return;
     }
     setGiftModalVisible(true);
-  }, [giftClaimed, giftEligible, giftThreshold, t]);
+  }, [giftClaimed, giftEligible]);
 
   // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
   // so callers cast at the call site — matching the existing
@@ -974,26 +1003,15 @@ const Header = ({
               </ReactText>
             </View>
             <View style={Styles.strengthTrackWrap}>
-              {!giftClaimed && (
-                <View
-                  style={[
-                    Styles.giftAboveBar,
-                    Rtl
-                      ? {
-                          right: `${Math.max(0, Math.min(100, profileStrength))}%`,
-                        }
-                      : {
-                          left: `${Math.max(0, Math.min(100, profileStrength))}%`,
-                        },
-                  ]}
-                >
-                  <GiftBadge
-                    eligible={giftEligible}
-                    claimed={giftClaimed}
-                    onPress={onGiftBadgePress}
-                  />
-                </View>
-              )}
+              <View
+                style={[Styles.giftAboveBar, Rtl ? { left: 0 } : { right: 0 }]}
+              >
+                <GiftBadge
+                  eligible={giftEligible}
+                  claimed={giftClaimed}
+                  onPress={onGiftBadgePress}
+                />
+              </View>
               <View style={Styles.strengthTrack}>
                 <View
                   style={[
@@ -1202,6 +1220,14 @@ const Header = ({
         onClaimed={onGiftClaimed}
         claim={claimGift}
       />
+      <ProfileGiftInfoModal
+        visible={giftInfoVariant !== null}
+        variant={giftInfoVariant ?? lastGiftInfoVariant.current}
+        percent={giftThreshold}
+        credits={giftCredits}
+        onClose={closeGiftInfo}
+        onStart={onGiftInfoStart}
+      />
       <PrivacyQuickSettingsModal
         visible={privacySettingsVisible}
         onClose={() => setPrivacySettingsVisible(false)}
@@ -1361,7 +1387,6 @@ const Styles = StyleSheet.create({
   giftAboveBar: {
     position: 'absolute',
     bottom: hp(1.4),
-    transform: [{ translateX: -wp(4) }],
     zIndex: 1,
   },
   strengthTrack: {
