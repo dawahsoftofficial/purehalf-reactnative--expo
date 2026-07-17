@@ -961,26 +961,15 @@ const Header = ({
               </ReactText>
             </View>
             <View style={Styles.strengthTrackWrap}>
-              {!giftClaimed && (
-                <View
-                  style={[
-                    Styles.giftAboveBar,
-                    Rtl
-                      ? {
-                          right: `${Math.max(0, Math.min(100, profileStrength))}%`,
-                        }
-                      : {
-                          left: `${Math.max(0, Math.min(100, profileStrength))}%`,
-                        },
-                  ]}
-                >
-                  <GiftBadge
-                    eligible={giftEligible}
-                    claimed={giftClaimed}
-                    onPress={onGiftBadgePress}
-                  />
-                </View>
-              )}
+              <View
+                style={[Styles.giftAboveBar, Rtl ? { left: 0 } : { right: 0 }]}
+              >
+                <GiftBadge
+                  eligible={giftEligible}
+                  claimed={giftClaimed}
+                  onPress={onGiftBadgePress}
+                />
+              </View>
               <View style={Styles.strengthTrack}>
                 <View
                   style={[
@@ -1348,7 +1337,6 @@ const Styles = StyleSheet.create({
   giftAboveBar: {
     position: 'absolute',
     bottom: hp(1.4),
-    transform: [{ translateX: -wp(4) }],
     zIndex: 1,
   },
   strengthTrack: {
