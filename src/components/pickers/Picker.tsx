@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -45,6 +46,24 @@ const ROW_MIN_HEIGHT = 48;
 // middle of the 220-260ms range used for sheet-style transitions elsewhere.
 const SHEET_SLIDE_DURATION_MS = 240;
 
+// slideInUp's preset only travels a fixed 100dp, which reads as a settle rather
+// than a rise once the sheet is taller than that. The sheet is capped at 80% of
+// the screen, so starting 85% down guarantees it begins fully off the bottom
+// edge at any content height.
+const SHEET_SLIDE_IN = {
+  from: { translateY: Dimensions.get('window').height * 0.85 },
+  to: { translateY: 0 },
+};
+
+// Animating the SafeAreaView directly (rather than wrapping it in a plain
+// Animatable.View) keeps Styles.sheet a direct child of sheetAnchor, so its
+// maxHeight: '80%' resolves against sheetAnchor's definite flex:1 size instead
+// of against an intermediate node with content-derived (indeterminate) height.
+// Declared at module scope: creating this per-render would remount the sheet
+// on every render.
+const AnimatableSafeAreaView =
+  Animatable.createAnimatableComponent(SafeAreaView);
+
 const displayValue = (value: PickerItem['value']) => {
   if (typeof value !== 'number') return value ?? '';
   if (value === 1) return 'Yes';
@@ -78,7 +97,7 @@ const Picker = ({
       visible={visible}
       // Fades the modal container (and therefore the backdrop) in place.
       // The sheet's own rise from the bottom is handled separately below by
-      // the Animatable.View, so it doesn't sweep up together with the dim.
+      // AnimatableSafeAreaView, so it doesn't sweep up together with the dim.
       animationType="fade"
       transparent
       onShow={() => setQuery('')}
@@ -107,89 +126,92 @@ const Picker = ({
         {/* Sized to its content (the sheet), not flex:1, so it sits at the
             bottom of sheetAnchor without covering the empty area above it —
             taps there still fall through sheetAnchor's box-none to the
-            backdrop. */}
-        <Animatable.View
-          animation="slideInUp"
+            backdrop. AnimatableSafeAreaView animates the sheet node itself
+            (see its declaration above) rather than wrapping it, so this stays
+            true post-animation too: Styles.sheet is still the direct,
+            content-sized, bottom-anchored child of sheetAnchor. */}
+        <AnimatableSafeAreaView
+          animation={SHEET_SLIDE_IN}
           duration={SHEET_SLIDE_DURATION_MS}
           useNativeDriver
+          style={Styles.sheet}
+          edges={['bottom']}
         >
-          <SafeAreaView style={Styles.sheet} edges={['bottom']}>
-            <View style={Styles.headerCon}>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Close"
+          <View style={Styles.headerCon}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Close"
+              onPress={() => {
+                setQuery('');
+                onClose();
+              }}
+              style={Styles.closeBtn}
+            >
+              <Ionicons name="close" color={Colors.ink} size={wp(6)} />
+            </TouchableOpacity>
+            <Text style={Styles.headerTxt} numberOfLines={2}>
+              {headerTitle}
+            </Text>
+            <View style={Styles.headerSpacer} />
+          </View>
+
+          {data.length > 10 ? (
+            <SearchBar
+              key={visible ? 'picker-search-open' : 'picker-search-closed'}
+              onChangeText={setQuery}
+              autoFocus={false}
+            />
+          ) : null}
+
+          <FlatList
+            data={filteredData}
+            style={Styles.list}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode={
+              Platform.OS === 'ios' ? 'interactive' : 'on-drag'
+            }
+            keyExtractor={(item, index) => String(item?.id ?? index)}
+            renderItem={({ item }) => (
+              <Ripple
+                style={Styles.itemCon}
                 onPress={() => {
                   setQuery('');
-                  onClose();
+                  onPress(item);
                 }}
-                style={Styles.closeBtn}
               >
-                <Ionicons name="close" color={Colors.ink} size={wp(6)} />
-              </TouchableOpacity>
-              <Text style={Styles.headerTxt} numberOfLines={2}>
-                {headerTitle}
-              </Text>
-              <View style={Styles.headerSpacer} />
-            </View>
-
-            {data.length > 10 ? (
-              <SearchBar
-                key={visible ? 'picker-search-open' : 'picker-search-closed'}
-                onChangeText={setQuery}
-                autoFocus={false}
-              />
-            ) : null}
-
-            <FlatList
-              data={filteredData}
-              style={Styles.list}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode={
-                Platform.OS === 'ios' ? 'interactive' : 'on-drag'
-              }
-              keyExtractor={(item, index) => String(item?.id ?? index)}
-              renderItem={({ item }) => (
-                <Ripple
-                  style={Styles.itemCon}
-                  onPress={() => {
-                    setQuery('');
-                    onPress(item);
-                  }}
-                >
-                  <Text style={Styles.itemLabel}>
-                    {displayValue(item?.value)}
-                  </Text>
-                  <Ionicons
-                    name="chevron-forward"
-                    color={Colors.primaryLite}
-                    size={wp(4.5)}
-                  />
-                </Ripple>
-              )}
-              contentContainerStyle={Styles.listContainer}
-              ListEmptyComponent={
-                loader ? (
-                  <ActivityIndicator
-                    color={Colors.primary}
-                    size="small"
-                    style={Styles.loader}
-                  />
-                ) : (
-                  <Text style={Styles.emptyText}>No matching options</Text>
-                )
-              }
-              ListFooterComponent={
-                loader && filteredData.length > 0 ? (
-                  <ActivityIndicator
-                    color={Colors.primary}
-                    size="small"
-                    style={Styles.loader}
-                  />
-                ) : null
-              }
-            />
-          </SafeAreaView>
-        </Animatable.View>
+                <Text style={Styles.itemLabel}>
+                  {displayValue(item?.value)}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  color={Colors.primaryLite}
+                  size={wp(4.5)}
+                />
+              </Ripple>
+            )}
+            contentContainerStyle={Styles.listContainer}
+            ListEmptyComponent={
+              loader ? (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size="small"
+                  style={Styles.loader}
+                />
+              ) : (
+                <Text style={Styles.emptyText}>No matching options</Text>
+              )
+            }
+            ListFooterComponent={
+              loader && filteredData.length > 0 ? (
+                <ActivityIndicator
+                  color={Colors.primary}
+                  size="small"
+                  style={Styles.loader}
+                />
+              ) : null
+            }
+          />
+        </AnimatableSafeAreaView>
       </KeyboardAvoidingView>
     </Modal>
   );
