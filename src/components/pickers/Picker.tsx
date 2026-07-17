@@ -5,7 +5,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
-  StatusBar,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -71,19 +71,28 @@ const Picker = ({
     <Modal
       visible={visible}
       animationType="slide"
-      presentationStyle="fullScreen"
+      transparent
       onShow={() => setQuery('')}
       onRequestClose={() => {
         setQuery('');
         onClose();
       }}
     >
-      <SafeAreaView style={Styles.safeArea} edges={['top', 'bottom']}>
-        <StatusBar backgroundColor={Colors.surface} barStyle="dark-content" />
-        <KeyboardAvoidingView
-          style={Styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+      <Pressable
+        style={Styles.backdrop}
+        accessibilityRole="button"
+        accessibilityLabel="Close"
+        onPress={() => {
+          setQuery('');
+          onClose();
+        }}
+      />
+      <KeyboardAvoidingView
+        style={Styles.sheetAnchor}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents="box-none"
+      >
+        <SafeAreaView style={Styles.sheet} edges={['bottom']}>
           <View style={Styles.headerCon}>
             <TouchableOpacity
               accessibilityRole="button"
@@ -112,6 +121,7 @@ const Picker = ({
 
           <FlatList
             data={filteredData}
+            style={Styles.list}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={
               Platform.OS === 'ios' ? 'interactive' : 'on-drag'
@@ -157,8 +167,8 @@ const Picker = ({
               ) : null
             }
           />
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -166,12 +176,29 @@ const Picker = ({
 export default Picker;
 
 const Styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.appBg,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
-  keyboardAvoidingView: {
+  sheetAnchor: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    // Capped, not fixed: the sheet grows with its content and stops at 80%.
+    // Measured from the bottom, so its top edge can't be cropped on a small
+    // device, and short lists (Age Range, Contact Support) stay short.
+    maxHeight: '80%',
+    backgroundColor: Colors.appBg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    // Clips the white header to the rounded top corners.
+    overflow: 'hidden',
+  },
+  list: {
+    // Lets the list shrink inside the capped, content-sized sheet instead of
+    // forcing it to full height.
+    flexShrink: 1,
   },
   headerCon: {
     minHeight: hp(7),
