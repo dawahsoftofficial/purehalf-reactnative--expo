@@ -80,8 +80,11 @@ const Picker = ({
     >
       <Pressable
         style={Styles.backdrop}
-        accessibilityRole="button"
-        accessibilityLabel="Close"
+        // Hidden from screen readers: it's a tap-anywhere-to-dismiss affordance,
+        // and as a full-screen element it would otherwise swallow focus ahead of
+        // the sheet. The header close button carries the accessible action.
+        importantForAccessibility="no"
+        accessibilityElementsHidden
         onPress={() => {
           setQuery('');
           onClose();
@@ -263,6 +266,10 @@ const Styles = StyleSheet.create({
     marginVertical: hp(4),
   },
   emptyText: {
+    // Beats the alignSelf that Text injects for RTL, which lands on this
+    // list's cross axis (horizontal, since listContainer is a column) and
+    // would shrink-wrap the box to the left edge, making textAlign a no-op.
+    alignSelf: 'center',
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,

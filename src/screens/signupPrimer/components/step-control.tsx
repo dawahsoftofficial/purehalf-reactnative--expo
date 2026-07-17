@@ -99,7 +99,8 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
   const opts = step.options ?? [];
 
   switch (step.control) {
-    case 'single':
+    case 'single': {
+      const auto = isAutoAdvance(step);
       return (
         <View style={Styles.list}>
           {opts.map((op) => (
@@ -107,15 +108,16 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
               key={op.id}
               label={op.label}
               on={value === op.id}
-              tick={false}
+              tick={!auto}
               onPress={() => {
                 onChange(op.id);
-                onAdvance();
+                if (auto) onAdvance();
               }}
             />
           ))}
         </View>
       );
+    }
 
     case 'multi':
     case 'traits': {
