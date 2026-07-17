@@ -33,6 +33,12 @@ type PickerProps = {
   data?: PickerItem[];
 };
 
+// A finger is the same size on every phone, so this must not use hp(): hp() is a
+// percentage of screen height (src/global/Scalling.tsx), which rendered ~63px on
+// a tall device and ~45px on a small one — under the 48px minimum tap target.
+// Deliberate deviation from the wp()/hp() convention in CLAUDE.md.
+const ROW_MIN_HEIGHT = 48;
+
 const displayValue = (value: PickerItem['value']) => {
   if (typeof value !== 'number') return value ?? '';
   if (value === 1) return 'Yes';
@@ -184,6 +190,9 @@ const Styles = StyleSheet.create({
   },
   headerTxt: {
     flex: 1,
+    // Beats the alignSelf that Text injects for RTL, which lands on this row's
+    // cross axis (vertical) and would pin the title to the top. See Text.tsx.
+    alignSelf: 'center',
     color: Colors.ink,
     textAlign: 'center',
     fontFamily: Fonts.APPFONT_B,
@@ -199,14 +208,14 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(4),
   },
   itemCon: {
-    minHeight: hp(7),
+    minHeight: ROW_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: wp(3),
     paddingHorizontal: wp(4),
-    paddingVertical: hp(1.3),
-    marginBottom: hp(1),
+    paddingVertical: hp(1),
+    marginBottom: hp(0.7),
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.hairline,
@@ -214,6 +223,10 @@ const Styles = StyleSheet.create({
   },
   itemLabel: {
     flex: 1,
+    // Same as headerTxt: overrides Text's injected RTL alignSelf so the label
+    // sits beside its chevron instead of above it. Horizontal alignment is
+    // still governed by textAlign (default 'auto'), so RTL is unaffected.
+    alignSelf: 'center',
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small2,
