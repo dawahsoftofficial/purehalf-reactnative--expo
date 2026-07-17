@@ -205,8 +205,6 @@
     "vipDailyGiftSuccess": "{{chats}} chats added to your balance!",
     "completeProfileCta": "Complete your profile",
     "completeProfileBannerBody": "Finish it to unlock your free chats",
-    "giftLockedHint": "Reach {{percent}}% profile completion to unlock this gift",
-    "giftAlreadyClaimedHint": "You've already claimed this gift",
     "vipBadgeHint": "You have an active VIP membership",
     "boostedBadgeHint": "Your profile is boosted for extra visibility right now",
     "completeBadgeHint": "Your profile has every required field filled in",

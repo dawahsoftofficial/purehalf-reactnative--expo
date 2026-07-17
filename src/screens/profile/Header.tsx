@@ -56,6 +56,9 @@ import { useSettingsStore } from '../../stores';
 import GiftBadge from './components/gift-badge';
 import GiftClaimModal from './components/gift-claim-modal';
 import PrivacyQuickSettingsModal from './components/privacy-quick-settings-modal';
+import ProfileGiftInfoModal, {
+  type ProfileGiftInfoVariant,
+} from './components/profile-gift-info-modal';
 import { buildUpdatedUserAfterGiftClaim } from './gift-claim-outcome';
 
 const { width, height } = Dimensions.get('window');
@@ -349,6 +352,8 @@ const Header = ({
   const [messageButtonLoader, setMessageButtonLoader] = useState(true);
   const [isChatCreditsLoading, setIsChatCreditsLoading] = useState(false);
   const [giftModalVisible, setGiftModalVisible] = useState(false);
+  const [giftInfoVariant, setGiftInfoVariant] =
+    useState<ProfileGiftInfoVariant | null>(null);
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [privacySettingsVisible, setPrivacySettingsVisible] = useState(false);
   const giftThreshold =
@@ -603,22 +608,29 @@ const Header = ({
   }, [updateCurrentUser, t]);
 
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
+  const closeGiftInfo = useCallback(() => setGiftInfoVariant(null), []);
+
+  // `from: 'Home'` is what makes OnboardingProfile's exitFlow/bailFlow reset to
+  // BottomTab when the user leaves it, rather than continuing down the signup
+  // chain to ProfilePicture — correct for a flow entered from inside the app.
+  const onGiftInfoStart = useCallback(() => {
+    setGiftInfoVariant(null);
+    navigation.navigate('OnboardingProfile', { from: 'Home' });
+  }, [navigation]);
 
   // GiftBadge is tappable in all three states; only the eligible tap opens
-  // the claim modal — locked/claimed taps just explain the state.
+  // the claim modal — locked/claimed taps open the explainer popup instead.
   const onGiftBadgePress = useCallback(() => {
     if (giftClaimed) {
-      flashSuccessMessage(t(LanguageKeys.giftAlreadyClaimedHint));
+      setGiftInfoVariant('claimed');
       return;
     }
     if (!giftEligible) {
-      flashErrorMessage(
-        t(LanguageKeys.giftLockedHint, { percent: giftThreshold })
-      );
+      setGiftInfoVariant('locked');
       return;
     }
     setGiftModalVisible(true);
-  }, [giftClaimed, giftEligible, giftThreshold, t]);
+  }, [giftClaimed, giftEligible]);
 
   // Services.tsx's Promise executors are untyped (bare `Promise<unknown>`),
   // so callers cast at the call site — matching the existing
@@ -1177,6 +1189,14 @@ const Header = ({
         onClose={closeGiftModal}
         onClaimed={onGiftClaimed}
         claim={claimGift}
+      />
+      <ProfileGiftInfoModal
+        visible={giftInfoVariant !== null}
+        variant={giftInfoVariant ?? 'locked'}
+        percent={giftThreshold}
+        credits={giftCredits}
+        onClose={closeGiftInfo}
+        onStart={onGiftInfoStart}
       />
       <PrivacyQuickSettingsModal
         visible={privacySettingsVisible}

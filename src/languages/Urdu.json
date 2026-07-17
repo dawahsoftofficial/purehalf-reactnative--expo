@@ -199,8 +199,6 @@
     "vipDailyGiftSuccess": "{{chats}} چیٹس آپ کے بیلنس میں شامل ہو گئیں!",
     "completeProfileCta": "اپنا پروفائل مکمل کریں",
     "completeProfileBannerBody": "مفت چیٹ کریڈٹس کا تحفہ حاصل کرنے کے لیے مکمل کریں",
-    "giftLockedHint": "یہ تحفہ حاصل کرنے کے لیے اپنا پروفائل {{percent}}% مکمل کریں",
-    "giftAlreadyClaimedHint": "آپ یہ تحفہ پہلے ہی حاصل کر چکے ہیں",
     "vipBadgeHint": "آپ کی وی آئی پی ممبرشپ فعال ہے",
     "boostedBadgeHint": "آپ کا پروفائل فی الحال اضافی نمائش کے لیے بوسٹ کیا گیا ہے",
     "completeBadgeHint": "آپ کے پروفائل کے تمام ضروری خانے مکمل ہیں",

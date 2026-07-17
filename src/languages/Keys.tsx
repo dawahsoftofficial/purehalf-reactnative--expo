@@ -50,8 +50,6 @@ const Keys = {
   vipDailyGiftSuccess: 'vipDailyGiftSuccess',
   completeProfileCta: 'completeProfileCta',
   completeProfileBannerBody: 'completeProfileBannerBody',
-  giftLockedHint: 'giftLockedHint',
-  giftAlreadyClaimedHint: 'giftAlreadyClaimedHint',
   vipBadgeHint: 'vipBadgeHint',
   boostedBadgeHint: 'boostedBadgeHint',
   completeBadgeHint: 'completeBadgeHint',
