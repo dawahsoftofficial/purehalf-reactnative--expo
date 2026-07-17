@@ -574,6 +574,13 @@ const Header = ({
 
   const onBackPress = useCallback(() => navigation.goBack(), [navigation]);
 
+  // Same route + params as Settings' "Profile" row, so both entry points land on
+  // the identical screen. Only wired up on the self header — see renderSelfHeader.
+  const onNamePress = useCallback(
+    () => navigation.navigate('UserInput', { fromSettings: true }),
+    [navigation]
+  );
+
   // The kebab opens the block/report/unblock picker directly. Previously it
   // opened its own RN Modal menu that then handed off to the picker (a second,
   // react-native-modal) — presenting the picker while the menu was still
@@ -867,7 +874,13 @@ const Header = ({
               ]}
             >
               {userData?.first_name || userData?.last_name ? (
-                <View style={Styles.nameShrink}>
+                <Ripple
+                  style={Styles.nameShrink}
+                  onPress={onNamePress}
+                  rippleColor={Colors.primaryRGBA12}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(LanguageKeys.basicSettings)}
+                >
                   <NameRow
                     firstName={userData?.first_name}
                     lastName={userData?.last_name}
@@ -875,7 +888,7 @@ const Header = ({
                     statusColor={onlineStatusColor}
                     rtl={Rtl}
                   />
-                </View>
+                </Ripple>
               ) : null}
               <View
                 style={{

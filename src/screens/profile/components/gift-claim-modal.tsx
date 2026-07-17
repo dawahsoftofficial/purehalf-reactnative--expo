@@ -6,12 +6,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { Button, Text } from '../../../components';
 import { hp, Typography, wp } from '../../../global';
 import { LanguageKeys } from '../../../languages';
+import { creditsToChats } from '../../../lib/utils/chat-credits';
 import { Colors, Fonts } from '../../../res';
 import { flashErrorMessage } from '../../../services';
 import type { ClaimResult } from '../gift-claim-outcome';
 
 type GiftClaimModalProps = {
   visible: boolean;
+  /** Raw credits from the profile_completion_gift_credits setting. */
   giftCredits: number;
   onClose: () => void;
   onClaimed: (result: ClaimResult) => void;
@@ -104,7 +106,7 @@ const GiftClaimModal = ({
                 {LanguageKeys.youEarned}
               </Text>
               <ReactText style={Styles.body}>
-                {`+${Math.floor(justClaimed.awarded / 50)} ${t(LanguageKeys.chatCredits)}`}
+                {`+${creditsToChats(justClaimed.awarded)} ${t(LanguageKeys.chatCredits)}`}
               </ReactText>
             </>
           ) : (
@@ -116,7 +118,9 @@ const GiftClaimModal = ({
                 {LanguageKeys.giftClaimTitle}
               </Text>
               <ReactText style={Styles.body}>
-                {t(LanguageKeys.giftClaimBody, { amount: giftCredits })}
+                {t(LanguageKeys.giftClaimBody, {
+                  amount: creditsToChats(giftCredits),
+                })}
               </ReactText>
               <View style={Styles.buttonRow}>
                 <Button
