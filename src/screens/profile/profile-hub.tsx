@@ -81,8 +81,13 @@ export const InterestsPreview = memo(function InterestsPreview({
           </Text>
         </View>
         {selected.length > 0 ? (
-          <View style={Styles.countPill}>
-            <Text style={Styles.countTxt}>{String(selected.length)}</Text>
+          // Interests have a cap (10) rather than a required total, so any
+          // selection counts as filled — matching the green "done" pill the
+          // other groups show at filled === total.
+          <View style={[Styles.countPill, Styles.countPillDone]}>
+            <Text style={[Styles.countTxt, Styles.countTxtDone]}>
+              {String(selected.length)}
+            </Text>
           </View>
         ) : null}
         <Ionicons

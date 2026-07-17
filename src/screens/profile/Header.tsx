@@ -1343,7 +1343,7 @@ const Styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2),
-    marginTop: hp(1),
+    marginTop: hp(1.6),
     flex: 1,
   },
   reviewStatusIcon: {

@@ -211,9 +211,13 @@ const Styles = StyleSheet.create({
   },
   subtitle: {
     flex: 1,
+    // The shared Text component injects alignSelf: 'flex-start', which would
+    // otherwise override the row's alignItems and pin this to the top.
+    alignSelf: 'center',
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
     color: Colors.muted,
+    includeFontPadding: false,
   },
   privacyToggle: {
     flexDirection: 'row',
