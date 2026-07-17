@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -22,6 +28,7 @@ import { journeyFor } from './journeys';
 import {
   computeProgress,
   formatMatchCount,
+  isAutoAdvance,
   nextStepIndex,
   prevStepIndex,
   questionPosition,
@@ -35,6 +42,11 @@ const isAnswered = (step: PrimerStepDef, value: any): boolean => {
   if (step.control === 'habits') return !!(value?.smoke && value?.drink);
   return value != null;
 };
+
+// Beat between tapping an auto-advancing option and the next question, so the
+// selected row's highlight actually paints. Long enough to register, short
+// enough not to feel like lag across eleven questions.
+const HIGHLIGHT_PAUSE_MS = 200;
 
 // Continuous twinkle for the reveal's star badge.
 const TWINKLE = {
@@ -168,6 +180,38 @@ const SignupPrimer = ({ navigation }: any) => {
     stepIndex,
     steps,
   ]);
+
+  // `advance` closes over `answers`, so the copy captured at tap time predates
+  // the onChange from that same tap. Calling through a ref means the timeout
+  // runs the current `advance` — by then React has re-rendered with the answer.
+  const advanceRef = useRef(advance);
+  useEffect(() => {
+    advanceRef.current = advance;
+  });
+
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cancel a pending pause whenever we leave the question that scheduled it.
+  // Keying on stepIndex/phase (rather than only unmounting) is what stops a
+  // tap-then-back inside the 200ms window from firing a stale advance and
+  // silently undoing the back. Cleanup still runs on unmount too.
+  useEffect(
+    () => () => {
+      if (advanceTimer.current) {
+        clearTimeout(advanceTimer.current);
+        advanceTimer.current = null;
+      }
+    },
+    [stepIndex, phase]
+  );
+
+  // Used only by auto-advancing options. The Continue button stays instant.
+  const advanceAfterHighlight = useCallback(() => {
+    if (advanceTimer.current) return; // a second tap must not skip a question
+    advanceTimer.current = setTimeout(() => {
+      advanceTimer.current = null;
+      advanceRef.current();
+    }, HIGHLIGHT_PAUSE_MS);
+  }, []);
 
   // Step back to the previous visible question; from the first question, return
   // to the gender step so nothing is a dead end.
@@ -379,7 +423,7 @@ const SignupPrimer = ({ navigation }: any) => {
             step={current}
             value={value}
             onChange={onChange}
-            onAdvance={advance}
+            onAdvance={advanceAfterHighlight}
           />
         </View>
         {showSupport ? (
@@ -389,7 +433,7 @@ const SignupPrimer = ({ navigation }: any) => {
         ) : null}
       </ScrollView>
 
-      {current.control !== 'single' ? (
+      {!isAutoAdvance(current) ? (
         <View style={Styles.footer}>
           <Button
             text={stepIndex >= steps.length - 1 ? 'See my matches' : 'Continue'}

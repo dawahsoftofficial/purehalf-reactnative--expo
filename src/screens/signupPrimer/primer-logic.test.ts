@@ -1,6 +1,7 @@
 import {
   computeProgress,
   formatMatchCount,
+  isAutoAdvance,
   nextStepIndex,
   prevStepIndex,
   type PrimerStep,
@@ -79,4 +80,37 @@ describe('conditional steps', () => {
       total: 3,
     });
   });
+});
+
+describe('isAutoAdvance', () => {
+  it("'single' always self-advances", () =>
+    expect(isAutoAdvance({ control: 'single' })).toBe(true));
+
+  it("'status' self-advances without the polygamy checkbox (woman Q2)", () =>
+    expect(isAutoAdvance({ control: 'status' })).toBe(true));
+
+  it("'status' waits for Continue when the polygamy checkbox is shown (man Q1)", () =>
+    expect(isAutoAdvance({ control: 'status', hasPolygamy: true })).toBe(
+      false
+    ));
+
+  it("'deen' self-advances without the revert checkbox (man Q3)", () =>
+    expect(isAutoAdvance({ control: 'deen' })).toBe(true));
+
+  it("'deen' waits for Continue when the revert checkbox is shown (woman Q3)", () =>
+    expect(isAutoAdvance({ control: 'deen', hasRevert: true })).toBe(false));
+
+  it('controls with extra inputs never self-advance', () => {
+    expect(isAutoAdvance({ control: 'multi' })).toBe(false);
+    expect(isAutoAdvance({ control: 'work' })).toBe(false);
+    expect(isAutoAdvance({ control: 'sectCombo' })).toBe(false);
+    expect(isAutoAdvance({ control: 'slider' })).toBe(false);
+    expect(isAutoAdvance({ control: 'text' })).toBe(false);
+    expect(isAutoAdvance({ control: 'traits' })).toBe(false);
+    expect(isAutoAdvance({ control: 'habits' })).toBe(false);
+    expect(isAutoAdvance({ control: 'casteCombo' })).toBe(false);
+  });
+
+  it('an unknown control needs Continue (safe direction)', () =>
+    expect(isAutoAdvance({ control: 'something-new' })).toBe(false));
 });

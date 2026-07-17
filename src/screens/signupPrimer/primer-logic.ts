@@ -23,6 +23,34 @@ export const shouldShowPrimer = ({
   seen: boolean;
 }): boolean => !loggedIn && enabled && !seen;
 
+// Minimal structural shape of a step, for the auto-advance rule. Declared here
+// rather than imported from primer-types to avoid a primer-logic <-> primer-types
+// cycle (primer-types already imports PrimerAnswers from this file, and
+// import/no-cycle is an error). PrimerStepDef satisfies this structurally.
+export type AutoAdvanceStep = {
+  control: string;
+  hasPolygamy?: boolean;
+  hasRevert?: boolean;
+};
+
+// A step self-advances on tap when it's a single choice with nothing else on
+// screen to touch. The optional checkboxes on status/deen are exactly what
+// disqualify a step — you can't tick a box on a screen that's already leaving.
+// Unknown controls fall through to false: a step that waits for Continue is
+// recoverable, a step that skips itself is not.
+export const isAutoAdvance = (step: AutoAdvanceStep): boolean => {
+  switch (step.control) {
+    case 'single':
+      return true;
+    case 'status':
+      return !step.hasPolygamy;
+    case 'deen':
+      return !step.hasRevert;
+    default:
+      return false;
+  }
+};
+
 // Display-format the (already server-shaped) match count. Guards against float
 // artefacts, NaN, and negatives so the reveal never shows garbage.
 export const formatMatchCount = (n: number): string => {

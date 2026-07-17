@@ -1,15 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   FlatList,
   KeyboardAvoidingView,
   Modal,
   Platform,
-  StatusBar,
+  Pressable,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Animatable from 'react-native-animatable';
 import Ripple from 'react-native-material-ripple';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -32,6 +34,35 @@ type PickerProps = {
   loader?: boolean;
   data?: PickerItem[];
 };
+
+// A finger is the same size on every phone, so this must not use hp(): hp() is a
+// percentage of screen height (src/global/Scalling.tsx), which rendered ~63px on
+// a tall device and ~45px on a small one — under the 48px minimum tap target.
+// Deliberate deviation from the wp()/hp() convention in CLAUDE.md.
+const ROW_MIN_HEIGHT = 48;
+
+// The Modal itself now only fades (see animationType below), so the sheet's
+// rise from the bottom edge is animated separately here. 240ms sits in the
+// middle of the 220-260ms range used for sheet-style transitions elsewhere.
+const SHEET_SLIDE_DURATION_MS = 240;
+
+// slideInUp's preset only travels a fixed 100dp, which reads as a settle rather
+// than a rise once the sheet is taller than that. The sheet is capped at 80% of
+// the screen, so starting 85% down guarantees it begins fully off the bottom
+// edge at any content height.
+const SHEET_SLIDE_IN = {
+  from: { translateY: Dimensions.get('window').height * 0.85 },
+  to: { translateY: 0 },
+};
+
+// Animating the SafeAreaView directly (rather than wrapping it in a plain
+// Animatable.View) keeps Styles.sheet a direct child of sheetAnchor, so its
+// maxHeight: '80%' resolves against sheetAnchor's definite flex:1 size instead
+// of against an intermediate node with content-derived (indeterminate) height.
+// Declared at module scope: creating this per-render would remount the sheet
+// on every render.
+const AnimatableSafeAreaView =
+  Animatable.createAnimatableComponent(SafeAreaView);
 
 const displayValue = (value: PickerItem['value']) => {
   if (typeof value !== 'number') return value ?? '';
@@ -64,19 +95,47 @@ const Picker = ({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="fullScreen"
+      // Fades the modal container (and therefore the backdrop) in place.
+      // The sheet's own rise from the bottom is handled separately below by
+      // AnimatableSafeAreaView, so it doesn't sweep up together with the dim.
+      animationType="fade"
+      transparent
       onShow={() => setQuery('')}
       onRequestClose={() => {
         setQuery('');
         onClose();
       }}
     >
-      <SafeAreaView style={Styles.safeArea} edges={['top', 'bottom']}>
-        <StatusBar backgroundColor={Colors.surface} barStyle="dark-content" />
-        <KeyboardAvoidingView
-          style={Styles.keyboardAvoidingView}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <Pressable
+        style={Styles.backdrop}
+        // Hidden from screen readers: it's a tap-anywhere-to-dismiss affordance,
+        // and as a full-screen element it would otherwise swallow focus ahead of
+        // the sheet. The header close button carries the accessible action.
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+        onPress={() => {
+          setQuery('');
+          onClose();
+        }}
+      />
+      <KeyboardAvoidingView
+        style={Styles.sheetAnchor}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents="box-none"
+      >
+        {/* Sized to its content (the sheet), not flex:1, so it sits at the
+            bottom of sheetAnchor without covering the empty area above it —
+            taps there still fall through sheetAnchor's box-none to the
+            backdrop. AnimatableSafeAreaView animates the sheet node itself
+            (see its declaration above) rather than wrapping it, so this stays
+            true post-animation too: Styles.sheet is still the direct,
+            content-sized, bottom-anchored child of sheetAnchor. */}
+        <AnimatableSafeAreaView
+          animation={SHEET_SLIDE_IN}
+          duration={SHEET_SLIDE_DURATION_MS}
+          useNativeDriver
+          style={Styles.sheet}
+          edges={['bottom']}
         >
           <View style={Styles.headerCon}>
             <TouchableOpacity
@@ -106,6 +165,7 @@ const Picker = ({
 
           <FlatList
             data={filteredData}
+            style={Styles.list}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode={
               Platform.OS === 'ios' ? 'interactive' : 'on-drag'
@@ -151,8 +211,8 @@ const Picker = ({
               ) : null
             }
           />
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+        </AnimatableSafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -160,12 +220,29 @@ const Picker = ({
 export default Picker;
 
 const Styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.appBg,
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
-  keyboardAvoidingView: {
+  sheetAnchor: {
     flex: 1,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    // Capped, not fixed: the sheet grows with its content and stops at 80%.
+    // Measured from the bottom, so its top edge can't be cropped on a small
+    // device, and short lists (Age Range, Contact Support) stay short.
+    maxHeight: '80%',
+    backgroundColor: Colors.appBg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    // Clips the white header to the rounded top corners.
+    overflow: 'hidden',
+  },
+  list: {
+    // Lets the list shrink inside the capped, content-sized sheet instead of
+    // forcing it to full height.
+    flexShrink: 1,
   },
   headerCon: {
     minHeight: hp(7),
@@ -184,6 +261,9 @@ const Styles = StyleSheet.create({
   },
   headerTxt: {
     flex: 1,
+    // Beats the alignSelf that Text injects for RTL, which lands on this row's
+    // cross axis (vertical) and would pin the title to the top. See Text.tsx.
+    alignSelf: 'center',
     color: Colors.ink,
     textAlign: 'center',
     fontFamily: Fonts.APPFONT_B,
@@ -199,14 +279,14 @@ const Styles = StyleSheet.create({
     paddingBottom: hp(4),
   },
   itemCon: {
-    minHeight: hp(7),
+    minHeight: ROW_MIN_HEIGHT,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: wp(3),
     paddingHorizontal: wp(4),
-    paddingVertical: hp(1.3),
-    marginBottom: hp(1),
+    paddingVertical: hp(1),
+    marginBottom: hp(0.7),
     borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.hairline,
@@ -214,6 +294,10 @@ const Styles = StyleSheet.create({
   },
   itemLabel: {
     flex: 1,
+    // Same as headerTxt: overrides Text's injected RTL alignSelf so the label
+    // sits beside its chevron instead of above it. Horizontal alignment is
+    // still governed by textAlign (default 'auto'), so RTL is unaffected.
+    alignSelf: 'center',
     color: Colors.ink,
     fontFamily: Fonts.APPFONT_M,
     fontSize: Typography.small2,
@@ -223,6 +307,10 @@ const Styles = StyleSheet.create({
     marginVertical: hp(4),
   },
   emptyText: {
+    // Beats the alignSelf that Text injects for RTL, which lands on this
+    // list's cross axis (horizontal, since listContainer is a column) and
+    // would shrink-wrap the box to the left edge, making textAlign a no-op.
+    alignSelf: 'center',
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_R,
     fontSize: Typography.small2,
