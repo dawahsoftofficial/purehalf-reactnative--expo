@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { type Asset, launchCamera } from 'react-native-image-picker';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -8,6 +9,7 @@ import Video from 'react-native-video';
 import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
+import { type IntroMediaStatus } from '../../lib/utils/profile-intro-media';
 import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
@@ -17,12 +19,40 @@ import {
   useGlobalContext,
 } from '../../services';
 
+const statusLabel = (status?: IntroMediaStatus) => {
+  if (status === 'approved') return LanguageKeys.approved;
+  if (status === 'rejected') return LanguageKeys.needsChanges;
+  return LanguageKeys.pendingReview;
+};
+
+const statusColor = (status?: IntroMediaStatus) => {
+  if (status === 'approved') return Colors.verified;
+  if (status === 'rejected') return Colors.attention;
+  return '#F2994A';
+};
+
 const ProfileIntroVideo = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
   const [cameraType, setCameraType] = useState<'front' | 'back'>('front');
   const [asset, setAsset] = useState<Asset | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  // Opens in "existing" mode when a video intro is already saved, so the owner
+  // can play, delete, or re-record it. With none saved it opens straight into
+  // the camera flow (first-time add).
+  const [serverVideo, setServerVideo] = useState<string | null>(
+    currentUser?.media?.intro_video ?? null
+  );
+  const [serverStatus, setServerStatus] = useState<IntroMediaStatus>(
+    currentUser?.media?.intro_video_status ?? null
+  );
+  const [mode, setMode] = useState<'existing' | 'record'>(
+    currentUser?.media?.intro_video ? 'existing' : 'record'
+  );
+  const [deleting, setDeleting] = useState(false);
+  const [videoPaused, setVideoPaused] = useState(false);
 
   const openCamera = () => {
     launchCamera(
@@ -73,6 +103,120 @@ const ProfileIntroVideo = ({ navigation }: any) => {
       setUploading(false);
     }
   };
+
+  // "Re-record" leaves the saved video untouched until a new take is submitted
+  // (which replaces it) — backing out of the camera keeps the original.
+  const reRecord = () => {
+    setVideoPaused(false);
+    setAsset(null);
+    setMode('record');
+  };
+
+  const performDelete = async () => {
+    if (!serverVideo || deleting) return;
+    setDeleting(true);
+    try {
+      const media = await ApiServices.deleteImage({
+        key: 'intro_video',
+        file_path: serverVideo,
+      });
+      const updatedUser = { ...currentUser, media };
+      updateCurrentUser(updatedUser);
+      await setData(storageKeys.USER, updatedUser);
+      setServerVideo(null);
+      setServerStatus(null);
+      setMode('record');
+    } catch {
+      // deleteImage already surfaces the error to the user.
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (deleting) return;
+    Alert.alert(t(LanguageKeys.delete), t(LanguageKeys.sureDeleteDes), [
+      { text: t(LanguageKeys.cancel), style: 'cancel' },
+      {
+        text: t(LanguageKeys.delete),
+        style: 'destructive',
+        onPress: () => void performDelete(),
+      },
+    ]);
+  };
+
+  if (mode === 'existing' && serverVideo) {
+    return (
+      <View style={Styles.screen}>
+        <Ripple
+          style={StyleSheet.absoluteFill}
+          onPress={() => setVideoPaused((value) => !value)}
+        >
+          <Video
+            source={{ uri: serverVideo }}
+            style={StyleSheet.absoluteFill}
+            resizeMode="cover"
+            repeat
+            paused={videoPaused}
+          />
+          {videoPaused ? (
+            <View style={Styles.playOverlay}>
+              <Ionicons name="play" size={wp(12)} color={Colors.color2} />
+            </View>
+          ) : null}
+        </Ripple>
+
+        <View style={Styles.topBar}>
+          <Ripple
+            style={Styles.roundButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="close" size={wp(6)} color={Colors.color2} />
+          </Ripple>
+          <View style={Styles.statusPill}>
+            <View
+              style={[
+                Styles.statusDot,
+                { backgroundColor: statusColor(serverStatus) },
+              ]}
+            />
+            <Text style={Styles.statusPillText}>
+              {statusLabel(serverStatus)}
+            </Text>
+          </View>
+        </View>
+
+        <View style={Styles.bottomPanel}>
+          <View style={Styles.reviewActions}>
+            <Ripple
+              style={Styles.deleteButton}
+              onPress={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator color={Colors.attention} />
+              ) : (
+                <Ionicons
+                  name="trash-outline"
+                  size={wp(5)}
+                  color={Colors.attention}
+                />
+              )}
+              <Text style={Styles.deleteText}>{LanguageKeys.delete}</Text>
+            </Ripple>
+            <Ripple
+              style={Styles.submitButton}
+              onPress={reRecord}
+              disabled={deleting}
+            >
+              <Ionicons name="refresh" size={wp(5)} color={Colors.primary} />
+              <Text style={Styles.submitText}>{LanguageKeys.retake}</Text>
+            </Ripple>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={Styles.screen}>
@@ -197,12 +341,19 @@ const Styles = StyleSheet.create({
     marginTop: hp(0.6),
     alignSelf: 'center',
   },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: Colors.blackRGBA25,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   topBar: {
     position: 'absolute',
     top: hp(5),
     left: wp(5),
     right: wp(5),
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   roundButton: {
@@ -212,6 +363,26 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.blackRGBA50,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+    backgroundColor: Colors.blackRGBA50,
+    borderRadius: 999,
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(0.9),
+  },
+  statusDot: {
+    width: wp(2.2),
+    height: wp(2.2),
+    borderRadius: wp(1.1),
+  },
+  statusPillText: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small2,
+    alignSelf: 'center',
   },
   bottomPanel: {
     position: 'absolute',
@@ -259,6 +430,17 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  deleteButton: {
+    flex: 1,
+    minHeight: hp(6),
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.attention,
+    flexDirection: 'row',
+    gap: wp(2),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   submitButton: {
     flex: 1.6,
     minHeight: hp(6),
@@ -274,10 +456,18 @@ const Styles = StyleSheet.create({
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
+    alignSelf: 'center',
+  },
+  deleteText: {
+    color: Colors.attention,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    alignSelf: 'center',
   },
   submitText: {
     color: Colors.primary,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
+    alignSelf: 'center',
   },
 });

@@ -6,9 +6,11 @@ import { Colors, Fonts } from '../../res';
 const { width } = Dimensions.get('window');
 
 const Styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
   innerContainer: {
     flex: 1,
-    justifyContent: 'space-between',
     backgroundColor: Colors.appBg,
   },
   guardianTextWrapper: {
@@ -29,6 +31,15 @@ const Styles = StyleSheet.create({
   // so the chat background is continuous whether or not messages are present.
   chatBody: {
     flex: 1,
+    width: '100%',
+    backgroundColor: Colors.appBg,
+  },
+  chatLoader: {
+    alignSelf: 'center',
+    marginTop: hp(4),
+  },
+  composerArea: {
+    flexShrink: 0,
     backgroundColor: Colors.appBg,
   },
   messagesList: {

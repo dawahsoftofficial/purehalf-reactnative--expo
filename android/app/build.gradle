@@ -132,8 +132,8 @@ android {
         applicationId "com.zojayn"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 78
-        versionName "3.8"
+        versionCode 79
+        versionName "3.9"
     }
 
     configurations.all {

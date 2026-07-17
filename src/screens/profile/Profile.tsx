@@ -24,11 +24,9 @@ import messageServices from '../../services/api/message-services';
 import type { UserMedia } from '../../services/api/types/user-types';
 import PolygamyBadge from './components/polygamy-badge';
 import ProfileIntroMedia from './components/profile-intro-media';
-import { updateDetails } from './Funtions';
 import Header from './Header';
 import InfoCard from './InfoCard';
 import InterestAndHobbyCard from './InterestAndHobbyCard';
-import InterestsPickerModal from './InterestsPickerModal';
 import {
   type BlockPickerOption,
   BlockPickerSheet,
@@ -43,11 +41,7 @@ import {
   InterestsPreview,
   SectionLabel,
 } from './profile-hub';
-import {
-  type FieldVisibilityLevel,
-  type ProfileFieldVisibility,
-  type ProfilePrivacyResponse,
-} from './profile-privacy';
+import { type ProfileFieldVisibility } from './profile-privacy';
 import Styles from './Styles';
 
 type LoaderState = { visible: boolean; message: string };
@@ -63,6 +57,7 @@ type PickerState = {
 type UserDetail = {
   tagline?: string;
   personality_id?: number[];
+  interest_id?: string[];
   height_scale?: string;
   height_display_scale?: string;
   height?: number;
@@ -141,13 +136,6 @@ const Profile = ({
   const [isBlockedYou, setIsBlockedYou] = useState(false);
   const [categoriesData, setCategoriesData] = useState<any>({});
   const [dataLoader, setDataLoader] = useState(true);
-  const [interestsPickerVisible, setInterestsPickerVisible] = useState(false);
-  const [interestsSaving, setInterestsSaving] = useState(false);
-  const [privacyUpdatingField, setPrivacyUpdatingField] = useState('');
-  const [profileFieldVisibility, setProfileFieldVisibility] =
-    useState<ProfileFieldVisibility>(
-      currentUser?.detail?.profile_field_visibility ?? {}
-    );
 
   const blockPickerData: BlockPickerOption[] = useMemo(
     () =>
@@ -203,9 +191,6 @@ const Profile = ({
         if (currentUser?.detail?.tagline) {
           setTagLineInput(currentUser.detail.tagline);
         }
-        setProfileFieldVisibility(
-          currentUser?.detail?.profile_field_visibility ?? {}
-        );
       }, 0);
 
       return () => clearTimeout(timeout);
@@ -240,119 +225,98 @@ const Profile = ({
   );
 
   const onEditInterests = useCallback(() => {
-    setInterestsPickerVisible(true);
-  }, []);
-
-  const onCloseInterestsPicker = useCallback(() => {
-    setInterestsPickerVisible(false);
-  }, []);
-
-  const onSaveInterests = useCallback(
-    (ids: string[]) => {
-      setInterestsSaving(true);
-      updateDetails({ interestAndHobbies: ids })
-        .then(async (res: any) => {
-          if (res && Object.keys(res).length !== 0) {
-            const updatedUser = { ...currentUser, detail: res };
-            await setData(storageKeys.USER, updatedUser);
-            updateCurrentUser(updatedUser);
-            setIinterestAndHobbies((prev) =>
-              prev.map((item) => ({
-                ...item,
-                selected: ids.includes(item?.id),
-              }))
-            );
-          }
-          flashSuccessMessage();
-          setInterestsSaving(false);
-          setInterestsPickerVisible(false);
-        })
-        .catch(() => setInterestsSaving(false));
-    },
-    [currentUser, setData, storageKeys.USER, updateCurrentUser]
-  );
+    navigation.navigate('EditInterests', { data: interestAndHobbies });
+  }, [navigation, interestAndHobbies]);
 
   const getAttribute = useCallback(
-    (Data: any, nextUserData: User) => {
-      getData(storageKeys.ATTRIBUTE).then((attributeRes: any) => {
-        if (attributeRes) {
-          if (attributeRes.hasOwnProperty('personality-0')) {
-            const interest = attributeRes['personality-0'] as any[];
-            interest?.forEach((element: any) => {
-              if (nextUserData?.detail?.personality_id?.includes(element.id)) {
-                element.selected = true;
-              }
-            });
-            setIinterestAndHobbies(interest);
-          }
-          const catData: any = {};
-          for (const child in Data) {
-            Data[child].forEach((element: any) => {
-              if (child !== 'personalityRequirements') {
-                const result = attributeRes[element.category][element.id];
-                if (result) {
-                  element.data = result;
-                }
-              }
-              if (
-                nextUserData?.detail &&
-                Object.keys(nextUserData?.detail).length !== 0
-              ) {
-                const value = (nextUserData?.detail as any)[element.apiKey];
+    async (Data: any, nextUserData: User) => {
+      let attributeRes: any;
+      try {
+        attributeRes = await ApiServices.getAttribute();
+        await setData(storageKeys.ATTRIBUTE, attributeRes);
+      } catch {
+        attributeRes = await getData(storageKeys.ATTRIBUTE);
+      }
 
-                if (value !== null && value !== undefined) {
-                  if (element.type === 'dropDown') {
-                    const result = _.find(element?.data, function (n) {
-                      if (n.id === value) {
-                        return n;
-                      }
-                    });
+      if (attributeRes) {
+        if (attributeRes.hasOwnProperty('interest-0')) {
+          const interest = (attributeRes['interest-0'] as any[]).map(
+            (element: any) => ({
+              ...element,
+              selected: Boolean(
+                nextUserData?.detail?.interest_id?.includes(element.id)
+              ),
+            })
+          );
+          setIinterestAndHobbies(interest);
+        }
+        const catData: any = {};
+        for (const child in Data) {
+          Data[child].forEach((element: any) => {
+            if (child !== 'personalityRequirements') {
+              const result = attributeRes[element.category]?.[element.id];
+              if (result) {
+                element.data = result;
+              }
+            }
+            if (
+              nextUserData?.detail &&
+              Object.keys(nextUserData?.detail).length !== 0
+            ) {
+              const value = (nextUserData?.detail as any)[element.apiKey];
 
-                    if (result) {
-                      element.selected = result;
-                    } else if (
-                      element.id === 'language' ||
-                      element.id === 'nationality'
-                    ) {
-                      element.selected = {
-                        id: value?.id,
-                        value: value?.name,
-                      };
+              if (value !== null && value !== undefined) {
+                if (element.type === 'dropDown') {
+                  const result = _.find(element?.data, function (n) {
+                    if (n.id === value) {
+                      return n;
                     }
-                  } else if (element.type === 'scalling') {
-                    if (element.id === 'height') {
-                      element.selected = {
-                        scale: nextUserData?.detail?.height_scale,
-                        value: nextUserData?.detail?.height,
-                        displayScale:
-                          nextUserData?.detail?.height_display_scale ??
-                          nextUserData?.detail?.height_scale,
-                      };
-                    } else {
-                      element.selected = {
-                        scale: nextUserData?.detail?.weight_scale,
-                        value: nextUserData?.detail?.weight,
-                      };
-                    }
-                  } else {
+                  });
+
+                  if (result) {
+                    element.selected = result;
+                  } else if (
+                    element.id === 'language' ||
+                    element.id === 'nationality'
+                  ) {
                     element.selected = {
-                      id: element?.id,
-                      value: value,
-                      category: element?.category,
+                      id: value?.id,
+                      value: value?.name,
                     };
                   }
+                } else if (element.type === 'scalling') {
+                  if (element.id === 'height') {
+                    element.selected = {
+                      scale: nextUserData?.detail?.height_scale,
+                      value: nextUserData?.detail?.height,
+                      displayScale:
+                        nextUserData?.detail?.height_display_scale ??
+                        nextUserData?.detail?.height_scale,
+                    };
+                  } else {
+                    element.selected = {
+                      scale: nextUserData?.detail?.weight_scale,
+                      value: nextUserData?.detail?.weight,
+                    };
+                  }
+                } else {
+                  element.selected = {
+                    id: element?.id,
+                    value: value,
+                    category: element?.category,
+                  };
                 }
               }
-            });
-            catData[child] = Data[child];
-          }
-          console.log('catData', catData);
-          setCategoriesData(catData);
-          setDataLoader(false);
+            }
+          });
+          catData[child] = Data[child];
         }
-      });
+        console.log('catData', catData);
+        setCategoriesData(catData);
+        setDataLoader(false);
+      }
     },
-    [getData, storageKeys.ATTRIBUTE]
+    [getData, setData, storageKeys.ATTRIBUTE]
   );
 
   const hideLoader = useCallback(() => {
@@ -374,9 +338,6 @@ const Profile = ({
           });
           const user = (await ApiServices.getUserDetail(profileUserId)) as User;
           setUserData(user);
-          setProfileFieldVisibility(
-            user?.detail?.profile_field_visibility ?? {}
-          );
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
@@ -407,9 +368,6 @@ const Profile = ({
             media: userData.media ?? undefined,
           };
           setUserData(user);
-          setProfileFieldVisibility(
-            user?.detail?.profile_field_visibility ?? {}
-          );
           if (user?.detail?.tagline) {
             setTagLineInput(user.detail.tagline);
           }
@@ -561,57 +519,6 @@ const Profile = ({
 
   const onChangeTagLine = (text: string) => setTagLineInput(text);
 
-  const updateInlinePrivacy = useCallback(
-    (field: string, next: FieldVisibilityLevel) => {
-      if (privacyUpdatingField) return;
-
-      const previous = profileFieldVisibility[field] ?? 'public';
-      const optimistic = { ...profileFieldVisibility, [field]: next };
-      setProfileFieldVisibility(optimistic);
-      setPrivacyUpdatingField(field);
-
-      ApiServices.updateProfilePrivacy({ visibility: { [field]: next } })
-        .then(async (result: ProfilePrivacyResponse) => {
-          const savedVisibility =
-            result?.profile_field_visibility ?? optimistic;
-          const updatedUser = {
-            ...currentUser,
-            detail: {
-              ...(currentUser?.detail ?? {}),
-              profile_field_visibility: savedVisibility,
-            },
-          };
-
-          setProfileFieldVisibility(savedVisibility);
-          setUserData((previousUser) => ({
-            ...previousUser,
-            detail: {
-              ...(previousUser?.detail ?? {}),
-              profile_field_visibility: savedVisibility,
-            },
-          }));
-          updateCurrentUser(updatedUser);
-          await setData(storageKeys.USER, updatedUser);
-          flashSuccessMessage(LanguageKeys.updated);
-        })
-        .catch(() => {
-          setProfileFieldVisibility({
-            ...profileFieldVisibility,
-            [field]: previous,
-          });
-        })
-        .finally(() => setPrivacyUpdatingField(''));
-    },
-    [
-      currentUser,
-      privacyUpdatingField,
-      profileFieldVisibility,
-      setData,
-      storageKeys.USER,
-      updateCurrentUser,
-    ]
-  );
-
   const isOwnProfile = !fromUserProfile;
   const headerUserData = {
     ...userData,
@@ -659,10 +566,13 @@ const Profile = ({
             onTaglineEditPress={showTagLineInput}
             onTaglineCancel={hideTagLineInput}
           />
-          {!isBlockedYou ? (
+          {/* Owner manages their intro video/voice from the Photos & videos
+              screen; here we only show the viewer version so visitors can
+              still watch/hear another member's intro on their profile. */}
+          {!isBlockedYou && fromUserProfile ? (
             <ProfileIntroMedia
-              isOwner={!fromUserProfile}
-              media={!fromUserProfile ? currentUser?.media : userData?.media}
+              isOwner={false}
+              media={userData?.media}
               navigation={navigation}
             />
           ) : null}
@@ -758,24 +668,6 @@ const Profile = ({
         data={buttonPickerVisible.pickerData}
         onButtonPress={onButtonPickerButtonPress}
         headerTitle={buttonPickerVisible.pickerHeaderTitle}
-      />
-
-      <InterestsPickerModal
-        visible={interestsPickerVisible}
-        data={interestAndHobbies}
-        saving={interestsSaving}
-        privacyVisible={profileFieldVisibility.personality_id !== 'private'}
-        privacyUpdating={privacyUpdatingField === 'personality_id'}
-        onPrivacyChange={() =>
-          updateInlinePrivacy(
-            'personality_id',
-            profileFieldVisibility.personality_id === 'private'
-              ? 'public'
-              : 'private'
-          )
-        }
-        onClose={onCloseInterestsPicker}
-        onSave={onSaveInterests}
       />
     </SafeAreaView>
   );

@@ -1,13 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { memo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { StyleSheet, Text as RNText, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
+import { stripLeadingEmoji } from '../../lib/utils/profile-utils';
 import { Colors, Fonts } from '../../res';
 import {
   countFilled,
@@ -60,40 +60,48 @@ export const InterestsPreview = memo(function InterestsPreview({
   interests,
   onEdit,
 }: InterestsPreviewProps) {
-  const { t } = useTranslation();
-  const selectedCount = (interests ?? []).filter((i) => i?.selected).length;
+  const selected = (interests ?? []).filter((i) => i?.selected);
+  const preview = selected
+    .map((i) => stripLeadingEmoji(i?.value ?? '').trim())
+    .filter((v) => v.length > 0)
+    .slice(0, 3)
+    .join(' · ');
   return (
-    <Ripple onPress={onEdit} style={Styles.card}>
-      <View style={Styles.cardHead}>
-        <View style={Styles.cardHeadText}>
-          <Text style={Styles.cardHeadTxt}>
+    <View style={Styles.card}>
+      <Ripple onPress={onEdit} style={Styles.row}>
+        <View style={Styles.iconChip}>
+          <Ionicons name="happy-outline" size={wp(5)} color={Colors.primary} />
+        </View>
+        <View style={Styles.rowText}>
+          <Text
+            style={Styles.rowTitle}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.9}
+          >
             {LanguageKeys.myInterestAndHobbies}
           </Text>
-          {selectedCount === 0 ? (
-            <View style={Styles.addRow}>
-              <Ionicons name="add" size={wp(4.5)} color={Colors.primary} />
-              <Text style={Styles.addTxt}>{LanguageKeys.tapToAdd}</Text>
-            </View>
-          ) : null}
+          <Text style={Styles.rowPreview} numberOfLines={1}>
+            {preview.length > 0 ? preview : LanguageKeys.tapToAdd}
+          </Text>
         </View>
-        <View style={Styles.cardHeadActions}>
-          {selectedCount > 0 ? (
-            <View style={Styles.countPill}>
-              <RNText style={Styles.countTxt}>
-                {t(LanguageKeys.interestAndHobbiesSelectedCount, {
-                  count: selectedCount,
-                })}
-              </RNText>
-            </View>
-          ) : null}
-          <Ionicons
-            name="chevron-forward"
-            size={wp(5)}
-            color={Colors.primaryLite}
-          />
-        </View>
-      </View>
-    </Ripple>
+        {selected.length > 0 ? (
+          // Interests have a cap (10) rather than a required total, so any
+          // selection counts as filled — matching the green "done" pill the
+          // other groups show at filled === total.
+          <View style={[Styles.countPill, Styles.countPillDone]}>
+            <Text style={[Styles.countTxt, Styles.countTxtDone]}>
+              {String(selected.length)}
+            </Text>
+          </View>
+        ) : null}
+        <Ionicons
+          name="chevron-forward"
+          size={wp(5)}
+          color={Colors.primaryLite}
+        />
+      </Ripple>
+    </View>
   );
 });
 
@@ -124,7 +132,14 @@ export const DetailSectionList = memo(function DetailSectionList({
               <Ionicons name={g.icon} size={wp(5)} color={Colors.primary} />
             </View>
             <View style={Styles.rowText}>
-              <Text style={Styles.rowTitle}>{g.title}</Text>
+              <Text
+                style={Styles.rowTitle}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
+              >
+                {g.title}
+              </Text>
               <Text style={Styles.rowPreview} numberOfLines={1}>
                 {preview.length > 0 ? preview : LanguageKeys.tapToAdd}
               </Text>
@@ -212,38 +227,6 @@ const Styles = StyleSheet.create({
     borderRadius: 16,
     marginHorizontal: wp(4),
     overflow: 'hidden',
-  },
-  cardHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: wp(4),
-    paddingVertical: hp(1.6),
-  },
-  cardHeadText: {
-    flex: 1,
-    paddingRight: wp(3),
-  },
-  cardHeadTxt: {
-    fontFamily: Fonts.APPFONT_SB,
-    fontSize: Typography.small3,
-    color: Colors.ink,
-  },
-  cardHeadActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(2.5),
-  },
-  addRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: wp(1.5),
-    marginTop: hp(0.8),
-  },
-  addTxt: {
-    color: Colors.primary,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small2,
   },
   row: {
     flexDirection: 'row',

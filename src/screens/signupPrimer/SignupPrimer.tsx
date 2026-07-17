@@ -1,5 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -22,6 +28,7 @@ import { journeyFor } from './journeys';
 import {
   computeProgress,
   formatMatchCount,
+  isAutoAdvance,
   nextStepIndex,
   prevStepIndex,
   questionPosition,
@@ -35,6 +42,11 @@ const isAnswered = (step: PrimerStepDef, value: any): boolean => {
   if (step.control === 'habits') return !!(value?.smoke && value?.drink);
   return value != null;
 };
+
+// Beat between tapping an auto-advancing option and the next question, so the
+// selected row's highlight actually paints. Long enough to register, short
+// enough not to feel like lag across eleven questions.
+const HIGHLIGHT_PAUSE_MS = 200;
 
 // Continuous twinkle for the reveal's star badge.
 const TWINKLE = {
@@ -169,6 +181,38 @@ const SignupPrimer = ({ navigation }: any) => {
     steps,
   ]);
 
+  // `advance` closes over `answers`, so the copy captured at tap time predates
+  // the onChange from that same tap. Calling through a ref means the timeout
+  // runs the current `advance` — by then React has re-rendered with the answer.
+  const advanceRef = useRef(advance);
+  useEffect(() => {
+    advanceRef.current = advance;
+  });
+
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cancel a pending pause whenever we leave the question that scheduled it.
+  // Keying on stepIndex/phase (rather than only unmounting) is what stops a
+  // tap-then-back inside the 200ms window from firing a stale advance and
+  // silently undoing the back. Cleanup still runs on unmount too.
+  useEffect(
+    () => () => {
+      if (advanceTimer.current) {
+        clearTimeout(advanceTimer.current);
+        advanceTimer.current = null;
+      }
+    },
+    [stepIndex, phase]
+  );
+
+  // Used only by auto-advancing options. The Continue button stays instant.
+  const advanceAfterHighlight = useCallback(() => {
+    if (advanceTimer.current) return; // a second tap must not skip a question
+    advanceTimer.current = setTimeout(() => {
+      advanceTimer.current = null;
+      advanceRef.current();
+    }, HIGHLIGHT_PAUSE_MS);
+  }, []);
+
   // Step back to the previous visible question; from the first question, return
   // to the gender step so nothing is a dead end.
   const goBack = useCallback(() => {
@@ -262,11 +306,6 @@ const SignupPrimer = ({ navigation }: any) => {
             About 2 minutes · no account needed
           </RNText>
         </ScrollView>
-        <View style={Styles.footer}>
-          <Ripple style={Styles.laterBtn} onPress={exitFlow}>
-            <RNText style={Styles.laterTxt}>Skip for now</RNText>
-          </Ripple>
-        </View>
       </Container>
     );
   }
@@ -363,9 +402,6 @@ const SignupPrimer = ({ navigation }: any) => {
               {`Question ${questionCount.current} of ${questionCount.total}`}
             </RNText>
           </View>
-          <Ripple onPress={advance}>
-            <RNText style={Styles.laterTxt}>Skip</RNText>
-          </Ripple>
         </View>
         <View style={Styles.meterTrack}>
           <View style={[Styles.meterFill, { width: `${progress}%` }]} />
@@ -379,15 +415,29 @@ const SignupPrimer = ({ navigation }: any) => {
       >
         <RNText style={Styles.qTitle}>{current.question}</RNText>
         {current.subtitle ? (
-          <RNText style={Styles.qSub}>{current.subtitle}</RNText>
+          current.max != null ? (
+            <View style={Styles.subRow}>
+              <RNText style={Styles.qSubInline}>{current.subtitle}</RNText>
+              <RNText style={Styles.inlineCounter}>
+                {`${Array.isArray(value) ? value.length : 0} / ${current.max} selected`}
+              </RNText>
+            </View>
+          ) : (
+            <RNText style={Styles.qSub}>{current.subtitle}</RNText>
+          )
         ) : null}
-        <View style={Styles.controlWrap}>
+        <View
+          style={[
+            Styles.controlWrap,
+            current.max != null && Styles.controlWrapTight,
+          ]}
+        >
           <StepControl
             key={current.id}
             step={current}
             value={value}
             onChange={onChange}
-            onAdvance={advance}
+            onAdvance={advanceAfterHighlight}
           />
         </View>
         {showSupport ? (
@@ -397,7 +447,7 @@ const SignupPrimer = ({ navigation }: any) => {
         ) : null}
       </ScrollView>
 
-      {current.control !== 'single' ? (
+      {!isAutoAdvance(current) ? (
         <View style={Styles.footer}>
           <Button
             text={stepIndex >= steps.length - 1 ? 'See my matches' : 'Continue'}
@@ -469,7 +519,32 @@ const Styles = StyleSheet.create({
     fontSize: Typography.small2,
     marginTop: hp(0.7),
   },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: hp(0.7),
+  },
+  qSubInline: {
+    flex: 1,
+    marginRight: wp(2),
+    color: Colors.muted,
+    fontFamily: Fonts.APPFONT_R,
+    fontSize: Typography.small2,
+  },
+  inlineCounter: {
+    flexShrink: 0,
+    color: Colors.primary,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny1,
+    backgroundColor: Colors.lavender,
+    borderRadius: 999,
+    paddingHorizontal: wp(2.5),
+    paddingVertical: hp(0.3),
+    overflow: 'hidden',
+  },
   controlWrap: { marginTop: hp(2.5) },
+  controlWrapTight: { marginTop: hp(1) },
   supportBox: {
     marginTop: hp(2),
     backgroundColor: 'rgba(46,158,91,0.12)',
@@ -486,12 +561,6 @@ const Styles = StyleSheet.create({
     paddingHorizontal: wp(5),
     paddingTop: hp(1.2),
     paddingBottom: hp(2),
-  },
-  laterBtn: { alignSelf: 'center', paddingVertical: hp(1.4) },
-  laterTxt: {
-    color: Colors.muted,
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small2,
   },
   // gender
   genderScroll: { flex: 1 },

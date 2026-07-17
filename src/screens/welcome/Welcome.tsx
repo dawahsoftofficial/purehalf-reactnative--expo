@@ -11,6 +11,12 @@ import React, {
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, StyleSheet, Text, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
+import {
+  Menu,
+  MenuOption,
+  MenuOptions,
+  MenuTrigger,
+} from 'react-native-popup-menu';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import {
@@ -26,6 +32,7 @@ import {
   Container,
   Loader,
   ModalLoader,
+  PopupMenuRenderer,
   PurchaseSuccessModal,
   Swiper,
   Text as AppText,
@@ -195,7 +202,45 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
   const [loadMoreLoader, setLoadMoreLoader] = useState(false);
   const [modalLoader, setModalLoader] = useState(false);
   // Get user stats from Pusher store (updated via counterUpdate events)
-  const { like_count, visit_count, photo_request_count } = useUserStatsStore();
+  const {
+    like_count,
+    visit_count,
+    photo_request_count,
+    photo_approval_count,
+    setUserStats,
+    setPhotoApprovalCount,
+  } = useUserStatsStore();
+  const photoAlertCount = photo_request_count + photo_approval_count;
+  const accountMenuItems = useMemo(
+    () => [
+      {
+        label: t(LanguageKeys.accountMenuProfile),
+        icon: 'person-outline',
+        screen: 'Profile',
+      },
+      {
+        label: t(LanguageKeys.accountMenuPhotos),
+        icon: 'images-outline',
+        screen: 'PhotosAndVideos',
+      },
+      {
+        label: t(LanguageKeys.accountMenuPrivacy),
+        icon: 'shield-checkmark-outline',
+        screen: 'PrivacySettings',
+      },
+      {
+        label: t(LanguageKeys.accountMenuMembership),
+        icon: 'diamond-outline',
+        screen: isPremiumUser ? 'MembershipInfo' : 'ProFeaturesPromotion',
+      },
+      {
+        label: t(LanguageKeys.accountMenuSettings),
+        icon: 'settings-outline',
+        screen: 'Settings',
+      },
+    ],
+    [isPremiumUser, t]
+  );
   const [activeOptionButton, setActiveOptionButton] = useState<OptionButton>(
     optionBarList[0]
   );
@@ -228,6 +273,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
     () => computeGiftStatus(currentUser, giftThreshold),
     [currentUser, giftThreshold]
   );
+  const giftPending = !giftStatus.claimed;
   const [giftModalVisible, setGiftModalVisible] = useState(false);
   const [dailyReward, setDailyReward] = useState<DailyVipReward | null>(null);
   const [dailyRewardVisible, setDailyRewardVisible] = useState(false);
@@ -580,7 +626,7 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         currentUser?.detail?.relocation_plan_id
       ),
       'myInterestAndHobbies-0': Boolean(
-        currentUser?.detail?.personality_id?.length
+        currentUser?.detail?.interest_id?.length
       ),
     };
 
@@ -703,7 +749,18 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
 
   useFocusEffect(
     React.useCallback(() => {
-      // Counters now come from Pusher events, no API call needed
+      // Pusher keeps these current while the app is open; the API restores
+      // persistent indicators after a cold start or a missed push event.
+      ApiServices.getUserStats()
+        .then((stats: any) => {
+          setUserStats(
+            stats?.like_you_counter ?? 0,
+            stats?.visit_you_counter ?? 0,
+            stats?.photo_requested_you_counter ?? 0
+          );
+          setPhotoApprovalCount(stats?.photo_request_approved_unread ?? 0);
+        })
+        .catch(() => null);
       handleProfileCompleteData();
 
       // Fetch users on focus when the deck is empty and no fetch is in flight.
@@ -714,7 +771,13 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
         setLoader(true);
         getUsers(undefined, true);
       }
-    }, [handleProfileCompleteData, usersList.length, getUsers])
+    }, [
+      getUsers,
+      handleProfileCompleteData,
+      setPhotoApprovalCount,
+      setUserStats,
+      usersList.length,
+    ])
   );
 
   // Show loading state instead of blank screen if premium store hasn't loaded yet
@@ -741,16 +804,101 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
             { flexDirection: Rtl ? 'row-reverse' : 'row' },
           ]}
         >
-          <View style={Styles.greetingBlock}>
-            <AppText style={Styles.greetingEyebrow}>
-              {LanguageKeys.assalamuAlaikum}
-            </AppText>
-            {currentUser?.first_name ? (
-              <AppText variant="display" style={Styles.greetingName}>
-                {currentUser.first_name}
-              </AppText>
-            ) : null}
-          </View>
+          <Menu renderer={PopupMenuRenderer}>
+            <MenuTrigger>
+              <View
+                style={[
+                  Styles.accountTrigger,
+                  { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                ]}
+              >
+                <View style={Styles.avatarBtn}>
+                  {currentUser?.media?.un_blur_primary_image ? (
+                    <Image
+                      source={{
+                        uri: currentUser?.media?.un_blur_primary_image,
+                      }}
+                      style={Styles.avatarImg}
+                    />
+                  ) : (
+                    <Text style={Styles.headerText}>
+                      {currentUser?.first_name?.slice(0, 1)}
+                    </Text>
+                  )}
+                  {isPremiumUser ? (
+                    <View style={Styles.premiumBadge}>
+                      <Ionicons
+                        name="diamond"
+                        size={wp(2.6)}
+                        color={Colors.surface}
+                      />
+                    </View>
+                  ) : null}
+                  {photoAlertCount > 0 ? (
+                    <View style={Styles.accountAlertBadge}>
+                      <Text style={Styles.accountAlertBadgeText}>
+                        {photoAlertCount > 99 ? '99+' : photoAlertCount}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {giftPending ? <View style={Styles.giftDot} /> : null}
+                </View>
+                <View style={Styles.greetingBlock}>
+                  <AppText
+                    variant="display"
+                    style={Styles.greetingName}
+                    numberOfLines={1}
+                  >
+                    {currentUser?.first_name || t(LanguageKeys.myProfile)}
+                  </AppText>
+                </View>
+                <View style={Styles.accountMenuCue}>
+                  <Ionicons
+                    name="chevron-down"
+                    size={wp(3.6)}
+                    color={Colors.primary}
+                  />
+                </View>
+              </View>
+            </MenuTrigger>
+            <MenuOptions optionsContainerStyle={Styles.accountMenuOptions}>
+              {accountMenuItems.map((item) => (
+                <MenuOption
+                  key={`${item.screen}-${item.label}`}
+                  onSelect={() => navigation.navigate(item.screen)}
+                  style={Styles.accountMenuOption}
+                >
+                  <View
+                    style={[
+                      Styles.accountMenuOptionContent,
+                      { flexDirection: Rtl ? 'row-reverse' : 'row' },
+                    ]}
+                  >
+                    <View style={Styles.accountMenuIcon}>
+                      <Ionicons
+                        name={item.icon as any}
+                        size={wp(4.8)}
+                        color={Colors.primary}
+                      />
+                    </View>
+                    <View style={Styles.accountMenuLabelWrap}>
+                      <Text style={Styles.accountMenuOptionText}>
+                        {item.label}
+                      </Text>
+                      {giftPending && item.screen === 'Profile' ? (
+                        <View style={Styles.giftDotInline} />
+                      ) : null}
+                    </View>
+                    <Ionicons
+                      name={Rtl ? 'chevron-back' : 'chevron-forward'}
+                      size={wp(4)}
+                      color={Colors.muted}
+                    />
+                  </View>
+                </MenuOption>
+              ))}
+            </MenuOptions>
+          </Menu>
           <View
             style={[
               Styles.headerRightWrapper,
@@ -772,33 +920,6 @@ const Welcome: React.FC<WelcomeProps> = ({ navigation, route }) => {
               onPress={() => navigation.navigate('SearchProfiles')}
             >
               <Ionicons name="search" size={wp(5.8)} color={Colors.ink} />
-            </Ripple>
-            <Ripple
-              style={Styles.avatarBtn}
-              onPress={() => navigation.navigate('Profile')}
-              rippleColor={Colors.primary}
-            >
-              {currentUser?.media?.un_blur_primary_image ? (
-                <Image
-                  source={{
-                    uri: currentUser?.media?.un_blur_primary_image,
-                  }}
-                  style={Styles.avatarImg}
-                />
-              ) : (
-                <Text style={Styles.headerText}>
-                  {currentUser?.first_name?.slice(0, 1)}
-                </Text>
-              )}
-              {isPremiumUser ? (
-                <View style={Styles.premiumBadge}>
-                  <Ionicons
-                    name="diamond"
-                    size={wp(2.6)}
-                    color={Colors.surface}
-                  />
-                </View>
-              ) : null}
             </Ripple>
           </View>
         </View>
@@ -932,26 +1053,35 @@ const Styles = StyleSheet.create({
     marginTop: hp(1),
   },
   greetingBlock: {
-    flex: 1,
-    paddingRight: wp(2),
-  },
-  greetingEyebrow: {
-    fontFamily: Fonts.APPFONT_M,
-    fontSize: Typography.small1,
-    color: Colors.muted,
-    includeFontPadding: false,
+    flexShrink: 1,
+    marginHorizontal: wp(2.8),
   },
   greetingName: {
     fontSize: Typography.large1,
     color: Colors.ink,
     textTransform: 'capitalize',
-    marginTop: hp(0.2),
     includeFontPadding: false,
   },
   headerRightWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: wp(2.5),
+  },
+  accountTrigger: {
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderColor: Colors.primaryRGBA12,
+    borderRadius: wp(8),
+    borderWidth: 1,
+    maxWidth: wp(62),
+    paddingHorizontal: wp(1.1),
+    paddingVertical: hp(0.4),
+  },
+  accountMenuCue: {
+    alignItems: 'center',
+    height: wp(7),
+    justifyContent: 'center',
+    width: wp(7),
   },
   searchIconBtn: {
     width: wp(10),
@@ -964,17 +1094,17 @@ const Styles = StyleSheet.create({
     borderColor: Colors.primaryRGBA12,
   },
   avatarBtn: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
+    width: wp(13),
+    height: wp(13),
+    borderRadius: wp(6.5),
     backgroundColor: Colors.lavender,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarImg: {
-    width: wp(10),
-    height: wp(10),
-    borderRadius: wp(5),
+    width: wp(13),
+    height: wp(13),
+    borderRadius: wp(6.5),
   },
   headerText: {
     fontFamily: Fonts.APPFONT_B,
@@ -994,6 +1124,86 @@ const Styles = StyleSheet.create({
     right: -2,
     borderWidth: 1.5,
     borderColor: Colors.surface,
+  },
+  accountAlertBadge: {
+    alignItems: 'center',
+    backgroundColor: Colors.color24,
+    borderColor: Colors.surface,
+    borderRadius: wp(2.7),
+    borderWidth: 1.5,
+    height: wp(5.4),
+    justifyContent: 'center',
+    minWidth: wp(5.4),
+    paddingHorizontal: wp(1),
+    position: 'absolute',
+    right: -wp(1.5),
+    top: -hp(0.7),
+  },
+  accountAlertBadgeText: {
+    color: Colors.color2,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.tiny2,
+    includeFontPadding: false,
+  },
+  accountMenuOptions: {
+    backgroundColor: Colors.surface,
+    borderColor: Colors.hairline,
+    borderRadius: 16,
+    borderWidth: 1,
+    elevation: 8,
+    marginTop: hp(7.2),
+    paddingVertical: hp(0.7),
+    shadowColor: Colors.ink,
+    shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.14,
+    shadowRadius: 14,
+    width: wp(66),
+  },
+  accountMenuOption: {
+    paddingHorizontal: wp(3.5),
+    paddingVertical: hp(1.05),
+  },
+  accountMenuOptionContent: {
+    alignItems: 'center',
+    gap: wp(2.6),
+  },
+  accountMenuIcon: {
+    alignItems: 'center',
+    backgroundColor: Colors.lavender,
+    borderRadius: wp(5),
+    height: wp(9),
+    justifyContent: 'center',
+    width: wp(9),
+  },
+  accountMenuOptionText: {
+    color: Colors.ink,
+    flex: 1,
+    fontFamily: Fonts.APPFONT_M,
+    fontSize: Typography.small1,
+    includeFontPadding: false,
+  },
+  accountMenuLabelWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: wp(2),
+  },
+  giftDot: {
+    position: 'absolute',
+    top: -hp(0.2),
+    left: -wp(1),
+    width: wp(3),
+    height: wp(3),
+    borderRadius: wp(1.5),
+    backgroundColor: Colors.color24,
+    borderWidth: 1.5,
+    borderColor: Colors.surface,
+  },
+  giftDotInline: {
+    width: wp(2.2),
+    height: wp(2.2),
+    borderRadius: wp(1.1),
+    backgroundColor: Colors.color24,
   },
   pendingApprovalBanner: {
     flexDirection: 'row',

@@ -16,11 +16,10 @@ type GiftBadgeProps = {
 
 // Three states, all tappable — the caller (which already knows
 // strengthPct/giftThreshold) decides what onPress does for each: locked
-// (muted, below the completion threshold) shows an explanatory hint,
-// eligible (solid primary, wiggling to draw the eye) opens the claim modal,
-// claimed (solid, verified-green — "opened") shows an already-claimed hint.
-// Used identically in the OnboardingProfile header and the ME profile
-// header so the gift reads the same wherever the user reaches it.
+// (muted, below the completion threshold) and claimed (verified-green,
+// "opened") open an explainer popup, eligible (solid primary, wiggling to
+// draw the eye) opens the claim modal. Rendered by the ME profile header
+// only, pinned to the right end of the profile-strength bar.
 const GiftBadge = ({ eligible, claimed, onPress }: GiftBadgeProps) => {
   if (claimed) {
     return (

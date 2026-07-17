@@ -40,7 +40,7 @@ const PROFILE_PRIVACY_GROUPS = [
     fields: [
       { apiKey: 'tagline', title: LanguageKeys.tagline },
       {
-        apiKey: 'personality_id',
+        apiKey: 'interest_id',
         title: LanguageKeys.myInterestAndHobbies,
       },
     ],

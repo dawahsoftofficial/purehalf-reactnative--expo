@@ -290,6 +290,7 @@ export type CounterParticipant = {
   like_count?: number;
   visit_count?: number;
   photo_request_count?: number;
+  photo_approval_count?: number;
 };
 
 /**

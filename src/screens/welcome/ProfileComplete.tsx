@@ -133,7 +133,7 @@ const ProfileComplete = () => {
         currentUser?.detail?.relocation_plan_id
           ? true
           : false,
-      'myInterestAndHobbies-0': currentUser?.detail?.personality_id?.length
+      'myInterestAndHobbies-0': currentUser?.detail?.interest_id?.length
         ? true
         : false,
     };

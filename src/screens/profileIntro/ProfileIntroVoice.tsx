@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { Container, Header, Text } from '../../components';
 import { hp, Typography, wp } from '../../global';
 import { LanguageKeys } from '../../languages';
+import { type IntroMediaStatus } from '../../lib/utils/profile-intro-media';
 import { Colors, Fonts } from '../../res';
 import {
   ApiServices,
@@ -23,14 +25,43 @@ const idlePeaks = [
   0.46, 0.24,
 ];
 
+const statusLabel = (status?: IntroMediaStatus) => {
+  if (status === 'approved') return LanguageKeys.approved;
+  if (status === 'rejected') return LanguageKeys.needsChanges;
+  return LanguageKeys.pendingReview;
+};
+
+const statusColor = (status?: IntroMediaStatus) => {
+  if (status === 'approved') return Colors.verified;
+  if (status === 'rejected') return Colors.attention;
+  return '#D97921';
+};
+
 const ProfileIntroVoice = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const { currentUser, updateCurrentUser } = useGlobalContext();
   const { setData, storageKeys } = StorageManager;
+
+  // The screen opens in "existing" mode when a voice intro is already saved,
+  // so the owner can play, delete, or re-record it. With no saved intro it
+  // opens straight into the record flow (first-time add).
+  const [serverVoice, setServerVoice] = useState<string | null>(
+    currentUser?.media?.intro_voice ?? null
+  );
+  const [serverStatus, setServerStatus] = useState<IntroMediaStatus>(
+    currentUser?.media?.intro_voice_status ?? null
+  );
+  const [mode, setMode] = useState<'existing' | 'record'>(
+    currentUser?.media?.intro_voice ? 'existing' : 'record'
+  );
+  const [deleting, setDeleting] = useState(false);
+
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [peaks, setPeaks] = useState<number[]>([]);
   const [recorded, setRecorded] = useState<RecordedChatAudio | null>(null);
   const [playing, setPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const recordingRef = useRef(false);
   const elapsedRef = useRef(0);
@@ -69,6 +100,31 @@ const ProfileIntroVoice = ({ navigation }: any) => {
     []
   );
 
+  // Shared playback used by both the just-recorded clip (local uri) and the
+  // already-saved intro (remote url); drives the waveform fill via progress.
+  const playAudio = async (url?: string | null) => {
+    if (!url) return;
+    if (playing) {
+      await chatAudioService.stopPlayback();
+      setPlaying(false);
+      setProgress(0);
+      return;
+    }
+    setProgress(0);
+    setPlaying(true);
+    await chatAudioService.play(url, {
+      onProgress: ({ currentPosition, duration }) => {
+        if (duration > 0) {
+          setProgress(Math.min(1, currentPosition / duration));
+        }
+      },
+      onPlaybackEnd: () => {
+        setPlaying(false);
+        setProgress(0);
+      },
+    });
+  };
+
   const startRecording = async () => {
     const granted = await chatAudioService.requestRecordPermission();
     if (!granted) {
@@ -100,20 +156,59 @@ const ProfileIntroVoice = ({ navigation }: any) => {
   const retake = async () => {
     if (playing) await chatAudioService.stopPlayback().catch(() => undefined);
     setPlaying(false);
+    setProgress(0);
     setRecorded(null);
     setPeaks([]);
     setElapsed(0);
   };
 
-  const togglePlayback = async () => {
-    if (!recorded?.uri) return;
-    if (playing) {
-      await chatAudioService.stopPlayback();
-      setPlaying(false);
-      return;
+  // "Re-record" from the existing screen: switch to the record flow without
+  // touching the saved intro yet — submitting the new take replaces it, and
+  // backing out keeps the original.
+  const reRecord = async () => {
+    if (playing) await chatAudioService.stopPlayback().catch(() => undefined);
+    setPlaying(false);
+    setProgress(0);
+    setRecorded(null);
+    setPeaks([]);
+    setElapsed(0);
+    setMode('record');
+  };
+
+  const performDelete = async () => {
+    if (!serverVoice || deleting) return;
+    if (playing) await chatAudioService.stopPlayback().catch(() => undefined);
+    setPlaying(false);
+    setProgress(0);
+    setDeleting(true);
+    try {
+      const media = await ApiServices.deleteImage({
+        key: 'intro_voice',
+        file_path: serverVoice,
+      });
+      const updatedUser = { ...currentUser, media };
+      updateCurrentUser(updatedUser);
+      await setData(storageKeys.USER, updatedUser);
+      setServerVoice(null);
+      setServerStatus(null);
+      setMode('record');
+    } catch {
+      // deleteImage already surfaces the error to the user.
+    } finally {
+      setDeleting(false);
     }
-    setPlaying(true);
-    await chatAudioService.play(recorded.uri, () => setPlaying(false));
+  };
+
+  const confirmDelete = () => {
+    if (deleting) return;
+    Alert.alert(t(LanguageKeys.delete), t(LanguageKeys.sureDeleteDes), [
+      { text: t(LanguageKeys.cancel), style: 'cancel' },
+      {
+        text: t(LanguageKeys.delete),
+        style: 'destructive',
+        onPress: () => void performDelete(),
+      },
+    ]);
   };
 
   const submit = async () => {
@@ -135,6 +230,86 @@ const ProfileIntroVoice = ({ navigation }: any) => {
 
   const shownPeaks = peaks.length > 0 ? peaks : idlePeaks;
   const secondsLeft = Math.max(0, 10 - elapsed);
+  const playedBars = playing ? progress * shownPeaks.length : 0;
+
+  const renderWaveform = () => (
+    <View style={Styles.waveform}>
+      {shownPeaks.map((peak, index) => (
+        <View
+          key={index}
+          style={[
+            Styles.waveBar,
+            recording && Styles.waveBarRecording,
+            index < playedBars && Styles.waveBarPlayed,
+            { height: hp(2 + Math.min(1, Math.max(0.05, peak)) * 11) },
+          ]}
+        />
+      ))}
+    </View>
+  );
+
+  if (mode === 'existing') {
+    return (
+      <Container style={Styles.screen} barBg={Colors.appBg}>
+        <Header title={LanguageKeys.voiceIntroTitle} navigation={navigation} />
+        <View style={Styles.content}>
+          <View style={Styles.timerPill}>
+            <View
+              style={[
+                Styles.liveDot,
+                { backgroundColor: statusColor(serverStatus) },
+              ]}
+            />
+            <Text style={Styles.timerText}>{statusLabel(serverStatus)}</Text>
+          </View>
+
+          <View style={Styles.waveCard}>
+            {renderWaveform()}
+            <Text style={Styles.stateLabel}>{LanguageKeys.playRecording}</Text>
+          </View>
+
+          <Ripple
+            style={Styles.playButton}
+            onPress={() => playAudio(serverVoice)}
+            disabled={deleting}
+          >
+            <Ionicons
+              name={playing ? 'stop' : 'play'}
+              size={wp(9)}
+              color={Colors.color2}
+            />
+          </Ripple>
+
+          <View style={Styles.actions}>
+            <Ripple
+              style={Styles.deleteButton}
+              onPress={confirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator color={Colors.attention} />
+              ) : (
+                <Ionicons
+                  name="trash-outline"
+                  size={wp(5)}
+                  color={Colors.attention}
+                />
+              )}
+              <Text style={Styles.deleteText}>{LanguageKeys.delete}</Text>
+            </Ripple>
+            <Ripple
+              style={Styles.submitButton}
+              onPress={reRecord}
+              disabled={deleting}
+            >
+              <Ionicons name="refresh" size={wp(5)} color={Colors.color2} />
+              <Text style={Styles.submitText}>{LanguageKeys.retake}</Text>
+            </Ripple>
+          </View>
+        </View>
+      </Container>
+    );
+  }
 
   return (
     <Container style={Styles.screen} barBg={Colors.appBg}>
@@ -150,18 +325,7 @@ const ProfileIntroVoice = ({ navigation }: any) => {
         </View>
 
         <View style={Styles.waveCard}>
-          <View style={Styles.waveform}>
-            {shownPeaks.map((peak, index) => (
-              <View
-                key={index}
-                style={[
-                  Styles.waveBar,
-                  recording && Styles.waveBarRecording,
-                  { height: hp(2 + Math.min(1, Math.max(0.05, peak)) * 11) },
-                ]}
-              />
-            ))}
-          </View>
+          {renderWaveform()}
           <Text style={Styles.stateLabel}>
             {recording
               ? LanguageKeys.recording
@@ -181,7 +345,7 @@ const ProfileIntroVoice = ({ navigation }: any) => {
         ) : (
           <Ripple
             style={Styles.playButton}
-            onPress={togglePlayback}
+            onPress={() => playAudio(recorded?.uri)}
             disabled={uploading}
           >
             <Ionicons
@@ -283,6 +447,7 @@ const Styles = StyleSheet.create({
     backgroundColor: Colors.primaryLite,
   },
   waveBarRecording: { backgroundColor: Colors.attention },
+  waveBarPlayed: { backgroundColor: Colors.primary },
   stateLabel: {
     color: Colors.muted,
     fontFamily: Fonts.APPFONT_M,
@@ -345,6 +510,17 @@ const Styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  deleteButton: {
+    flex: 1,
+    minHeight: hp(6),
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.attention,
+    flexDirection: 'row',
+    gap: wp(2),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   submitButton: {
     flex: 1.7,
     minHeight: hp(6),
@@ -360,10 +536,18 @@ const Styles = StyleSheet.create({
     color: Colors.primary,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
+    alignSelf: 'center',
+  },
+  deleteText: {
+    color: Colors.attention,
+    fontFamily: Fonts.APPFONT_SB,
+    fontSize: Typography.small1,
+    alignSelf: 'center',
   },
   submitText: {
     color: Colors.color2,
     fontFamily: Fonts.APPFONT_SB,
     fontSize: Typography.small1,
+    alignSelf: 'center',
   },
 });

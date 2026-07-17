@@ -50,45 +50,36 @@ function NotificationPermissionBanner() {
     }, [refreshPermissionStatus])
   );
 
-  const handleBannerPress = useCallback(async () => {
+  const handleBannerPress = useCallback(() => {
+    setSettingsModalVisible(true);
+  }, []);
+
+  const handlePrimaryAction = useCallback(async () => {
     if (isRequesting) return;
+
+    if (permissionStatus === 'blocked') {
+      try {
+        await openNotificationSettings();
+        setSettingsModalVisible(false);
+      } catch (error) {
+        console.error('Failed to open notification settings:', error);
+      }
+      return;
+    }
 
     setIsRequesting(true);
     try {
-      const currentStatus = await getNotificationPermissionStatus();
-
-      if (currentStatus === 'granted') {
-        setPermissionStatus('granted');
-        return;
-      }
-
-      if (currentStatus === 'blocked') {
-        setPermissionStatus('blocked');
-        setSettingsModalVisible(true);
-        return;
-      }
-
       const requestedStatus = await requestNotificationPermission();
       setPermissionStatus(requestedStatus);
 
-      if (requestedStatus === 'blocked') {
-        setSettingsModalVisible(true);
-      } else if (requestedStatus === 'granted') {
+      if (requestedStatus === 'granted') {
+        setSettingsModalVisible(false);
         await refreshPermissionStatus();
       }
     } finally {
       setIsRequesting(false);
     }
-  }, [isRequesting, refreshPermissionStatus]);
-
-  const handleOpenSettings = useCallback(async () => {
-    setSettingsModalVisible(false);
-    try {
-      await openNotificationSettings();
-    } catch (error) {
-      console.error('Failed to open notification settings:', error);
-    }
-  }, []);
+  }, [isRequesting, permissionStatus, refreshPermissionStatus]);
 
   if (
     permissionStatus === 'checking' ||
@@ -117,7 +108,7 @@ function NotificationPermissionBanner() {
         </View>
         <View style={Styles.bannerCopy}>
           <Text style={Styles.bannerTitle}>
-            {LanguageKeys.turnOnNotifications}
+            {LanguageKeys.notificationPermissionOffTitle}
           </Text>
           <Text style={Styles.bannerDescription} numberOfLines={2}>
             {LanguageKeys.notificationsBannerDescription}
@@ -155,17 +146,24 @@ function NotificationPermissionBanner() {
 
             <Ripple
               style={Styles.settingsButton}
-              onPress={handleOpenSettings}
+              onPress={handlePrimaryAction}
+              disabled={isRequesting}
               rippleColor={Colors.color2}
               accessibilityRole="button"
             >
               <Ionicons
-                name="settings-outline"
+                name={
+                  permissionStatus === 'blocked'
+                    ? 'settings-outline'
+                    : 'notifications-outline'
+                }
                 size={wp(4.5)}
                 color={Colors.color2}
               />
               <Text style={Styles.settingsButtonText}>
-                {LanguageKeys.openSettings}
+                {permissionStatus === 'blocked'
+                  ? LanguageKeys.openSettings
+                  : LanguageKeys.turnOnNotifications}
               </Text>
             </Ripple>
 

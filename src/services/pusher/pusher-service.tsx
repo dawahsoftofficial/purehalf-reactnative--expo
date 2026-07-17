@@ -803,7 +803,8 @@ function handleCounterEvent(
           if (
             participant.like_count !== undefined ||
             participant.visit_count !== undefined ||
-            participant.photo_request_count !== undefined
+            participant.photo_request_count !== undefined ||
+            participant.photo_approval_count !== undefined
           ) {
             const likeCount = participant.like_count ?? 0;
             const visitCount = participant.visit_count ?? 0;
@@ -822,6 +823,9 @@ function handleCounterEvent(
             useUserStatsStore
               .getState()
               .setUserStats(likeCount, visitCount, photoRequestCount);
+            useUserStatsStore
+              .getState()
+              .setPhotoApprovalCount(participant.photo_approval_count ?? 0);
           }
         }
         break;

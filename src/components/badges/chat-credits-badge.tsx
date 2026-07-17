@@ -4,6 +4,7 @@ import Ripple from 'react-native-material-ripple';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
 import { hp, wp } from '../../global';
+import { creditsToChats } from '../../lib/utils/chat-credits';
 import { Colors, Fonts } from '../../res';
 import Text from '../Text';
 
@@ -21,7 +22,7 @@ function ChatCreditsBadge({
   if (credits === undefined || credits === null) {
     return null;
   }
-  const chats = Math.max(0, Math.floor(credits / 50));
+  const chats = creditsToChats(credits);
 
   const badgeContent = (
     <View style={Styles.container}>

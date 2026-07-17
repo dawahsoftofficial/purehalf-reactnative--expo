@@ -28,8 +28,12 @@ export const routeNotification = async (
   switch (type) {
     case 'profile_liked':
     case 'profile_visited':
-    case 'photo_request_approved':
       navigation.navigate('UserProfile', { userData: { id: data?.id } });
+      break;
+    case 'photo_request_approved':
+      navigation.navigate('PrivatePhotoRequest', {
+        initialTab: 'yourRequests',
+      });
       break;
     case 'photo_access_request':
     case 'photo_request_declined':
