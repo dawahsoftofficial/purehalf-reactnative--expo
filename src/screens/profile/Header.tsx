@@ -5,7 +5,13 @@ import {
 } from '@react-navigation/native';
 import moment from 'moment';
 import type { ReactElement } from 'react';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -617,6 +623,17 @@ const Header = ({
   const closeGiftModal = useCallback(() => setGiftModalVisible(false), []);
   const closeGiftInfo = useCallback(() => setGiftInfoVariant(null), []);
 
+  // Sticky fallback for the variant prop below: on iOS, RN's Modal keeps
+  // rendering children through the fade-out animation until the native
+  // onDismiss fires, so the instant closeGiftInfo() nulls giftInfoVariant,
+  // a literal 'locked' fallback would visibly swap claimed's copy/buttons to
+  // locked's while the popup is still fading out. Tracking the last non-null
+  // variant keeps the closing popup showing what it was showing.
+  const lastGiftInfoVariant = useRef<ProfileGiftInfoVariant>('locked');
+  if (giftInfoVariant !== null) {
+    lastGiftInfoVariant.current = giftInfoVariant;
+  }
+
   // `from: 'Home'` is what makes OnboardingProfile's exitFlow/bailFlow reset to
   // BottomTab when the user leaves it, rather than continuing down the signup
   // chain to ProfilePicture — correct for a flow entered from inside the app.
@@ -1205,7 +1222,7 @@ const Header = ({
       />
       <ProfileGiftInfoModal
         visible={giftInfoVariant !== null}
-        variant={giftInfoVariant ?? 'locked'}
+        variant={giftInfoVariant ?? lastGiftInfoVariant.current}
         percent={giftThreshold}
         credits={giftCredits}
         onClose={closeGiftInfo}

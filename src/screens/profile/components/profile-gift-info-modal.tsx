@@ -7,6 +7,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import { Button, Text } from '../../../components';
 import { hp, Typography, wp } from '../../../global';
 import { LanguageKeys } from '../../../languages';
+import { creditsToChats } from '../../../lib/utils/chat-credits';
 import { Colors, Fonts } from '../../../res';
 
 export type ProfileGiftInfoVariant = 'locked' | 'claimed';
@@ -15,6 +16,7 @@ type ProfileGiftInfoModalProps = {
   visible: boolean;
   variant: ProfileGiftInfoVariant;
   percent: number;
+  /** Raw credits from the profile_completion_gift_credits setting. */
   credits: number;
   onClose: () => void;
   onStart: () => void;
@@ -65,8 +67,13 @@ const ProfileGiftInfoModal = ({
           </Text>
           <ReactText style={Styles.body}>
             {claimed
-              ? t(LanguageKeys.giftClaimedBody, { credits })
-              : t(LanguageKeys.giftInfoBody, { percent, credits })}
+              ? t(LanguageKeys.giftClaimedBody, {
+                  chats: creditsToChats(credits),
+                })
+              : t(LanguageKeys.giftInfoBody, {
+                  percent,
+                  chats: creditsToChats(credits),
+                })}
           </ReactText>
           {claimed ? (
             <Button

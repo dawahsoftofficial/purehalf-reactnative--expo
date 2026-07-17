@@ -68,9 +68,7 @@ describe('ProfileGiftInfoModal', () => {
       render(<ProfileGiftInfoModal {...baseProps} variant="locked" />);
 
       expect(screen.getByText('giftInfoTitle')).toBeTruthy();
-      expect(
-        screen.getByText('giftInfoBody|percent=90,credits=150')
-      ).toBeTruthy();
+      expect(screen.getByText('giftInfoBody|percent=90,chats=3')).toBeTruthy();
     });
 
     it('starts the profile flow via onStart, not onClose', () => {
@@ -97,7 +95,7 @@ describe('ProfileGiftInfoModal', () => {
       render(<ProfileGiftInfoModal {...baseProps} variant="claimed" />);
 
       expect(screen.getByText('giftClaimedTitle')).toBeTruthy();
-      expect(screen.getByText('giftClaimedBody|credits=150')).toBeTruthy();
+      expect(screen.getByText('giftClaimedBody|chats=3')).toBeTruthy();
       expect(screen.queryByText('giftStartNow')).toBeNull();
       expect(screen.queryByText('maybeLater')).toBeNull();
     });
