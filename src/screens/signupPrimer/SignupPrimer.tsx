@@ -190,11 +190,18 @@ const SignupPrimer = ({ navigation }: any) => {
   });
 
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Cancel a pending pause whenever we leave the question that scheduled it.
+  // Keying on stepIndex/phase (rather than only unmounting) is what stops a
+  // tap-then-back inside the 200ms window from firing a stale advance and
+  // silently undoing the back. Cleanup still runs on unmount too.
   useEffect(
     () => () => {
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      if (advanceTimer.current) {
+        clearTimeout(advanceTimer.current);
+        advanceTimer.current = null;
+      }
     },
-    []
+    [stepIndex, phase]
   );
 
   // Used only by auto-advancing options. The Continue button stays instant.
