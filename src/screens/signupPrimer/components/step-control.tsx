@@ -12,6 +12,7 @@ import {
   SECOND_MARRIAGE_LABEL,
   SECT_PREFERENCE_OPTIONS,
 } from '../journeys';
+import { isAutoAdvance } from '../primer-logic';
 import type { PrimerOption, PrimerStepDef } from '../primer-types';
 import RangeSlider from './range-slider';
 
@@ -64,16 +65,20 @@ const Row = ({
   label,
   on,
   square,
+  tick = true,
   onPress,
 }: {
   label: string;
   on: boolean;
   square?: boolean;
+  // Auto-advancing rows hide the tick: a tick reads as "confirm this", which is
+  // wrong for a row that leaves the screen on tap. rowOn carries the selection.
+  tick?: boolean;
   onPress: () => void;
 }) => (
   <Ripple onPress={onPress} style={[Styles.row, on && Styles.rowOn]}>
     <RNText style={Styles.rowTxt}>{label}</RNText>
-    {square ? <Square on={on} /> : <Radio on={on} />}
+    {tick ? <>{square ? <Square on={on} /> : <Radio on={on} />}</> : null}
   </Ripple>
 );
 
@@ -102,6 +107,7 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
               key={op.id}
               label={op.label}
               on={value === op.id}
+              tick={false}
               onPress={() => {
                 onChange(op.id);
                 onAdvance();
@@ -186,6 +192,7 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
 
     case 'status': {
       const v = value ?? {};
+      const auto = isAutoAdvance(step);
       return (
         <View style={Styles.list}>
           {opts.map((op) => (
@@ -193,7 +200,11 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
               key={op.id}
               label={op.label}
               on={v.status === op.id}
-              onPress={() => onChange({ ...v, status: op.id })}
+              tick={!auto}
+              onPress={() => {
+                onChange({ ...v, status: op.id });
+                if (auto) onAdvance();
+              }}
             />
           ))}
           {step.hasPolygamy ? (
@@ -272,6 +283,7 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
 
     case 'deen': {
       const v = value ?? {};
+      const auto = isAutoAdvance(step);
       return (
         <View style={Styles.list}>
           {opts.map((op) => (
@@ -279,7 +291,11 @@ function StepControl({ step, value, onChange, onAdvance }: Props) {
               key={op.id}
               label={op.label}
               on={v.practice === op.id}
-              onPress={() => onChange({ ...v, practice: op.id })}
+              tick={!auto}
+              onPress={() => {
+                onChange({ ...v, practice: op.id });
+                if (auto) onAdvance();
+              }}
             />
           ))}
           {step.hasRevert ? (
